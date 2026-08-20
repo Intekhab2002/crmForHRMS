@@ -23,6 +23,8 @@ import FormConfigurationPage
   from "../modules/formConfiguration/pages/FormConfigurationPage";
 
 import PermissionRoute from "./PermissionRoute";
+import FormFieldsPage
+  from "../modules/formConfiguration/pages/FormFieldsPage";
 
 const LAYOUTS = Object.freeze({ public: PublicLayout, auth: AuthLayout, dashboard: DashboardLayout });
 const GUARDS = Object.freeze({ auth: ProtectedRoute, guest: PublicRoute });
@@ -41,6 +43,7 @@ const COMPONENTS = Object.freeze({
   notFound: NotFoundPage,
   defaultEntry: DefaultEntryPage,
   formConfiguration: FormConfigurationPage,
+    formFields: FormFieldsPage,
 });
 
 function withAccess(route, element) {

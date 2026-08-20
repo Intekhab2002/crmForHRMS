@@ -1,11 +1,6 @@
-import {
-  APP_ROLES,
-  USER_MANAGEMENT_ACCESS,
-} from "./access.config";
+import { APP_ROLES, USER_MANAGEMENT_ACCESS } from "./access.config";
 
-import {
-  FORM_CONFIGURATION_PERMISSIONS,
-} from "../modules/formConfiguration/formConfiguration.constants";
+import { FORM_CONFIGURATION_PERMISSIONS } from "../modules/formConfiguration/formConfiguration.constants";
 
 /**
  * Single data-driven application definition.
@@ -17,10 +12,34 @@ export const APP_MODULE_CONFIG = Object.freeze({
   public: Object.freeze({
     layout: "public",
     routes: Object.freeze([
-      Object.freeze({ id: "home", path: "/home", label: "Home", component: "home", navigation: { section: "public", order: 10 } }),
-      Object.freeze({ id: "ticket-status", path: "/ticket-status", label: "Ticket Status", component: "publicTicketStatus", navigation: { section: "public", order: 20 } }),
-      Object.freeze({ id: "about", path: "/about", label: "About", component: "about", navigation: { section: "public", order: 30 } }),
-      Object.freeze({ id: "contact", path: "/contact", label: "Contact", component: "contact", navigation: { section: "public", order: 40 } }),
+      Object.freeze({
+        id: "home",
+        path: "/home",
+        label: "Home",
+        component: "home",
+        navigation: { section: "public", order: 10 },
+      }),
+      Object.freeze({
+        id: "ticket-status",
+        path: "/ticket-status",
+        label: "Ticket Status",
+        component: "publicTicketStatus",
+        navigation: { section: "public", order: 20 },
+      }),
+      Object.freeze({
+        id: "about",
+        path: "/about",
+        label: "About",
+        component: "about",
+        navigation: { section: "public", order: 30 },
+      }),
+      Object.freeze({
+        id: "contact",
+        path: "/contact",
+        label: "Contact",
+        component: "contact",
+        navigation: { section: "public", order: 40 },
+      }),
     ]),
   }),
 
@@ -28,7 +47,12 @@ export const APP_MODULE_CONFIG = Object.freeze({
     layout: "auth",
     guestOnly: true,
     routes: Object.freeze([
-      Object.freeze({ id: "login", path: "/login", label: "Login", component: "login" }),
+      Object.freeze({
+        id: "login",
+        path: "/login",
+        label: "Login",
+        component: "login",
+      }),
     ]),
   }),
 
@@ -60,27 +84,65 @@ export const APP_MODULE_CONFIG = Object.freeze({
         access: { roles: Object.values(APP_ROLES) },
         navigation: { section: "app", icon: "tickets", order: 30 },
         children: Object.freeze([
-          Object.freeze({ id: "tickets.list", index: true, component: "ticketsList", access: { roles: Object.values(APP_ROLES) } }),
-          Object.freeze({ id: "tickets.create", path: "create", label: "Create Ticket", component: "ticketCreate", access: { roles: [APP_ROLES.DEVELOPER, APP_ROLES.SUPERADMIN, APP_ROLES.ADMIN, APP_ROLES.MANAGER, APP_ROLES.AGENT, APP_ROLES.CUSTOMER] } }),
-          Object.freeze({ id: "tickets.details", path: ":ticketId", label: "Ticket Details", component: "ticketLifecycle", access: { roles: Object.values(APP_ROLES) } }),
+          Object.freeze({
+            id: "tickets.list",
+            index: true,
+            component: "ticketsList",
+            access: { roles: Object.values(APP_ROLES) },
+          }),
+          Object.freeze({
+            id: "tickets.create",
+            path: "create",
+            label: "Create Ticket",
+            component: "ticketCreate",
+            access: {
+              roles: [
+                APP_ROLES.DEVELOPER,
+                APP_ROLES.SUPERADMIN,
+                APP_ROLES.ADMIN,
+                APP_ROLES.MANAGER,
+                APP_ROLES.AGENT,
+                APP_ROLES.CUSTOMER,
+              ],
+            },
+          }),
+          Object.freeze({
+            id: "tickets.details",
+            path: ":ticketId",
+            label: "Ticket Details",
+            component: "ticketLifecycle",
+            access: { roles: Object.values(APP_ROLES) },
+          }),
         ]),
       }),
       Object.freeze({
-  id: "form-configuration",
-  path: "/configuration/forms",
-  label: "Form Configuration",
-  component: "formConfiguration",
-  access: {
-    permissions: [
-      FORM_CONFIGURATION_PERMISSIONS.READ,
-    ],
-  },
-  navigation: {
-    section: "app",
-    icon: "formConfiguration",
-    order: 25,
-  },
-}),
+        id: "form-configuration",
+        path: "/configuration/forms",
+        label: "Form Configuration",
+        component: "formConfiguration",
+        access: {
+          permissions: [FORM_CONFIGURATION_PERMISSIONS.READ],
+        },
+        navigation: {
+          section: "app",
+          icon: "formConfiguration",
+          order: 25,
+        },
+      }),
+      Object.freeze({
+        id: "form-fields",
+        path: "/configuration/form-fields",
+        label: "Form Fields",
+        component: "formFields",
+        access: {
+          permissions: [FORM_CONFIGURATION_PERMISSIONS.FIELD_READ],
+        },
+        navigation: {
+          section: "app",
+          icon: "formConfiguration",
+          order: 26,
+        },
+      }),
     ]),
   }),
 });
