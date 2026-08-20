@@ -31,6 +31,60 @@ import {
 import FormFieldTable from "../components/FormFieldTable";
 import FormFieldDialog from "../components/FormFieldDialog";
 
+
+
+function buildFieldUpdatePayload(values) {
+    return {
+        name: values.name,
+        label: values.label,
+        description: values.description ?? null,
+
+        type: values.type,
+        dataType: values.dataType,
+
+        placeholder:
+            values.placeholder ?? null,
+
+        helpText:
+            values.helpText ?? null,
+
+        defaultValue:
+            values.defaultValue ?? null,
+
+        status: values.status,
+
+        isVisible:
+            values.isVisible,
+
+        isEnabled:
+            values.isEnabled,
+
+        isEditable:
+            values.isEditable,
+
+        isReadOnly:
+            values.isReadOnly,
+
+        isRequired:
+            values.isRequired,
+
+        isSearchable:
+            values.isSearchable,
+
+        isFilterable:
+            values.isFilterable,
+
+        isSortable:
+            values.isSortable,
+
+        validationConfig:
+            values.validationConfig ?? {},
+
+        optionsConfig:
+            values.optionsConfig ?? {},
+    };
+}
+
 export default function FormFieldsPage() {
   const {
     hasPermission,
@@ -142,39 +196,39 @@ export default function FormFieldsPage() {
     );
   }, [fields, search]);
 
-  async function handleSubmit(values) {
+async function handleSubmit(values) {
     setSubmitting(true);
     setError("");
 
     try {
-      if (editingField) {
-        await formConfigurationApi.updateField(
-          editingField.id,
-          values,
-        );
-      } else {
-        await formConfigurationApi.createField(
-          values,
-        );
-      }
+        if (editingField) {
+            const payload =
+                buildFieldUpdatePayload(values);
 
-      setDialogOpen(false);
-      setEditingField(null);
+            await formConfigurationApi.updateField(
+                editingField.id,
+                payload,
+            );
+        } else {
+            await formConfigurationApi.createField(
+                values,
+            );
+        }
 
-      await loadFields();
+        setDialogOpen(false);
+        setEditingField(null);
+
+        await loadFields();
     } catch (requestError) {
-      setError(
-        requestError
-          ?.response
-          ?.data
-          ?.message ??
-          requestError.message ??
-          "Unable to save form field.",
-      );
+        setError(
+            requestError?.response?.data?.message ??
+            requestError?.message ??
+            "Unable to save form field.",
+        );
     } finally {
-      setSubmitting(false);
+        setSubmitting(false);
     }
-  }
+}
 
   async function handleDelete(field) {
     if (

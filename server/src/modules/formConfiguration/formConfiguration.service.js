@@ -207,6 +207,13 @@ async function enableField(
         );
     }
 
+    if (existing.is_deleted) {
+        throw AppError.conflict(
+            "Deleted form fields must be restored before they can be enabled.",
+        
+        );
+    }
+
     return repository.activateField(
         fieldId,
         actorId,

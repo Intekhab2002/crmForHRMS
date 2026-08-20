@@ -220,6 +220,17 @@ const DEACTIVATE_FIELD = `
         ${SELECT_FIELD_COLUMNS};
 `;
 
+const ACTIVATE_FIELD = `
+    UPDATE field_definitions
+    SET
+        status = 'active',
+        is_enabled = TRUE,
+        updated_by = $2::UUID
+    WHERE id = $1::UUID
+      AND is_deleted = FALSE
+    RETURNING
+        ${SELECT_FIELD_COLUMNS};
+`;
 const RESTORE_FIELD = `
     UPDATE field_definitions
     SET
@@ -754,6 +765,27 @@ async function deactivateField(
     return result.rows[0] ?? null;
 }
 
+
+async function activateField(
+    fieldId,
+    actorId,
+    transactionContext = null,
+) {
+    const executor =
+        getExecutor(transactionContext);
+
+    const result =
+        await executor.query(
+            ACTIVATE_FIELD,
+            [
+                fieldId,
+                actorId,
+            ],
+        );
+
+    return result.rows[0] ?? null;
+}
+
 async function softDeleteField(
     fieldId,
     actorId,
@@ -1067,6 +1099,7 @@ export default Object.freeze({
     createField,
     updateField,
     deactivateField,
+    activateField,
     softDeleteField,
     restoreField,
 
