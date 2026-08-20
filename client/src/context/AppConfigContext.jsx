@@ -6,6 +6,9 @@ import { DASHBOARD_CONFIG } from "../config/dashboard.config";
 import { TICKET_FIELD_CONFIG } from "../config/field.config";
 import { TICKET_MODULE_CONFIG } from "../config/ticket.config";
 import { AppConfigContext } from "./AppConfigContextValue";
+import {
+  hasAllPermissions,
+} from "../utils/permissions";
 
 function resolveNavigation(routes, section, parentPath = "") {
   return routes.flatMap((route) => {
@@ -20,7 +23,27 @@ function resolveNavigation(routes, section, parentPath = "") {
           path,
           icon: route.navigation.icon,
           order: route.navigation.order ?? 0,
-          accessible: (roles) => canAccessRoles(roles, route.access?.roles),
+          accessible: (
+  roles = [],
+  permissions = [],
+) => {
+  const roleAllowed =
+    canAccessRoles(
+      roles,
+      route.access?.roles,
+    );
+
+  const permissionAllowed =
+    hasAllPermissions(
+      permissions,
+      route.access?.permissions ?? [],
+    );
+
+  return (
+    roleAllowed &&
+    permissionAllowed
+  );
+},
         }]
       : [];
 

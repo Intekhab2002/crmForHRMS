@@ -1,4 +1,11 @@
-import { APP_ROLES, USER_MANAGEMENT_ACCESS } from "./access.config";
+import {
+  APP_ROLES,
+  USER_MANAGEMENT_ACCESS,
+} from "./access.config";
+
+import {
+  FORM_CONFIGURATION_PERMISSIONS,
+} from "../modules/formConfiguration/formConfiguration.constants";
 
 /**
  * Single data-driven application definition.
@@ -58,6 +65,22 @@ export const APP_MODULE_CONFIG = Object.freeze({
           Object.freeze({ id: "tickets.details", path: ":ticketId", label: "Ticket Details", component: "ticketLifecycle", access: { roles: Object.values(APP_ROLES) } }),
         ]),
       }),
+      Object.freeze({
+  id: "form-configuration",
+  path: "/configuration/forms",
+  label: "Form Configuration",
+  component: "formConfiguration",
+  access: {
+    permissions: [
+      FORM_CONFIGURATION_PERMISSIONS.READ,
+    ],
+  },
+  navigation: {
+    section: "app",
+    icon: "formConfiguration",
+    order: 25,
+  },
+}),
     ]),
   }),
 });

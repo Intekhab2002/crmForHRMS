@@ -19,6 +19,10 @@ import DefaultEntryPage from "../pages/common/DefaultEntryPage";
 import LoginPage from "../modules/auth/pages/LoginPage";
 import UserManagementPage from "../modules/users/pages/UserManagementPage";
 import { APP_MODULE_CONFIG, SYSTEM_ROUTES } from "../config/module.config";
+import FormConfigurationPage
+  from "../modules/formConfiguration/pages/FormConfigurationPage";
+
+import PermissionRoute from "./PermissionRoute";
 
 const LAYOUTS = Object.freeze({ public: PublicLayout, auth: AuthLayout, dashboard: DashboardLayout });
 const GUARDS = Object.freeze({ auth: ProtectedRoute, guest: PublicRoute });
@@ -36,11 +40,31 @@ const COMPONENTS = Object.freeze({
   forbidden: ForbiddenPage,
   notFound: NotFoundPage,
   defaultEntry: DefaultEntryPage,
+  formConfiguration: FormConfigurationPage,
 });
 
 function withAccess(route, element) {
-  if (!route.access?.roles?.length) return element;
-  return <RoleRoute roles={route.access.roles}>{element ?? <Outlet />}</RoleRoute>;
+  let protectedElement = element ?? <Outlet />;
+
+  if (route.access?.roles?.length) {
+    protectedElement = (
+      <RoleRoute roles={route.access.roles}>
+        {protectedElement}
+      </RoleRoute>
+    );
+  }
+
+  if (route.access?.permissions?.length) {
+    protectedElement = (
+      <PermissionRoute
+        allPermissions={route.access.permissions}
+      >
+        {protectedElement}
+      </PermissionRoute>
+    );
+  }
+
+  return protectedElement;
 }
 
 function buildRoute(route) {

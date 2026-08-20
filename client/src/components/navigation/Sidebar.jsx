@@ -6,22 +6,38 @@ import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumb
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../../context/useAuth";
 import { useAppConfig } from "../../context/useAppConfig";
+import DynamicFormOutlinedIcon
+  from "@mui/icons-material/DynamicFormOutlined";
 
 const ICONS = Object.freeze({
   dashboard: DashboardOutlinedIcon,
   users: PeopleOutlinedIcon,
   tickets: ConfirmationNumberOutlinedIcon,
+  formConfiguration: DynamicFormOutlinedIcon,
 });
 
 export default function Sidebar({ onNavigate }) {
   const location = useLocation();
-  const { roles } = useAuth();
-  const { navigation } = useAppConfig();
+const {
+  roles,
+  permissions,
+} = useAuth();  const { navigation } = useAppConfig();
 
-  const items = useMemo(
-    () => navigation.app.filter((item) => item.accessible(roles)),
-    [navigation.app, roles],
-  );
+const items = useMemo(
+  () =>
+    navigation.app.filter(
+      (item) =>
+        item.accessible(
+          roles,
+          permissions,
+        ),
+    ),
+  [
+    navigation.app,
+    permissions,
+    roles,
+  ],
+);
 
   return (
     <Box sx={{ width: "100%" }}>
