@@ -63,6 +63,64 @@ export const formConfigurationApi = Object.freeze({
     return response.data;
   },
 
+  async getField(fieldId) {
+  const response = await apiClient.get(
+    `${formFields}/${fieldId}`,
+  );
+
+  return response.data;
+},
+
+async createField(payload) {
+  const response = await apiClient.post(
+    formFields,
+    payload,
+  );
+
+  return response.data;
+},
+
+async updateField(fieldId, payload) {
+  const response = await apiClient.patch(
+    `${formFields}/${fieldId}`,
+    payload,
+  );
+
+  return response.data;
+},
+
+async deleteField(fieldId) {
+  const response = await apiClient.delete(
+    `${formFields}/${fieldId}`,
+  );
+
+  return response.data;
+},
+
+async restoreField(fieldId) {
+  const response = await apiClient.post(
+    `${formFields}/${fieldId}/restore`,
+  );
+
+  return response.data;
+},
+
+async enableField(fieldId) {
+  const response = await apiClient.post(
+    `${formFields}/${fieldId}/enable`,
+  );
+
+  return response.data;
+},
+
+async disableField(fieldId) {
+  const response = await apiClient.post(
+    `${formFields}/${fieldId}/disable`,
+  );
+
+  return response.data;
+},
+
   async assignField(formId, payload) {
     const response = await apiClient.post(
       `${forms}/${formId}/fields`,
