@@ -1,0 +1,25 @@
+export const TICKET_STATUS = Object.freeze({
+  OPEN: "OPEN",
+
+  ASSIGNED: "ASSIGNED",
+
+  IN_PROGRESS: "IN_PROGRESS",
+
+  PENDING: "PENDING",
+
+  RESOLVED: "RESOLVED",
+
+  CLOSED: "CLOSED",
+
+  REOPENED: "REOPENED",
+});
+
+export const TICKET_PRIORITY = Object.freeze({
+  LOW: "LOW",
+
+  MEDIUM: "MEDIUM",
+
+  HIGH: "HIGH",
+
+  CRITICAL: "CRITICAL",
+});
