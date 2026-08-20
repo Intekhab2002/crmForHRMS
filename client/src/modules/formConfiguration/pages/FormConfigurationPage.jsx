@@ -190,39 +190,91 @@ export default function FormConfigurationPage() {
       selectedForm,
     ]);
 
-  async function handleSubmitForm(values) {
+async function handleSubmit(values) {
     setSubmitting(true);
     setError("");
 
     try {
-      if (editingForm) {
-        await formConfigurationApi.updateForm(
-          editingForm.id,
-          values,
-        );
-      } else {
-        await formConfigurationApi.createForm(
-          values,
-        );
-      }
+        const payload = {
+            name: values.name,
+            label: values.label,
+            description:
+                values.description || null,
 
-      setDialogOpen(false);
-      setEditingForm(null);
+            type: values.type,
+            dataType: values.dataType,
 
-      await loadData();
+            placeholder:
+                values.placeholder || null,
+
+            helpText:
+                values.helpText || null,
+
+            defaultValue:
+                values.defaultValue || null,
+
+            status: values.status,
+
+            isVisible:
+                values.isVisible,
+
+            isEnabled:
+                values.isEnabled,
+
+            isEditable:
+                values.isEditable,
+
+            isReadOnly:
+                values.isReadOnly,
+
+            isRequired:
+                values.isRequired,
+
+            isSearchable:
+                values.isSearchable,
+
+            isFilterable:
+                values.isFilterable,
+
+            isSortable:
+                values.isSortable,
+
+            validationConfig:
+                values.validationConfig ?? {},
+
+            optionsConfig:
+                values.optionsConfig ?? {},
+        };
+
+        if (editingField) {
+            await formConfigurationApi.updateField(
+                editingField.id,
+                payload,
+            );
+        } else {
+            await formConfigurationApi.createField({
+                fieldKey: values.fieldKey,
+                ...payload,
+            });
+        }
+
+        setDialogOpen(false);
+        setEditingField(null);
+
+        await loadFields();
     } catch (requestError) {
-      setError(
-        requestError
-          ?.response
-          ?.data
-          ?.message ??
-          requestError.message ??
-          "Unable to save form.",
-      );
+        setError(
+            requestError
+                ?.response
+                ?.data
+                ?.message ??
+            requestError.message ??
+            "Unable to save form field.",
+        );
     } finally {
-      setSubmitting(false);
+        setSubmitting(false);
     }
-  }
+}
 
   async function handleDelete(form) {
     const confirmed =
@@ -398,7 +450,7 @@ export default function FormConfigurationPage() {
           setEditingForm(null);
           setError("");
         }}
-        onSubmit={handleSubmitForm}
+        onSubmit={handleSubmit}
       />
 
       <FieldAssignmentDialog

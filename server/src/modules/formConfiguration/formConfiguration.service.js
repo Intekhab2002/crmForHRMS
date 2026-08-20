@@ -186,6 +186,33 @@ async function disableField(
     );
 }
 
+async function enableField(
+    fieldId,
+    actorId,
+) {
+    assertFieldId(fieldId);
+
+    const existing =
+        await repository.findFieldById(
+            fieldId,
+        );
+
+    if (!existing) {
+        throw AppError.notFound(
+            "Form field not found.",
+            {
+                code:
+                    FIELD_ERROR_CODES.NOT_FOUND,
+            },
+        );
+    }
+
+    return repository.activateField(
+        fieldId,
+        actorId,
+    );
+}
+
 async function deleteField(
     fieldId,
     actorId,
@@ -609,6 +636,7 @@ export default Object.freeze({
     createField,
     updateField,
     disableField,
+    enableField,
     deleteField,
     restoreField,
       // Forms

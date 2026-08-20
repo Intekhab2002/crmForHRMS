@@ -150,6 +150,21 @@ router.post(
     controller.disableField,
 );
 
+/**
+ * POST /form-fields/:fieldId/enable
+ */
+router.post(
+    "/form-fields/:fieldId/enable",
+    authenticate,
+    requirePermission(
+        RBAC_PERMISSIONS.FORM_FIELD_ENABLE,
+    ),
+    validateParams(
+        validator.fieldIdParamSchema,
+    ),
+    controller.enableField,
+);
+
 
 /**
  * DELETE /form-fields/:fieldId

@@ -122,6 +122,29 @@ async function disableField(
 }
 
 
+async function enableField(
+    request,
+    response,
+    next,
+) {
+    try {
+        const field =
+            await service.enableField(
+                request.params.fieldId,
+                request.auth.userId,
+            );
+
+        return ApiResponse.updated(
+            response,
+            mapper.mapFieldToApi(field),
+            "Form field enabled successfully.",
+        );
+    } catch (error) {
+        return next(error);
+    }
+}
+
+
 async function deleteField(
     request,
     response,
@@ -391,4 +414,5 @@ export default Object.freeze({
     deleteForm,
     assignField,
     removeField,
+    enableField,
 });
