@@ -215,7 +215,7 @@ const [
         selectedForm?.id === form.id
       ) {
         setSelectedForm(null);
-        setAssignmentOpen(false);
+        setAssignmentManagerOpen(false);
       }
 
       await loadData();
@@ -251,7 +251,7 @@ const [
         response?.data ?? null;
 
       setSelectedForm(updatedForm);
-      setAssignmentOpen(false);
+      setAssignmentDialogOpen(false);
 
       await loadData();
     } catch (requestError) {
@@ -362,7 +362,7 @@ function closeAssignmentManager() {
     return;
   }
 
-  setAssignmentOpen(false);
+  setAssignmentManagerOpen(false);
   setAssignmentDialogOpen(false);
   setEditingAssignment(null);
   setSelectedForm(null);
@@ -459,7 +459,7 @@ function closeAssignmentManager() {
         onSubmit={handleSubmit}
       />
 
-{assignmentOpen && selectedForm ? (
+{assignmentManagerOpen && selectedForm ? (
   <Card sx={{ mt: 3 }}>
     <CardContent>
       <Stack
@@ -510,12 +510,12 @@ function closeAssignmentManager() {
         }
         loading={submitting}
         canUpdate={canUpdate}
-        onEdit={(assignment) => {
-          setEditingAssignment(
-            assignment,
-          );
-          setAssignmentDialogOpen(true);
-        }}
+        // onEdit={(assignment) => {
+        //   setEditingAssignment(
+        //     assignment,
+        //   );
+        //   setAssignmentDialogOpen(true);
+        // }}
         onRemove={
           handleRemoveField
         }
