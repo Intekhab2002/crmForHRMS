@@ -11,8 +11,6 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
-  Divider,
   Stack,
   Typography,
 } from "@mui/material";
@@ -29,131 +27,91 @@ import {
   FORM_CONFIGURATION_PERMISSIONS,
 } from "../formConfiguration.constants";
 
-import FormConfigurationTable from "../components/FormConfigurationTable";
-import FormConfigurationDialog from "../components/FormConfigurationDialog";
-import FieldAssignmentDialog from "../components/FieldAssignmentDialog";
+import FormConfigurationTable
+  from "../components/FormConfigurationTable";
+
+import FormConfigurationDialog
+  from "../components/FormConfigurationDialog";
+
+import FieldAssignmentDialog
+  from "../components/FieldAssignmentDialog";
 
 export default function FormConfigurationPage() {
-  const {
-    hasPermission,
-  } = useAuth();
+  const { hasPermission } = useAuth();
 
-  const [
-    forms,
-    setForms,
-  ] = useState([]);
+  const [forms, setForms] = useState([]);
+  const [fields, setFields] = useState([]);
 
-  const [
-    fields,
-    setFields,
-  ] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingForm, setEditingForm] = useState(null);
 
-  const [
-    error,
-    setError,
-  ] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const [
-    dialogOpen,
-    setDialogOpen,
-  ] = useState(false);
+  const [assignmentOpen, setAssignmentOpen] = useState(false);
+  const [selectedForm, setSelectedForm] = useState(null);
 
-  const [
-    editingForm,
-    setEditingForm,
-  ] = useState(null);
+  const canRead = hasPermission(
+    FORM_CONFIGURATION_PERMISSIONS.READ,
+  );
 
-  const [
-    submitting,
-    setSubmitting,
-  ] = useState(false);
+  const canCreate = hasPermission(
+    FORM_CONFIGURATION_PERMISSIONS.CREATE,
+  );
 
-  const [
-    assignmentOpen,
-    setAssignmentOpen,
-  ] = useState(false);
+  const canUpdate = hasPermission(
+    FORM_CONFIGURATION_PERMISSIONS.UPDATE,
+  );
 
-  const [
-    selectedForm,
-    setSelectedForm,
-  ] = useState(null);
+  const canDelete = hasPermission(
+    FORM_CONFIGURATION_PERMISSIONS.DELETE,
+  );
 
-  const canRead =
-    hasPermission(
-      FORM_CONFIGURATION_PERMISSIONS.READ,
-    );
+  const canReadFields = hasPermission(
+    FORM_CONFIGURATION_PERMISSIONS.FIELD_READ,
+  );
 
-  const canCreate =
-    hasPermission(
-      FORM_CONFIGURATION_PERMISSIONS.CREATE,
-    );
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError("");
 
-  const canUpdate =
-    hasPermission(
-      FORM_CONFIGURATION_PERMISSIONS.UPDATE,
-    );
+    try {
+      const [
+        formsResponse,
+        fieldsResponse,
+      ] = await Promise.all([
+        formConfigurationApi.listForms({
+          page: 1,
+          limit: 100,
+        }),
 
-  const canDelete =
-    hasPermission(
-      FORM_CONFIGURATION_PERMISSIONS.DELETE,
-    );
-
-  const canReadFields =
-    hasPermission(
-      FORM_CONFIGURATION_PERMISSIONS.FIELD_READ,
-    );
-
-  const loadData =
-    useCallback(
-      async () => {
-        setLoading(true);
-        setError("");
-
-        try {
-          const [
-            formsResponse,
-            fieldsResponse,
-          ] = await Promise.all([
-            formConfigurationApi.listForms({
+        canReadFields
+          ? formConfigurationApi.listFields({
               page: 1,
               limit: 100,
-            }),
+            })
+          : Promise.resolve(null),
+      ]);
 
-            canReadFields
-              ? formConfigurationApi.listFields({
-                  page: 1,
-                  limit: 100,
-                })
-              : Promise.resolve(null),
-          ]);
+      setForms(
+        formsResponse?.data ?? [],
+      );
 
-          setForms(
-            formsResponse?.data ?? [],
-          );
-
-          setFields(
-            fieldsResponse?.data ?? [],
-          );
-        } catch (requestError) {
-          setError(
-            requestError
-              ?.response
-              ?.data
-              ?.message ??
-              requestError.message ??
-              "Unable to load form configuration.",
-          );
-        } finally {
-          setLoading(false);
-        }
-      },
-      [canReadFields],
-    );
+      setFields(
+        fieldsResponse?.data ?? [],
+      );
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ??
+          requestError?.message ??
+          "Unable to load form configuration.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [canReadFields]);
 
   useEffect(() => {
     if (canRead) {
@@ -161,152 +119,99 @@ export default function FormConfigurationPage() {
     }
   }, [canRead, loadData]);
 
-  const availableFields =
-    useMemo(() => {
-      if (!selectedForm) {
-        return fields;
-      }
+  const availableFields = useMemo(() => {
+    if (!selectedForm) {
+      return fields;
+    }
 
-      const assignedIds =
-        new Set(
-          (
-            selectedForm.fields ??
-            []
-          ).map(
-            (field) =>
-              field.fieldId ??
-              field.id,
-          ),
-        );
-
-      return fields.filter(
+    const assignedIds = new Set(
+      (selectedForm.fields ?? []).map(
         (field) =>
-          !assignedIds.has(
-            field.id,
-          ),
-      );
-    }, [
-      fields,
-      selectedForm,
-    ]);
+          field.fieldId ??
+          field.id,
+      ),
+    );
 
-async function handleSubmit(values) {
+    return fields.filter(
+      (field) =>
+        !assignedIds.has(field.id),
+    );
+  }, [fields, selectedForm]);
+
+  async function handleSubmit(values) {
     setSubmitting(true);
     setError("");
 
     try {
-        const payload = {
-            name: values.name,
-            label: values.label,
-            description:
-                values.description || null,
+      const payload = {
+        name: values.name.trim(),
+        module: values.module.trim(),
+        description:
+          values.description?.trim() || null,
+        status: values.status,
+      };
 
-            type: values.type,
-            dataType: values.dataType,
-
-            placeholder:
-                values.placeholder || null,
-
-            helpText:
-                values.helpText || null,
-
-            defaultValue:
-                values.defaultValue || null,
-
-            status: values.status,
-
-            isVisible:
-                values.isVisible,
-
-            isEnabled:
-                values.isEnabled,
-
-            isEditable:
-                values.isEditable,
-
-            isReadOnly:
-                values.isReadOnly,
-
-            isRequired:
-                values.isRequired,
-
-            isSearchable:
-                values.isSearchable,
-
-            isFilterable:
-                values.isFilterable,
-
-            isSortable:
-                values.isSortable,
-
-            validationConfig:
-                values.validationConfig ?? {},
-
-            optionsConfig:
-                values.optionsConfig ?? {},
-        };
-
-        if (editingField) {
-            await formConfigurationApi.updateField(
-                editingField.id,
-                payload,
-            );
-        } else {
-            await formConfigurationApi.createField({
-                fieldKey: values.fieldKey,
-                ...payload,
-            });
-        }
-
-        setDialogOpen(false);
-        setEditingField(null);
-
-        await loadFields();
-    } catch (requestError) {
-        setError(
-            requestError
-                ?.response
-                ?.data
-                ?.message ??
-            requestError.message ??
-            "Unable to save form field.",
+      if (editingForm) {
+        await formConfigurationApi.updateForm(
+          editingForm.id,
+          payload,
         );
+      } else {
+        await formConfigurationApi.createForm({
+          code: values.code.trim(),
+          ...payload,
+        });
+      }
+
+      setDialogOpen(false);
+      setEditingForm(null);
+
+      await loadData();
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ??
+          requestError?.message ??
+          "Unable to save form.",
+      );
     } finally {
-        setSubmitting(false);
+      setSubmitting(false);
     }
-}
+  }
 
   async function handleDelete(form) {
-    const confirmed =
-      window.confirm(
-        `Delete form "${form.name}"?`,
-      );
+    const confirmed = window.confirm(
+      `Delete form "${form.name}"?`,
+    );
 
     if (!confirmed) {
       return;
     }
+
+    setError("");
 
     try {
       await formConfigurationApi.deleteForm(
         form.id,
       );
 
+      if (
+        selectedForm?.id === form.id
+      ) {
+        setSelectedForm(null);
+        setAssignmentOpen(false);
+      }
+
       await loadData();
     } catch (requestError) {
       setError(
-        requestError
-          ?.response
-          ?.data
-          ?.message ??
-          requestError.message ??
+        requestError?.response?.data?.message ??
+          requestError?.message ??
           "Unable to delete form.",
       );
     }
   }
 
-  async function handleAssignField(
-    values,
-  ) {
+  async function handleAssignField(values) {
     if (!selectedForm) {
       return;
     }
@@ -320,23 +225,22 @@ async function handleSubmit(values) {
         values,
       );
 
-      setAssignmentOpen(false);
-
       const response =
         await formConfigurationApi.getForm(
           selectedForm.id,
         );
 
-      setSelectedForm(
-        response?.data ?? null,
-      );
+      const updatedForm =
+        response?.data ?? null;
+
+      setSelectedForm(updatedForm);
+      setAssignmentOpen(false);
+
+      await loadData();
     } catch (requestError) {
       setError(
-        requestError
-          ?.response
-          ?.data
-          ?.message ??
-          requestError.message ??
+        requestError?.response?.data?.message ??
+          requestError?.message ??
           "Unable to assign field.",
       );
     } finally {
@@ -344,12 +248,49 @@ async function handleSubmit(values) {
     }
   }
 
+  function openCreateDialog() {
+    setEditingForm(null);
+    setError("");
+    setDialogOpen(true);
+  }
+
+  function openEditDialog(form) {
+    setEditingForm(form);
+    setError("");
+    setDialogOpen(true);
+  }
+
+  function closeFormDialog() {
+    if (submitting) {
+      return;
+    }
+
+    setDialogOpen(false);
+    setEditingForm(null);
+    setError("");
+  }
+
+  function openAssignmentDialog(form) {
+    setSelectedForm(form);
+    setError("");
+    setAssignmentOpen(true);
+  }
+
+  function closeAssignmentDialog() {
+    if (submitting) {
+      return;
+    }
+
+    setAssignmentOpen(false);
+    setSelectedForm(null);
+    setError("");
+  }
+
   if (!canRead) {
     return (
       <Alert severity="error">
-        You do not have permission
-        to manage form
-        configuration.
+        You do not have permission to manage
+        form configuration.
       </Alert>
     );
   }
@@ -382,21 +323,16 @@ async function handleSubmit(values) {
             color="text.secondary"
             mt={0.5}
           >
-            Manage reusable CRM forms
-            and their field assignments.
+            Manage reusable CRM forms and
+            their field assignments.
           </Typography>
         </Box>
 
         {canCreate ? (
           <Button
             variant="contained"
-            startIcon={
-              <AddIcon />
-            }
-            onClick={() => {
-              setEditingForm(null);
-              setDialogOpen(true);
-            }}
+            startIcon={<AddIcon />}
+            onClick={openCreateDialog}
           >
             Create Form
           </Button>
@@ -407,9 +343,7 @@ async function handleSubmit(values) {
         <Alert
           severity="error"
           sx={{ mb: 2 }}
-          onClose={() =>
-            setError("")
-          }
+          onClose={() => setError("")}
         >
           {error}
         </Alert>
@@ -423,19 +357,12 @@ async function handleSubmit(values) {
             canCreate={canCreate}
             canUpdate={canUpdate}
             canDelete={canDelete}
-            onCreate={() => {
-              setEditingForm(null);
-              setDialogOpen(true);
-            }}
-            onEdit={(form) => {
-              setEditingForm(form);
-              setDialogOpen(true);
-            }}
+            onCreate={openCreateDialog}
+            onEdit={openEditDialog}
             onDelete={handleDelete}
-            onManageFields={(form) => {
-              setSelectedForm(form);
-              setAssignmentOpen(true);
-            }}
+            onManageFields={
+              openAssignmentDialog
+            }
           />
         </CardContent>
       </Card>
@@ -445,11 +372,7 @@ async function handleSubmit(values) {
         form={editingForm}
         submitting={submitting}
         error={error}
-        onClose={() => {
-          setDialogOpen(false);
-          setEditingForm(null);
-          setError("");
-        }}
+        onClose={closeFormDialog}
         onSubmit={handleSubmit}
       />
 
@@ -458,11 +381,7 @@ async function handleSubmit(values) {
         fields={availableFields}
         submitting={submitting}
         error={error}
-        onClose={() => {
-          setAssignmentOpen(false);
-          setSelectedForm(null);
-          setError("");
-        }}
+        onClose={closeAssignmentDialog}
         onSubmit={handleAssignField}
       />
     </Box>
