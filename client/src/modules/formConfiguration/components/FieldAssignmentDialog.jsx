@@ -20,8 +20,9 @@ import {
 export default function FieldAssignmentDialog({
   open,
   fields,
-  submitting = false,
-  error = "",
+  assignment = null,
+  submitting,
+  error,
   onClose,
   onSubmit,
 }) {

@@ -1,9 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   Alert,
@@ -19,25 +14,17 @@ import AddIcon from "@mui/icons-material/Add";
 
 import { useAuth } from "../../../context/useAuth";
 
-import {
-  formConfigurationApi,
-} from "../api/formConfiguration.api";
+import { formConfigurationApi } from "../api/formConfiguration.api";
 
-import {
-  FORM_CONFIGURATION_PERMISSIONS,
-} from "../formConfiguration.constants";
+import { FORM_CONFIGURATION_PERMISSIONS } from "../formConfiguration.constants";
 
-import FormConfigurationTable
-  from "../components/FormConfigurationTable";
+import FormConfigurationTable from "../components/FormConfigurationTable";
 
-import FormConfigurationDialog
-  from "../components/FormConfigurationDialog";
+import FormConfigurationDialog from "../components/FormConfigurationDialog";
 
-import FieldAssignmentDialog
-  from "../components/FieldAssignmentDialog";
+import FieldAssignmentDialog from "../components/FieldAssignmentDialog";
 
-  import FormAssignedFieldsTable
-  from "../components/FormAssignedFieldsTable";
+import FormAssignedFieldsTable from "../components/FormAssignedFieldsTable";
 
 export default function FormConfigurationPage() {
   const { hasPermission } = useAuth();
@@ -53,38 +40,21 @@ export default function FormConfigurationPage() {
 
   const [submitting, setSubmitting] = useState(false);
 
-const [
-  assignmentManagerOpen,
-  setAssignmentManagerOpen,
-] = useState(false);
+  const [assignmentManagerOpen, setAssignmentManagerOpen] = useState(false);
 
-const [
-  assignmentDialogOpen,
-  setAssignmentDialogOpen,
-] = useState(false);  const [selectedForm, setSelectedForm] = useState(null);
+  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
 
+  const [selectedForm, setSelectedForm] = useState(null);
 
+  const [editingAssignment, setEditingAssignment] = useState(null);
 
-const [
-  editingAssignment,
-  setEditingAssignment,
-] = useState(null);
+  const canRead = hasPermission(FORM_CONFIGURATION_PERMISSIONS.READ);
 
-  const canRead = hasPermission(
-    FORM_CONFIGURATION_PERMISSIONS.READ,
-  );
+  const canCreate = hasPermission(FORM_CONFIGURATION_PERMISSIONS.CREATE);
 
-  const canCreate = hasPermission(
-    FORM_CONFIGURATION_PERMISSIONS.CREATE,
-  );
+  const canUpdate = hasPermission(FORM_CONFIGURATION_PERMISSIONS.UPDATE);
 
-  const canUpdate = hasPermission(
-    FORM_CONFIGURATION_PERMISSIONS.UPDATE,
-  );
-
-  const canDelete = hasPermission(
-    FORM_CONFIGURATION_PERMISSIONS.DELETE,
-  );
+  const canDelete = hasPermission(FORM_CONFIGURATION_PERMISSIONS.DELETE);
 
   const canReadFields = hasPermission(
     FORM_CONFIGURATION_PERMISSIONS.FIELD_READ,
@@ -95,10 +65,7 @@ const [
     setError("");
 
     try {
-      const [
-        formsResponse,
-        fieldsResponse,
-      ] = await Promise.all([
+      const [formsResponse, fieldsResponse] = await Promise.all([
         formConfigurationApi.listForms({
           page: 1,
           limit: 100,
@@ -112,13 +79,9 @@ const [
           : Promise.resolve(null),
       ]);
 
-      setForms(
-        formsResponse?.data ?? [],
-      );
+      setForms(formsResponse?.data ?? []);
 
-      setFields(
-        fieldsResponse?.data ?? [],
-      );
+      setFields(fieldsResponse?.data ?? []);
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ??
@@ -142,17 +105,10 @@ const [
     }
 
     const assignedIds = new Set(
-      (selectedForm.fields ?? []).map(
-        (field) =>
-          field.fieldId ??
-          field.id,
-      ),
+      (selectedForm.fields ?? []).map((field) => field.fieldId ?? field.id),
     );
 
-    return fields.filter(
-      (field) =>
-        !assignedIds.has(field.id),
-    );
+    return fields.filter((field) => !assignedIds.has(field.id));
   }, [fields, selectedForm]);
 
   async function handleSubmit(values) {
@@ -163,16 +119,12 @@ const [
       const payload = {
         name: values.name.trim(),
         module: values.module.trim(),
-        description:
-          values.description?.trim() || null,
+        description: values.description?.trim() || null,
         status: values.status,
       };
 
       if (editingForm) {
-        await formConfigurationApi.updateForm(
-          editingForm.id,
-          payload,
-        );
+        await formConfigurationApi.updateForm(editingForm.id, payload);
       } else {
         await formConfigurationApi.createForm({
           code: values.code.trim(),
@@ -196,9 +148,7 @@ const [
   }
 
   async function handleDelete(form) {
-    const confirmed = window.confirm(
-      `Delete form "${form.name}"?`,
-    );
+    const confirmed = window.confirm(`Delete form "${form.name}"?`);
 
     if (!confirmed) {
       return;
@@ -207,13 +157,9 @@ const [
     setError("");
 
     try {
-      await formConfigurationApi.deleteForm(
-        form.id,
-      );
+      await formConfigurationApi.deleteForm(form.id);
 
-      if (
-        selectedForm?.id === form.id
-      ) {
+      if (selectedForm?.id === form.id) {
         setSelectedForm(null);
         setAssignmentManagerOpen(false);
       }
@@ -237,18 +183,11 @@ const [
     setError("");
 
     try {
-      await formConfigurationApi.assignField(
-        selectedForm.id,
-        values,
-      );
+      await formConfigurationApi.assignField(selectedForm.id, values);
 
-      const response =
-        await formConfigurationApi.getForm(
-          selectedForm.id,
-        );
+      const response = await formConfigurationApi.getForm(selectedForm.id);
 
-      const updatedForm =
-        response?.data ?? null;
+      const updatedForm = response?.data ?? null;
 
       setSelectedForm(updatedForm);
       setAssignmentDialogOpen(false);
@@ -287,93 +226,83 @@ const [
     setError("");
   }
 
-async function openAssignmentManager(form) {
-  setError("");
+  async function openAssignmentManager(form) {
+    setError("");
 
-  try {
-    const response =
-      await formConfigurationApi.getForm(
-        form.id,
+    try {
+      const response = await formConfigurationApi.getForm(form.id);
+
+      setSelectedForm(
+        response?.data ?? {
+          ...form,
+          fields: [],
+        },
       );
 
-    setSelectedForm(
-      response?.data ?? {
-        ...form,
-        fields: [],
-      },
-    );
-
-    setAssignmentManagerOpen(true);
-  } catch (requestError) {
-    setError(
-      requestError?.response?.data?.message ??
-        requestError?.message ??
-        "Unable to load form fields.",
-    );
-  }
-}
-
-
-async function handleRemoveField(assignment) {
-  if (!selectedForm) {
-    return;
+      setAssignmentManagerOpen(true);
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ??
+          requestError?.message ??
+          "Unable to load form fields.",
+      );
+    }
   }
 
-  const confirmed = window.confirm(
-    `Remove "${assignment.fieldKey}" from "${selectedForm.name}"?`,
-  );
+  async function handleRemoveField(assignment) {
+    if (!selectedForm) {
+      return;
+    }
 
-  if (!confirmed) {
-    return;
-  }
-
-  setSubmitting(true);
-  setError("");
-
-  try {
-    await formConfigurationApi.removeField(
-      selectedForm.id,
-      assignment.fieldId,
+    const confirmed = window.confirm(
+      `Remove "${assignment.fieldKey}" from "${selectedForm.name}"?`,
     );
 
-    const response =
-      await formConfigurationApi.getForm(
+    if (!confirmed) {
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+
+    try {
+      await formConfigurationApi.removeField(
         selectedForm.id,
+        assignment.fieldId,
       );
 
-    setSelectedForm(
-      response?.data ?? null,
-    );
+      const response = await formConfigurationApi.getForm(selectedForm.id);
 
-    await loadData();
-  } catch (requestError) {
-    setError(
-      requestError?.response?.data?.message ??
-        requestError?.message ??
-        "Unable to remove field from form.",
-    );
-  } finally {
-    setSubmitting(false);
-  }
-}
+      setSelectedForm(response?.data ?? null);
 
-function closeAssignmentManager() {
-  if (submitting) {
-    return;
+      await loadData();
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ??
+          requestError?.message ??
+          "Unable to remove field from form.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  setAssignmentManagerOpen(false);
-  setAssignmentDialogOpen(false);
-  setEditingAssignment(null);
-  setSelectedForm(null);
-  setError("");
-}
+  function closeAssignmentManager() {
+    if (submitting) {
+      return;
+    }
+
+    setAssignmentManagerOpen(false);
+    setAssignmentDialogOpen(false);
+    setEditingAssignment(null);
+    setSelectedForm(null);
+    setError("");
+  }
 
   if (!canRead) {
     return (
       <Alert severity="error">
-        You do not have permission to manage
-        form configuration.
+        You do not have permission to manage form configuration.
       </Alert>
     );
   }
@@ -394,20 +323,12 @@ function closeAssignmentManager() {
         mb={3}
       >
         <Box>
-          <Typography
-            variant="h4"
-            fontWeight={700}
-          >
+          <Typography variant="h4" fontWeight={700}>
             Form Configuration
           </Typography>
 
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            mt={0.5}
-          >
-            Manage reusable CRM forms and
-            their field assignments.
+          <Typography variant="body2" color="text.secondary" mt={0.5}>
+            Manage reusable CRM forms and their field assignments.
           </Typography>
         </Box>
 
@@ -423,11 +344,7 @@ function closeAssignmentManager() {
       </Stack>
 
       {error ? (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
-          onClose={() => setError("")}
-        >
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
           {error}
         </Alert>
       ) : null}
@@ -443,9 +360,7 @@ function closeAssignmentManager() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onDelete={handleDelete}
-            onManageFields={
-              openAssignmentManager
-            }
+            onManageFields={openAssignmentManager}
           />
         </CardContent>
       </Card>
@@ -459,88 +374,90 @@ function closeAssignmentManager() {
         onSubmit={handleSubmit}
       />
 
-{assignmentManagerOpen && selectedForm ? (
-  <Card sx={{ mt: 3 }}>
-    <CardContent>
-      <Stack
-        direction={{
-          xs: "column",
-          sm: "row",
+      {assignmentManagerOpen && selectedForm ? (
+        <Card sx={{ mt: 3 }}>
+          <CardContent>
+            <Stack
+              direction={{
+                xs: "column",
+                sm: "row",
+              }}
+              justifyContent="space-between"
+              alignItems={{
+                xs: "stretch",
+                sm: "center",
+              }}
+              gap={2}
+              mb={2}
+            >
+              <Box>
+                <Typography variant="h6" fontWeight={700}>
+                  {selectedForm.name}
+                </Typography>
+
+                <Typography variant="body2" color="text.secondary">
+                  {selectedForm.code}
+                </Typography>
+              </Box>
+
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  onClick={closeAssignmentManager}
+                  disabled={submitting}
+                >
+                  Close
+                </Button>
+
+                {canUpdate ? (
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => {
+                      setEditingAssignment(null);
+                      setError("");
+                      setAssignmentDialogOpen(true);
+                    }}
+                  >
+                    Add Field
+                  </Button>
+                ) : null}
+              </Stack>
+            </Stack>
+
+            <FormAssignedFieldsTable
+              rows={selectedForm.fields ?? []}
+              loading={submitting}
+              canUpdate={canUpdate}
+              onEdit={(assignment) => {
+                setEditingAssignment(
+                  assignment,
+                );
+                setAssignmentDialogOpen(true);
+              }}
+              onRemove={handleRemoveField}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <FieldAssignmentDialog
+        open={assignmentDialogOpen}
+        fields={availableFields}
+        submitting={submitting}
+        error={error}
+        assignment={editingAssignment}
+        onClose={() => {
+          if (submitting) {
+            return;
+          }
+
+          setAssignmentDialogOpen(false);
+          setEditingAssignment(null);
+          setError("");
         }}
-        justifyContent="space-between"
-        alignItems={{
-          xs: "stretch",
-          sm: "center",
-        }}
-        gap={2}
-        mb={2}
-      >
-        <Box>
-          <Typography
-            variant="h6"
-            fontWeight={700}
-          >
-            {selectedForm.name}
-          </Typography>
-
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
-            {selectedForm.code}
-          </Typography>
-        </Box>
-
-        {canUpdate ? (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() =>
-              setAssignmentDialogOpen(true)
-            }
-          >
-            Add Field
-          </Button>
-        ) : null}
-      </Stack>
-
-      <FormAssignedFieldsTable
-        rows={
-          selectedForm.fields ?? []
-        }
-        loading={submitting}
-        canUpdate={canUpdate}
-        // onEdit={(assignment) => {
-        //   setEditingAssignment(
-        //     assignment,
-        //   );
-        //   setAssignmentDialogOpen(true);
-        // }}
-        onRemove={
-          handleRemoveField
-        }
+        onSubmit={handleAssignField}
       />
-    </CardContent>
-  </Card>
-) : null}
-
-<FieldAssignmentDialog
-  open={assignmentDialogOpen}
-  fields={availableFields}
-  submitting={submitting}
-  error={error}
-  assignment={editingAssignment}
-  onClose={() => {
-    if (submitting) {
-      return;
-    }
-
-    setAssignmentDialogOpen(false);
-    setEditingAssignment(null);
-    setError("");
-  }}
-  onSubmit={handleAssignField}
-/>
     </Box>
   );
 }
