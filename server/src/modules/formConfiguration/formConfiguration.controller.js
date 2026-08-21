@@ -409,6 +409,7 @@ export default Object.freeze({
     restoreField,
     getForms,
     getFormByIdentifier,
+    getRuntimeForm,
     createForm,
     updateForm,
     deleteForm,

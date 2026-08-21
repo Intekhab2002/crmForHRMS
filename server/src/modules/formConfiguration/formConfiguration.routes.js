@@ -234,6 +234,25 @@ router.post(
 );
 
 /**
+ * GET /forms/runtime/:formCode
+ *
+ * Returns normalized runtime configuration
+ * for DynamicForm.
+ */
+router.get(
+    "/forms/runtime/:formCode",
+    authenticate,
+    requirePermission(
+        RBAC_PERMISSIONS.FORM_DEFINITION_READ,
+    ),
+    validateParams(
+        validator.formCodeParamSchema,
+    ),
+    controller.getRuntimeForm,
+);
+
+
+/**
  * GET /forms/:identifier
  *
  * UUID  -> administrative form definition

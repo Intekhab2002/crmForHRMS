@@ -137,4 +137,12 @@ async disableField(fieldId) {
 
     return response.data;
   },
+
+  async getRuntimeForm(formCode) {
+  const response = await apiClient.get(
+    `${forms}/runtime/${encodeURIComponent(formCode)}`,
+  );
+
+  return response.data;
+},
 });
