@@ -143,6 +143,25 @@ export const APP_MODULE_CONFIG = Object.freeze({
           order: 26,
         },
       }),
+
+      Object.freeze({
+        id: "form-configuration-dynamic-test",
+        path: "/configuration/dynamic-test",
+        label: "Dynamic Form Test",
+        component: "dynamicFormTest",
+        access: {
+          permissions: [FORM_CONFIGURATION_PERMISSIONS.READ],
+        },
+        navigation: {
+          section: "app",
+          icon: "formConfiguration",
+          order: 26,
+        },
+      }),
+      //       {
+      //   path: "/form-configuration/dynamic-test",
+      //   element: "dynamicFormTest",
+      // }
     ]),
   }),
 });

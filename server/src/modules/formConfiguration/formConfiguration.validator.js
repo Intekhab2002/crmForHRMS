@@ -188,6 +188,12 @@ const formCodeSchema = z
         "Form code must use the format module.action.",
     );
 
+const formCodeParamSchema = z
+    .object({
+        formCode: formCodeSchema,
+    })
+    .strict();
+
 const createFormSchema = z
     .object({
         code: formCodeSchema,
@@ -386,6 +392,7 @@ export default Object.freeze({
     createFormSchema,
     updateFormSchema,
     formIdParamSchema,
+    formCodeParamSchema,
 
     formListQuerySchema,
     formIdentifierParamSchema,

@@ -26,6 +26,9 @@ import PermissionRoute from "./PermissionRoute";
 import FormFieldsPage
   from "../modules/formConfiguration/pages/FormFieldsPage";
 
+  import DynamicFormTestPage from
+  "../modules/formConfiguration/pages/DynamicFormTestPage";
+
 const LAYOUTS = Object.freeze({ public: PublicLayout, auth: AuthLayout, dashboard: DashboardLayout });
 const GUARDS = Object.freeze({ auth: ProtectedRoute, guest: PublicRoute });
 const COMPONENTS = Object.freeze({
@@ -44,6 +47,7 @@ const COMPONENTS = Object.freeze({
   defaultEntry: DefaultEntryPage,
   formConfiguration: FormConfigurationPage,
     formFields: FormFieldsPage,
+    dynamicFormTest: DynamicFormTestPage
 });
 
 function withAccess(route, element) {
