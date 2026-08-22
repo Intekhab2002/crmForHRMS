@@ -261,37 +261,14 @@ async getTicket(ticketId) {
   },
 
   async addComment(ticketId, body, user) {
-    const tickets = getTicketsFromStorage();
-    const index = requireTicket(tickets, ticketId);
-    const ticket = tickets[index];
-    const actor = getActor(user);
-    const now = new Date().toISOString();
-    const comment = {
-      id: makeId("comment"),
-      body,
-      author: actor,
-      createdAt: now,
-    };
+  const response = await apiClient.post(
+    `${API_CONFIG.endpoints.tickets}/${ticketId}/comments`,
+    {
+      comment: body,
+    },
+  );
 
-    ticket.comments = [comment, ...(ticket.comments ?? [])];
-    ticket.updatedAt = now;
-    ticket.updatedBy = actor;
-    ticket.lifecycle = [
-      {
-        id: makeId("event"),
-        type: "commented",
-        actor,
-        createdAt: now,
-        summary: "Comment added.",
-        comment: body,
-      },
-      ...(ticket.lifecycle ?? []),
-    ];
-
-    tickets[index] = ticket;
-    saveTickets(tickets);
-
-    return clone(ticket);
+  return response.data?.data ?? null;
   },
 
   async listComments(ticketId) {
