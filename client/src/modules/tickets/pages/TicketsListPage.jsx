@@ -26,23 +26,23 @@ export default function TicketsListPage() {
       }),
       ticketService.getFields("detail"),
     ])
-      .then(([ticketResponse, schema]) => {
+      .then(([tickets, schema]) => {
         if (!active) return;
 
-        setRows(ticketResponse.data ?? []);
+        setRows(tickets?? []);
         setFields(schema);
       })
-     .catch((requestError) => {
-  if (!active) {
-    return;
-  }
+      .catch((requestError) => {
+        if (!active) {
+          return;
+        }
 
-  setError(
-    requestError.response?.data?.message ??
-      requestError.message ??
-      "Unable to load tickets.",
-  );
-})
+        setError(
+          requestError.response?.data?.message ??
+            requestError.message ??
+            "Unable to load tickets.",
+        );
+      })
       .finally(() => {
         if (active) setLoading(false);
       });

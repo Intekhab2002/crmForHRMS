@@ -1,4 +1,4 @@
-import  { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import { Link, useParams } from "react-router";
@@ -11,6 +11,7 @@ import TicketUpdatePanel from "../components/TicketUpdatePanel";
 import { useAppConfig } from "../../../context/useAppConfig";
 import { useAuth } from "../../../context/useAuth";
 import { ticketService } from "../services/ticket.service";
+import TicketStatusActions from "../components/TicketStatusActions";
 
 function pickFields(fields, names) {
   return names
@@ -27,6 +28,49 @@ export default function TicketLifecyclePage() {
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const handleResolve = async (resolutionNote) => {
+    setActionLoading(true);
+
+    try {
+      const updatedTicket = await ticketService.resolveTicket(
+        ticketId,
+        resolutionNote,
+      );
+
+      setTicket(updatedTicket);
+      setNotice("Ticket resolved successfully.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleClose = async () => {
+    setActionLoading(true);
+
+    try {
+      const updatedTicket = await ticketService.closeTicket(ticketId);
+
+      setTicket(updatedTicket);
+      setNotice("Ticket closed successfully.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReopen = async () => {
+    setActionLoading(true);
+
+    try {
+      const updatedTicket = await ticketService.reopenTicket(ticketId);
+
+      setTicket(updatedTicket);
+      setNotice("Ticket reopened successfully.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const loadTicket = useCallback(() => {
     let active = true;
@@ -60,19 +104,31 @@ export default function TicketLifecyclePage() {
   );
 
   const handleUpdate = async (values) => {
-    const updatedTicket = await ticketService.updateTicket(ticketId, values, user);
+    const updatedTicket = await ticketService.updateTicket(
+      ticketId,
+      values,
+      user,
+    );
     setTicket(updatedTicket);
     setNotice(ticketConfig.update.successMessage);
   };
 
   const handleComment = async (comment) => {
-    const updatedTicket = await ticketService.addComment(ticketId, comment, user);
+    const updatedTicket = await ticketService.addComment(
+      ticketId,
+      comment,
+      user,
+    );
     setTicket(updatedTicket);
     setNotice(ticketConfig.comments.successMessage);
   };
 
   const handleAttachments = async (files) => {
-    const updatedTicket = await ticketService.addAttachments(ticketId, files, user);
+    const updatedTicket = await ticketService.addAttachments(
+      ticketId,
+      files,
+      user,
+    );
     setTicket(updatedTicket);
     setNotice(ticketConfig.attachments.successMessage);
   };
@@ -97,6 +153,14 @@ export default function TicketLifecyclePage() {
               {ticketConfig.labels.backToTickets}
             </Button>
           }
+        />
+        <TicketStatusActions
+          ticket={ticket}
+          config={ticketConfig.actions}
+          onResolve={handleResolve}
+          onClose={handleClose}
+          onReopen={handleReopen}
+          loading={actionLoading}
         />
         <Alert severity="warning">
           {error || ticketConfig.labels.notFound}

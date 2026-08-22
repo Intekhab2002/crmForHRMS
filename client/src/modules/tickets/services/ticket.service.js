@@ -143,6 +143,44 @@ async getTicket(ticketId) {
   }
 },
 
+  async assignTicket(ticketId, assignedUserId) {
+    const response = await apiClient.patch(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/assign`,
+      {
+        assignedUserId,
+      },
+    );
+
+    return mapTicketFromApi(response.data?.data);
+  },
+
+  async resolveTicket(ticketId, resolutionNote) {
+    const response = await apiClient.patch(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/resolve`,
+      {
+        resolutionNote,
+      },
+    );
+
+    return mapTicketFromApi(response.data?.data);
+  },
+
+  async closeTicket(ticketId) {
+    const response = await apiClient.patch(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/close`,
+    );
+
+    return mapTicketFromApi(response.data?.data);
+  },
+
+  async reopenTicket(ticketId) {
+    const response = await apiClient.patch(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/reopen`,
+    );
+
+    return mapTicketFromApi(response.data?.data);
+  },
+
   async createTicket(values, user) {
     const tickets = getTicketsFromStorage();
     const now = new Date().toISOString();

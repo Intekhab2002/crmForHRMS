@@ -331,6 +331,28 @@ export const TICKET_MODULE_CONFIG = Object.freeze({
       "updatedAt",
     ],
   },
+  actions: {
+  assign: {
+    enabled: true,
+    label: "Assign",
+  },
+
+  resolve: {
+    enabled: true,
+    label: "Resolve",
+    requireResolutionNote: true,
+  },
+
+  close: {
+    enabled: true,
+    label: "Close",
+  },
+
+  reopen: {
+    enabled: true,
+    label: "Reopen",
+  },
+},
   mock: {
     tickets: [
       {
