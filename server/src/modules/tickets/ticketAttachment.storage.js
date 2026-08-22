@@ -28,6 +28,9 @@ export const TICKET_ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
 
     "application/vnd.ms-powerpoint",
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+
+        // Archives
+    "application/zip",
 ]);
 
 export async function ensureTicketAttachmentStorage() {

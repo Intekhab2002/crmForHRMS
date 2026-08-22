@@ -363,5 +363,40 @@ async uploadAttachment(ticketId, file, onUploadProgress) {
 
   return response.data?.data ?? null;
 },
+
+
+  async viewAttachment(ticketId, attachmentId) {
+    const response = await apiClient.get(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/attachments/${attachmentId}/view`,
+      {
+        responseType: "blob",
+      },
+    );
+
+    return response.data;
+  },
+
+  async downloadAttachment(ticketId, attachmentId) {
+    const response = await apiClient.get(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/attachments/${attachmentId}/download`,
+      {
+        responseType: "blob",
+      },
+    );
+
+    return {
+      blob: response.data,
+      contentDisposition:
+        response.headers["content-disposition"] ?? "",
+    };
+  },
+
+  async deleteAttachment(ticketId, attachmentId) {
+    const response = await apiClient.delete(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/attachments/${attachmentId}`,
+    );
+
+    return response.data;
+  },
 };
 

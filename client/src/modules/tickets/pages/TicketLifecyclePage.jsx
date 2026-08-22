@@ -3,7 +3,7 @@ import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import { Link, useParams } from "react-router";
 import PageHeader from "../../../components/page/PageHeader";
-import TicketAttachmentUploader from "../components/TicketAttachmentUploader";
+import TicketAttachmentUploader from "../components/TicketAttachmentUploaderNotUsingCurrently";
 import TicketCommentComposer from "../components/TicketCommentComposer";
 import TicketComments from "../components/TicketComments";
 import TicketLifecycleTimeline from "../components/TicketLifecycleTimeline";
@@ -13,6 +13,7 @@ import { useAppConfig } from "../../../context/useAppConfig";
 import { useAuth } from "../../../context/useAuth";
 import { ticketService } from "../services/ticket.service";
 import TicketStatusActions from "../components/TicketStatusActions";
+import TicketAttachmentList from "../components/TicketAttachmentList";
 
 function pickFields(fields, names) {
   return names
@@ -244,12 +245,14 @@ export default function TicketLifecyclePage() {
         config={ticketConfig.comments}
         onSubmit={handleComment}
       />
-      <TicketAttachmentUploader
+      {/* <TicketAttachmentUploader
         config={ticketConfig.attachments}
         attachments={attachments}
         loading={attachmentsLoading}
         onSubmit={handleAttachments}
-      />
+      /> */}
+
+      <TicketAttachmentList ticketId={ticket.id} />
 
       <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
         <Stack spacing={2}>
