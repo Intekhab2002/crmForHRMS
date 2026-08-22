@@ -8,6 +8,8 @@ import ticketController from "./ticket.controller.js";
 import ticketValidator from "./ticket.validator.js";
 import ticketAttachmentController from "./ticketAttachment.controller.js";
 import { ticketAttachmentUpload } from "./ticketAttachment.upload.js";
+import ticketLifecycleController
+    from "./ticketLifecycle.controller.js";
 
 const { authenticate } = authMiddleware;
 const { requirePermission } = rbacMiddleware;
@@ -135,6 +137,11 @@ router.delete(
         ticketValidator.ticketAttachmentParamSchema,
     ),
     ticketAttachmentController.deleteAttachment,
+);
+
+router.get(
+    "/:ticketId/lifecycle",
+    ticketLifecycleController.getLifecycle,
 );
 
 router.get(
