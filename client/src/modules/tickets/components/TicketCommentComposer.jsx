@@ -9,12 +9,19 @@ import {
 } from "@mui/material";
 import AddCommentOutlinedIcon from "@mui/icons-material/AddCommentOutlined";
 import CanAccess from "../../../components/rbac/CanAccess";
+import { useAuth } from "../../../context/useAuth";
 
 export default function TicketCommentComposer({
   config,
   onSubmit,
 }) {
-  console.log("TicketCommentComposer config:", config);
+ const { hasPermission } = useAuth();
+
+console.log("TicketCommentComposer config:", config);
+console.log(
+  "ticket:comment permission:",
+  hasPermission("ticket:comment"),
+);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 

@@ -112,6 +112,7 @@ export const RBAC_PERMISSIONS = Object.freeze({
     TICKET_UPDATE: "ticket:update",
     TICKET_DELETE: "ticket:delete",
     TICKET_ASSIGN: "ticket:assign",
+    TICKET_COMMENT: "ticket:comment",
     TICKET_RESOLVE: "ticket:resolve",
     TICKET_CLOSE: "ticket:close",
 
