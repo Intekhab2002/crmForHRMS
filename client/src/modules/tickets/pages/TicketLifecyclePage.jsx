@@ -32,6 +32,8 @@ export default function TicketLifecyclePage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(true);
+  const [attachments, setAttachments] = useState([]);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(true);
 
   const handleResolve = async (resolutionNote) => {
     setActionLoading(true);
@@ -110,10 +112,23 @@ export default function TicketLifecyclePage() {
     }
   }, [ticketId]);
 
+  const loadAttachments = useCallback(async () => {
+    setAttachmentsLoading(true);
+
+    try {
+      const attachmentRecords = await ticketService.listAttachments(ticketId);
+
+      setAttachments(attachmentRecords);
+    } finally {
+      setAttachmentsLoading(false);
+    }
+  }, [ticketId]);
+
   useEffect(() => {
     loadTicket();
     loadComments();
-  }, [loadTicket, loadComments]);
+    loadAttachments();
+  }, [loadTicket, loadComments, loadAttachments]);
   const updateFields = useMemo(
     () => pickFields(fields, ticketConfig.update.fields),
     [fields, ticketConfig.update.fields],
@@ -137,13 +152,13 @@ export default function TicketLifecyclePage() {
     setNotice(ticketConfig.comments.successMessage);
   };
 
-  const handleAttachments = async (files) => {
-    const updatedTicket = await ticketService.addAttachments(
-      ticketId,
-      files,
-      user,
-    );
-    setTicket(updatedTicket);
+  const handleAttachments = async (files, onUploadProgress) => {
+    for (const file of files) {
+      await ticketService.uploadAttachment(ticketId, file, onUploadProgress);
+    }
+
+    await loadAttachments();
+
     setNotice(ticketConfig.attachments.successMessage);
   };
 
@@ -231,7 +246,8 @@ export default function TicketLifecyclePage() {
       />
       <TicketAttachmentUploader
         config={ticketConfig.attachments}
-        attachments={ticket.attachments}
+        attachments={attachments}
+        loading={attachmentsLoading}
         onSubmit={handleAttachments}
       />
 

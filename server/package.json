@@ -11,7 +11,6 @@
     "db:migrate": "node scripts/migrate.js",
     "db:seed:admin": "node seeders/001_create_development_admin.js",
     "db:seed:rbac": "node seeders/002_seed_rbac.js"
-
   },
   "keywords": [],
   "author": "",
@@ -30,6 +29,7 @@
     "http-status-codes": "^2.3.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.11.0",
+    "multer": "^2.2.0",
     "p-retry": "^8.0.0",
     "pg": "^8.22.0",
     "uuid": "^14.0.1",

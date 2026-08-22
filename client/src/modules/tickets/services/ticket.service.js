@@ -337,25 +337,31 @@ async getTicket(ticketId) {
     return ticket ? clone(ticket) : null;
   },
 
-  async listAttachments(ticketId) {
-    const response = await apiClient.get(
-        `${API_CONFIG.endpoints.tickets}/${ticketId}/attachments`,
-    );
+async listAttachments(ticketId) {
+  const response = await apiClient.get(
+    `${API_CONFIG.endpoints.tickets}/${ticketId}/attachments`,
+  );
 
-    return response.data?.data ?? [];
+  return response.data?.data ?? [];
 },
 
-async uploadAttachment(ticketId, file) {
-    const formData = new FormData();
+async uploadAttachment(ticketId, file, onUploadProgress) {
+  if (!(file instanceof File)) {
+    throw new TypeError("A valid file is required.");
+  }
 
-    formData.append("file", file);
+  const formData = new FormData();
+  formData.append("file", file);
 
-    const response = await apiClient.post(
-        `${API_CONFIG.endpoints.tickets}/${ticketId}/attachments`,
-        formData,
-    );
+  const response = await apiClient.post(
+    `${API_CONFIG.endpoints.tickets}/${ticketId}/attachments`,
+    formData,
+    {
+      onUploadProgress,
+    },
+  );
 
-    return response.data?.data;
+  return response.data?.data ?? null;
 },
 };
 

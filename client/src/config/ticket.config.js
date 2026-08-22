@@ -278,13 +278,13 @@ export const TICKET_MODULE_CONFIG = Object.freeze({
     successMessage: "Comment added.",
     permission: "ticket:comment",
   },
-  attachments: {
-    title: "Attachments",
-    selectLabel: "Select files",
-    uploadLabel: "Add files",
-    successMessage: "Files added.",
-    permission: "ticket:attach",
-  },
+attachments: {
+  title: "Attachments",
+  selectLabel: "Select files",
+  uploadLabel: "Upload files",
+  successMessage: "Files uploaded successfully.",
+  permission: "ticket:attachment",
+},
   lifecycle: {
     title: "Lifecycle",
     description: "A complete audit trail of creation, updates, comments, and attachments.",
