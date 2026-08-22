@@ -6,6 +6,12 @@ import { TICKET_ERROR_CODES, TICKET_STATUS } from "./ticket.constants.js";
 import contactService from "../contacts/contact.service.js";
 import database from "../../database/postgres.js";
 
+import ticketLifecycleService from "./ticketLifecycle.service.js";
+import {
+  TICKET_LIFECYCLE_EVENT_TYPE,
+  TICKET_LIFECYCLE_EVENT_ACTION,
+} from "./ticketLifecycle.constants.js";
+
 const STATUS_TRANSITIONS = Object.freeze({
   OPEN: new Set([
     TICKET_STATUS.ASSIGNED,
@@ -52,6 +58,23 @@ async function getTicket(ticketId) {
 
   return ticket;
 }
+
+await ticketLifecycleService.record(
+  {
+    ticketId: ticket.id,
+    actorUserId: authenticatedUserId,
+
+    eventType: TICKET_LIFECYCLE_EVENT_TYPE.TICKET,
+
+    eventAction: TICKET_LIFECYCLE_EVENT_ACTION.CREATED,
+
+    metadata: {
+      subject: ticket.subject,
+      status: ticket.status,
+    },
+  },
+  tx,
+);
 
 async function validateReferences(data) {
   const [requester, organization, department] = await Promise.all([
@@ -144,8 +167,7 @@ async function createTicket(data, authenticatedUserId) {
   const normalized = {
     ...data,
 
-    requesterUserId:
-      data.requesterUserId ?? authenticatedUserId,
+    requesterUserId: data.requesterUserId ?? authenticatedUserId,
 
     subject: data.subject.trim(),
 
@@ -169,33 +191,27 @@ async function createTicket(data, authenticatedUserId) {
   try {
     await client.query("BEGIN");
 
-    const contact =
-      await contactService.findOrCreateContact(
-        {
-          organizationId:
-            normalized.organizationId,
+    const contact = await contactService.findOrCreateContact(
+      {
+        organizationId: normalized.organizationId,
 
-          name:
-            normalized.contactName,
+        name: normalized.contactName,
 
-          mobile:
-            normalized.mobilePhone,
-        },
-        tx,
-      );
+        mobile: normalized.mobilePhone,
+      },
+      tx,
+    );
 
-    const ticket =
-      await ticketRepository.createTicket(
-        {
-          ...normalized,
+    const ticket = await ticketRepository.createTicket(
+      {
+        ...normalized,
 
-          contactId: contact.id,
+        contactId: contact.id,
 
-          createdByUserId:
-            authenticatedUserId,
-        },
-        tx,
-      );
+        createdByUserId: authenticatedUserId,
+      },
+      tx,
+    );
 
     await client.query("COMMIT");
 
@@ -213,7 +229,7 @@ async function createTicket(data, authenticatedUserId) {
   }
 }
 
-async function updateTicket(ticketId, data) {
+async function updateTicket(ticketId, data, authenticatedUserId) {
   const current = await getTicket(ticketId);
 
   const effective = {
@@ -222,12 +238,9 @@ async function updateTicket(ticketId, data) {
     requesterUserId: current.requester_user_id,
     organizationId: data.organizationId ?? current.organization_id,
     departmentId: data.departmentId ?? current.department_id,
-    assignedUserId: Object.prototype.hasOwnProperty.call(
-    data,
-    "assignedUserId",
-    )
-    ? data.assignedUserId
-    : current.assigned_user_id,
+    assignedUserId: Object.prototype.hasOwnProperty.call(data, "assignedUserId")
+      ? data.assignedUserId
+      : current.assigned_user_id,
   };
 
   await validateReferences(effective);
@@ -250,10 +263,7 @@ async function updateTicket(ticketId, data) {
       );
     }
 
-    if (
-      data.status === TICKET_STATUS.ASSIGNED &&
-      !effective.assignedUserId
-    ) {
+    if (data.status === TICKET_STATUS.ASSIGNED && !effective.assignedUserId) {
       throw AppError.conflict(
         "An assignee is required before assigning a ticket.",
         { code: TICKET_ERROR_CODES.ASSIGNEE_REQUIRED },
@@ -272,15 +282,50 @@ async function updateTicket(ticketId, data) {
     }
   }
 
-  return ticketRepository.updateTicket(ticketId, {
+  const fieldChanges = ticketLifecycleService.collectFieldChanges(
+    current,
+    data,
+  );
+
+  const updatedTicket = await ticketRepository.updateTicket(ticketId, {
     ...data,
     subject: data.subject?.trim(),
     description: data.description?.trim(),
     issueType: data.issueType?.trim(),
   });
+
+  for (const change of fieldChanges) {
+    if (change.fieldName === "status") {
+      continue;
+    }
+
+    await ticketLifecycleService.record({
+      ticketId,
+      actorUserId: authenticatedUserId,
+      eventType: TICKET_LIFECYCLE_EVENT_TYPE.FIELD,
+      eventAction: TICKET_LIFECYCLE_EVENT_ACTION.UPDATED,
+      fieldName: change.fieldName,
+      oldValue: change.oldValue,
+      newValue: change.newValue,
+    });
+  }
+
+  if (data.status && data.status !== current.status) {
+    await ticketLifecycleService.record({
+      ticketId,
+      actorUserId: authenticatedUserId,
+      eventType: TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
+      eventAction: TICKET_LIFECYCLE_EVENT_ACTION.STATUS_CHANGED,
+      fieldName: "status",
+      oldValue: current.status,
+      newValue: data.status,
+    });
+  }
+
+  return updatedTicket;
 }
 
-async function assignTicket(ticketId, userId) {
+async function assignTicket(ticketId, userId, authenticatedUserId) {
   const ticket = await getTicket(ticketId);
 
   if (
@@ -302,7 +347,7 @@ async function assignTicket(ticketId, userId) {
   return ticketRepository.assignTicket(ticketId, userId);
 }
 
-async function resolveTicket(ticketId, resolutionNote) {
+async function resolveTicket(ticketId, resolutionNote, authenticatedUserId) {
   const ticket = await getTicket(ticketId);
 
   if (
@@ -317,7 +362,7 @@ async function resolveTicket(ticketId, resolutionNote) {
   return ticketRepository.resolveTicket(ticketId, resolutionNote.trim());
 }
 
-async function closeTicket(ticketId) {
+async function closeTicket(ticketId, authenticatedUserId) {
   const ticket = await getTicket(ticketId);
 
   if (ticket.status === TICKET_STATUS.CLOSED) {
@@ -329,7 +374,7 @@ async function closeTicket(ticketId) {
   return ticketRepository.closeTicket(ticketId);
 }
 
-async function reopenTicket(ticketId) {
+async function reopenTicket(ticketId, authenticatedUserId) {
   const ticket = await getTicket(ticketId);
 
   if (
@@ -345,7 +390,7 @@ async function reopenTicket(ticketId) {
   return ticketRepository.reopenTicket(ticketId);
 }
 
-async function deleteTicket(ticketId) {
+async function deleteTicket(ticketId, authenticatedUserId) {
   return closeTicket(ticketId);
 }
 
@@ -359,11 +404,7 @@ async function getComments(ticketId) {
   return ticketRepository.findTicketComments(ticketId);
 }
 
-async function addComment(
-  ticketId,
-  comment,
-  authenticatedUserId,
-) {
+async function addComment(ticketId, comment, authenticatedUserId) {
   await getTicket(ticketId);
 
   const normalizedComment = comment.trim();
@@ -392,6 +433,6 @@ export default Object.freeze({
   reopenTicket,
   deleteTicket,
   getAssignableUsers,
-    getComments,
+  getComments,
   addComment,
 });
