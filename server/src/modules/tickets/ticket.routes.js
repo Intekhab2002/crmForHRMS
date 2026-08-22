@@ -140,8 +140,11 @@ router.delete(
 );
 
 router.get(
-    "/:ticketId/lifecycle",
-    ticketLifecycleController.getLifecycle,
+  "/:ticketId/lifecycle",
+  authenticate,
+  requirePermission(TICKET_READ),
+  validateParams(ticketValidator.ticketIdParamSchema),
+  ticketLifecycleController.getLifecycle,
 );
 
 router.get(

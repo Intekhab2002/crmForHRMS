@@ -238,20 +238,26 @@ async function updateTicket(ticketId, data, authenticatedUserId) {
     ...current,
     ...data,
     requesterUserId: current.requester_user_id,
-    organizationId: data.organizationId ?? current.organization_id,
-    departmentId: data.departmentId ?? current.department_id,
-    assignedUserId: Object.prototype.hasOwnProperty.call(data, "assignedUserId")
-      ? data.assignedUserId
-      : current.assigned_user_id,
+    organizationId:
+      data.organizationId ?? current.organization_id,
+    departmentId:
+      data.departmentId ?? current.department_id,
+    assignedUserId:
+      Object.prototype.hasOwnProperty.call(data, "assignedUserId")
+        ? data.assignedUserId
+        : current.assigned_user_id,
   };
 
   await validateReferences(effective);
 
   if (data.status) {
     if (data.status === current.status) {
-      throw AppError.conflict("Ticket is already in the requested status.", {
-        code: TICKET_ERROR_CODES.INVALID_STATUS_TRANSITION,
-      });
+      throw AppError.conflict(
+        "Ticket is already in the requested status.",
+        {
+          code: TICKET_ERROR_CODES.INVALID_STATUS_TRANSITION,
+        },
+      );
     }
 
     const allowed = STATUS_TRANSITIONS[current.status];
@@ -265,10 +271,15 @@ async function updateTicket(ticketId, data, authenticatedUserId) {
       );
     }
 
-    if (data.status === TICKET_STATUS.ASSIGNED && !effective.assignedUserId) {
+    if (
+      data.status === TICKET_STATUS.ASSIGNED &&
+      !effective.assignedUserId
+    ) {
       throw AppError.conflict(
         "An assignee is required before assigning a ticket.",
-        { code: TICKET_ERROR_CODES.ASSIGNEE_REQUIRED },
+        {
+          code: TICKET_ERROR_CODES.ASSIGNEE_REQUIRED,
+        },
       );
     }
 
@@ -279,52 +290,95 @@ async function updateTicket(ticketId, data, authenticatedUserId) {
     ) {
       throw AppError.conflict(
         "A resolution note is required before resolving a ticket.",
-        { code: TICKET_ERROR_CODES.RESOLUTION_REQUIRED },
+        {
+          code: TICKET_ERROR_CODES.RESOLUTION_REQUIRED,
+        },
       );
     }
   }
 
-  const fieldChanges = ticketLifecycleService.collectFieldChanges(
-    current,
-    data,
-  );
+  const fieldChanges =
+    ticketLifecycleService.collectFieldChanges(
+      current,
+      data,
+    );
 
-  const updatedTicket = await ticketRepository.updateTicket(ticketId, {
-    ...data,
-    subject: data.subject?.trim(),
-    description: data.description?.trim(),
-    issueType: data.issueType?.trim(),
-  });
+  const client = await database.getClient();
 
-  for (const change of fieldChanges) {
-    if (change.fieldName === "status") {
-      continue;
+  const tx = {
+    client,
+  };
+
+  try {
+    await client.query("BEGIN");
+
+    const updatedTicket =
+      await ticketRepository.updateTicket(
+        ticketId,
+        {
+          ...data,
+          subject: data.subject?.trim(),
+          description: data.description?.trim(),
+          issueType: data.issueType?.trim(),
+        },
+        tx,
+      );
+
+    for (const change of fieldChanges) {
+      if (change.fieldName === "status") {
+        continue;
+      }
+
+      await ticketLifecycleService.record(
+        {
+          ticketId,
+          actorUserId: authenticatedUserId,
+          eventType:
+            TICKET_LIFECYCLE_EVENT_TYPE.FIELD,
+          eventAction:
+            TICKET_LIFECYCLE_EVENT_ACTION.UPDATED,
+          fieldName: change.fieldName,
+          oldValue: change.oldValue,
+          newValue: change.newValue,
+        },
+        tx,
+      );
     }
 
-    await ticketLifecycleService.record({
-      ticketId,
-      actorUserId: authenticatedUserId,
-      eventType: TICKET_LIFECYCLE_EVENT_TYPE.FIELD,
-      eventAction: TICKET_LIFECYCLE_EVENT_ACTION.UPDATED,
-      fieldName: change.fieldName,
-      oldValue: change.oldValue,
-      newValue: change.newValue,
-    });
-  }
+    if (
+      data.status &&
+      data.status !== current.status
+    ) {
+      await ticketLifecycleService.record(
+        {
+          ticketId,
+          actorUserId: authenticatedUserId,
+          eventType:
+            TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
+          eventAction:
+            TICKET_LIFECYCLE_EVENT_ACTION.STATUS_CHANGED,
+          fieldName: "status",
+          oldValue: current.status,
+          newValue: data.status,
+        },
+        tx,
+      );
+    }
 
-  if (data.status && data.status !== current.status) {
-    await ticketLifecycleService.record({
-      ticketId,
-      actorUserId: authenticatedUserId,
-      eventType: TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
-      eventAction: TICKET_LIFECYCLE_EVENT_ACTION.STATUS_CHANGED,
-      fieldName: "status",
-      oldValue: current.status,
-      newValue: data.status,
-    });
-  }
+    await client.query("COMMIT");
 
-  return updatedTicket;
+    return updatedTicket;
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      error.rollbackError = rollbackError;
+    }
+
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function assignTicket(ticketId, userId, authenticatedUserId) {
@@ -344,9 +398,10 @@ async function assignTicket(ticketId, userId, authenticatedUserId) {
     organizationId: ticket.organization_id,
     departmentId: ticket.department_id,
     assignedUserId: userId,
+
   });
 
-  return ticketRepository.assignTicket(ticketId, userId);
+  return ticketRepository.assignTicket(ticketId, userId,authenticatedUserId);
 }
 
 async function resolveTicket(ticketId, resolutionNote, authenticatedUserId) {
