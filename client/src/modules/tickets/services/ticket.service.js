@@ -294,6 +294,14 @@ async getTicket(ticketId) {
     return clone(ticket);
   },
 
+  async listComments(ticketId) {
+  const response = await apiClient.get(
+    `${API_CONFIG.endpoints.tickets}/${ticketId}/comments`,
+  );
+
+  return response.data?.data ?? [];
+},
+
   async addAttachments(ticketId, files, user) {
     const tickets = getTicketsFromStorage();
     const index = requireTicket(tickets, ticketId);

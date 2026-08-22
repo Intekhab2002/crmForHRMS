@@ -40,6 +40,7 @@ export const TICKET_ERROR_CODES = Object.freeze({
         "TICKET_RESOLUTION_REQUIRED",
         ASSIGNED_USER_NOT_FOUND:
     "ASSIGNED_USER_NOT_FOUND",
+    COMMENT_EMPTY: "TICKET_COMMENT_EMPTY",
 });
 
 export const TICKET_MESSAGES = Object.freeze({
@@ -54,6 +55,8 @@ export const TICKET_MESSAGES = Object.freeze({
     DELETE_SUCCESS: "Ticket deleted successfully.",
     ASSIGNABLE_USERS_SUCCESS:
     "Assignable users retrieved successfully.",
+    COMMENTS_SUCCESS: "Ticket comments retrieved successfully.",
+COMMENT_CREATE_SUCCESS: "Comment added successfully.",
 });
 
 export default Object.freeze({

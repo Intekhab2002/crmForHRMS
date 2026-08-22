@@ -166,6 +166,40 @@ async function getAssignableUsers(req, res, next) {
     }
 }
 
+async function getComments(req, res, next) {
+    try {
+        const comments = await ticketService.getComments(
+            req.params.ticketId,
+        );
+
+        return ApiResponse.success(
+            res,
+            comments,
+            TICKET_MESSAGES.COMMENTS_SUCCESS,
+        );
+    } catch (error) {
+        return next(error);
+    }
+}
+
+async function addComment(req, res, next) {
+    try {
+        const comment = await ticketService.addComment(
+            req.params.ticketId,
+            req.body.comment,
+            req.auth.userId,
+        );
+
+        return ApiResponse.created(
+            res,
+            comment,
+            TICKET_MESSAGES.COMMENT_CREATE_SUCCESS,
+        );
+    } catch (error) {
+        return next(error);
+    }
+}
+
 export default Object.freeze({
     getTickets,
     getTicket,
@@ -177,4 +211,6 @@ export default Object.freeze({
     reopenTicket,
     deleteTicket,
     getAssignableUsers,
+    getComments,
+    addComment,
 });

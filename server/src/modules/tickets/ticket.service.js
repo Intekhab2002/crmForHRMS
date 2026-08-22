@@ -353,6 +353,34 @@ async function getAssignableUsers() {
   return ticketRepository.findAssignableUsers();
 }
 
+async function getComments(ticketId) {
+  await getTicket(ticketId);
+
+  return ticketRepository.findTicketComments(ticketId);
+}
+
+async function addComment(
+  ticketId,
+  comment,
+  authenticatedUserId,
+) {
+  await getTicket(ticketId);
+
+  const normalizedComment = comment.trim();
+
+  if (!normalizedComment) {
+    throw AppError.badRequest("Comment is required.", {
+      code: TICKET_ERROR_CODES.COMMENT_EMPTY,
+    });
+  }
+
+  return ticketRepository.createTicketComment(
+    ticketId,
+    authenticatedUserId,
+    normalizedComment,
+  );
+}
+
 export default Object.freeze({
   listTickets,
   getTicket,
@@ -364,4 +392,6 @@ export default Object.freeze({
   reopenTicket,
   deleteTicket,
   getAssignableUsers,
+    getComments,
+  addComment,
 });

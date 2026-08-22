@@ -340,6 +340,44 @@ const FIND_ASSIGNABLE_USER = `
     LIMIT 1;
 `;
 
+const FIND_TICKET_COMMENTS = `
+    SELECT
+        tc.id,
+        tc.ticket_id,
+        tc.user_id,
+        u.username,
+        u.email,
+        tc.comment,
+        tc.created_at,
+        tc.updated_at
+    FROM ticket_comments tc
+    INNER JOIN users u
+        ON u.id = tc.user_id
+    WHERE tc.ticket_id = $1::UUID
+    ORDER BY tc.created_at DESC;
+`;
+
+const CREATE_TICKET_COMMENT = `
+    INSERT INTO ticket_comments (
+        id,
+        ticket_id,
+        user_id,
+        comment
+    )
+    VALUES (
+        $1::UUID,
+        $2::UUID,
+        $3::UUID,
+        $4::TEXT
+    )
+    RETURNING
+        id,
+        ticket_id,
+        user_id,
+        comment,
+        created_at,
+        updated_at;
+`;
 async function findTickets(filters, tx = null) {
   const executor = getQueryExecutor(tx);
 
@@ -506,6 +544,37 @@ async function findAssignableUsers(tx = null) {
   return result.rows;
 }
 
+async function findTicketComments(ticketId, tx = null) {
+  const executor = getQueryExecutor(tx);
+
+  const result = await executor.query(
+    FIND_TICKET_COMMENTS,
+    [ticketId],
+  );
+
+  return result.rows;
+}
+async function createTicketComment(
+  ticketId,
+  userId,
+  comment,
+  tx = null,
+) {
+  const executor = getQueryExecutor(tx);
+
+  const result = await executor.query(
+    CREATE_TICKET_COMMENT,
+    [
+      randomUUID(),
+      ticketId,
+      userId,
+      comment,
+    ],
+  );
+
+  return result.rows[0];
+}
+
 export default Object.freeze({
   findTickets,
   findTicketById,
@@ -522,4 +591,6 @@ export default Object.freeze({
   deleteTicket,
   findAssignableUsers,
   findAssignableUser,
+    findTicketComments,
+  createTicketComment,
 });

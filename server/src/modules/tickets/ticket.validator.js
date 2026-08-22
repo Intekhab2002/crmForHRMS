@@ -116,6 +116,12 @@ const resolveTicketSchema = z
   })
   .strict();
 
+  const createCommentSchema = z
+  .object({
+    comment: nonEmptyString("Comment", 5000),
+  })
+  .strict();
+
 export default Object.freeze({
   ticketIdParamSchema,
   ticketListQuerySchema,
@@ -123,4 +129,5 @@ export default Object.freeze({
   updateTicketSchema,
   assignTicketSchema,
   resolveTicketSchema,
+  createCommentSchema,
 });

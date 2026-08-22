@@ -71,6 +71,23 @@ router.get(
 );
 
 router.get(
+    "/:ticketId/comments",
+    authenticate,
+    requirePermission(TICKET_READ),
+    validateParams(ticketValidator.ticketIdParamSchema),
+    ticketController.getComments,
+);
+
+router.post(
+    "/:ticketId/comments",
+    authenticate,
+    requirePermission(TICKET_UPDATE),
+    validateParams(ticketValidator.ticketIdParamSchema),
+    validateBody(ticketValidator.createCommentSchema),
+    ticketController.addComment,
+);
+
+router.get(
     "/:ticketId",
     authenticate,
     requirePermission(TICKET_READ),
