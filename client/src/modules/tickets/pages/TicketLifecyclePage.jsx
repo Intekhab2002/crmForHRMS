@@ -100,20 +100,20 @@ export default function TicketLifecyclePage() {
   }, [ticketId]);
 
   const loadComments = useCallback(async () => {
-  setCommentsLoading(true);
+    setCommentsLoading(true);
 
-  try {
-    const commentRecords = await ticketService.listComments(ticketId);
-    setComments(commentRecords);
-  } finally {
-    setCommentsLoading(false);
-  }
-}, [ticketId]);
+    try {
+      const commentRecords = await ticketService.listComments(ticketId);
+      setComments(commentRecords);
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [ticketId]);
 
-useEffect(() => {
-  loadTicket();
-  loadComments();
-}, [loadTicket, loadComments]);
+  useEffect(() => {
+    loadTicket();
+    loadComments();
+  }, [loadTicket, loadComments]);
   const updateFields = useMemo(
     () => pickFields(fields, ticketConfig.update.fields),
     [fields, ticketConfig.update.fields],
@@ -129,13 +129,13 @@ useEffect(() => {
     setNotice(ticketConfig.update.successMessage);
   };
 
-const handleComment = async (comment) => {
-  await ticketService.addComment(ticketId, comment);
+  const handleComment = async (comment) => {
+    await ticketService.addComment(ticketId, comment);
 
-  await loadComments();
+    await loadComments();
 
-  setNotice(ticketConfig.comments.successMessage);
-};
+    setNotice(ticketConfig.comments.successMessage);
+  };
 
   const handleAttachments = async (files) => {
     const updatedTicket = await ticketService.addAttachments(
@@ -168,7 +168,6 @@ const handleComment = async (comment) => {
             </Button>
           }
         />
-        
 
         <Alert severity="warning">
           {error || ticketConfig.labels.notFound}
@@ -193,14 +192,14 @@ const handleComment = async (comment) => {
           </Button>
         }
       />
-        <TicketStatusActions
-          ticket={ticket}
-          config={ticketConfig.actions}
-          onResolve={handleResolve}
-          onClose={handleClose}
-          onReopen={handleReopen}
-          loading={actionLoading}
-        />
+      <TicketStatusActions
+        ticket={ticket}
+        config={ticketConfig.actions}
+        onResolve={handleResolve}
+        onClose={handleClose}
+        onReopen={handleReopen}
+        loading={actionLoading}
+      />
 
       {notice ? (
         <Alert severity="success" onClose={() => setNotice("")}>
@@ -225,16 +224,11 @@ const handleComment = async (comment) => {
         onSubmit={handleUpdate}
       />
 
+      <TicketComments comments={comments} loading={commentsLoading} />
       <TicketCommentComposer
         config={ticketConfig.comments}
         onSubmit={handleComment}
       />
-
-      <TicketComments
-  comments={comments}
-  loading={commentsLoading}
-/>
-
       <TicketAttachmentUploader
         config={ticketConfig.attachments}
         attachments={ticket.attachments}
