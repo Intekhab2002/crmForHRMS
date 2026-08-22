@@ -20,8 +20,7 @@ const {
     TICKET_ASSIGN,
     TICKET_RESOLVE,
     TICKET_CLOSE,
-    TICKET_ATTACHMENT_READ,
-    TICKET_ATTACHMENT_CREATE,
+    TICKET_ATTACHMENT,
 } = RBAC_PERMISSIONS;
 
 const router = Router();
@@ -94,7 +93,7 @@ router.post(
 router.get(
     "/:ticketId/attachments",
     authenticate,
-    requirePermission(TICKET_ATTACHMENT_READ),
+    requirePermission(TICKET_ATTACHMENT),
     validateParams(ticketValidator.ticketIdParamSchema),
     ticketAttachmentController.listAttachments,
 );
@@ -102,7 +101,7 @@ router.get(
 router.post(
     "/:ticketId/attachments",
     authenticate,
-    requirePermission(TICKET_ATTACHMENT_CREATE),
+    requirePermission(TICKET_ATTACHMENT),
     validateParams(ticketValidator.ticketIdParamSchema),
     ticketAttachmentUpload.single("file"),
     ticketAttachmentController.uploadAttachment,
