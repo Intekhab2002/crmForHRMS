@@ -154,14 +154,8 @@ export default function TicketLifecyclePage() {
             </Button>
           }
         />
-        <TicketStatusActions
-          ticket={ticket}
-          config={ticketConfig.actions}
-          onResolve={handleResolve}
-          onClose={handleClose}
-          onReopen={handleReopen}
-          loading={actionLoading}
-        />
+        
+
         <Alert severity="warning">
           {error || ticketConfig.labels.notFound}
         </Alert>
@@ -185,6 +179,14 @@ export default function TicketLifecyclePage() {
           </Button>
         }
       />
+        <TicketStatusActions
+          ticket={ticket}
+          config={ticketConfig.actions}
+          onResolve={handleResolve}
+          onClose={handleClose}
+          onReopen={handleReopen}
+          loading={actionLoading}
+        />
 
       {notice ? (
         <Alert severity="success" onClose={() => setNotice("")}>

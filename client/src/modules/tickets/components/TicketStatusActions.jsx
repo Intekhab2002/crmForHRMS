@@ -17,6 +17,7 @@ const STATUS = {
   ASSIGNED: "ASSIGNED",
   RESOLVED: "RESOLVED",
   CLOSED: "CLOSED",
+  REOPENED: "REOPENED",
 };
 
 export default function TicketStatusActions({
@@ -27,6 +28,7 @@ export default function TicketStatusActions({
   onReopen,
   loading = false,
 }) {
+
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [resolutionNote, setResolutionNote] = useState("");
   const [error, setError] = useState("");
@@ -95,7 +97,7 @@ export default function TicketStatusActions({
         spacing={1.5}
         justifyContent="flex-end"
       >
-        {ticket.status === STATUS.ASSIGNED &&
+        {ticket.status === STATUS.ASSIGNED || ticket.status === STATUS.REOPENED &&
         config.resolve.enabled ? (
           <Button
             variant="contained"
