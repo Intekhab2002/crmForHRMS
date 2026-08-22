@@ -6,6 +6,9 @@ import {
     TICKET_STATUS,
 } from "./ticket.constants.js";
 
+import contactService
+    from "../contacts/contact.service.js";
+
 const STATUS_TRANSITIONS = Object.freeze({
     OPEN: new Set([
         TICKET_STATUS.ASSIGNED,
@@ -365,6 +368,60 @@ async function deleteTicket(ticketId) {
 
 async function getAssignableUsers() {
     return ticketRepository.findAssignableUsers();
+}
+
+async function createTicket(
+    data,
+    authenticatedUserId,
+) {
+    const normalized = {
+        ...data,
+
+        requesterUserId:
+            data.requesterUserId ??
+            authenticatedUserId,
+
+        subject: data.subject.trim(),
+
+        description:
+            data.description.trim(),
+
+        issueType:
+            data.issueType.trim(),
+
+        contactName:
+            data.contactName.trim(),
+
+        mobilePhone:
+            data.mobilePhone.trim(),
+    };
+
+    await validateReferences(normalized);
+
+    // transaction will wrap the following:
+    // 1. find/create contact
+    // 2. create ticket
+
+    const contact =
+        await contactService.findOrCreateContact({
+            organizationId:
+                normalized.organizationId,
+
+            name:
+                normalized.contactName,
+
+            mobile:
+                normalized.mobilePhone,
+        });
+
+    return ticketRepository.createTicket({
+        ...normalized,
+
+        contactId: contact.id,
+
+        createdByUserId:
+            authenticatedUserId,
+    });
 }
 
 export default Object.freeze({

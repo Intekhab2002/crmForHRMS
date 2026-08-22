@@ -49,6 +49,9 @@ import ticketRouter from "../modules/tickets/ticket.routes.js";
 import formConfigurationModule
     from "../modules/formConfiguration/index.js";
 
+import contactRouter
+    from "../modules/contacts/contact.routes.js";
+
 
 
 const router = Router();
@@ -96,7 +99,10 @@ router.use(
     formConfigurationModule.routes,
 );
 
-
+router.use(
+    `/${apiVersion}/contacts`,
+    contactRouter,
+);
 
 // router.use(`/${apiVersion}/sla`, slaRouter);
 

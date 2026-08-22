@@ -1,8 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import {
-    getQueryExecutor,
-} from "../../database/queryExecutor.js";
+import { getQueryExecutor } from "../../database/queryExecutor.js";
 
 const TICKET_FIELDS = `
     t.id,
@@ -20,8 +18,12 @@ const TICKET_FIELDS = `
     organization.name AS organization_name,
     t.department_id,
     department.name AS department_name,
-    t.assigned_employee_id,
-    assignee.display_name AS assignee_name,
+    t.contact_id,
+    contact.name AS contact_name,
+    contact.mobile_phone AS contact_mobile_phone,
+    t.assigned_user_id,
+    assignee.username AS assignee_username,
+    assignee.email AS assignee_email,
     t.resolution_note,
     t.assigned_at,
     t.resolved_at,
@@ -38,8 +40,10 @@ const TICKET_FROM = `
         ON organization.id = t.organization_id
     INNER JOIN departments department
         ON department.id = t.department_id
-    LEFT JOIN employees assignee
-        ON assignee.id = t.assigned_employee_id
+    LEFT JOIN contacts contact
+        ON contact.id = t.contact_id
+    LEFT JOIN users assignee
+        ON assignee.id = t.assigned_user_id
 `;
 
 const TICKET_RETURNING_FIELDS = `
@@ -275,7 +279,6 @@ const DELETE_TICKET = `
     RETURNING ${TICKET_RETURNING_FIELDS};
 `;
 
-
 const FIND_ASSIGNABLE_USERS = `
     SELECT
         u.id,
@@ -296,171 +299,168 @@ const FIND_ASSIGNABLE_USERS = `
     ORDER BY u.username ASC;
 `;
 
+const FIND_CONTACT = `
+    SELECT
+        id,
+        organization_id,
+        name,
+        mobile_phone
+    FROM contacts
+    WHERE organization_id = $1::UUID
+      AND mobile_phone = $2::VARCHAR
+    LIMIT 1;
+`;
+
 async function findTickets(filters, tx = null) {
-    const executor = getQueryExecutor(tx);
+  const executor = getQueryExecutor(tx);
 
-    const values = [
-        filters.search ?? null,
-        filters.status ?? null,
-        filters.priority ?? null,
-        filters.organizationId ?? null,
-        filters.departmentId ?? null,
-        filters.requesterUserId ?? null,
-        filters.assignedEmployeeId ?? null,
-    ];
+  const values = [
+    filters.search ?? null,
+    filters.status ?? null,
+    filters.priority ?? null,
+    filters.organizationId ?? null,
+    filters.departmentId ?? null,
+    filters.requesterUserId ?? null,
+    filters.assignedEmployeeId ?? null,
+  ];
 
-    const [rowsResult, countResult] = await Promise.all([
-        executor.query(FIND_TICKETS, [
-            ...values,
-            filters.limit,
-            filters.offset,
-        ]),
-        executor.query(COUNT_TICKETS, values),
-    ]);
+  const [rowsResult, countResult] = await Promise.all([
+    executor.query(FIND_TICKETS, [...values, filters.limit, filters.offset]),
+    executor.query(COUNT_TICKETS, values),
+  ]);
 
-    return {
-        rows: rowsResult.rows,
-        total: Number(countResult.rows[0]?.total ?? 0),
-    };
+  return {
+    rows: rowsResult.rows,
+    total: Number(countResult.rows[0]?.total ?? 0),
+  };
 }
 
 async function findTicketById(id, tx = null) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(FIND_TICKET_BY_ID, [id]);
-    return result.rows[0] ?? null;
+  const executor = getQueryExecutor(tx);
+  const result = await executor.query(FIND_TICKET_BY_ID, [id]);
+  return result.rows[0] ?? null;
 }
 
 async function findUser(id, tx = null) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(FIND_USER, [id]);
-    return result.rows[0] ?? null;
+  const executor = getQueryExecutor(tx);
+  const result = await executor.query(FIND_USER, [id]);
+  return result.rows[0] ?? null;
 }
 
 async function findOrganization(id, tx = null) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(FIND_ORGANIZATION, [id]);
-    return result.rows[0] ?? null;
+  const executor = getQueryExecutor(tx);
+  const result = await executor.query(FIND_ORGANIZATION, [id]);
+  return result.rows[0] ?? null;
 }
 
 async function findDepartment(id, tx = null) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(FIND_DEPARTMENT, [id]);
-    return result.rows[0] ?? null;
+  const executor = getQueryExecutor(tx);
+  const result = await executor.query(FIND_DEPARTMENT, [id]);
+  return result.rows[0] ?? null;
 }
 
 async function findEmployee(id, tx = null) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(FIND_EMPLOYEE, [id]);
-    return result.rows[0] ?? null;
+  const executor = getQueryExecutor(tx);
+  const result = await executor.query(FIND_EMPLOYEE, [id]);
+  return result.rows[0] ?? null;
 }
 
 async function createTicket(data, tx = null) {
-    const executor = getQueryExecutor(tx);
+  const executor = getQueryExecutor(tx);
 
-    const result = await executor.query(CREATE_TICKET, [
-        randomUUID(),
-        data.subject,
-        data.description,
-        data.issueType,
-        data.priority,
-        data.requesterUserId,
-        data.createdByUserId,
-        data.organizationId,
-        data.departmentId,
-        data.assignedEmployeeId ?? null,
-    ]);
+  const result = await executor.query(CREATE_TICKET, [
+    randomUUID(),
+    data.subject,
+    data.description,
+    data.issueType,
+    data.priority,
+    data.requesterUserId,
+    data.createdByUserId,
+    data.organizationId,
+    data.departmentId,
+    data.assignedEmployeeId ?? null,
+  ]);
 
-    return result.rows[0];
+  return result.rows[0];
 }
 
 async function updateTicket(ticketId, data, tx = null) {
-    const executor = getQueryExecutor(tx);
+  const executor = getQueryExecutor(tx);
 
-    const has = (key) =>
-        Object.prototype.hasOwnProperty.call(data, key);
+  const has = (key) => Object.prototype.hasOwnProperty.call(data, key);
 
-    const result = await executor.query(UPDATE_TICKET, [
-        ticketId,
-        data.subject ?? null,
-        data.description ?? null,
-        data.issueType ?? null,
-        data.priority ?? null,
-        data.organizationId ?? null,
-        data.departmentId ?? null,
-        has("assignedEmployeeId"),
-        data.assignedEmployeeId ?? null,
-        data.status ?? null,
-        has("resolutionNote"),
-        data.resolutionNote ?? null,
-    ]);
+  const result = await executor.query(UPDATE_TICKET, [
+    ticketId,
+    data.subject ?? null,
+    data.description ?? null,
+    data.issueType ?? null,
+    data.priority ?? null,
+    data.organizationId ?? null,
+    data.departmentId ?? null,
+    has("assignedEmployeeId"),
+    data.assignedEmployeeId ?? null,
+    data.status ?? null,
+    has("resolutionNote"),
+    data.resolutionNote ?? null,
+  ]);
 
-    return result.rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 async function assignTicket(ticketId, employeeId, tx = null) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(
-        ASSIGN_TICKET,
-        [ticketId, employeeId],
-    );
-    return result.rows[0] ?? null;
+  const executor = getQueryExecutor(tx);
+  const result = await executor.query(ASSIGN_TICKET, [ticketId, employeeId]);
+  return result.rows[0] ?? null;
 }
 
 async function resolveTicket(ticketId, resolutionNote, tx = null) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(
-        RESOLVE_TICKET,
-        [ticketId, resolutionNote],
-    );
-    return result.rows[0] ?? null;
+  const executor = getQueryExecutor(tx);
+  const result = await executor.query(RESOLVE_TICKET, [
+    ticketId,
+    resolutionNote,
+  ]);
+  return result.rows[0] ?? null;
 }
 
 async function closeTicket(ticketId, tx = null) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(CLOSE_TICKET, [ticketId]);
-    return result.rows[0] ?? null;
+  const executor = getQueryExecutor(tx);
+  const result = await executor.query(CLOSE_TICKET, [ticketId]);
+  return result.rows[0] ?? null;
 }
 
 async function reopenTicket(ticketId, tx = null) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(REOPEN_TICKET, [ticketId]);
-    return result.rows[0] ?? null;
+  const executor = getQueryExecutor(tx);
+  const result = await executor.query(REOPEN_TICKET, [ticketId]);
+  return result.rows[0] ?? null;
 }
 
 async function deleteTicket(ticketId, tx = null) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(DELETE_TICKET, [ticketId]);
-    return result.rows[0] ?? null;
+  const executor = getQueryExecutor(tx);
+  const result = await executor.query(DELETE_TICKET, [ticketId]);
+  return result.rows[0] ?? null;
 }
 
+async function findAssignableUsers(tx = null) {
+  const executor = getQueryExecutor(tx);
 
-async function findAssignableUsers(
-    transactionContext = null,
-) {
-    const executor = getExecutor(
-        transactionContext,
-    );
+  const result = await executor.query(FIND_ASSIGNABLE_USERS);
 
-    const result = await executor.query(
-        FIND_ASSIGNABLE_USERS,
-    );
-
-    return result.rows;
+  return result.rows;
 }
 
 export default Object.freeze({
-    findTickets,
-    findTicketById,
-    findUser,
-    findOrganization,
-    findDepartment,
-    findEmployee,
-    createTicket,
-    updateTicket,
-    assignTicket,
-    resolveTicket,
-    closeTicket,
-    reopenTicket,
-    deleteTicket,
-    findAssignableUsers,
+  findTickets,
+  findTicketById,
+  findUser,
+  findOrganization,
+  findDepartment,
+  findEmployee,
+  createTicket,
+  updateTicket,
+  assignTicket,
+  resolveTicket,
+  closeTicket,
+  reopenTicket,
+  deleteTicket,
+  findAssignableUsers,
 });
