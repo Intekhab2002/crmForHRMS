@@ -1,4 +1,4 @@
-import db from "../../database/db.js";
+import { getQueryExecutor } from "../../database/queryExecutor.js";
 
 const FIND_BY_TICKET = `
     SELECT
@@ -17,8 +17,8 @@ const FIND_BY_TICKET = `
     FROM ticket_attachments ta
     INNER JOIN users u
         ON u.id = ta.user_id
-    WHERE ta.ticket_id = $1
-    ORDER BY ta.created_at DESC
+    WHERE ta.ticket_id = $1::UUID
+    ORDER BY ta.created_at DESC;
 `;
 
 const FIND_BY_ID = `
@@ -38,7 +38,8 @@ const FIND_BY_ID = `
     FROM ticket_attachments ta
     INNER JOIN users u
         ON u.id = ta.user_id
-    WHERE ta.id = $1
+    WHERE ta.id = $1::UUID
+    LIMIT 1;
 `;
 
 const CREATE = `
@@ -53,14 +54,14 @@ const CREATE = `
         storage_path
     )
     VALUES (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        $8
+        $1::UUID,
+        $2::UUID,
+        $3::UUID,
+        $4::VARCHAR,
+        $5::VARCHAR,
+        $6::VARCHAR,
+        $7::BIGINT,
+        $8::TEXT
     )
     RETURNING
         id,
@@ -72,17 +73,19 @@ const CREATE = `
         file_size,
         storage_path,
         created_at,
-        updated_at
+        updated_at;
 `;
 
 const DELETE = `
     DELETE FROM ticket_attachments
-    WHERE id = $1
-    RETURNING *
+    WHERE id = $1::UUID
+    RETURNING *;
 `;
 
-async function findByTicket(ticketId) {
-    const result = await db.query(
+async function findByTicket(ticketId, tx = null) {
+    const executor = getQueryExecutor(tx);
+
+    const result = await executor.query(
         FIND_BY_TICKET,
         [ticketId],
     );
@@ -90,8 +93,10 @@ async function findByTicket(ticketId) {
     return result.rows;
 }
 
-async function findById(attachmentId) {
-    const result = await db.query(
+async function findById(attachmentId, tx = null) {
+    const executor = getQueryExecutor(tx);
+
+    const result = await executor.query(
         FIND_BY_ID,
         [attachmentId],
     );
@@ -99,17 +104,8 @@ async function findById(attachmentId) {
     return result.rows[0] ?? null;
 }
 
-async function create({
-    id,
-    ticketId,
-    userId,
-    originalName,
-    storedName,
-    mimeType,
-    fileSize,
-    storagePath,
-}) {
-    const result = await db.query(CREATE, [
+async function create(
+    {
         id,
         ticketId,
         userId,
@@ -118,13 +114,35 @@ async function create({
         mimeType,
         fileSize,
         storagePath,
-    ]);
+    },
+    tx = null,
+) {
+    const executor = getQueryExecutor(tx);
+
+    const result = await executor.query(
+        CREATE,
+        [
+            id,
+            ticketId,
+            userId,
+            originalName,
+            storedName,
+            mimeType,
+            fileSize,
+            storagePath,
+        ],
+    );
 
     return result.rows[0];
 }
 
-async function remove(attachmentId) {
-    const result = await db.query(
+async function remove(
+    attachmentId,
+    tx = null,
+) {
+    const executor = getQueryExecutor(tx);
+
+    const result = await executor.query(
         DELETE,
         [attachmentId],
     );
@@ -132,9 +150,9 @@ async function remove(attachmentId) {
     return result.rows[0] ?? null;
 }
 
-export default {
+export default Object.freeze({
     findByTicket,
     findById,
     create,
     remove,
-};
+});

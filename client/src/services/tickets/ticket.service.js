@@ -240,45 +240,7 @@ export const ticketService = {
     return clone(ticket);
   },
 
-  async addAttachments(ticketId, files, user) {
-    const tickets = getTicketsFromStorage();
-    const index = requireTicket(tickets, ticketId);
-    const ticket = tickets[index];
-    const actor = getActor(user);
-    const now = new Date().toISOString();
-    const attachments = Array.from(files).map((file) => ({
-      id: makeId("attachment"),
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      uploadedBy: actor,
-      createdAt: now,
-    }));
 
-    if (!attachments.length) {
-      return clone(ticket);
-    }
-
-    ticket.attachments = [...attachments, ...(ticket.attachments ?? [])];
-    ticket.updatedAt = now;
-    ticket.updatedBy = actor;
-    ticket.lifecycle = [
-      {
-        id: makeId("event"),
-        type: "attached",
-        actor,
-        createdAt: now,
-        summary: "Files were attached.",
-        files: attachments,
-      },
-      ...(ticket.lifecycle ?? []),
-    ];
-
-    tickets[index] = ticket;
-    saveTickets(tickets);
-
-    return clone(ticket);
-  },
 
   async lookupPublicTicket(values) {
     const reference = values.reference?.trim().toLowerCase();
