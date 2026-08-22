@@ -16,4 +16,5 @@ export const PERMISSIONS = Object.freeze({
   SLA_MANAGE: "sla:manage",
 
   DASHBOARD_VIEW: "dashboard:view",
+  TICKET_COMMENT: "tickets:comment",
 });
