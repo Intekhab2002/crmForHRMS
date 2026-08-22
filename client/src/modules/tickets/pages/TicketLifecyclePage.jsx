@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router";
 import PageHeader from "../../../components/page/PageHeader";
 import TicketAttachmentUploader from "../components/TicketAttachmentUploader";
 import TicketCommentComposer from "../components/TicketCommentComposer";
+import TicketComments from "../components/TicketComments";
 import TicketLifecycleTimeline from "../components/TicketLifecycleTimeline";
 import TicketOverview from "../components/TicketOverview";
 import TicketUpdatePanel from "../components/TicketUpdatePanel";
@@ -29,6 +30,8 @@ export default function TicketLifecyclePage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(true);
 
   const handleResolve = async (resolutionNote) => {
     setActionLoading(true);
@@ -96,8 +99,21 @@ export default function TicketLifecyclePage() {
     };
   }, [ticketId]);
 
-  useEffect(() => loadTicket(), [loadTicket]);
+  const loadComments = useCallback(async () => {
+  setCommentsLoading(true);
 
+  try {
+    const commentRecords = await ticketService.listComments(ticketId);
+    setComments(commentRecords);
+  } finally {
+    setCommentsLoading(false);
+  }
+}, [ticketId]);
+
+useEffect(() => {
+  loadTicket();
+  loadComments();
+}, [loadTicket, loadComments]);
   const updateFields = useMemo(
     () => pickFields(fields, ticketConfig.update.fields),
     [fields, ticketConfig.update.fields],
@@ -113,15 +129,13 @@ export default function TicketLifecyclePage() {
     setNotice(ticketConfig.update.successMessage);
   };
 
-  const handleComment = async (comment) => {
-    const updatedTicket = await ticketService.addComment(
-      ticketId,
-      comment,
-      user,
-    );
-    setTicket(updatedTicket);
-    setNotice(ticketConfig.comments.successMessage);
-  };
+const handleComment = async (comment) => {
+  await ticketService.addComment(ticketId, comment);
+
+  await loadComments();
+
+  setNotice(ticketConfig.comments.successMessage);
+};
 
   const handleAttachments = async (files) => {
     const updatedTicket = await ticketService.addAttachments(
@@ -215,6 +229,11 @@ export default function TicketLifecyclePage() {
         config={ticketConfig.comments}
         onSubmit={handleComment}
       />
+
+      <TicketComments
+  comments={comments}
+  loading={commentsLoading}
+/>
 
       <TicketAttachmentUploader
         config={ticketConfig.attachments}
