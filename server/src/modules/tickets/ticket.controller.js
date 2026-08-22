@@ -58,6 +58,7 @@ async function updateTicket(req, res, next) {
         const ticket = await ticketService.updateTicket(
             req.params.ticketId,
             req.body,
+            req.auth.userId,
         );
 
         return ApiResponse.updated(
@@ -75,6 +76,7 @@ async function assignTicket(req, res, next) {
         const ticket = await ticketService.assignTicket(
             req.params.ticketId,
             req.body.assignedUserId,
+            req.auth.userId,
         );
 
         return ApiResponse.updated(
@@ -92,6 +94,7 @@ async function resolveTicket(req, res, next) {
         const ticket = await ticketService.resolveTicket(
             req.params.ticketId,
             req.body.resolutionNote,
+            req.auth.userId,
         );
 
         return ApiResponse.updated(
@@ -108,6 +111,7 @@ async function closeTicket(req, res, next) {
     try {
         const ticket = await ticketService.closeTicket(
             req.params.ticketId,
+            req.auth.userId,
         );
 
         return ApiResponse.updated(
@@ -124,6 +128,7 @@ async function reopenTicket(req, res, next) {
     try {
         const ticket = await ticketService.reopenTicket(
             req.params.ticketId,
+            req.auth.userId,
         );
 
         return ApiResponse.updated(
@@ -140,6 +145,7 @@ async function deleteTicket(req, res, next) {
     try {
         const ticket = await ticketService.deleteTicket(
             req.params.ticketId,
+            req.auth.userId,
         );
 
         return ApiResponse.deleted(

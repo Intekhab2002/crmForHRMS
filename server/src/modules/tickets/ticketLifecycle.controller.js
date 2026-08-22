@@ -1,5 +1,3 @@
-import AppError from "../../helpers/AppError.js";
-
 import ticketService from "./ticket.service.js";
 import ticketLifecycleService from "./ticketLifecycle.service.js";
 

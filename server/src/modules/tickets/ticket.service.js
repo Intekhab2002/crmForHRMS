@@ -59,22 +59,7 @@ async function getTicket(ticketId) {
   return ticket;
 }
 
-await ticketLifecycleService.record(
-  {
-    ticketId: ticket.id,
-    actorUserId: authenticatedUserId,
 
-    eventType: TICKET_LIFECYCLE_EVENT_TYPE.TICKET,
-
-    eventAction: TICKET_LIFECYCLE_EVENT_ACTION.CREATED,
-
-    metadata: {
-      subject: ticket.subject,
-      status: ticket.status,
-    },
-  },
-  tx,
-);
 
 async function validateReferences(data) {
   const [requester, organization, department] = await Promise.all([
@@ -212,6 +197,23 @@ async function createTicket(data, authenticatedUserId) {
       },
       tx,
     );
+
+    await ticketLifecycleService.record(
+  {
+    ticketId: ticket.id,
+    actorUserId: authenticatedUserId,
+
+    eventType: TICKET_LIFECYCLE_EVENT_TYPE.TICKET,
+
+    eventAction: TICKET_LIFECYCLE_EVENT_ACTION.CREATED,
+
+    metadata: {
+      subject: ticket.subject,
+      status: ticket.status,
+    },
+  },
+  tx,
+);
 
     await client.query("COMMIT");
 
@@ -391,7 +393,7 @@ async function reopenTicket(ticketId, authenticatedUserId) {
 }
 
 async function deleteTicket(ticketId, authenticatedUserId) {
-  return closeTicket(ticketId);
+  return closeTicket(ticketId,authenticatedUserId);
 }
 
 async function getAssignableUsers() {
@@ -415,11 +417,25 @@ async function addComment(ticketId, comment, authenticatedUserId) {
     });
   }
 
-  return ticketRepository.createTicketComment(
+const comment =
+    await ticketRepository.createTicketComment(
+        ticketId,
+        authenticatedUserId,
+        normalizedComment,
+    );
+
+await ticketLifecycleService.record({
     ticketId,
-    authenticatedUserId,
-    normalizedComment,
-  );
+    actorUserId: authenticatedUserId,
+    eventType: TICKET_LIFECYCLE_EVENT_TYPE.COMMENT,
+    eventAction:
+        TICKET_LIFECYCLE_EVENT_ACTION.COMMENT_ADDED,
+    metadata: {
+        commentId: comment.id,
+    },
+});
+
+return comment;
 }
 
 export default Object.freeze({
