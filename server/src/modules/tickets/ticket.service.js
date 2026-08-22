@@ -363,6 +363,10 @@ async function deleteTicket(ticketId) {
     return closeTicket(ticketId);
 }
 
+async function getAssignableUsers() {
+    return ticketRepository.findAssignableUsers();
+}
+
 export default Object.freeze({
     listTickets,
     getTicket,
@@ -373,4 +377,5 @@ export default Object.freeze({
     closeTicket,
     reopenTicket,
     deleteTicket,
+    getAssignableUsers,
 });

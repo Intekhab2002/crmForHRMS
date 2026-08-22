@@ -151,6 +151,20 @@ async function deleteTicket(req, res, next) {
         return next(error);
     }
 }
+async function getAssignableUsers(req, res, next) {
+    try {
+        const users =
+            await ticketService.getAssignableUsers();
+
+        return ApiResponse.success(
+            res,
+            users,
+            TICKET_MESSAGES.ASSIGNABLE_USERS_SUCCESS,
+        );
+    } catch (error) {
+        return next(error);
+    }
+}
 
 export default Object.freeze({
     getTickets,
@@ -162,4 +176,5 @@ export default Object.freeze({
     closeTicket,
     reopenTicket,
     deleteTicket,
+    getAssignableUsers,
 });

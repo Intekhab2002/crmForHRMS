@@ -275,6 +275,27 @@ const DELETE_TICKET = `
     RETURNING ${TICKET_RETURNING_FIELDS};
 `;
 
+
+const FIND_ASSIGNABLE_USERS = `
+    SELECT
+        u.id,
+        u.username,
+        u.email,
+        u.status
+    FROM users u
+    WHERE u.status = 'active'
+      AND NOT EXISTS (
+          SELECT 1
+          FROM user_roles ur
+          INNER JOIN roles r
+              ON r.id = ur.role_id
+          WHERE ur.user_id = u.id
+            AND LOWER(r.code) = 'developer'
+            AND r.is_active = TRUE
+      )
+    ORDER BY u.username ASC;
+`;
+
 async function findTickets(filters, tx = null) {
     const executor = getQueryExecutor(tx);
 
@@ -412,6 +433,21 @@ async function deleteTicket(ticketId, tx = null) {
     return result.rows[0] ?? null;
 }
 
+
+async function findAssignableUsers(
+    transactionContext = null,
+) {
+    const executor = getExecutor(
+        transactionContext,
+    );
+
+    const result = await executor.query(
+        FIND_ASSIGNABLE_USERS,
+    );
+
+    return result.rows;
+}
+
 export default Object.freeze({
     findTickets,
     findTicketById,
@@ -426,4 +462,5 @@ export default Object.freeze({
     closeTicket,
     reopenTicket,
     deleteTicket,
+    findAssignableUsers,
 });

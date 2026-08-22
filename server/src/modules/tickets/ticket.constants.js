@@ -50,6 +50,8 @@ export const TICKET_MESSAGES = Object.freeze({
     CLOSE_SUCCESS: "Ticket closed successfully.",
     REOPEN_SUCCESS: "Ticket reopened successfully.",
     DELETE_SUCCESS: "Ticket deleted successfully.",
+    ASSIGNABLE_USERS_SUCCESS:
+    "Assignable users retrieved successfully.",
 });
 
 export default Object.freeze({
