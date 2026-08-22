@@ -4,6 +4,7 @@ import ticketRepository from "./ticket.repository.js";
 import { TICKET_ERROR_CODES, TICKET_STATUS } from "./ticket.constants.js";
 
 import contactService from "../contacts/contact.service.js";
+import database from "../../database/postgres.js";
 
 const STATUS_TRANSITIONS = Object.freeze({
   OPEN: new Set([
@@ -143,7 +144,8 @@ async function createTicket(data, authenticatedUserId) {
   const normalized = {
     ...data,
 
-    requesterUserId: data.requesterUserId ?? authenticatedUserId,
+    requesterUserId:
+      data.requesterUserId ?? authenticatedUserId,
 
     subject: data.subject.trim(),
 
@@ -158,11 +160,57 @@ async function createTicket(data, authenticatedUserId) {
 
   await validateReferences(normalized);
 
-  return ticketRepository.createTicket({
-    ...normalized,
+  const client = await database.getClient();
 
-    createdByUserId: authenticatedUserId,
-  });
+  const tx = {
+    client,
+  };
+
+  try {
+    await client.query("BEGIN");
+
+    const contact =
+      await contactService.findOrCreateContact(
+        {
+          organizationId:
+            normalized.organizationId,
+
+          name:
+            normalized.contactName,
+
+          mobile:
+            normalized.mobilePhone,
+        },
+        tx,
+      );
+
+    const ticket =
+      await ticketRepository.createTicket(
+        {
+          ...normalized,
+
+          contactId: contact.id,
+
+          createdByUserId:
+            authenticatedUserId,
+        },
+        tx,
+      );
+
+    await client.query("COMMIT");
+
+    return ticket;
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      error.rollbackError = rollbackError;
+    }
+
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function updateTicket(ticketId, data) {
@@ -174,12 +222,12 @@ async function updateTicket(ticketId, data) {
     requesterUserId: current.requester_user_id,
     organizationId: data.organizationId ?? current.organization_id,
     departmentId: data.departmentId ?? current.department_id,
-    assignedEmployeeId: Object.prototype.hasOwnProperty.call(
-      data,
-      "assignedEmployeeId",
+    assignedUserId: Object.prototype.hasOwnProperty.call(
+    data,
+    "assignedUserId",
     )
-      ? data.assignedEmployeeId
-      : current.assigned_employee_id,
+    ? data.assignedUserId
+    : current.assigned_user_id,
   };
 
   await validateReferences(effective);
@@ -204,7 +252,7 @@ async function updateTicket(ticketId, data) {
 
     if (
       data.status === TICKET_STATUS.ASSIGNED &&
-      !effective.assignedEmployeeId
+      !effective.assignedUserId
     ) {
       throw AppError.conflict(
         "An assignee is required before assigning a ticket.",
@@ -232,7 +280,7 @@ async function updateTicket(ticketId, data) {
   });
 }
 
-async function assignTicket(ticketId, employeeId) {
+async function assignTicket(ticketId, userId) {
   const ticket = await getTicket(ticketId);
 
   if (
@@ -248,10 +296,10 @@ async function assignTicket(ticketId, employeeId) {
     requesterUserId: ticket.requester_user_id,
     organizationId: ticket.organization_id,
     departmentId: ticket.department_id,
-    assignedEmployeeId: employeeId,
+    assignedUserId: userId,
   });
 
-  return ticketRepository.assignTicket(ticketId, employeeId);
+  return ticketRepository.assignTicket(ticketId, userId);
 }
 
 async function resolveTicket(ticketId, resolutionNote) {

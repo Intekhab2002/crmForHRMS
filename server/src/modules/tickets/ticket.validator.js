@@ -95,7 +95,7 @@ const updateTicketSchema = z
     priority: prioritySchema.optional(),
     organizationId: uuidSchema.optional(),
     departmentId: uuidSchema.optional(),
-    assignedEmployeeId: uuidSchema.nullable().optional(),
+    assignedUserId: uuidSchema.nullable().optional(),
     status: statusSchema.optional(),
     resolutionNote: z.string().trim().min(1).nullable().optional(),
   })

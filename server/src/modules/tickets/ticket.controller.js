@@ -74,7 +74,7 @@ async function assignTicket(req, res, next) {
     try {
         const ticket = await ticketService.assignTicket(
             req.params.ticketId,
-            req.body.assignedEmployeeId,
+            req.body.assignedUserId,
         );
 
         return ApiResponse.updated(

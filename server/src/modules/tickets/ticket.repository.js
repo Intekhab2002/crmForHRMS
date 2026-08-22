@@ -195,10 +195,10 @@ const UPDATE_TICKET = `
         priority = COALESCE($5::VARCHAR, priority),
         organization_id = COALESCE($6::UUID, organization_id),
         department_id = COALESCE($7::UUID, department_id),
-        assigned_employee_id =
+        assigned_user_id =
             CASE
                 WHEN $8::BOOLEAN THEN $9::UUID
-                ELSE assigned_employee_id
+                ELSE assigned_user_id
             END,
         status = COALESCE($10::VARCHAR, status),
         resolution_note =
@@ -237,7 +237,7 @@ const UPDATE_TICKET = `
 const ASSIGN_TICKET = `
     UPDATE tickets
     SET
-        assigned_employee_id = $2::UUID,
+        assigned_user_id = $2::UUID,
         assigned_at = CURRENT_TIMESTAMP,
         status = CASE
             WHEN status IN ('OPEN', 'REOPENED') THEN 'ASSIGNED'
@@ -447,8 +447,8 @@ async function updateTicket(ticketId, data, tx = null) {
     data.priority ?? null,
     data.organizationId ?? null,
     data.departmentId ?? null,
-    has("assignedEmployeeId"),
-    data.assignedEmployeeId ?? null,
+    has("assignedUserId"),
+    data.assignedUserId ?? null,
     data.status ?? null,
     has("resolutionNote"),
     data.resolutionNote ?? null,
@@ -457,9 +457,17 @@ async function updateTicket(ticketId, data, tx = null) {
   return result.rows[0] ?? null;
 }
 
-async function assignTicket(ticketId, employeeId, tx = null) {
+async function assignTicket(ticketId, userId, tx = null) {
   const executor = getQueryExecutor(tx);
-  const result = await executor.query(ASSIGN_TICKET, [ticketId, employeeId]);
+
+  const result = await executor.query(
+    ASSIGN_TICKET,
+    [
+      ticketId,
+      userId,
+    ],
+  );
+
   return result.rows[0] ?? null;
 }
 
