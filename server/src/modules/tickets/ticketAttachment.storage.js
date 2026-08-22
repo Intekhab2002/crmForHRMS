@@ -2,7 +2,6 @@ import fs from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 
-
 const DEFAULT_STORAGE_DIR = path.resolve(
     process.env.TICKET_ATTACHMENT_STORAGE_PATH ||
         "./storage/ticket-attachments",
@@ -51,10 +50,17 @@ export async function saveTicketAttachment(file) {
     await ensureTicketAttachmentStorage();
 
     const storedName = createStoredFilename(file.originalname);
+
     const absolutePath =
         getTicketAttachmentStoragePath(storedName);
 
-    await fs.writeFile(absolutePath, file.buffer);
+    await fs.writeFile(
+        absolutePath,
+        file.buffer,
+        {
+            flag: "wx",
+        },
+    );
 
     return {
         storedName,
@@ -66,6 +72,59 @@ export async function saveTicketAttachment(file) {
     };
 }
 
+function resolveStoredAttachmentPath(storagePath) {
+    if (!storagePath) {
+        throw new Error(
+            "Attachment storage path is missing.",
+        );
+    }
+
+    const storageRoot = path.resolve(
+        DEFAULT_STORAGE_DIR,
+    );
+
+    const absolutePath = path.resolve(
+        process.cwd(),
+        storagePath,
+    );
+
+    const relativePath = path.relative(
+        storageRoot,
+        absolutePath,
+    );
+
+    if (
+        relativePath.startsWith("..") ||
+        path.isAbsolute(relativePath)
+    ) {
+        throw new Error(
+            "Attachment path is outside the configured storage directory.",
+        );
+    }
+
+    return absolutePath;
+}
+
+export async function getTicketAttachmentFile(
+    storagePath,
+) {
+    const absolutePath =
+        resolveStoredAttachmentPath(storagePath);
+
+    const stat = await fs.stat(absolutePath);
+
+    if (!stat.isFile()) {
+        throw new Error(
+            "Attachment storage object is not a file.",
+        );
+    }
+
+    return {
+        absolutePath,
+        size: stat.size,
+    };
+}
+
 export async function deleteTicketAttachmentFile(
     storagePath,
 ) {
@@ -73,10 +132,8 @@ export async function deleteTicketAttachmentFile(
         return;
     }
 
-    const absolutePath = path.resolve(
-        process.cwd(),
-        storagePath,
-    );
+    const absolutePath =
+        resolveStoredAttachmentPath(storagePath);
 
     try {
         await fs.unlink(absolutePath);

@@ -29,6 +29,12 @@ const ticketIdParamSchema = z
   })
   .strict();
 
+  const ticketAttachmentParamSchema =
+    z.object({
+        ticketId: z.string().uuid(),
+        attachmentId: z.string().uuid(),
+    });
+
 const ticketListQuerySchema = z
   .object({
     page: positiveIntegerQuery.optional().default("1"),
@@ -130,4 +136,5 @@ export default Object.freeze({
   assignTicketSchema,
   resolveTicketSchema,
   createCommentSchema,
+  ticketAttachmentParamSchema,
 });

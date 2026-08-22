@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import ticketAttachmentRepository from "./ticketAttachment.repository.js";
 import {
     saveTicketAttachment,
+     getTicketAttachmentFile,
     deleteTicketAttachmentFile,
 } from "./ticketAttachment.storage.js";
 
@@ -66,6 +67,29 @@ async function getAttachment(attachmentId) {
     );
 }
 
+async function getAttachmentFile(
+    attachmentId,
+) {
+    const attachment =
+        await ticketAttachmentRepository.findById(
+            attachmentId,
+        );
+
+    if (!attachment) {
+        return null;
+    }
+
+    const file =
+        await getTicketAttachmentFile(
+            attachment.storage_path,
+        );
+
+    return {
+        attachment,
+        file,
+    };
+}
+
 async function deleteAttachment(attachmentId) {
     const attachment =
         await ticketAttachmentRepository.findById(
@@ -93,6 +117,7 @@ async function deleteAttachment(attachmentId) {
 export default {
     listAttachments,
     createAttachment,
+    getAttachmentFile,
     getAttachment,
     deleteAttachment,
 };
