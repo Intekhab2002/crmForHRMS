@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 
+
 const DEFAULT_STORAGE_DIR = path.resolve(
     process.env.TICKET_ATTACHMENT_STORAGE_PATH ||
         "./storage/ticket-attachments",

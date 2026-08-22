@@ -6,6 +6,8 @@ import {
     deleteTicketAttachmentFile,
 } from "./ticketAttachment.storage.js";
 
+import AppError from "../../helpers/AppError.js";
+
 async function listAttachments(ticketId) {
     return ticketAttachmentRepository.findByTicket(
         ticketId,
@@ -17,9 +19,11 @@ async function createAttachment({
     userId,
     file,
 }) {
-    if (!file) {
-        throw new Error("Attachment file is required.");
-    }
+if (!file) {
+    throw AppError.validation(
+        "Attachment file is required.",
+    );
+}
 
     const id = randomUUID();
 
