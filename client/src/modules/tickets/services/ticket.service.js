@@ -9,6 +9,11 @@ import {
   setStoredValue,
 } from "../../../utils/storage";
 
+import apiClient from "../../../services/api/apiClient";
+import { API_CONFIG } from "../../../config/api.config";
+
+import { mapTicketsFromApi, mapTicketFromApi } from "../utils/ticketMappers";
+
 const { storage, ticketNumber, mock } = TICKET_MODULE_CONFIG;
 
 function clone(value) {
@@ -116,16 +121,27 @@ export const ticketService = {
     return clone(getFieldsForContext(context));
   },
 
-  async listTickets() {
-    return clone(getTicketsFromStorage());
-  },
+async listTickets(params = {}) {
+  const response = await apiClient.get(API_CONFIG.endpoints.tickets, {
+    params,
+  });
 
-  async getTicket(ticketId) {
-    const tickets = getTicketsFromStorage();
-    const ticket = tickets.find((item) => item.id === ticketId);
+   return mapTicketsFromApi(response.data?.data);
+},
 
-    return ticket ? clone(ticket) : null;
-  },
+async getTicket(ticketId) {
+  try {
+    const response = await apiClient.get(`${API_CONFIG.endpoints.tickets}/${ticketId}`);
+
+    return mapTicketFromApi(response.data?.data);
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
+},
 
   async createTicket(values, user) {
     const tickets = getTicketsFromStorage();

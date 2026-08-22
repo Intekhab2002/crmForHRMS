@@ -1,4 +1,4 @@
-import  { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Button, Stack } from "@mui/material";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import { Link, useNavigate } from "react-router";
@@ -20,17 +20,29 @@ export default function TicketsListPage() {
     let active = true;
 
     Promise.all([
-      ticketService.listTickets(),
+      ticketService.listTickets({
+        page: 1,
+        limit: ticket.list.defaultPageSize,
+      }),
       ticketService.getFields("detail"),
     ])
-      .then(([tickets, schema]) => {
+      .then(([ticketResponse, schema]) => {
         if (!active) return;
-        setRows(tickets);
+
+        setRows(ticketResponse.data ?? []);
         setFields(schema);
       })
-      .catch((requestError) => {
-        if (active) setError(requestError.message);
-      })
+     .catch((requestError) => {
+  if (!active) {
+    return;
+  }
+
+  setError(
+    requestError.response?.data?.message ??
+      requestError.message ??
+      "Unable to load tickets.",
+  );
+})
       .finally(() => {
         if (active) setLoading(false);
       });
