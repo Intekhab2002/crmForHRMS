@@ -38,6 +38,8 @@ export const TICKET_ERROR_CODES = Object.freeze({
         "TICKET_ASSIGNEE_REQUIRED",
     RESOLUTION_REQUIRED:
         "TICKET_RESOLUTION_REQUIRED",
+        ASSIGNED_USER_NOT_FOUND:
+    "ASSIGNED_USER_NOT_FOUND",
 });
 
 export const TICKET_MESSAGES = Object.freeze({

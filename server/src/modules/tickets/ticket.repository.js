@@ -58,7 +58,8 @@ const TICKET_RETURNING_FIELDS = `
     created_by_user_id,
     organization_id,
     department_id,
-    assigned_employee_id,
+    contact_id,
+    assigned_user_id,
     resolution_note,
     assigned_at,
     resolved_at,
@@ -80,7 +81,7 @@ const FIND_TICKETS = `
         AND ($4::UUID IS NULL OR t.organization_id = $4::UUID)
         AND ($5::UUID IS NULL OR t.department_id = $5::UUID)
         AND ($6::UUID IS NULL OR t.requester_user_id = $6::UUID)
-        AND ($7::UUID IS NULL OR t.assigned_employee_id = $7::UUID)
+AND ($7::UUID IS NULL OR t.assigned_user_id = $7::UUID)
     ORDER BY t.created_at DESC
     LIMIT $8::INTEGER
     OFFSET $9::INTEGER;
@@ -98,8 +99,7 @@ const COUNT_TICKETS = `
         AND ($4::UUID IS NULL OR t.organization_id = $4::UUID)
         AND ($5::UUID IS NULL OR t.department_id = $5::UUID)
         AND ($6::UUID IS NULL OR t.requester_user_id = $6::UUID)
-        AND ($7::UUID IS NULL OR t.assigned_employee_id = $7::UUID);
-`;
+AND ($7::UUID IS NULL OR t.assigned_user_id = $7::UUID)`;
 
 const FIND_TICKET_BY_ID = `
     SELECT
@@ -150,19 +150,25 @@ const CREATE_TICKET = `
         created_by_user_id,
         organization_id,
         department_id,
-        assigned_employee_id,
+        contact_id,
+        assigned_user_id,
         assigned_at
     )
     VALUES (
         $1::UUID,
         'TKT-' || TO_CHAR(CURRENT_DATE, 'YYYY') || '-' ||
-            LPAD(NEXTVAL('ticket_number_seq')::TEXT, 6, '0'),
+            LPAD(
+                NEXTVAL('ticket_number_seq')::TEXT,
+                6,
+                '0'
+            ),
         $2::VARCHAR,
         $3::TEXT,
         $4::VARCHAR,
         $5::VARCHAR,
         CASE
-            WHEN $10::UUID IS NOT NULL THEN 'ASSIGNED'
+            WHEN $11::UUID IS NOT NULL
+                THEN 'ASSIGNED'
             ELSE 'OPEN'
         END,
         $6::UUID,
@@ -170,8 +176,10 @@ const CREATE_TICKET = `
         $8::UUID,
         $9::UUID,
         $10::UUID,
+        $11::UUID,
         CASE
-            WHEN $10::UUID IS NOT NULL THEN CURRENT_TIMESTAMP
+            WHEN $11::UUID IS NOT NULL
+                THEN CURRENT_TIMESTAMP
             ELSE NULL
         END
     )
@@ -311,6 +319,27 @@ const FIND_CONTACT = `
     LIMIT 1;
 `;
 
+const FIND_ASSIGNABLE_USER = `
+    SELECT
+        u.id,
+        u.username,
+        u.email,
+        u.status
+    FROM users u
+    WHERE u.id = $1::UUID
+      AND u.status = 'active'
+      AND NOT EXISTS (
+          SELECT 1
+          FROM user_roles ur
+          INNER JOIN roles r
+              ON r.id = ur.role_id
+          WHERE ur.user_id = u.id
+            AND LOWER(r.code) = 'developer'
+            AND r.is_active = TRUE
+      )
+    LIMIT 1;
+`;
+
 async function findTickets(filters, tx = null) {
   const executor = getQueryExecutor(tx);
 
@@ -321,7 +350,7 @@ async function findTickets(filters, tx = null) {
     filters.organizationId ?? null,
     filters.departmentId ?? null,
     filters.requesterUserId ?? null,
-    filters.assignedEmployeeId ?? null,
+    filters.assignedUserId ?? null,
   ];
 
   const [rowsResult, countResult] = await Promise.all([
@@ -365,23 +394,44 @@ async function findEmployee(id, tx = null) {
   return result.rows[0] ?? null;
 }
 
-async function createTicket(data, tx = null) {
-  const executor = getQueryExecutor(tx);
+async function findAssignableUser(
+    id,
+    tx = null,
+) {
+    const executor = getQueryExecutor(tx);
 
-  const result = await executor.query(CREATE_TICKET, [
-    randomUUID(),
-    data.subject,
-    data.description,
-    data.issueType,
-    data.priority,
-    data.requesterUserId,
-    data.createdByUserId,
-    data.organizationId,
-    data.departmentId,
-    data.assignedEmployeeId ?? null,
-  ]);
+    const result = await executor.query(
+        FIND_ASSIGNABLE_USER,
+        [id],
+    );
 
-  return result.rows[0];
+    return result.rows[0] ?? null;
+}
+
+async function createTicket(
+    data,
+    tx = null,
+) {
+    const executor = getQueryExecutor(tx);
+
+    const result = await executor.query(
+        CREATE_TICKET,
+        [
+            randomUUID(),
+            data.subject,
+            data.description,
+            data.issueType,
+            data.priority,
+            data.requesterUserId,
+            data.createdByUserId,
+            data.organizationId,
+            data.departmentId,
+            data.contactId,
+            data.assignedUserId ?? null,
+        ],
+    );
+
+    return result.rows[0];
 }
 
 async function updateTicket(ticketId, data, tx = null) {
@@ -463,4 +513,5 @@ export default Object.freeze({
   reopenTicket,
   deleteTicket,
   findAssignableUsers,
+  findAssignableUser,
 });

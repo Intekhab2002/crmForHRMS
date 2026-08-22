@@ -40,8 +40,6 @@ const ticketListQuerySchema = z
     departmentId: uuidSchema.optional(),
     requesterUserId: uuidSchema.optional(),
     assignedUserId: uuidSchema.optional(),
-    contactName: nonEmptyString("Contact name", 255),
-    mobilePhone: nonEmptyString("Mobile number", 30),
   })
   .strict()
   .superRefine((value, context) => {
@@ -57,13 +55,35 @@ const ticketListQuerySchema = z
 const createTicketSchema = z
   .object({
     subject: nonEmptyString("Subject", 255),
-    description: z.string().trim().min(1, "Description is required."),
+
+    description: z
+      .string()
+      .trim()
+      .min(1, "Description is required."),
+
     issueType: nonEmptyString("Issue type", 100),
-    priority: prioritySchema.optional().default(TICKET_PRIORITY.MEDIUM),
+
+    priority: prioritySchema
+      .optional()
+      .default(TICKET_PRIORITY.MEDIUM),
+
     requesterUserId: uuidSchema.optional(),
+
     organizationId: uuidSchema,
+
     departmentId: uuidSchema,
-    assignedEmployeeId: uuidSchema.optional(),
+
+    assignedUserId: uuidSchema.optional(),
+
+    contactName: nonEmptyString(
+      "Contact name",
+      255,
+    ),
+
+    mobilePhone: nonEmptyString(
+      "Mobile number",
+      30,
+    ),
   })
   .strict();
 
