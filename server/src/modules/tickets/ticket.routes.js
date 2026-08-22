@@ -18,7 +18,6 @@ const {
     TICKET_READ,
     TICKET_CREATE,
     TICKET_UPDATE,
-    TICKET_DELETE,
     TICKET_ASSIGN,
     TICKET_RESOLVE,
     TICKET_CLOSE,
@@ -206,12 +205,6 @@ router.patch(
     ticketController.reopenTicket,
 );
 
-router.delete(
-    "/:ticketId",
-    authenticate,
-    requirePermission(TICKET_DELETE),
-    validateParams(ticketValidator.ticketIdParamSchema),
-    ticketController.deleteTicket,
-);
+
 
 export default router;

@@ -59,8 +59,6 @@ async function getTicket(ticketId) {
   return ticket;
 }
 
-
-
 async function validateReferences(data) {
   const [requester, organization, department] = await Promise.all([
     ticketRepository.findUser(data.requesterUserId),
@@ -199,21 +197,21 @@ async function createTicket(data, authenticatedUserId) {
     );
 
     await ticketLifecycleService.record(
-  {
-    ticketId: ticket.id,
-    actorUserId: authenticatedUserId,
+      {
+        ticketId: ticket.id,
+        actorUserId: authenticatedUserId,
 
-    eventType: TICKET_LIFECYCLE_EVENT_TYPE.TICKET,
+        eventType: TICKET_LIFECYCLE_EVENT_TYPE.TICKET,
 
-    eventAction: TICKET_LIFECYCLE_EVENT_ACTION.CREATED,
+        eventAction: TICKET_LIFECYCLE_EVENT_ACTION.CREATED,
 
-    metadata: {
-      subject: ticket.subject,
-      status: ticket.status,
-    },
-  },
-  tx,
-);
+        metadata: {
+          subject: ticket.subject,
+          status: ticket.status,
+        },
+      },
+      tx,
+    );
 
     await client.query("COMMIT");
 
@@ -238,26 +236,20 @@ async function updateTicket(ticketId, data, authenticatedUserId) {
     ...current,
     ...data,
     requesterUserId: current.requester_user_id,
-    organizationId:
-      data.organizationId ?? current.organization_id,
-    departmentId:
-      data.departmentId ?? current.department_id,
-    assignedUserId:
-      Object.prototype.hasOwnProperty.call(data, "assignedUserId")
-        ? data.assignedUserId
-        : current.assigned_user_id,
+    organizationId: data.organizationId ?? current.organization_id,
+    departmentId: data.departmentId ?? current.department_id,
+    assignedUserId: Object.prototype.hasOwnProperty.call(data, "assignedUserId")
+      ? data.assignedUserId
+      : current.assigned_user_id,
   };
 
   await validateReferences(effective);
 
   if (data.status) {
     if (data.status === current.status) {
-      throw AppError.conflict(
-        "Ticket is already in the requested status.",
-        {
-          code: TICKET_ERROR_CODES.INVALID_STATUS_TRANSITION,
-        },
-      );
+      throw AppError.conflict("Ticket is already in the requested status.", {
+        code: TICKET_ERROR_CODES.INVALID_STATUS_TRANSITION,
+      });
     }
 
     const allowed = STATUS_TRANSITIONS[current.status];
@@ -271,10 +263,7 @@ async function updateTicket(ticketId, data, authenticatedUserId) {
       );
     }
 
-    if (
-      data.status === TICKET_STATUS.ASSIGNED &&
-      !effective.assignedUserId
-    ) {
+    if (data.status === TICKET_STATUS.ASSIGNED && !effective.assignedUserId) {
       throw AppError.conflict(
         "An assignee is required before assigning a ticket.",
         {
@@ -297,11 +286,10 @@ async function updateTicket(ticketId, data, authenticatedUserId) {
     }
   }
 
-  const fieldChanges =
-    ticketLifecycleService.collectFieldChanges(
-      current,
-      data,
-    );
+  const fieldChanges = ticketLifecycleService.collectFieldChanges(
+    current,
+    data,
+  );
 
   const client = await database.getClient();
 
@@ -312,17 +300,16 @@ async function updateTicket(ticketId, data, authenticatedUserId) {
   try {
     await client.query("BEGIN");
 
-    const updatedTicket =
-      await ticketRepository.updateTicket(
-        ticketId,
-        {
-          ...data,
-          subject: data.subject?.trim(),
-          description: data.description?.trim(),
-          issueType: data.issueType?.trim(),
-        },
-        tx,
-      );
+    const updatedTicket = await ticketRepository.updateTicket(
+      ticketId,
+      {
+        ...data,
+        subject: data.subject?.trim(),
+        description: data.description?.trim(),
+        issueType: data.issueType?.trim(),
+      },
+      tx,
+    );
 
     for (const change of fieldChanges) {
       if (change.fieldName === "status") {
@@ -333,10 +320,8 @@ async function updateTicket(ticketId, data, authenticatedUserId) {
         {
           ticketId,
           actorUserId: authenticatedUserId,
-          eventType:
-            TICKET_LIFECYCLE_EVENT_TYPE.FIELD,
-          eventAction:
-            TICKET_LIFECYCLE_EVENT_ACTION.UPDATED,
+          eventType: TICKET_LIFECYCLE_EVENT_TYPE.FIELD,
+          eventAction: TICKET_LIFECYCLE_EVENT_ACTION.UPDATED,
           fieldName: change.fieldName,
           oldValue: change.oldValue,
           newValue: change.newValue,
@@ -345,18 +330,13 @@ async function updateTicket(ticketId, data, authenticatedUserId) {
       );
     }
 
-    if (
-      data.status &&
-      data.status !== current.status
-    ) {
+    if (data.status && data.status !== current.status) {
       await ticketLifecycleService.record(
         {
           ticketId,
           actorUserId: authenticatedUserId,
-          eventType:
-            TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
-          eventAction:
-            TICKET_LIFECYCLE_EVENT_ACTION.STATUS_CHANGED,
+          eventType: TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
+          eventAction: TICKET_LIFECYCLE_EVENT_ACTION.STATUS_CHANGED,
           fieldName: "status",
           oldValue: current.status,
           newValue: data.status,
@@ -381,24 +361,16 @@ async function updateTicket(ticketId, data, authenticatedUserId) {
   }
 }
 
-async function assignTicket(
-  ticketId,
-  userId,
-  authenticatedUserId,
-) {
+async function assignTicket(ticketId, userId, authenticatedUserId) {
   const ticket = await getTicket(ticketId);
 
   if (
     ticket.status === TICKET_STATUS.CLOSED ||
     ticket.status === TICKET_STATUS.RESOLVED
   ) {
-    throw AppError.conflict(
-      "Resolved or closed tickets cannot be assigned.",
-      {
-        code:
-          TICKET_ERROR_CODES.INVALID_STATUS_TRANSITION,
-      },
-    );
+    throw AppError.conflict("Resolved or closed tickets cannot be assigned.", {
+      code: TICKET_ERROR_CODES.INVALID_STATUS_TRANSITION,
+    });
   }
 
   await validateReferences({
@@ -417,30 +389,22 @@ async function assignTicket(
   try {
     await client.query("BEGIN");
 
-    const updatedTicket =
-      await ticketRepository.assignTicket(
-        ticketId,
-        userId,
-        tx,
-      );
+    const updatedTicket = await ticketRepository.assignTicket(
+      ticketId,
+      userId,
+      tx,
+    );
 
-    const previousAssignee =
-      ticket.assigned_user_id ?? null;
+    const previousAssignee = ticket.assigned_user_id ?? null;
 
     let eventAction;
 
     if (!previousAssignee && userId) {
-      eventAction =
-        TICKET_LIFECYCLE_EVENT_ACTION.ASSIGNED;
-    } else if (
-      previousAssignee &&
-      previousAssignee !== userId
-    ) {
-      eventAction =
-        TICKET_LIFECYCLE_EVENT_ACTION.ASSIGNMENT_CHANGED;
+      eventAction = TICKET_LIFECYCLE_EVENT_ACTION.ASSIGNED;
+    } else if (previousAssignee && previousAssignee !== userId) {
+      eventAction = TICKET_LIFECYCLE_EVENT_ACTION.ASSIGNMENT_CHANGED;
     } else {
-      eventAction =
-        TICKET_LIFECYCLE_EVENT_ACTION.ASSIGNED;
+      eventAction = TICKET_LIFECYCLE_EVENT_ACTION.ASSIGNED;
     }
 
     await ticketLifecycleService.record(
@@ -448,8 +412,7 @@ async function assignTicket(
         ticketId,
         actorUserId: authenticatedUserId,
 
-        eventType:
-          TICKET_LIFECYCLE_EVENT_TYPE.ASSIGNMENT,
+        eventType: TICKET_LIFECYCLE_EVENT_TYPE.ASSIGNMENT,
 
         eventAction,
 
@@ -478,28 +441,19 @@ async function assignTicket(
   }
 }
 
-async function resolveTicket(
-  ticketId,
-  resolutionNote,
-  authenticatedUserId,
-) {
+async function resolveTicket(ticketId, resolutionNote, authenticatedUserId) {
   const ticket = await getTicket(ticketId);
 
   if (
     ticket.status === TICKET_STATUS.CLOSED ||
     ticket.status === TICKET_STATUS.RESOLVED
   ) {
-    throw AppError.conflict(
-      "Ticket is already resolved or closed.",
-      {
-        code:
-          TICKET_ERROR_CODES.INVALID_STATUS_TRANSITION,
-      },
-    );
+    throw AppError.conflict("Ticket is already resolved or closed.", {
+      code: TICKET_ERROR_CODES.INVALID_STATUS_TRANSITION,
+    });
   }
 
-  const normalizedResolutionNote =
-    resolutionNote.trim();
+  const normalizedResolutionNote = resolutionNote.trim();
 
   const client = await database.getClient();
 
@@ -510,23 +464,20 @@ async function resolveTicket(
   try {
     await client.query("BEGIN");
 
-    const updatedTicket =
-      await ticketRepository.resolveTicket(
-        ticketId,
-        normalizedResolutionNote,
-        tx,
-      );
+    const updatedTicket = await ticketRepository.resolveTicket(
+      ticketId,
+      normalizedResolutionNote,
+      tx,
+    );
 
     await ticketLifecycleService.record(
       {
         ticketId,
         actorUserId: authenticatedUserId,
 
-        eventType:
-          TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
+        eventType: TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
 
-        eventAction:
-          TICKET_LIFECYCLE_EVENT_ACTION.RESOLVED,
+        eventAction: TICKET_LIFECYCLE_EVENT_ACTION.RESOLVED,
 
         fieldName: "status",
 
@@ -535,8 +486,7 @@ async function resolveTicket(
         newValue: TICKET_STATUS.RESOLVED,
 
         metadata: {
-          resolutionNote:
-            normalizedResolutionNote,
+          resolutionNote: normalizedResolutionNote,
         },
       },
       tx,
@@ -556,22 +506,15 @@ async function resolveTicket(
   } finally {
     client.release();
   }
-} 
+}
 
-async function closeTicket(
-  ticketId,
-  authenticatedUserId,
-) {
+async function closeTicket(ticketId, authenticatedUserId) {
   const ticket = await getTicket(ticketId);
 
   if (ticket.status === TICKET_STATUS.CLOSED) {
-    throw AppError.conflict(
-      "Ticket is already closed.",
-      {
-        code:
-          TICKET_ERROR_CODES.INVALID_STATUS_TRANSITION,
-      },
-    );
+    throw AppError.conflict("Ticket is already closed.", {
+      code: TICKET_ERROR_CODES.INVALID_STATUS_TRANSITION,
+    });
   }
 
   const client = await database.getClient();
@@ -583,22 +526,16 @@ async function closeTicket(
   try {
     await client.query("BEGIN");
 
-    const updatedTicket =
-      await ticketRepository.closeTicket(
-        ticketId,
-        tx,
-      );
+    const updatedTicket = await ticketRepository.closeTicket(ticketId, tx);
 
     await ticketLifecycleService.record(
       {
         ticketId,
         actorUserId: authenticatedUserId,
 
-        eventType:
-          TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
+        eventType: TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
 
-        eventAction:
-          TICKET_LIFECYCLE_EVENT_ACTION.CLOSED,
+        eventAction: TICKET_LIFECYCLE_EVENT_ACTION.CLOSED,
 
         fieldName: "status",
 
@@ -625,10 +562,7 @@ async function closeTicket(
   }
 }
 
-async function reopenTicket(
-  ticketId,
-  authenticatedUserId,
-) {
+async function reopenTicket(ticketId, authenticatedUserId) {
   const ticket = await getTicket(ticketId);
 
   if (
@@ -638,8 +572,7 @@ async function reopenTicket(
     throw AppError.conflict(
       "Only resolved or closed tickets can be reopened.",
       {
-        code:
-          TICKET_ERROR_CODES.INVALID_STATUS_TRANSITION,
+        code: TICKET_ERROR_CODES.INVALID_STATUS_TRANSITION,
       },
     );
   }
@@ -653,22 +586,16 @@ async function reopenTicket(
   try {
     await client.query("BEGIN");
 
-    const updatedTicket =
-      await ticketRepository.reopenTicket(
-        ticketId,
-        tx,
-      );
+    const updatedTicket = await ticketRepository.reopenTicket(ticketId, tx);
 
     await ticketLifecycleService.record(
       {
         ticketId,
         actorUserId: authenticatedUserId,
 
-        eventType:
-          TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
+        eventType: TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
 
-        eventAction:
-          TICKET_LIFECYCLE_EVENT_ACTION.REOPENED,
+        eventAction: TICKET_LIFECYCLE_EVENT_ACTION.REOPENED,
 
         fieldName: "status",
 
@@ -695,10 +622,6 @@ async function reopenTicket(
   }
 }
 
-async function deleteTicket(ticketId, authenticatedUserId) {
-  return closeTicket(ticketId,authenticatedUserId);
-}
-
 async function getAssignableUsers() {
   return ticketRepository.findAssignableUsers();
 }
@@ -709,7 +632,11 @@ async function getComments(ticketId) {
   return ticketRepository.findTicketComments(ticketId);
 }
 
-async function addComment(ticketId, comment, authenticatedUserId) {
+async function addComment(
+  ticketId,
+  comment,
+  authenticatedUserId,
+) {
   await getTicket(ticketId);
 
   const normalizedComment = comment.trim();
@@ -720,25 +647,52 @@ async function addComment(ticketId, comment, authenticatedUserId) {
     });
   }
 
-const createdComment =
-  await ticketRepository.createTicketComment(
-    ticketId,
-    authenticatedUserId,
-    normalizedComment,
-  );
+  const client = await database.getClient();
 
-await ticketLifecycleService.record({
-    ticketId,
-    actorUserId: authenticatedUserId,
-    eventType: TICKET_LIFECYCLE_EVENT_TYPE.COMMENT,
-    eventAction:
-        TICKET_LIFECYCLE_EVENT_ACTION.COMMENT_ADDED,
-    metadata: {
-        commentId: comment.id,
-    },
-});
+  const tx = {
+    client,
+  };
 
-return createdComment;
+  try {
+    await client.query("BEGIN");
+
+    const createdComment =
+      await ticketRepository.createTicketComment(
+        ticketId,
+        authenticatedUserId,
+        normalizedComment,
+        tx,
+      );
+
+    await ticketLifecycleService.record(
+      {
+        ticketId,
+        actorUserId: authenticatedUserId,
+        eventType:
+          TICKET_LIFECYCLE_EVENT_TYPE.COMMENT,
+        eventAction:
+          TICKET_LIFECYCLE_EVENT_ACTION.COMMENT_ADDED,
+        metadata: {
+          commentId: createdComment.id,
+        },
+      },
+      tx,
+    );
+
+    await client.query("COMMIT");
+
+    return createdComment;
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      error.rollbackError = rollbackError;
+    }
+
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export default Object.freeze({
@@ -750,7 +704,6 @@ export default Object.freeze({
   resolveTicket,
   closeTicket,
   reopenTicket,
-  deleteTicket,
   getAssignableUsers,
   getComments,
   addComment,
