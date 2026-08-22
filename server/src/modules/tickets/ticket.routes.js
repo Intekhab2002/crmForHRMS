@@ -6,6 +6,8 @@ import { RBAC_PERMISSIONS } from "../rbac/rbac.constants.js";
 
 import ticketController from "./ticket.controller.js";
 import ticketValidator from "./ticket.validator.js";
+import ticketAttachmentController from "./ticketAttachment.controller.js";
+import { ticketAttachmentUpload } from "./ticketAttachment.upload.js";
 
 const { authenticate } = authMiddleware;
 const { requirePermission } = rbacMiddleware;
@@ -18,6 +20,8 @@ const {
     TICKET_ASSIGN,
     TICKET_RESOLVE,
     TICKET_CLOSE,
+    TICKET_ATTACHMENT_READ,
+    TICKET_ATTACHMENT_CREATE,
 } = RBAC_PERMISSIONS;
 
 const router = Router();
@@ -85,6 +89,23 @@ router.post(
     validateParams(ticketValidator.ticketIdParamSchema),
     validateBody(ticketValidator.createCommentSchema),
     ticketController.addComment,
+);
+
+router.get(
+    "/:ticketId/attachments",
+    authenticate,
+    requirePermission(TICKET_ATTACHMENT_READ),
+    validateParams(ticketValidator.ticketIdParamSchema),
+    ticketAttachmentController.listAttachments,
+);
+
+router.post(
+    "/:ticketId/attachments",
+    authenticate,
+    requirePermission(TICKET_ATTACHMENT_CREATE),
+    validateParams(ticketValidator.ticketIdParamSchema),
+    ticketAttachmentUpload.single("file"),
+    ticketAttachmentController.uploadAttachment,
 );
 
 router.get(

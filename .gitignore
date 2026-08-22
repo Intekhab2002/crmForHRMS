@@ -76,3 +76,6 @@ desktop.ini
 .temp
 .swp
 .swo
+
+/storage/
+server/storage/
