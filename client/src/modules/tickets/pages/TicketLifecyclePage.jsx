@@ -35,6 +35,9 @@ export default function TicketLifecyclePage() {
   const [commentsLoading, setCommentsLoading] = useState(true);
   const [attachments, setAttachments] = useState([]);
   const [attachmentsLoading, setAttachmentsLoading] = useState(true);
+  const [lifecycle, setLifecycle] = useState([]);
+  const [lifecycleLoading, setLifecycleLoading] = useState(true);
+  
 
   const handleResolve = async (resolutionNote) => {
     setActionLoading(true);
@@ -46,6 +49,9 @@ export default function TicketLifecyclePage() {
       );
 
       setTicket(updatedTicket);
+
+      await loadLifecycle();
+
       setNotice("Ticket resolved successfully.");
     } finally {
       setActionLoading(false);
@@ -59,6 +65,7 @@ export default function TicketLifecyclePage() {
       const updatedTicket = await ticketService.closeTicket(ticketId);
 
       setTicket(updatedTicket);
+      await loadLifecycle();
       setNotice("Ticket closed successfully.");
     } finally {
       setActionLoading(false);
@@ -72,6 +79,7 @@ export default function TicketLifecyclePage() {
       const updatedTicket = await ticketService.reopenTicket(ticketId);
 
       setTicket(updatedTicket);
+      await loadLifecycle();
       setNotice("Ticket reopened successfully.");
     } finally {
       setActionLoading(false);
@@ -125,11 +133,26 @@ export default function TicketLifecyclePage() {
     }
   }, [ticketId]);
 
+  const loadLifecycle = useCallback(async () => {
+    setLifecycleLoading(true);
+
+    try {
+      const lifecycleRecords = await ticketService.listLifecycle(ticketId);
+
+      setLifecycle(lifecycleRecords);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLifecycleLoading(false);
+    }
+  }, [ticketId]);
+
   useEffect(() => {
     loadTicket();
     loadComments();
     loadAttachments();
-  }, [loadTicket, loadComments, loadAttachments]);
+    loadLifecycle();
+  }, [loadTicket, loadComments, loadAttachments, loadLifecycle]);
   const updateFields = useMemo(
     () => pickFields(fields, ticketConfig.update.fields),
     [fields, ticketConfig.update.fields],
@@ -141,7 +164,11 @@ export default function TicketLifecyclePage() {
       values,
       user,
     );
+
     setTicket(updatedTicket);
+
+    await loadLifecycle();
+
     setNotice(ticketConfig.update.successMessage);
   };
 
@@ -149,6 +176,7 @@ export default function TicketLifecyclePage() {
     await ticketService.addComment(ticketId, comment);
 
     await loadComments();
+    await loadLifecycle();
 
     setNotice(ticketConfig.comments.successMessage);
   };
@@ -159,6 +187,7 @@ export default function TicketLifecyclePage() {
     }
 
     await loadAttachments();
+    await loadLifecycle();
 
     setNotice(ticketConfig.attachments.successMessage);
   };
@@ -265,11 +294,12 @@ export default function TicketLifecyclePage() {
             </Typography>
           </Stack>
           <TicketLifecycleTimeline
-            events={ticket.lifecycle}
+            events={lifecycle}
             fields={fields}
             eventTypes={ticketConfig.lifecycle.eventTypes}
             emptyMessage={ticketConfig.lifecycle.emptyMessage}
             fallback={ticketConfig.labels.notAvailable}
+            loading={lifecycleLoading}
           />
         </Stack>
       </Paper>

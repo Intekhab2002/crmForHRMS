@@ -22,6 +22,182 @@ function mapActor({
   };
 }
 
+function mapLifecycleActor(event) {
+  return {
+    id: event.actor_user_id ?? null,
+    name: event.username ?? event.email ?? "System",
+    email: event.email ?? "",
+  };
+}
+
+function buildLifecycleSummary(event, metadata) {
+  switch (event.event_action) {
+    case "CREATED":
+      return "Ticket was created.";
+
+    case "UPDATED":
+      return event.field_name
+        ? `${event.field_name} was updated.`
+        : "Ticket details were updated.";
+
+    case "STATUS_CHANGED":
+      return "Ticket status was changed.";
+
+    case "ASSIGNED":
+      return "Ticket was assigned.";
+
+    case "UNASSIGNED":
+      return "Ticket was unassigned.";
+
+    case "COMMENT_ADDED":
+      return "A comment was added.";
+
+    case "ATTACHMENT_UPLOADED":
+      return metadata.originalName
+        ? `Attachment "${metadata.originalName}" was uploaded.`
+        : "An attachment was uploaded.";
+
+    case "ATTACHMENT_DELETED":
+      return metadata.originalName
+        ? `Attachment "${metadata.originalName}" was deleted.`
+        : "An attachment was deleted.";
+
+    case "RESOLVED":
+      return "Ticket was resolved.";
+
+    case "CLOSED":
+      return "Ticket was closed.";
+
+    case "REOPENED":
+      return "Ticket was reopened.";
+
+    default:
+      return event.event_action
+        ? event.event_action
+            .replaceAll("_", " ")
+            .toLowerCase()
+            .replace(/^./, (character) =>
+              character.toUpperCase(),
+            )
+        : "Ticket activity.";
+  }
+}
+
+function buildLifecycleChanges(event) {
+  if (!event.field_name) {
+    return [];
+  }
+
+  return [
+    {
+      field: event.field_name,
+      label: formatLifecycleFieldName(event.field_name),
+      from: event.old_value,
+      to: event.new_value,
+    },
+  ];
+}
+
+function formatLifecycleFieldName(fieldName) {
+  if (!fieldName) {
+    return "Field";
+  }
+
+  return fieldName
+    .replaceAll("_", " ")
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (character) =>
+      character.toUpperCase(),
+    );
+}
+
+function buildLifecycleComment(event, metadata) {
+  if (event.event_action !== "COMMENT_ADDED") {
+    return null;
+  }
+
+  return (
+    metadata.comment ??
+    metadata.commentText ??
+    metadata.body ??
+    null
+  );
+}
+
+function buildLifecycleFiles(
+  event,
+  metadata,
+  fileSize,
+) {
+  if (
+    event.event_type !== "ATTACHMENT" ||
+    !metadata.originalName
+  ) {
+    return [];
+  }
+
+  return [
+    {
+      id: metadata.attachmentId ?? event.id,
+      name: metadata.originalName,
+      size: Number.isFinite(fileSize)
+        ? fileSize
+        : null,
+      mimeType: metadata.mimeType ?? "",
+      attachmentId:
+        metadata.attachmentId ?? null,
+    },
+  ];
+}
+
+function mapLifecycleEvent(event) {
+  if (!event) {
+    return null;
+  }
+
+  const metadata =
+    event.metadata && typeof event.metadata === "object"
+      ? event.metadata
+      : {};
+
+  const fileSize =
+    metadata.fileSize !== undefined &&
+    metadata.fileSize !== null
+      ? Number(metadata.fileSize)
+      : null;
+
+  return {
+    id: event.id,
+
+    ticketId: event.ticket_id,
+
+    actorUserId: event.actor_user_id,
+
+    actor: mapLifecycleActor(event),
+
+    type: event.event_type,
+    action: event.event_action,
+
+    fieldName: event.field_name ?? null,
+
+    oldValue: event.old_value ?? null,
+    newValue: event.new_value ?? null,
+
+    metadata,
+
+    createdAt: event.created_at,
+
+    summary: buildLifecycleSummary(event, metadata),
+
+    changes: buildLifecycleChanges(event),
+
+    comment: buildLifecycleComment(event, metadata),
+
+    files: buildLifecycleFiles(event, metadata, fileSize),
+  };
+}
+
+
 export function mapTicketFromApi(ticket) {
   if (!ticket) {
     return null;
@@ -98,5 +274,15 @@ export function mapTicketsFromApi(tickets) {
 
   return tickets
     .map(mapTicketFromApi)
+    .filter(Boolean);
+}
+
+export function mapLifecycleFromApi(events) {
+  if (!Array.isArray(events)) {
+    return [];
+  }
+
+  return events
+    .map(mapLifecycleEvent)
     .filter(Boolean);
 }

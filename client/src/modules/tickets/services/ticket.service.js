@@ -12,7 +12,11 @@ import {
 import apiClient from "../../../services/api/apiClient";
 import { API_CONFIG } from "../../../config/api.config";
 
-import { mapTicketsFromApi, mapTicketFromApi } from "../utils/ticketMappers";
+import {
+  mapTicketsFromApi,
+  mapTicketFromApi,
+  mapLifecycleFromApi,
+} from "../utils/ticketMappers";
 
 const { storage, ticketNumber, mock } = TICKET_MODULE_CONFIG;
 
@@ -121,27 +125,29 @@ export const ticketService = {
     return clone(getFieldsForContext(context));
   },
 
-async listTickets(params = {}) {
-  const response = await apiClient.get(API_CONFIG.endpoints.tickets, {
-    params,
-  });
+  async listTickets(params = {}) {
+    const response = await apiClient.get(API_CONFIG.endpoints.tickets, {
+      params,
+    });
 
-   return mapTicketsFromApi(response.data?.data);
-},
+    return mapTicketsFromApi(response.data?.data);
+  },
 
-async getTicket(ticketId) {
-  try {
-    const response = await apiClient.get(`${API_CONFIG.endpoints.tickets}/${ticketId}`);
+  async getTicket(ticketId) {
+    try {
+      const response = await apiClient.get(
+        `${API_CONFIG.endpoints.tickets}/${ticketId}`,
+      );
 
-    return mapTicketFromApi(response.data?.data);
-  } catch (error) {
-    if (error.response?.status === 404) {
-      return null;
+      return mapTicketFromApi(response.data?.data);
+    } catch (error) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+
+      throw error;
     }
-
-    throw error;
-  }
-},
+  },
 
   async assignTicket(ticketId, assignedUserId) {
     const response = await apiClient.patch(
@@ -187,7 +193,9 @@ async getTicket(ticketId) {
     const actor = getActor(user);
     const sequence = getNextSequence();
     const fieldValues = buildTicketFieldValues(values, "create");
-    const statusField = TICKET_FIELD_CONFIG.find((field) => field.name === "status");
+    const statusField = TICKET_FIELD_CONFIG.find(
+      (field) => field.name === "status",
+    );
 
     const ticket = normalizeTicket({
       ...fieldValues,
@@ -223,7 +231,9 @@ async getTicket(ticketId) {
     const updateFields = getFieldsForContext("update");
 
     const changes = updateFields
-      .filter((field) => Object.prototype.hasOwnProperty.call(values, field.name))
+      .filter((field) =>
+        Object.prototype.hasOwnProperty.call(values, field.name),
+      )
       .map((field) => ({
         field: field.name,
         label: field.label,
@@ -261,22 +271,32 @@ async getTicket(ticketId) {
   },
 
   async addComment(ticketId, body, user) {
-  const response = await apiClient.post(
-    `${API_CONFIG.endpoints.tickets}/${ticketId}/comments`,
-    {
-      comment: body,
-    },
-  );
+    const response = await apiClient.post(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/comments`,
+      {
+        comment: body,
+      },
+    );
 
-  return response.data?.data ?? null;
+    return response.data?.data ?? null;
   },
 
   async listComments(ticketId) {
+    const response = await apiClient.get(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/comments`,
+    );
+
+    return response.data?.data ?? [];
+  },
+
+  async listLifecycle(ticketId) {
   const response = await apiClient.get(
-    `${API_CONFIG.endpoints.tickets}/${ticketId}/comments`,
+    `${API_CONFIG.endpoints.tickets}/${ticketId}/lifecycle`,
   );
 
-  return response.data?.data ?? [];
+  return mapLifecycleFromApi(
+    response.data?.data,
+  );
 },
 
   async addAttachments(ticketId, files, user) {
@@ -337,33 +357,40 @@ async getTicket(ticketId) {
     return ticket ? clone(ticket) : null;
   },
 
-async listAttachments(ticketId) {
-  const response = await apiClient.get(
-    `${API_CONFIG.endpoints.tickets}/${ticketId}/attachments`,
-  );
+  async listAttachments(ticketId) {
+    const response = await apiClient.get(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/attachments`,
+    );
 
-  return response.data?.data ?? [];
-},
+    return response.data?.data ?? [];
+  },
 
-async uploadAttachment(ticketId, file, onUploadProgress) {
-  if (!(file instanceof File)) {
-    throw new TypeError("A valid file is required.");
-  }
+  async listLifecycle(ticketId) {
+    const response = await apiClient.get(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/lifecycle`,
+    );
 
-  const formData = new FormData();
-  formData.append("file", file);
+    return response.data?.data ?? [];
+  },
 
-  const response = await apiClient.post(
-    `${API_CONFIG.endpoints.tickets}/${ticketId}/attachments`,
-    formData,
-    {
-      onUploadProgress,
-    },
-  );
+  async uploadAttachment(ticketId, file, onUploadProgress) {
+    if (!(file instanceof File)) {
+      throw new TypeError("A valid file is required.");
+    }
 
-  return response.data?.data ?? null;
-},
+    const formData = new FormData();
+    formData.append("file", file);
 
+    const response = await apiClient.post(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/attachments`,
+      formData,
+      {
+        onUploadProgress,
+      },
+    );
+
+    return response.data?.data ?? null;
+  },
 
   async viewAttachment(ticketId, attachmentId) {
     const response = await apiClient.get(
@@ -386,8 +413,7 @@ async uploadAttachment(ticketId, file, onUploadProgress) {
 
     return {
       blob: response.data,
-      contentDisposition:
-        response.headers["content-disposition"] ?? "",
+      contentDisposition: response.headers["content-disposition"] ?? "",
     };
   },
 
@@ -399,4 +425,3 @@ async uploadAttachment(ticketId, file, onUploadProgress) {
     return response.data;
   },
 };
-
