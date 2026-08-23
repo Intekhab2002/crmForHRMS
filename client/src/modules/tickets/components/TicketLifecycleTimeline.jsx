@@ -125,17 +125,9 @@ export default function TicketLifecycleTimeline({
 
   if (loading) {
     return (
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={{ py: 6 }}
-      >
+      <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
         <CircularProgress size={28} />
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ mt: 1.5 }}
-        >
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
           Loading ticket history...
         </Typography>
       </Stack>
@@ -162,7 +154,7 @@ export default function TicketLifecycleTimeline({
       <Stack spacing={0}>
         {visibleEvents.map((event, index) => {
           const eventType =
-            eventTypes[event.type] ?? {};
+            eventTypes[event.action] ?? eventTypes[event.type] ?? {};
 
           const actor = actorLabel(event.actor);
 
@@ -171,10 +163,7 @@ export default function TicketLifecycleTimeline({
               key={event.id}
               sx={{
                 position: "relative",
-                pb:
-                  index === visibleEvents.length - 1
-                    ? 0
-                    : 3,
+                pb: index === visibleEvents.length - 1 ? 0 : 3,
               }}
             >
               <Box
@@ -201,10 +190,7 @@ export default function TicketLifecycleTimeline({
                             : "primary.main",
                   }}
                 >
-                  {getEventIcon(
-                    event.type,
-                    event.action,
-                  )}
+                  {getEventIcon(event.type, event.action)}
                 </Avatar>
 
                 <Paper
@@ -213,8 +199,7 @@ export default function TicketLifecycleTimeline({
                     flex: 1,
                     p: { xs: 1.75, md: 2.25 },
                     borderRadius: 2.5,
-                    transition:
-                      "box-shadow 0.2s ease, transform 0.2s ease",
+                    transition: "box-shadow 0.2s ease, transform 0.2s ease",
                     "&:hover": {
                       boxShadow: 3,
                       transform: "translateY(-1px)",
@@ -245,19 +230,14 @@ export default function TicketLifecycleTimeline({
                           label={
                             eventType.label ??
                             event.action ??
-                            event.type
+                            event.type ??
+                            "Activity"
                           }
-                          color={
-                            eventType.color ?? "default"
-                          }
+                          color={eventType.color ?? "default"}
                         />
 
-                        <Typography
-                          variant="subtitle1"
-                          fontWeight={800}
-                        >
-                          {event.summary ||
-                            "Ticket activity"}
+                        <Typography variant="subtitle1" fontWeight={800}>
+                          {event.summary || "Ticket activity"}
                         </Typography>
                       </Stack>
 
@@ -266,18 +246,11 @@ export default function TicketLifecycleTimeline({
                         color="text.secondary"
                         sx={{ whiteSpace: "nowrap" }}
                       >
-                        {formatDateTime(
-                          event.createdAt,
-                          fallback,
-                        )}
+                        {formatDateTime(event.createdAt, fallback)}
                       </Typography>
                     </Stack>
 
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                    >
+                    <Stack direction="row" spacing={1} alignItems="center">
                       <Avatar
                         sx={{
                           width: 28,
@@ -288,10 +261,7 @@ export default function TicketLifecycleTimeline({
                         {getInitials(event.actor)}
                       </Avatar>
 
-                      <Typography
-                        variant="body2"
-                        fontWeight={600}
-                      >
+                      <Typography variant="body2" fontWeight={600}>
                         {actor}
                       </Typography>
                     </Stack>
@@ -301,65 +271,55 @@ export default function TicketLifecycleTimeline({
                         <Divider sx={{ mb: 1.5 }} />
 
                         <Stack spacing={1}>
-                          {event.changes.map(
-                            (change) => {
-                              const field = getField(
-                                fields,
-                                change.field,
-                              );
+                          {event.changes.map((change) => {
+                            const field = getField(fields, change.field);
 
-                              return (
-                                <Box
-                                  key={`${event.id}-${change.field}`}
-                                  sx={{
-                                    display: "grid",
-                                    gridTemplateColumns:
-                                      {
-                                        xs: "1fr",
-                                        md: "180px 1fr",
-                                      },
-                                    gap: 1,
-                                  }}
+                            return (
+                              <Box
+                                key={`${event.id}-${change.field}`}
+                                sx={{
+                                  display: "grid",
+                                  gridTemplateColumns: {
+                                    xs: "1fr",
+                                    md: "180px 1fr",
+                                  },
+                                  gap: 1,
+                                }}
+                              >
+                                <Typography variant="body2" fontWeight={700}>
+                                  {change.label}
+                                </Typography>
+
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
                                 >
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={700}
+                                  {formatTicketValue(
+                                    field,
+                                    change.from,
+                                    fallback,
+                                  )}
+
+                                  <Box
+                                    component="span"
+                                    sx={{
+                                      mx: 1,
+                                      fontWeight: 700,
+                                      color: "text.primary",
+                                    }}
                                   >
-                                    {change.label}
-                                  </Typography>
+                                    →
+                                  </Box>
 
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    {formatTicketValue(
-                                      field,
-                                      change.from,
-                                      fallback,
-                                    )}
-
-                                    <Box
-                                      component="span"
-                                      sx={{
-                                        mx: 1,
-                                        fontWeight: 700,
-                                        color:
-                                          "text.primary",
-                                      }}
-                                    >
-                                      →
-                                    </Box>
-
-                                    {formatTicketValue(
-                                      field,
-                                      change.to,
-                                      fallback,
-                                    )}
-                                  </Typography>
-                                </Box>
-                              );
-                            },
-                          )}
+                                  {formatTicketValue(
+                                    field,
+                                    change.to,
+                                    fallback,
+                                  )}
+                                </Typography>
+                              </Box>
+                            );
+                          })}
                         </Stack>
                       </Box>
                     ) : null}
@@ -390,8 +350,7 @@ export default function TicketLifecycleTimeline({
                               variant="outlined"
                               sx={{
                                 p: 1.25,
-                                bgcolor:
-                                  "action.hover",
+                                bgcolor: "action.hover",
                               }}
                             >
                               <Stack
@@ -399,9 +358,7 @@ export default function TicketLifecycleTimeline({
                                 spacing={1.5}
                                 alignItems="center"
                               >
-                                <AttachFileOutlinedIcon
-                                  fontSize="small"
-                                />
+                                <AttachFileOutlinedIcon fontSize="small" />
 
                                 <Box
                                   sx={{
@@ -421,9 +378,7 @@ export default function TicketLifecycleTimeline({
                                     variant="caption"
                                     color="text.secondary"
                                   >
-                                    {formatFileSize(
-                                      file.size,
-                                    )}
+                                    {formatFileSize(file.size)}
                                   </Typography>
                                 </Box>
                               </Stack>

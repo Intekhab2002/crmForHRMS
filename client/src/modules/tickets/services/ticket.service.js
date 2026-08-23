@@ -365,14 +365,6 @@ export const ticketService = {
     return response.data?.data ?? [];
   },
 
-  async listLifecycle(ticketId) {
-    const response = await apiClient.get(
-      `${API_CONFIG.endpoints.tickets}/${ticketId}/lifecycle`,
-    );
-
-    return response.data?.data ?? [];
-  },
-
   async uploadAttachment(ticketId, file, onUploadProgress) {
     if (!(file instanceof File)) {
       throw new TypeError("A valid file is required.");

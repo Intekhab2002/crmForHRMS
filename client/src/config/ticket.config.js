@@ -1,7 +1,11 @@
 export const TICKET_STATUS_OPTIONS = Object.freeze([
   { value: "open", label: "Open", color: "info" },
   { value: "in_progress", label: "In progress", color: "warning" },
-  { value: "waiting_on_customer", label: "Waiting on customer", color: "secondary" },
+  {
+    value: "waiting_on_customer",
+    label: "Waiting on customer",
+    color: "secondary",
+  },
   { value: "resolved", label: "Resolved", color: "success" },
   { value: "closed", label: "Closed", color: "default" },
 ]);
@@ -36,8 +40,18 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     type: "text",
     required: true,
     placeholder: "Short summary of the request",
-    contexts: { create: true, update: true, list: true, detail: true, public: true },
-    permissions: { create: "ticket:create", update: "ticket:update", read: "ticket:read" },
+    contexts: {
+      create: true,
+      update: true,
+      list: true,
+      detail: true,
+      public: true,
+    },
+    permissions: {
+      create: "ticket:create",
+      update: "ticket:update",
+      read: "ticket:read",
+    },
     grid: { xs: 12, md: 8 },
   },
   {
@@ -48,7 +62,11 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     placeholder: "Describe the issue, impact, and expected outcome",
     minRows: 4,
     contexts: { create: true, update: true, detail: true },
-    permissions: { create: "ticket:create", update: "ticket:update", read: "ticket:read" },
+    permissions: {
+      create: "ticket:create",
+      update: "ticket:update",
+      read: "ticket:read",
+    },
     grid: { xs: 12 },
   },
   {
@@ -58,8 +76,18 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     required: true,
     defaultValue: "system",
     options: TICKET_ISSUE_TYPE_OPTIONS,
-    contexts: { create: true, update: true, list: true, detail: true, public: true },
-    permissions: { create: "ticket:create", update: "ticket:update", read: "ticket:read" },
+    contexts: {
+      create: true,
+      update: true,
+      list: true,
+      detail: true,
+      public: true,
+    },
+    permissions: {
+      create: "ticket:create",
+      update: "ticket:update",
+      read: "ticket:read",
+    },
     grid: { xs: 12, md: 4 },
   },
   {
@@ -69,8 +97,18 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     required: true,
     defaultValue: "medium",
     options: TICKET_PRIORITY_OPTIONS,
-    contexts: { create: true, update: true, list: true, detail: true, public: true },
-    permissions: { create: "ticket:create", update: "ticket:update", read: "ticket:read" },
+    contexts: {
+      create: true,
+      update: true,
+      list: true,
+      detail: true,
+      public: true,
+    },
+    permissions: {
+      create: "ticket:create",
+      update: "ticket:update",
+      read: "ticket:read",
+    },
     grid: { xs: 12, md: 4 },
   },
   {
@@ -90,8 +128,18 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     type: "text",
     required: true,
     placeholder: "Employee or customer name",
-    contexts: { create: true, update: true, list: true, detail: true, public: true },
-    permissions: { create: "ticket:create", update: "ticket:update", read: "ticket:read" },
+    contexts: {
+      create: true,
+      update: true,
+      list: true,
+      detail: true,
+      public: true,
+    },
+    permissions: {
+      create: "ticket:create",
+      update: "ticket:update",
+      read: "ticket:read",
+    },
     grid: { xs: 12, md: 4 },
   },
   {
@@ -101,7 +149,11 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     required: true,
     placeholder: "requester@company.com",
     contexts: { create: true, update: true, detail: true },
-    permissions: { create: "ticket:create", update: "ticket:update", read: "ticket:read" },
+    permissions: {
+      create: "ticket:create",
+      update: "ticket:update",
+      read: "ticket:read",
+    },
     grid: { xs: 12, md: 4 },
   },
   {
@@ -109,7 +161,11 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "Requester phone",
     type: "text",
     contexts: { create: true, update: true, detail: true },
-    permissions: { create: "ticket:create", update: "ticket:update", read: "ticket:read" },
+    permissions: {
+      create: "ticket:create",
+      update: "ticket:update",
+      read: "ticket:read",
+    },
     grid: { xs: 12, md: 4 },
   },
   {
@@ -117,7 +173,11 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "Organization",
     type: "text",
     contexts: { create: true, update: true, list: true, detail: true },
-    permissions: { create: "ticket:create", update: "ticket:update", read: "ticket:read" },
+    permissions: {
+      create: "ticket:create",
+      update: "ticket:update",
+      read: "ticket:read",
+    },
     grid: { xs: 12, md: 4 },
   },
   {
@@ -125,7 +185,11 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "Department",
     type: "text",
     contexts: { create: true, update: true, list: true, detail: true },
-    permissions: { create: "ticket:create", update: "ticket:update", read: "ticket:read" },
+    permissions: {
+      create: "ticket:create",
+      update: "ticket:update",
+      read: "ticket:read",
+    },
     grid: { xs: 12, md: 4 },
   },
   {
@@ -133,8 +197,18 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "Assignee",
     type: "text",
     placeholder: "Agent or queue owner",
-    contexts: { create: true, update: true, list: true, detail: true, public: true },
-    permissions: { create: "ticket:assign", update: "ticket:assign", read: "ticket:read" },
+    contexts: {
+      create: true,
+      update: true,
+      list: true,
+      detail: true,
+      public: true,
+    },
+    permissions: {
+      create: "ticket:assign",
+      update: "ticket:assign",
+      read: "ticket:read",
+    },
     grid: { xs: 12, md: 4 },
   },
   {
@@ -142,7 +216,11 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "Due date",
     type: "date",
     contexts: { create: true, update: true, detail: true },
-    permissions: { create: "ticket:create", update: "ticket:update", read: "ticket:read" },
+    permissions: {
+      create: "ticket:create",
+      update: "ticket:update",
+      read: "ticket:read",
+    },
     grid: { xs: 12, md: 4 },
   },
   {
@@ -182,7 +260,8 @@ export const TICKET_MODULE_CONFIG = Object.freeze({
   },
   create: {
     title: "Create ticket",
-    description: "Capture a new support request with fields controlled by configuration.",
+    description:
+      "Capture a new support request with fields controlled by configuration.",
     submitLabel: "Create ticket",
     successMessage: "Ticket created successfully.",
     fields: [
@@ -213,13 +292,33 @@ export const TICKET_MODULE_CONFIG = Object.freeze({
     columns: [
       { field: "reference", headerName: "Ticket #", width: 150 },
       { field: "subject", headerName: "Subject", flex: 1.2, minWidth: 220 },
-      { field: "status", headerName: "Status", width: 160, presentation: "statusChip" },
-      { field: "priority", headerName: "Priority", width: 130, presentation: "priorityChip" },
-      { field: "issueType", headerName: "Issue type", width: 160, presentation: "optionLabel" },
+      {
+        field: "status",
+        headerName: "Status",
+        width: 160,
+        presentation: "statusChip",
+      },
+      {
+        field: "priority",
+        headerName: "Priority",
+        width: 130,
+        presentation: "priorityChip",
+      },
+      {
+        field: "issueType",
+        headerName: "Issue type",
+        width: 160,
+        presentation: "optionLabel",
+      },
       { field: "requesterName", headerName: "Requester", width: 180 },
       { field: "assignee", headerName: "Assignee", width: 180 },
       { field: "department", headerName: "Department", width: 160 },
-      { field: "updatedAt", headerName: "Last updated", width: 180, presentation: "dateTime" },
+      {
+        field: "updatedAt",
+        headerName: "Last updated",
+        width: 180,
+        presentation: "dateTime",
+      },
       {
         field: "actions",
         type: "actions",
@@ -278,27 +377,96 @@ export const TICKET_MODULE_CONFIG = Object.freeze({
     successMessage: "Comment added.",
     permission: "ticket:comment",
   },
-attachments: {
-  title: "Attachments",
-  selectLabel: "Select files",
-  uploadLabel: "Upload files",
-  successMessage: "Files uploaded successfully.",
-  permission: "ticket:attachment",
-},
+  attachments: {
+    title: "Attachments",
+    selectLabel: "Select files",
+    uploadLabel: "Upload files",
+    successMessage: "Files uploaded successfully.",
+    permission: "ticket:attachment",
+  },
   lifecycle: {
     title: "Lifecycle",
-    description: "A complete audit trail of creation, updates, comments, and attachments.",
+    description:
+      "A complete audit trail of creation, updates, comments, and attachments.",
     emptyMessage: "No lifecycle activity yet.",
     eventTypes: {
-      created: { label: "Created", color: "success", public: true },
-      updated: { label: "Updated", color: "info", public: true },
-      commented: { label: "Commented", color: "secondary", public: false },
-      attached: { label: "Attachment added", color: "warning", public: false },
+      CREATED: {
+        label: "Created",
+        color: "success",
+        public: true,
+      },
+
+      UPDATED: {
+        label: "Updated",
+        color: "info",
+        public: true,
+      },
+
+      STATUS_CHANGED: {
+        label: "Status changed",
+        color: "info",
+        public: true,
+      },
+
+      ASSIGNED: {
+        label: "Assigned",
+        color: "primary",
+        public: true,
+      },
+
+      UNASSIGNED: {
+        label: "Unassigned",
+        color: "warning",
+        public: true,
+      },
+
+      ASSIGNMENT_CHANGED: {
+        label: "Assignment changed",
+        color: "primary",
+        public: true,
+      },
+
+      RESOLVED: {
+        label: "Resolved",
+        color: "success",
+        public: true,
+      },
+
+      CLOSED: {
+        label: "Closed",
+        color: "default",
+        public: true,
+      },
+
+      REOPENED: {
+        label: "Reopened",
+        color: "warning",
+        public: true,
+      },
+
+      COMMENT_ADDED: {
+        label: "Comment added",
+        color: "secondary",
+        public: true,
+      },
+
+      ATTACHMENT_UPLOADED: {
+        label: "Attachment uploaded",
+        color: "warning",
+        public: true,
+      },
+
+      ATTACHMENT_DELETED: {
+        label: "Attachment deleted",
+        color: "error",
+        public: true,
+      },
     },
   },
   publicStatus: {
     title: "Check ticket status",
-    description: "Enter a ticket number to view the current status without signing in.",
+    description:
+      "Enter a ticket number to view the current status without signing in.",
     submitLabel: "Check status",
     notFoundMessage: "No ticket matches that information.",
     lookupFields: [
@@ -332,119 +500,25 @@ attachments: {
     ],
   },
   actions: {
-  assign: {
-    enabled: true,
-    label: "Assign",
-  },
+    assign: {
+      enabled: true,
+      label: "Assign",
+    },
 
-  resolve: {
-    enabled: true,
-    label: "Resolve",
-    requireResolutionNote: true,
-  },
+    resolve: {
+      enabled: true,
+      label: "Resolve",
+      requireResolutionNote: true,
+    },
 
-  close: {
-    enabled: true,
-    label: "Close",
-  },
+    close: {
+      enabled: true,
+      label: "Close",
+    },
 
-  reopen: {
-    enabled: true,
-    label: "Reopen",
-  },
-},
-  mock: {
-    tickets: [
-      {
-        id: "ticket-1",
-        reference: "TKT-2026-0001",
-        subject: "Unable to access employee self service",
-        description: "Requester can sign in but the employee self service page returns a permission error.",
-        issueType: "access",
-        priority: "high",
-        status: "in_progress",
-        requesterName: "Aarav Sharma",
-        requesterEmail: "aarav.sharma@example.com",
-        requesterPhone: "+91 98765 43210",
-        organization: "Acme India",
-        department: "People Operations",
-        assignee: "Support Desk",
-        dueDate: "2026-08-21",
-        resolutionNotes: "",
-        createdAt: "2026-08-14T09:30:00.000Z",
-        updatedAt: "2026-08-15T12:10:00.000Z",
-        createdBy: { id: "agent-1", name: "Nisha Rao", email: "nisha.rao@example.com" },
-        updatedBy: { id: "agent-2", name: "Kabir Mehta", email: "kabir.mehta@example.com" },
-        comments: [
-          {
-            id: "comment-1",
-            body: "Validated the requester role and escalated to identity management.",
-            author: { id: "agent-2", name: "Kabir Mehta", email: "kabir.mehta@example.com" },
-            createdAt: "2026-08-15T12:10:00.000Z",
-          },
-        ],
-        attachments: [],
-        lifecycle: [
-          {
-            id: "event-1",
-            type: "created",
-            actor: { id: "agent-1", name: "Nisha Rao", email: "nisha.rao@example.com" },
-            createdAt: "2026-08-14T09:30:00.000Z",
-            summary: "Ticket was created.",
-          },
-          {
-            id: "event-2",
-            type: "updated",
-            actor: { id: "agent-2", name: "Kabir Mehta", email: "kabir.mehta@example.com" },
-            createdAt: "2026-08-15T10:45:00.000Z",
-            summary: "Ticket details were updated.",
-            changes: [
-              { field: "status", label: "Status", from: "open", to: "in_progress" },
-              { field: "assignee", label: "Assignee", from: "Unassigned", to: "Support Desk" },
-            ],
-          },
-          {
-            id: "event-3",
-            type: "commented",
-            actor: { id: "agent-2", name: "Kabir Mehta", email: "kabir.mehta@example.com" },
-            createdAt: "2026-08-15T12:10:00.000Z",
-            summary: "Comment added.",
-            comment: "Validated the requester role and escalated to identity management.",
-          },
-        ],
-      },
-      {
-        id: "ticket-2",
-        reference: "TKT-2026-0002",
-        subject: "Payroll export mismatch for July",
-        description: "Finance reported a mismatch between payroll export totals and approved payroll.",
-        issueType: "payroll",
-        priority: "urgent",
-        status: "open",
-        requesterName: "Maya Fernandes",
-        requesterEmail: "maya.fernandes@example.com",
-        requesterPhone: "+91 91234 56780",
-        organization: "Acme India",
-        department: "Finance",
-        assignee: "",
-        dueDate: "2026-08-19",
-        resolutionNotes: "",
-        createdAt: "2026-08-18T07:15:00.000Z",
-        updatedAt: "2026-08-18T07:15:00.000Z",
-        createdBy: { id: "agent-1", name: "Nisha Rao", email: "nisha.rao@example.com" },
-        updatedBy: { id: "agent-1", name: "Nisha Rao", email: "nisha.rao@example.com" },
-        comments: [],
-        attachments: [],
-        lifecycle: [
-          {
-            id: "event-4",
-            type: "created",
-            actor: { id: "agent-1", name: "Nisha Rao", email: "nisha.rao@example.com" },
-            createdAt: "2026-08-18T07:15:00.000Z",
-            summary: "Ticket was created.",
-          },
-        ],
-      },
-    ],
+    reopen: {
+      enabled: true,
+      label: "Reopen",
+    },
   },
 });
