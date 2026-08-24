@@ -3,11 +3,8 @@ export function getFieldName(field) {
 }
 
 export function getFieldError(field, formik) {
-  const fieldName = getFieldName(field);
-
-  return formik.touched[fieldName]
-    ? formik.errors[fieldName]
-    : undefined;
+  const name = getFieldName(field);
+  return formik.touched[name] ? formik.errors[name] : undefined;
 }
 
 export function getFieldValue(field, formik) {
@@ -15,10 +12,10 @@ export function getFieldValue(field, formik) {
 }
 
 export function getCommonFieldProps(field, formik) {
-  const fieldName = getFieldName(field);
+  const error = getFieldError(field, formik);
 
   return {
-    name: fieldName,
+    name: field.key,
     value: getFieldValue(field, formik),
     onChange: formik.handleChange,
     onBlur: formik.handleBlur,
@@ -26,10 +23,27 @@ export function getCommonFieldProps(field, formik) {
     placeholder: field.placeholder ?? "",
     required: Boolean(field.required),
     disabled: field.enabled === false,
-    error: Boolean(getFieldError(field, formik)),
-    helperText:
-      getFieldError(field, formik) ??
-      field.helpText ??
-      "",
+    error: Boolean(error),
+    helperText: error ?? field.helpText ?? "",
+  };
+}
+
+export function getStaticOptions(field) {
+  return Array.isArray(field.options?.static)
+    ? field.options.static
+    : [];
+}
+
+export function normalizeOption(option) {
+  if (option && typeof option === "object") {
+    return {
+      value: option.value,
+      label: option.label ?? String(option.value),
+    };
+  }
+
+  return {
+    value: option,
+    label: String(option ?? ""),
   };
 }

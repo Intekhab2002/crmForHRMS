@@ -1,28 +1,6 @@
 import { TextField } from "@mui/material";
+import { getCommonFieldProps } from "./rendererUtils";
 
-import {
-  getCommonFieldProps,
-} from "./rendererUtils";
-
-export default function TextFieldRenderer({
-  field,
-  formik,
-}) {
-  return (
-    <TextField
-      {...getCommonFieldProps(
-        field,
-        formik,
-      )}
-      fullWidth
-      type="text"
-      slotProps={{
-        input: {
-          readOnly: Boolean(
-            field.readOnly,
-          ),
-        },
-      }}
-    />
-  );
+export default function TextFieldRenderer({ field, formik }) {
+  return <TextField {...getCommonFieldProps(field, formik)} fullWidth slotProps={{ input: { readOnly: Boolean(field.readOnly) } }} />;
 }

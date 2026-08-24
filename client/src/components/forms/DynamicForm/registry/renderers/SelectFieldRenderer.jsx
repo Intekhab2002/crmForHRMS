@@ -1,55 +1,14 @@
-import {
-  MenuItem,
-  TextField,
-} from "@mui/material";
+import { MenuItem, TextField } from "@mui/material";
+import { getCommonFieldProps, getStaticOptions, normalizeOption } from "./rendererUtils";
 
-import {
-  getCommonFieldProps,
-} from "./rendererUtils";
-
-export default function SelectFieldRenderer({
-  field,
-  formik,
-}) {
-  const props = getCommonFieldProps(
-    field,
-    formik,
-  );
-
-  const options = Array.isArray(field.options)
-    ? field.options
-    : [];
+export default function SelectFieldRenderer({ field, formik }) {
+  const options = getStaticOptions(field);
 
   return (
-    <TextField
-      {...props}
-      fullWidth
-      select
-      slotProps={{
-        input: {
-          readOnly: Boolean(field.readOnly),
-        },
-      }}
-    >
-      {options.map((option) => {
-        const value =
-          typeof option === "object"
-            ? option.value
-            : option;
-
-        const label =
-          typeof option === "object"
-            ? option.label
-            : option;
-
-        return (
-          <MenuItem
-            key={String(value)}
-            value={value}
-          >
-            {label}
-          </MenuItem>
-        );
+    <TextField {...getCommonFieldProps(field, formik)} fullWidth select slotProps={{ input: { readOnly: Boolean(field.readOnly) } }}>
+      {options.map((item, index) => {
+        const option = normalizeOption(item);
+        return <MenuItem key={`${String(option.value)}-${index}`} value={option.value}>{option.label}</MenuItem>;
       })}
     </TextField>
   );
