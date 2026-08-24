@@ -64,10 +64,12 @@ function mapAssignmentToApi(row) {
         formId: row.form_id,
         fieldId: row.field_id,
         fieldKey: row.field_key,
+
         displayOrder: row.display_order,
         section: row.section,
         gridSize: row.grid_size,
         columnWidth: row.column_width,
+
         isVisible: row.is_visible,
         isEnabled: row.is_enabled,
         isEditable: row.is_editable,
@@ -76,10 +78,62 @@ function mapAssignmentToApi(row) {
         isSearchable: row.is_searchable,
         isFilterable: row.is_filterable,
         isSortable: row.is_sortable,
+
+        effectiveVisible:
+            row.is_visible ??
+            row.field_is_visible,
+
+        effectiveEnabled:
+            row.is_enabled ??
+            row.field_is_enabled,
+
+        effectiveEditable:
+            row.is_editable ??
+            row.field_is_editable,
+
+        effectiveReadOnly:
+            row.is_read_only ??
+            row.field_is_read_only,
+
+        effectiveRequired:
+            row.is_required ??
+            row.field_is_required,
+
+        effectiveSearchable:
+            row.is_searchable ??
+            row.field_is_searchable,
+
+        effectiveFilterable:
+            row.is_filterable ??
+            row.field_is_filterable,
+
+        effectiveSortable:
+            row.is_sortable ??
+            row.field_is_sortable,
+
         labelOverride: row.label_override,
-        placeholderOverride: row.placeholder_override,
-        helpTextOverride: row.help_text_override,
-        defaultValueOverride: row.default_value_override,
+        placeholderOverride:
+            row.placeholder_override,
+        helpTextOverride:
+            row.help_text_override,
+        defaultValueOverride:
+            row.default_value_override,
+
+        effectiveLabel:
+            row.label_override ??
+            row.field_label,
+
+        effectivePlaceholder:
+            row.placeholder_override ??
+            row.field_placeholder,
+
+        effectiveHelpText:
+            row.help_text_override ??
+            row.field_help_text,
+
+        effectiveDefaultValue:
+            row.default_value_override ??
+            row.field_default_value,
     };
 }
 

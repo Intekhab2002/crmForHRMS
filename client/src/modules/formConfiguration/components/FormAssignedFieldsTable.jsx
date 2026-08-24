@@ -14,13 +14,7 @@ import { DataGrid } from "@mui/x-data-grid";
 
 function renderOverride(value) {
   if (value === null || value === undefined) {
-    return (
-      <Chip
-        size="small"
-        label="Inherited"
-        variant="outlined"
-      />
-    );
+    return <Chip size="small" label="Inherited" variant="outlined" />;
   }
 
   return (
@@ -71,88 +65,77 @@ export default function FormAssignedFieldsTable({
       headerName: "Section",
       flex: 0.8,
       minWidth: 140,
-      valueGetter: (_value, row) =>
-        row.section || "-",
+      valueGetter: (_value, row) => row.section || "-",
     },
 
     {
       field: "gridSize",
       headerName: "Grid",
       width: 80,
-      valueGetter: (_value, row) =>
-        row.gridSize ?? "-",
+      valueGetter: (_value, row) => row.gridSize ?? "-",
     },
 
     {
       field: "columnWidth",
       headerName: "Width",
       width: 100,
-      valueGetter: (_value, row) =>
-        row.columnWidth || "-",
+      valueGetter: (_value, row) => row.columnWidth || "-",
     },
 
     {
-      field: "isVisible",
+      field: "effectiveVisible",
       headerName: "Visible",
-      width: 105,
-      renderCell: ({ value }) =>
-        renderOverride(value),
+      width: 110,
+      renderCell: ({ value }) => renderBoolean(value),
     },
 
     {
-      field: "isEnabled",
+      field: "effectiveEnabled",
       headerName: "Enabled",
-      width: 105,
-      renderCell: ({ value }) =>
-        renderOverride(value),
+      width: 110,
+      renderCell: ({ value }) => renderBoolean(value),
     },
 
     {
-      field: "isEditable",
+      field: "effectiveEditable",
       headerName: "Editable",
-      width: 105,
-      renderCell: ({ value }) =>
-        renderOverride(value),
+      width: 110,
+      renderCell: ({ value }) => renderBoolean(value),
     },
 
     {
-      field: "isReadOnly",
+      field: "effectiveReadOnly",
       headerName: "Read Only",
-      width: 105,
-      renderCell: ({ value }) =>
-        renderOverride(value),
+      width: 110,
+      renderCell: ({ value }) => renderBoolean(value),
     },
 
     {
-      field: "isRequired",
+      field: "effectiveRequired",
       headerName: "Required",
-      width: 105,
-      renderCell: ({ value }) =>
-        renderOverride(value),
+      width: 110,
+      renderCell: ({ value }) => renderBoolean(value),
     },
 
     {
-      field: "isSearchable",
+      field: "effectiveSearchable",
       headerName: "Search",
       width: 100,
-      renderCell: ({ value }) =>
-        renderOverride(value),
+      renderCell: ({ value }) => renderBoolean(value),
     },
 
     {
-      field: "isFilterable",
+      field: "effectiveFilterable",
       headerName: "Filter",
       width: 100,
-      renderCell: ({ value }) =>
-        renderOverride(value),
+      renderCell: ({ value }) => renderBoolean(value),
     },
 
     {
-      field: "isSortable",
+      field: "effectiveSortable",
       headerName: "Sort",
       width: 100,
-      renderCell: ({ value }) =>
-        renderOverride(value),
+      renderCell: ({ value }) => renderBoolean(value),
     },
 
     {
@@ -162,18 +145,10 @@ export default function FormAssignedFieldsTable({
       sortable: false,
       filterable: false,
       renderCell: ({ row }) => (
-        <Stack
-          direction="row"
-          spacing={0.5}
-        >
+        <Stack direction="row" spacing={0.5}>
           {canUpdate ? (
             <Tooltip title="Edit assignment">
-              <IconButton
-                size="small"
-                onClick={() =>
-                  onEdit?.(row)
-                }
-              >
+              <IconButton size="small" onClick={() => onEdit?.(row)}>
                 <EditOutlinedIcon fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -184,9 +159,7 @@ export default function FormAssignedFieldsTable({
               <IconButton
                 size="small"
                 color="error"
-                onClick={() =>
-                  onRemove?.(row)
-                }
+                onClick={() => onRemove?.(row)}
               >
                 <DeleteOutlineIcon fontSize="small" />
               </IconButton>
@@ -205,18 +178,11 @@ export default function FormAssignedFieldsTable({
           textAlign: "center",
         }}
       >
-        <Typography
-          variant="body1"
-          fontWeight={600}
-        >
+        <Typography variant="body1" fontWeight={600}>
           No fields assigned
         </Typography>
 
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          mt={0.5}
-        >
+        <Typography variant="body2" color="text.secondary" mt={0.5}>
           Add fields to configure this form.
         </Typography>
       </Box>
@@ -232,11 +198,7 @@ export default function FormAssignedFieldsTable({
       autoHeight
       hideFooterSelectedRowCount
       getRowId={(row) => row.id}
-      pageSizeOptions={[
-        10,
-        20,
-        50,
-      ]}
+      pageSizeOptions={[10, 20, 50]}
       initialState={{
         pagination: {
           paginationModel: {
