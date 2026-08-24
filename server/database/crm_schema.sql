@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict vBTdzPExDQQINatwgHNi09NMzGgXzdI0Ges6zRcEXadPGmvdlIhNzZQrOE08XXp
+\restrict fOGZJZusBxgvPlgAH9vfu3p5FMslapyek0am2MNvTRyNeZwRhD9ku3u8xcZhyBI
 
 -- Dumped from database version 18.3
 -- Dumped by pg_dump version 18.3
@@ -234,6 +234,22 @@ $$;
 ALTER FUNCTION public.set_roles_updated_at() OWNER TO postgres;
 
 --
+-- Name: set_ticket_attachments_updated_at(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.set_ticket_attachments_updated_at() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.set_ticket_attachments_updated_at() OWNER TO postgres;
+
+--
 -- Name: set_ticket_comments_updated_at(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -324,167 +340,6 @@ CREATE TABLE public.departments (
 
 
 ALTER TABLE public.departments OWNER TO postgres;
-
---
--- Name: employees; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.employees (
-    id uuid CONSTRAINT employees_id_not_null1 NOT NULL,
-    user_id uuid CONSTRAINT employees_user_id_not_null1 NOT NULL,
-    employee_number character varying(50) CONSTRAINT employees_employee_number_not_null1 NOT NULL,
-    first_name character varying(100) CONSTRAINT employees_first_name_not_null1 NOT NULL,
-    middle_name character varying(100),
-    last_name character varying(100) CONSTRAINT employees_last_name_not_null1 NOT NULL,
-    display_name character varying(255) CONSTRAINT employees_display_name_not_null1 NOT NULL,
-    organization_id uuid CONSTRAINT employees_organization_id_not_null1 NOT NULL,
-    department_id uuid CONSTRAINT employees_department_id_not_null1 NOT NULL,
-    manager_id uuid,
-    designation character varying(150),
-    employment_type character varying(30) DEFAULT 'full_time'::character varying NOT NULL,
-    joining_date date CONSTRAINT employees_joining_date_not_null1 NOT NULL,
-    leaving_date date,
-    status character varying(30) DEFAULT 'active'::character varying CONSTRAINT employees_status_not_null1 NOT NULL,
-    phone character varying(30),
-    alternate_phone character varying(30),
-    work_email character varying(320),
-    date_of_birth date,
-    gender character varying(30),
-    address_line1 character varying(255),
-    address_line2 character varying(255),
-    city character varying(100),
-    state character varying(100),
-    postal_code character varying(20),
-    country character varying(100),
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP CONSTRAINT employees_created_at_not_null1 NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP CONSTRAINT employees_updated_at_not_null1 NOT NULL,
-    CONSTRAINT employees_created_at_not_null CHECK ((created_at IS NOT NULL)),
-    CONSTRAINT employees_department_id_not_null CHECK ((department_id IS NOT NULL)),
-    CONSTRAINT employees_display_name_not_null CHECK ((display_name IS NOT NULL)),
-    CONSTRAINT employees_employee_number_not_null CHECK ((employee_number IS NOT NULL)),
-    CONSTRAINT employees_employment_type_check CHECK (((employment_type)::text = ANY ((ARRAY['full_time'::character varying, 'part_time'::character varying, 'contract'::character varying, 'intern'::character varying, 'consultant'::character varying])::text[]))),
-    CONSTRAINT employees_first_name_not_null CHECK ((first_name IS NOT NULL)),
-    CONSTRAINT employees_id_not_null CHECK ((id IS NOT NULL)),
-    CONSTRAINT employees_joining_date_not_null CHECK ((joining_date IS NOT NULL)),
-    CONSTRAINT employees_last_name_not_null CHECK ((last_name IS NOT NULL)),
-    CONSTRAINT employees_leaving_date_check CHECK (((leaving_date IS NULL) OR (leaving_date >= joining_date))),
-    CONSTRAINT employees_organization_id_not_null CHECK ((organization_id IS NOT NULL)),
-    CONSTRAINT employees_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying, 'on_leave'::character varying, 'terminated'::character varying])::text[]))),
-    CONSTRAINT employees_status_not_null CHECK ((status IS NOT NULL)),
-    CONSTRAINT employees_updated_at_not_null CHECK ((updated_at IS NOT NULL)),
-    CONSTRAINT employees_user_id_not_null CHECK ((user_id IS NOT NULL))
-);
-
-
-ALTER TABLE public.employees OWNER TO postgres;
-
---
--- Name: field_definitions; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.field_definitions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    field_key character varying(100) NOT NULL,
-    name character varying(150) NOT NULL,
-    label character varying(200) NOT NULL,
-    description text,
-    type character varying(50) NOT NULL,
-    data_type character varying(50) NOT NULL,
-    placeholder character varying(255),
-    help_text text,
-    default_value jsonb,
-    status character varying(20) DEFAULT 'active'::character varying NOT NULL,
-    is_deleted boolean DEFAULT false NOT NULL,
-    is_visible boolean DEFAULT true NOT NULL,
-    is_enabled boolean DEFAULT true NOT NULL,
-    is_editable boolean DEFAULT true NOT NULL,
-    is_read_only boolean DEFAULT false NOT NULL,
-    is_required boolean DEFAULT false NOT NULL,
-    is_searchable boolean DEFAULT false NOT NULL,
-    is_filterable boolean DEFAULT false NOT NULL,
-    is_sortable boolean DEFAULT false NOT NULL,
-    validation_config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    options_config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    created_by uuid,
-    updated_by uuid,
-    deleted_by uuid,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    deleted_at timestamp with time zone,
-    CONSTRAINT field_definitions_data_type_check CHECK (((data_type)::text = ANY ((ARRAY['string'::character varying, 'number'::character varying, 'boolean'::character varying, 'date'::character varying, 'datetime'::character varying, 'time'::character varying, 'file'::character varying, 'array'::character varying])::text[]))),
-    CONSTRAINT field_definitions_deleted_state_check CHECK ((((is_deleted = false) AND (deleted_at IS NULL)) OR ((is_deleted = true) AND (deleted_at IS NOT NULL)))),
-    CONSTRAINT field_definitions_label_not_blank CHECK ((length(btrim((label)::text)) > 0)),
-    CONSTRAINT field_definitions_name_not_blank CHECK ((length(btrim((name)::text)) > 0)),
-    CONSTRAINT field_definitions_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[]))),
-    CONSTRAINT field_definitions_type_check CHECK (((type)::text = ANY ((ARRAY['text'::character varying, 'textarea'::character varying, 'number'::character varying, 'email'::character varying, 'password'::character varying, 'select'::character varying, 'multi_select'::character varying, 'autocomplete'::character varying, 'date'::character varying, 'datetime'::character varying, 'time'::character varying, 'checkbox'::character varying, 'switch'::character varying, 'radio'::character varying, 'file'::character varying])::text[])))
-);
-
-
-ALTER TABLE public.field_definitions OWNER TO postgres;
-
---
--- Name: form_definitions; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.form_definitions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    code character varying(100) NOT NULL,
-    name character varying(150) NOT NULL,
-    module character varying(100) NOT NULL,
-    description text,
-    status character varying(20) DEFAULT 'active'::character varying NOT NULL,
-    is_deleted boolean DEFAULT false NOT NULL,
-    created_by uuid,
-    updated_by uuid,
-    deleted_by uuid,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    deleted_at timestamp with time zone,
-    CONSTRAINT form_definitions_code_format_check CHECK (((code)::text ~ '^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$'::text)),
-    CONSTRAINT form_definitions_deleted_state_check CHECK ((((is_deleted = false) AND (deleted_at IS NULL)) OR ((is_deleted = true) AND (deleted_at IS NOT NULL)))),
-    CONSTRAINT form_definitions_module_not_blank CHECK ((length(btrim((module)::text)) > 0)),
-    CONSTRAINT form_definitions_name_not_blank CHECK ((length(btrim((name)::text)) > 0)),
-    CONSTRAINT form_definitions_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
-);
-
-
-ALTER TABLE public.form_definitions OWNER TO postgres;
-
---
--- Name: form_field_assignments; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.form_field_assignments (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    form_id uuid NOT NULL,
-    field_id uuid NOT NULL,
-    is_visible boolean,
-    is_enabled boolean,
-    is_editable boolean,
-    is_read_only boolean,
-    is_required boolean,
-    is_searchable boolean,
-    is_filterable boolean,
-    is_sortable boolean,
-    display_order integer DEFAULT 0 NOT NULL,
-    section character varying(100),
-    grid_size smallint,
-    column_width character varying(50),
-    label_override character varying(200),
-    placeholder_override character varying(255),
-    help_text_override text,
-    default_value_override jsonb,
-    created_by uuid,
-    updated_by uuid,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT form_field_assignments_column_width_check CHECK (((column_width IS NULL) OR (length(btrim((column_width)::text)) > 0))),
-    CONSTRAINT form_field_assignments_display_order_check CHECK ((display_order >= 0)),
-    CONSTRAINT form_field_assignments_grid_size_check CHECK (((grid_size IS NULL) OR ((grid_size >= 1) AND (grid_size <= 12))))
-);
-
-
-ALTER TABLE public.form_field_assignments OWNER TO postgres;
 
 --
 -- Name: organizations; Type: TABLE; Schema: public; Owner: postgres
@@ -586,6 +441,32 @@ CREATE TABLE public.schema_migrations (
 ALTER TABLE public.schema_migrations OWNER TO postgres;
 
 --
+-- Name: ticket_attachments; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.ticket_attachments (
+    id uuid NOT NULL,
+    ticket_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    original_name character varying(255) NOT NULL,
+    stored_name character varying(255) NOT NULL,
+    mime_type character varying(150) NOT NULL,
+    file_size bigint NOT NULL,
+    storage_path text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT ticket_attachments_file_size_limit CHECK ((file_size <= 10485760)),
+    CONSTRAINT ticket_attachments_file_size_positive CHECK ((file_size > 0)),
+    CONSTRAINT ticket_attachments_mime_type_not_blank CHECK ((length(btrim((mime_type)::text)) > 0)),
+    CONSTRAINT ticket_attachments_original_name_not_blank CHECK ((length(btrim((original_name)::text)) > 0)),
+    CONSTRAINT ticket_attachments_storage_path_not_blank CHECK ((length(btrim(storage_path)) > 0)),
+    CONSTRAINT ticket_attachments_stored_name_not_blank CHECK ((length(btrim((stored_name)::text)) > 0))
+);
+
+
+ALTER TABLE public.ticket_attachments OWNER TO postgres;
+
+--
 -- Name: ticket_comments; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -606,6 +487,27 @@ CREATE TABLE public.ticket_comments (
 
 
 ALTER TABLE public.ticket_comments OWNER TO postgres;
+
+--
+-- Name: ticket_lifecycle_events; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.ticket_lifecycle_events (
+    id uuid NOT NULL,
+    ticket_id uuid NOT NULL,
+    actor_user_id uuid NOT NULL,
+    event_type character varying(50) NOT NULL,
+    event_action character varying(100) NOT NULL,
+    field_name character varying(100),
+    old_value text,
+    new_value text,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT ticket_lifecycle_events_type_check CHECK (((event_type)::text = ANY ((ARRAY['TICKET'::character varying, 'FIELD'::character varying, 'STATUS'::character varying, 'ASSIGNMENT'::character varying, 'COMMENT'::character varying, 'ATTACHMENT'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.ticket_lifecycle_events OWNER TO postgres;
 
 --
 -- Name: ticket_number_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -747,54 +649,6 @@ ALTER TABLE ONLY public.departments
 
 
 --
--- Name: employees employees_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.employees
-    ADD CONSTRAINT employees_pkey PRIMARY KEY (id);
-
-
---
--- Name: field_definitions field_definitions_field_key_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.field_definitions
-    ADD CONSTRAINT field_definitions_field_key_unique UNIQUE (field_key);
-
-
---
--- Name: field_definitions field_definitions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.field_definitions
-    ADD CONSTRAINT field_definitions_pkey PRIMARY KEY (id);
-
-
---
--- Name: form_definitions form_definitions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.form_definitions
-    ADD CONSTRAINT form_definitions_pkey PRIMARY KEY (id);
-
-
---
--- Name: form_field_assignments form_field_assignments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.form_field_assignments
-    ADD CONSTRAINT form_field_assignments_pkey PRIMARY KEY (id);
-
-
---
--- Name: form_field_assignments form_field_assignments_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.form_field_assignments
-    ADD CONSTRAINT form_field_assignments_unique UNIQUE (form_id, field_id);
-
-
---
 -- Name: organizations organizations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -835,11 +689,27 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
+-- Name: ticket_attachments ticket_attachments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ticket_attachments
+    ADD CONSTRAINT ticket_attachments_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: ticket_comments ticket_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.ticket_comments
     ADD CONSTRAINT ticket_comments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ticket_lifecycle_events ticket_lifecycle_events_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ticket_lifecycle_events
+    ADD CONSTRAINT ticket_lifecycle_events_pkey PRIMARY KEY (id);
 
 
 --
@@ -930,153 +800,6 @@ CREATE INDEX departments_parent_idx ON public.departments USING btree (parent_de
 --
 
 CREATE INDEX departments_status_idx ON public.departments USING btree (status);
-
-
---
--- Name: employees_department_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX employees_department_idx ON public.employees USING btree (department_id);
-
-
---
--- Name: employees_display_name_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX employees_display_name_idx ON public.employees USING btree (lower((display_name)::text));
-
-
---
--- Name: employees_joining_date_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX employees_joining_date_idx ON public.employees USING btree (joining_date);
-
-
---
--- Name: employees_manager_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX employees_manager_idx ON public.employees USING btree (manager_id) WHERE (manager_id IS NOT NULL);
-
-
---
--- Name: employees_number_unique_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE UNIQUE INDEX employees_number_unique_idx ON public.employees USING btree (lower((employee_number)::text));
-
-
---
--- Name: employees_organization_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX employees_organization_idx ON public.employees USING btree (organization_id);
-
-
---
--- Name: employees_status_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX employees_status_idx ON public.employees USING btree (status);
-
-
---
--- Name: employees_user_unique_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE UNIQUE INDEX employees_user_unique_idx ON public.employees USING btree (user_id);
-
-
---
--- Name: field_definitions_data_type_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX field_definitions_data_type_idx ON public.field_definitions USING btree (data_type);
-
-
---
--- Name: field_definitions_deleted_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX field_definitions_deleted_idx ON public.field_definitions USING btree (is_deleted);
-
-
---
--- Name: field_definitions_options_config_gin_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX field_definitions_options_config_gin_idx ON public.field_definitions USING gin (options_config);
-
-
---
--- Name: field_definitions_status_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX field_definitions_status_idx ON public.field_definitions USING btree (status);
-
-
---
--- Name: field_definitions_type_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX field_definitions_type_idx ON public.field_definitions USING btree (type);
-
-
---
--- Name: field_definitions_validation_config_gin_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX field_definitions_validation_config_gin_idx ON public.field_definitions USING gin (validation_config);
-
-
---
--- Name: form_definitions_code_unique_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE UNIQUE INDEX form_definitions_code_unique_idx ON public.form_definitions USING btree (code);
-
-
---
--- Name: form_definitions_deleted_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX form_definitions_deleted_idx ON public.form_definitions USING btree (is_deleted);
-
-
---
--- Name: form_definitions_module_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX form_definitions_module_idx ON public.form_definitions USING btree (module);
-
-
---
--- Name: form_definitions_status_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX form_definitions_status_idx ON public.form_definitions USING btree (status);
-
-
---
--- Name: form_field_assignments_field_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX form_field_assignments_field_idx ON public.form_field_assignments USING btree (field_id);
-
-
---
--- Name: form_field_assignments_form_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX form_field_assignments_form_idx ON public.form_field_assignments USING btree (form_id, display_order);
-
-
---
--- Name: form_field_assignments_section_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX form_field_assignments_section_idx ON public.form_field_assignments USING btree (section);
 
 
 --
@@ -1192,6 +915,20 @@ CREATE INDEX roles_system_idx ON public.roles USING btree (is_system);
 
 
 --
+-- Name: ticket_attachments_ticket_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ticket_attachments_ticket_idx ON public.ticket_attachments USING btree (ticket_id, created_at DESC);
+
+
+--
+-- Name: ticket_attachments_user_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ticket_attachments_user_idx ON public.ticket_attachments USING btree (user_id);
+
+
+--
 -- Name: ticket_comments_ticket_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1203,6 +940,34 @@ CREATE INDEX ticket_comments_ticket_idx ON public.ticket_comments USING btree (t
 --
 
 CREATE INDEX ticket_comments_user_idx ON public.ticket_comments USING btree (user_id);
+
+
+--
+-- Name: ticket_lifecycle_events_actor_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ticket_lifecycle_events_actor_idx ON public.ticket_lifecycle_events USING btree (actor_user_id);
+
+
+--
+-- Name: ticket_lifecycle_events_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ticket_lifecycle_events_created_at_idx ON public.ticket_lifecycle_events USING btree (created_at DESC);
+
+
+--
+-- Name: ticket_lifecycle_events_ticket_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ticket_lifecycle_events_ticket_idx ON public.ticket_lifecycle_events USING btree (ticket_id, created_at DESC);
+
+
+--
+-- Name: ticket_lifecycle_events_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ticket_lifecycle_events_type_idx ON public.ticket_lifecycle_events USING btree (event_type, event_action);
 
 
 --
@@ -1360,34 +1125,6 @@ CREATE TRIGGER departments_set_updated_at BEFORE UPDATE ON public.departments FO
 
 
 --
--- Name: employees employees_set_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER employees_set_updated_at BEFORE UPDATE ON public.employees FOR EACH ROW EXECUTE FUNCTION public.set_employees_updated_at();
-
-
---
--- Name: field_definitions field_definitions_set_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER field_definitions_set_updated_at BEFORE UPDATE ON public.field_definitions FOR EACH ROW EXECUTE FUNCTION public.set_field_definitions_updated_at();
-
-
---
--- Name: form_definitions form_definitions_set_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER form_definitions_set_updated_at BEFORE UPDATE ON public.form_definitions FOR EACH ROW EXECUTE FUNCTION public.set_form_definitions_updated_at();
-
-
---
--- Name: form_field_assignments form_field_assignments_set_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER form_field_assignments_set_updated_at BEFORE UPDATE ON public.form_field_assignments FOR EACH ROW EXECUTE FUNCTION public.set_form_field_assignments_updated_at();
-
-
---
 -- Name: organizations organizations_set_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1413,6 +1150,13 @@ CREATE TRIGGER roles_protect_system_roles BEFORE INSERT OR DELETE OR UPDATE ON p
 --
 
 CREATE TRIGGER roles_set_updated_at BEFORE UPDATE ON public.roles FOR EACH ROW EXECUTE FUNCTION public.set_roles_updated_at();
+
+
+--
+-- Name: ticket_attachments ticket_attachments_set_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER ticket_attachments_set_updated_at BEFORE UPDATE ON public.ticket_attachments FOR EACH ROW EXECUTE FUNCTION public.set_ticket_attachments_updated_at();
 
 
 --
@@ -1468,118 +1212,6 @@ ALTER TABLE ONLY public.departments
 
 
 --
--- Name: employees employees_department_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.employees
-    ADD CONSTRAINT employees_department_fk FOREIGN KEY (department_id) REFERENCES public.departments(id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: employees employees_manager_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.employees
-    ADD CONSTRAINT employees_manager_fk FOREIGN KEY (manager_id) REFERENCES public.employees(id) ON UPDATE CASCADE ON DELETE SET NULL;
-
-
---
--- Name: employees employees_organization_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.employees
-    ADD CONSTRAINT employees_organization_fk FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: employees employees_user_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.employees
-    ADD CONSTRAINT employees_user_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: field_definitions field_definitions_created_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.field_definitions
-    ADD CONSTRAINT field_definitions_created_by_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
--- Name: field_definitions field_definitions_deleted_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.field_definitions
-    ADD CONSTRAINT field_definitions_deleted_by_fk FOREIGN KEY (deleted_by) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
--- Name: field_definitions field_definitions_updated_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.field_definitions
-    ADD CONSTRAINT field_definitions_updated_by_fk FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
--- Name: form_definitions form_definitions_created_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.form_definitions
-    ADD CONSTRAINT form_definitions_created_by_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
--- Name: form_definitions form_definitions_deleted_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.form_definitions
-    ADD CONSTRAINT form_definitions_deleted_by_fk FOREIGN KEY (deleted_by) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
--- Name: form_definitions form_definitions_updated_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.form_definitions
-    ADD CONSTRAINT form_definitions_updated_by_fk FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
--- Name: form_field_assignments form_field_assignments_created_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.form_field_assignments
-    ADD CONSTRAINT form_field_assignments_created_by_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
--- Name: form_field_assignments form_field_assignments_field_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.form_field_assignments
-    ADD CONSTRAINT form_field_assignments_field_fk FOREIGN KEY (field_id) REFERENCES public.field_definitions(id) ON DELETE RESTRICT;
-
-
---
--- Name: form_field_assignments form_field_assignments_form_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.form_field_assignments
-    ADD CONSTRAINT form_field_assignments_form_fk FOREIGN KEY (form_id) REFERENCES public.form_definitions(id) ON DELETE CASCADE;
-
-
---
--- Name: form_field_assignments form_field_assignments_updated_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.form_field_assignments
-    ADD CONSTRAINT form_field_assignments_updated_by_fk FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
 -- Name: role_permissions role_permissions_permission_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1593,6 +1225,22 @@ ALTER TABLE ONLY public.role_permissions
 
 ALTER TABLE ONLY public.role_permissions
     ADD CONSTRAINT role_permissions_role_fk FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ticket_attachments ticket_attachments_ticket_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ticket_attachments
+    ADD CONSTRAINT ticket_attachments_ticket_fk FOREIGN KEY (ticket_id) REFERENCES public.tickets(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ticket_attachments ticket_attachments_user_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ticket_attachments
+    ADD CONSTRAINT ticket_attachments_user_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
@@ -1612,11 +1260,19 @@ ALTER TABLE ONLY public.ticket_comments
 
 
 --
--- Name: tickets tickets_assigned_employee_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: ticket_lifecycle_events ticket_lifecycle_events_actor_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.tickets
-    ADD CONSTRAINT tickets_assigned_employee_fk FOREIGN KEY (assigned_employee_id) REFERENCES public.employees(id) ON UPDATE CASCADE ON DELETE SET NULL;
+ALTER TABLE ONLY public.ticket_lifecycle_events
+    ADD CONSTRAINT ticket_lifecycle_events_actor_fk FOREIGN KEY (actor_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: ticket_lifecycle_events ticket_lifecycle_events_ticket_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ticket_lifecycle_events
+    ADD CONSTRAINT ticket_lifecycle_events_ticket_fk FOREIGN KEY (ticket_id) REFERENCES public.tickets(id) ON DELETE CASCADE;
 
 
 --
@@ -1711,5 +1367,5 @@ ALTER TABLE ONLY public.user_sessions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict vBTdzPExDQQINatwgHNi09NMzGgXzdI0Ges6zRcEXadPGmvdlIhNzZQrOE08XXp
+\unrestrict fOGZJZusBxgvPlgAH9vfu3p5FMslapyek0am2MNvTRyNeZwRhD9ku3u8xcZhyBI
 
