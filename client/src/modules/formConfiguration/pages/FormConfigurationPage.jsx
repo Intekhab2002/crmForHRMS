@@ -257,6 +257,75 @@ export default function FormConfigurationPage() {
     }
   }
 
+  async function moveAssignment(assignment, direction) {
+    if (!selectedForm) {
+      return;
+    }
+
+    const orderedFields = [...(selectedForm.fields ?? [])].sort(
+      (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+    );
+
+    const currentIndex = orderedFields.findIndex(
+      (item) => item.id === assignment.id,
+    );
+
+    const targetIndex =
+      direction === "up" ? currentIndex - 1 : currentIndex + 1;
+
+    if (
+      currentIndex < 0 ||
+      targetIndex < 0 ||
+      targetIndex >= orderedFields.length
+    ) {
+      return;
+    }
+
+    const current = orderedFields[currentIndex];
+    const target = orderedFields[targetIndex];
+
+    setSubmitting(true);
+    setError("");
+
+    try {
+      await Promise.all([
+        formConfigurationApi.updateAssignment(
+          selectedForm.id,
+          current.fieldId,
+          {
+            displayOrder: target.displayOrder,
+          },
+        ),
+
+        formConfigurationApi.updateAssignment(selectedForm.id, target.fieldId, {
+          displayOrder: current.displayOrder,
+        }),
+      ]);
+
+      const response = await formConfigurationApi.getForm(selectedForm.id);
+
+      setSelectedForm(response?.data ?? null);
+
+      await loadData();
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ??
+          requestError?.message ??
+          "Unable to reorder fields.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleMoveUp(assignment) {
+    return moveAssignment(assignment, "up");
+  }
+
+  function handleMoveDown(assignment) {
+    return moveAssignment(assignment, "down");
+  }
+
   async function handleRemoveField(assignment) {
     if (!selectedForm) {
       return;
@@ -442,6 +511,8 @@ export default function FormConfigurationPage() {
                 setAssignmentDialogOpen(true);
               }}
               onRemove={handleRemoveField}
+              onMoveUp={handleMoveUp}
+              onMoveDown={handleMoveDown}
             />
           </CardContent>
         </Card>

@@ -12,6 +12,8 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
 import { DataGrid } from "@mui/x-data-grid";
 
+import { ArrowDownward, ArrowUpward } from "@mui/icons-material";
+
 function renderOverride(value) {
   if (value === null || value === undefined) {
     return <Chip size="small" label="Inherited" variant="outlined" />;
@@ -44,6 +46,8 @@ export default function FormAssignedFieldsTable({
   canUpdate = false,
   onEdit,
   onRemove,
+  onMoveUp,
+  onMoveDown,
 }) {
   const columns = [
     {
@@ -146,6 +150,21 @@ export default function FormAssignedFieldsTable({
       filterable: false,
       renderCell: ({ row }) => (
         <Stack direction="row" spacing={0.5}>
+          {canUpdate ? (
+            <Tooltip title="Move up">
+              <IconButton size="small" onClick={() => onMoveUp?.(row)}>
+                <ArrowUpward fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : null}
+
+          {canUpdate ? (
+            <Tooltip title="Move down">
+              <IconButton size="small" onClick={() => onMoveDown?.(row)}>
+                <ArrowDownward fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : null}
           {canUpdate ? (
             <Tooltip title="Edit assignment">
               <IconButton size="small" onClick={() => onEdit?.(row)}>
