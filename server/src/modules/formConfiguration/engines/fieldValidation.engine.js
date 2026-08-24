@@ -37,9 +37,55 @@ function validateDataType(field, value, errors) {
         addError(errors, field, "Expected a valid ISO datetime string.");
     } else if (type === "time" && (typeof value !== "string" || !/^\d{2}:\d{2}(:\d{2})?$/.test(value))) {
         addError(errors, field, "Expected a valid time string.");
-    } else if (type === "file" && (typeof value !== "object" || value === null || Array.isArray(value))) {
-        addError(errors, field, "Expected a file descriptor.");
+    } else if (type === "file") {
+    const descriptors = Array.isArray(value)
+        ? value
+        : [value];
+
+    for (const descriptor of descriptors) {
+        if (
+            typeof descriptor !== "object" ||
+            descriptor === null ||
+            Array.isArray(descriptor) ||
+            typeof descriptor.name !== "string" ||
+            descriptor.name.trim() === ""
+        ) {
+            addError(
+                errors,
+                field,
+                "Expected a valid file descriptor.",
+            );
+            break;
+        }
+
+        if (
+            descriptor.size !== undefined &&
+            (
+                typeof descriptor.size !== "number" ||
+                descriptor.size < 0
+            )
+        ) {
+            addError(
+                errors,
+                field,
+                "File descriptor size must be a non-negative number.",
+            );
+            break;
+        }
+
+        if (
+            descriptor.type !== undefined &&
+            typeof descriptor.type !== "string"
+        ) {
+            addError(
+                errors,
+                field,
+                "File descriptor type must be a string.",
+            );
+            break;
+        }
     }
+}
 }
 
 function validateRules(field, value, errors) {

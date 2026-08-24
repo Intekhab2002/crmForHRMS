@@ -48,7 +48,6 @@ function getRuntimeFields(runtimeForm) {
 function buildDynamicPayload(
   body,
   fields,
-  authenticatedUserId,
 ) {
   const fieldMap = new Map(
     fields.map((field) => [field.key, field]),
@@ -90,10 +89,6 @@ function buildDynamicPayload(
     }
   }
 
-  if (fieldMap.has("created_by")) {
-    payload.created_by =
-      authenticatedUserId;
-  }
 
   return payload;
 }
@@ -123,7 +118,6 @@ async function resolveMetadata(
     buildDynamicPayload(
       body,
       fields,
-      authenticatedUserId,
     );
 
   const validated =
