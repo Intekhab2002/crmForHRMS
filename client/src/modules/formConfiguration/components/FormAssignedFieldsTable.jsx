@@ -10,9 +10,39 @@ import {
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
-import {
-  DataGrid,
-} from "@mui/x-data-grid";
+import { DataGrid } from "@mui/x-data-grid";
+
+function renderOverride(value) {
+  if (value === null || value === undefined) {
+    return (
+      <Chip
+        size="small"
+        label="Inherited"
+        variant="outlined"
+      />
+    );
+  }
+
+  return (
+    <Chip
+      size="small"
+      label={value ? "Yes" : "No"}
+      color={value ? "success" : "default"}
+      variant="outlined"
+    />
+  );
+}
+
+function renderBoolean(value) {
+  return (
+    <Chip
+      size="small"
+      label={value ? "Yes" : "No"}
+      color={value ? "success" : "default"}
+      variant="outlined"
+    />
+  );
+}
 
 export default function FormAssignedFieldsTable({
   rows,
@@ -25,7 +55,7 @@ export default function FormAssignedFieldsTable({
     {
       field: "displayOrder",
       headerName: "Order",
-      width: 90,
+      width: 80,
       type: "number",
     },
 
@@ -39,98 +69,90 @@ export default function FormAssignedFieldsTable({
     {
       field: "section",
       headerName: "Section",
-      flex: 1,
-      minWidth: 160,
-      valueGetter: (
-        _value,
-        row,
-      ) =>
-        row.section ||
-        "-",
+      flex: 0.8,
+      minWidth: 140,
+      valueGetter: (_value, row) =>
+        row.section || "-",
     },
 
     {
       field: "gridSize",
       headerName: "Grid",
-      width: 90,
-      valueGetter: (
-        _value,
-        row,
-      ) =>
-        row.gridSize ??
-        "-",
+      width: 80,
+      valueGetter: (_value, row) =>
+        row.gridSize ?? "-",
+    },
+
+    {
+      field: "columnWidth",
+      headerName: "Width",
+      width: 100,
+      valueGetter: (_value, row) =>
+        row.columnWidth || "-",
     },
 
     {
       field: "isVisible",
       headerName: "Visible",
-      width: 100,
-      renderCell: ({
-        value,
-      }) => (
-        <Chip
-          size="small"
-          label={
-            value
-              ? "Yes"
-              : "No"
-          }
-          color={
-            value
-              ? "success"
-              : "default"
-          }
-          variant="outlined"
-        />
-      ),
+      width: 105,
+      renderCell: ({ value }) =>
+        renderOverride(value),
     },
 
     {
-      field: "isRequired",
-      headerName: "Required",
-      width: 110,
-      renderCell: ({
-        value,
-      }) => (
-        <Chip
-          size="small"
-          label={
-            value
-              ? "Yes"
-              : "No"
-          }
-          color={
-            value
-              ? "warning"
-              : "default"
-          }
-          variant="outlined"
-        />
-      ),
+      field: "isEnabled",
+      headerName: "Enabled",
+      width: 105,
+      renderCell: ({ value }) =>
+        renderOverride(value),
     },
 
     {
       field: "isEditable",
       headerName: "Editable",
-      width: 110,
-      renderCell: ({
-        value,
-      }) => (
-        <Chip
-          size="small"
-          label={
-            value
-              ? "Yes"
-              : "No"
-          }
-          color={
-            value
-              ? "success"
-              : "default"
-          }
-          variant="outlined"
-        />
-      ),
+      width: 105,
+      renderCell: ({ value }) =>
+        renderOverride(value),
+    },
+
+    {
+      field: "isReadOnly",
+      headerName: "Read Only",
+      width: 105,
+      renderCell: ({ value }) =>
+        renderOverride(value),
+    },
+
+    {
+      field: "isRequired",
+      headerName: "Required",
+      width: 105,
+      renderCell: ({ value }) =>
+        renderOverride(value),
+    },
+
+    {
+      field: "isSearchable",
+      headerName: "Search",
+      width: 100,
+      renderCell: ({ value }) =>
+        renderOverride(value),
+    },
+
+    {
+      field: "isFilterable",
+      headerName: "Filter",
+      width: 100,
+      renderCell: ({ value }) =>
+        renderOverride(value),
+    },
+
+    {
+      field: "isSortable",
+      headerName: "Sort",
+      width: 100,
+      renderCell: ({ value }) =>
+        renderOverride(value),
     },
 
     {
@@ -139,9 +161,7 @@ export default function FormAssignedFieldsTable({
       width: 120,
       sortable: false,
       filterable: false,
-      renderCell: ({
-        row,
-      }) => (
+      renderCell: ({ row }) => (
         <Stack
           direction="row"
           spacing={0.5}
@@ -211,9 +231,7 @@ export default function FormAssignedFieldsTable({
       disableRowSelectionOnClick
       autoHeight
       hideFooterSelectedRowCount
-      getRowId={(row) =>
-        row.id
-      }
+      getRowId={(row) => row.id}
       pageSizeOptions={[
         10,
         20,
@@ -226,6 +244,7 @@ export default function FormAssignedFieldsTable({
             page: 0,
           },
         },
+
         sorting: {
           sortModel: [
             {
