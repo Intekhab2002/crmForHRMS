@@ -9,16 +9,10 @@ function getUserId(user) {
 function buildUpdatePayload(values) {
   const {
     attachment,
-    requesterUserId,
     ...fields
   } = values;
 
-  return {
-    ...fields,
-    ...(requesterUserId
-      ? { requesterUserId }
-      : {}),
-  };
+  return fields;
 }
 
 export const ticketRuntimeService =
