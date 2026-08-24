@@ -1,32 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import { Link, useParams } from "react-router";
 import PageHeader from "../../../components/page/PageHeader";
-import TicketAttachmentUploader from "../components/TicketAttachmentUploaderNotUsingCurrently";
 import TicketCommentComposer from "../components/TicketCommentComposer";
 import TicketComments from "../components/TicketComments";
 import TicketLifecycleTimeline from "../components/TicketLifecycleTimeline";
 import TicketOverview from "../components/TicketOverview";
 import TicketUpdatePanel from "../components/TicketUpdatePanel";
 import { useAppConfig } from "../../../context/useAppConfig";
-import { useAuth } from "../../../context/useAuth";
 import { ticketService } from "../services/ticket.service";
 import TicketStatusActions from "../components/TicketStatusActions";
 import TicketAttachmentList from "../components/TicketAttachmentList";
+import { ticketRuntimeService } from "../services/ticketRuntime.service";
 
-function pickFields(fields, names) {
-  return names
-    .map((name) => fields.find((field) => field.name === name))
-    .filter(Boolean);
-}
+
 
 export default function TicketLifecyclePage() {
   const { ticketId } = useParams();
-  const { user } = useAuth();
   const { ticket: ticketConfig } = useAppConfig();
   const [ticket, setTicket] = useState(null);
-  const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -91,12 +84,10 @@ export default function TicketLifecyclePage() {
 
     Promise.all([
       ticketService.getTicket(ticketId),
-      ticketService.getFields("detail"),
     ])
       .then(([ticketRecord, schema]) => {
         if (!active) return;
         setTicket(ticketRecord);
-        setFields(schema);
       })
       .catch((requestError) => {
         if (active) setError(requestError.message);
@@ -153,24 +144,23 @@ export default function TicketLifecyclePage() {
     loadAttachments();
     loadLifecycle();
   }, [loadTicket, loadComments, loadAttachments, loadLifecycle]);
-  const updateFields = useMemo(
-    () => pickFields(fields, ticketConfig.update.fields),
-    [fields, ticketConfig.update.fields],
-  );
 
-  const handleUpdate = async (values) => {
-    const updatedTicket = await ticketService.updateTicket(
+
+const handleUpdate = async (values) => {
+  const updatedTicket =
+    await ticketRuntimeService.updateTicket(
       ticketId,
       values,
-      user,
     );
 
-    setTicket(updatedTicket);
+  setTicket(updatedTicket);
 
-    await loadLifecycle();
+  await loadLifecycle();
 
-    setNotice(ticketConfig.update.successMessage);
-  };
+  setNotice(
+    ticketConfig.update.successMessage,
+  );
+};
 
   const handleComment = async (comment) => {
     await ticketService.addComment(ticketId, comment);
@@ -256,7 +246,7 @@ export default function TicketLifecyclePage() {
 
       <TicketOverview
         ticket={ticket}
-        fields={fields}
+        // fields={fields}
         fieldNames={ticketConfig.detail.fields}
         title={ticket.subject}
         fallback={ticketConfig.labels.notAvailable}
@@ -264,7 +254,6 @@ export default function TicketLifecyclePage() {
 
       <TicketUpdatePanel
         config={ticketConfig.update}
-        fields={updateFields}
         ticket={ticket}
         onSubmit={handleUpdate}
       />
@@ -295,7 +284,7 @@ export default function TicketLifecyclePage() {
           </Stack>
           <TicketLifecycleTimeline
             events={lifecycle}
-            fields={fields}
+            // fields={fields}
             eventTypes={ticketConfig.lifecycle.eventTypes}
             emptyMessage={ticketConfig.lifecycle.emptyMessage}
             fallback={ticketConfig.labels.notAvailable}

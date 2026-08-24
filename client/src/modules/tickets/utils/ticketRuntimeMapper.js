@@ -1,42 +1,50 @@
 function getCustomData(ticket) {
-  return ticket?.custom_data &&
-    typeof ticket.custom_data === "object"
-    ? ticket.custom_data
+  return ticket?.customData &&
+    typeof ticket.customData === "object"
+    ? ticket.customData
     : {};
 }
 
 function getTicketValue(ticket, fieldKey) {
-  const customData = getCustomData(ticket);
+  const customData =
+    getCustomData(ticket);
 
   const directValues = {
-    subject: ticket?.subject,
-    description: ticket?.description,
-    issue_type: ticket?.issue_type,
-    priority: ticket?.priority,
-    status: ticket?.status,
+    subject:
+      ticket?.subject,
+
+    description:
+      ticket?.description,
+
+    issue_type:
+      ticket?.issueType,
+
+    priority:
+      ticket?.priority,
+
+    status:
+      ticket?.status,
 
     department:
-      ticket?.department_id ??
-      ticket?.department,
+      ticket?.departmentId ?? "",
 
     assigned_to:
-      ticket?.assigned_user_id ??
-      ticket?.assignedUserId,
+      ticket?.assignedUserId ?? "",
 
     requester_user_id:
-      ticket?.requester_user_id,
+      ticket?.requesterUserId ?? "",
 
     created_by:
-      ticket?.created_by_user_id,
+      ticket?.createdByUserId ?? "",
 
     organization:
-      ticket?.organization_id,
+      ticket?.organizationId ?? "",
 
     contact:
-      ticket?.contact_id,
+      ticket?.contactId ?? "",
 
     resolution:
-      ticket?.resolution_note,
+      ticket?.resolutionNotes ?? "",
   };
 
   if (
@@ -45,7 +53,7 @@ function getTicketValue(ticket, fieldKey) {
       fieldKey,
     )
   ) {
-    return directValues[fieldKey] ?? "";
+    return directValues[fieldKey];
   }
 
   return customData[fieldKey] ?? "";

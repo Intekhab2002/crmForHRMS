@@ -9,12 +9,7 @@
  *   camelCase
  */
 
-function mapActor({
-  id,
-  username,
-  email,
-  name,
-} = {}) {
+function mapActor({ id, username, email, name } = {}) {
   return {
     id: id ?? null,
     name: name ?? username ?? email ?? "",
@@ -76,9 +71,7 @@ function buildLifecycleSummary(event, metadata) {
         ? event.event_action
             .replaceAll("_", " ")
             .toLowerCase()
-            .replace(/^./, (character) =>
-              character.toUpperCase(),
-            )
+            .replace(/^./, (character) => character.toUpperCase())
         : "Ticket activity.";
   }
 }
@@ -106,9 +99,7 @@ function formatLifecycleFieldName(fieldName) {
   return fieldName
     .replaceAll("_", " ")
     .replace(/([A-Z])/g, " $1")
-    .replace(/^./, (character) =>
-      character.toUpperCase(),
-    );
+    .replace(/^./, (character) => character.toUpperCase());
 }
 
 function buildLifecycleComment(event, metadata) {
@@ -116,23 +107,11 @@ function buildLifecycleComment(event, metadata) {
     return null;
   }
 
-  return (
-    metadata.comment ??
-    metadata.commentText ??
-    metadata.body ??
-    null
-  );
+  return metadata.comment ?? metadata.commentText ?? metadata.body ?? null;
 }
 
-function buildLifecycleFiles(
-  event,
-  metadata,
-  fileSize,
-) {
-  if (
-    event.event_type !== "ATTACHMENT" ||
-    !metadata.originalName
-  ) {
+function buildLifecycleFiles(event, metadata, fileSize) {
+  if (event.event_type !== "ATTACHMENT" || !metadata.originalName) {
     return [];
   }
 
@@ -140,12 +119,9 @@ function buildLifecycleFiles(
     {
       id: metadata.attachmentId ?? event.id,
       name: metadata.originalName,
-      size: Number.isFinite(fileSize)
-        ? fileSize
-        : null,
+      size: Number.isFinite(fileSize) ? fileSize : null,
       mimeType: metadata.mimeType ?? "",
-      attachmentId:
-        metadata.attachmentId ?? null,
+      attachmentId: metadata.attachmentId ?? null,
     },
   ];
 }
@@ -156,13 +132,10 @@ function mapLifecycleEvent(event) {
   }
 
   const metadata =
-    event.metadata && typeof event.metadata === "object"
-      ? event.metadata
-      : {};
+    event.metadata && typeof event.metadata === "object" ? event.metadata : {};
 
   const fileSize =
-    metadata.fileSize !== undefined &&
-    metadata.fileSize !== null
+    metadata.fileSize !== undefined && metadata.fileSize !== null
       ? Number(metadata.fileSize)
       : null;
 
@@ -197,7 +170,6 @@ function mapLifecycleEvent(event) {
   };
 }
 
-
 export function mapTicketFromApi(ticket) {
   if (!ticket) {
     return null;
@@ -214,10 +186,7 @@ export function mapTicketFromApi(ticket) {
     status: ticket.status,
 
     requesterUserId: ticket.requester_user_id,
-    requesterName:
-      ticket.contact_name ??
-      ticket.requester_username ??
-      "",
+    requesterName: ticket.contact_name ?? ticket.requester_username ?? "",
     requesterEmail: ticket.requester_email ?? "",
     requesterPhone: ticket.contact_mobile_phone ?? "",
 
@@ -248,22 +217,20 @@ export function mapTicketFromApi(ticket) {
 
     createdAt: ticket.created_at,
     updatedAt: ticket.updated_at,
+    customData:
+      ticket.custom_data && typeof ticket.custom_data === "object"
+        ? ticket.custom_data
+        : {},
 
     /*
      * These will be populated when the backend
      * lifecycle/comment/attachment APIs are implemented.
      */
-    comments: Array.isArray(ticket.comments)
-      ? ticket.comments
-      : [],
+    comments: Array.isArray(ticket.comments) ? ticket.comments : [],
 
-    attachments: Array.isArray(ticket.attachments)
-      ? ticket.attachments
-      : [],
+    attachments: Array.isArray(ticket.attachments) ? ticket.attachments : [],
 
-    lifecycle: Array.isArray(ticket.lifecycle)
-      ? ticket.lifecycle
-      : [],
+    lifecycle: Array.isArray(ticket.lifecycle) ? ticket.lifecycle : [],
   };
 }
 
@@ -272,9 +239,7 @@ export function mapTicketsFromApi(tickets) {
     return [];
   }
 
-  return tickets
-    .map(mapTicketFromApi)
-    .filter(Boolean);
+  return tickets.map(mapTicketFromApi).filter(Boolean);
 }
 
 export function mapLifecycleFromApi(events) {
@@ -282,7 +247,5 @@ export function mapLifecycleFromApi(events) {
     return [];
   }
 
-  return events
-    .map(mapLifecycleEvent)
-    .filter(Boolean);
+  return events.map(mapLifecycleEvent).filter(Boolean);
 }
