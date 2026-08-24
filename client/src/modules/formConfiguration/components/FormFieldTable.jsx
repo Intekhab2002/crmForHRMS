@@ -5,23 +5,15 @@ import {
   Tooltip,
 } from "@mui/material";
 
-import EditOutlinedIcon from
-  "@mui/icons-material/EditOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import RestoreOutlinedIcon from "@mui/icons-material/RestoreOutlined";
+import ToggleOnOutlinedIcon from "@mui/icons-material/ToggleOnOutlined";
+import ToggleOffOutlinedIcon from "@mui/icons-material/ToggleOffOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
 
-import DeleteOutlineIcon from
-  "@mui/icons-material/DeleteOutline";
-
-import RestoreOutlinedIcon from
-  "@mui/icons-material/RestoreOutlined";
-
-import ToggleOnOutlinedIcon from
-  "@mui/icons-material/ToggleOnOutlined";
-
-import ToggleOffOutlinedIcon from
-  "@mui/icons-material/ToggleOffOutlined";
-
-import { DataGrid } from
-  "@mui/x-data-grid";
+import { DataGrid } from "@mui/x-data-grid";
 
 export default function FormFieldTable({
   rows,
@@ -36,165 +28,114 @@ export default function FormFieldTable({
   onRestore,
   onEnable,
   onDisable,
+  onToggleVisibility,
 }) {
   const columns = [
     {
       field: "fieldKey",
       headerName: "Field Key",
-      minWidth: 160,
+      minWidth: 170,
       flex: 1,
     },
-
     {
       field: "label",
       headerName: "Label",
       minWidth: 160,
       flex: 1,
     },
-
     {
       field: "type",
       headerName: "Type",
       width: 130,
     },
-
     {
       field: "dataType",
       headerName: "Data Type",
       width: 130,
     },
-
+    {
+      field: "storageType",
+      headerName: "Storage",
+      width: 150,
+    },
     {
       field: "isRequired",
       headerName: "Required",
-      width: 110,
-      renderCell: ({
-        value,
-      }) => (
-        <Chip
-          size="small"
-          label={value ? "Yes" : "No"}
-          color={
-            value
-              ? "primary"
-              : "default"
-          }
-        />
+      width: 100,
+      renderCell: ({ value }) => (
+        <Chip size="small" label={value ? "Yes" : "No"} color={value ? "primary" : "default"} />
       ),
     },
-
     {
       field: "status",
       headerName: "Status",
       width: 120,
-      renderCell: ({
-        value,
-      }) => (
+      renderCell: ({ value }) => (
         <Chip
           size="small"
           label={value}
-          color={
-            value === "active"
-              ? "success"
-              : "default"
-          }
+          color={value === "active" ? "success" : "default"}
           variant="outlined"
         />
       ),
     },
-
     {
       field: "isVisible",
       headerName: "Visible",
       width: 100,
-      renderCell: ({
-        value,
-      }) => (value ? "Yes" : "No"),
+      renderCell: ({ value }) => (value ? "Yes" : "No"),
     },
-
     {
       field: "actions",
       headerName: "Actions",
-      width: 220,
+      width: 280,
       sortable: false,
       filterable: false,
-
-      renderCell: ({
-        row,
-      }) => (
-        <Box
-          display="flex"
-          gap={0.5}
-        >
+      renderCell: ({ row }) => (
+        <Box display="flex" gap={0.25}>
           {canUpdate ? (
             <Tooltip title="Edit">
-              <IconButton
-                size="small"
-                onClick={() =>
-                  onEdit(row)
-                }
-              >
+              <IconButton size="small" onClick={() => onEdit(row)}>
                 <EditOutlinedIcon />
               </IconButton>
             </Tooltip>
           ) : null}
 
-          {row.isDeleted &&
-          canRestore ? (
+          {!row.isDeleted && canUpdate ? (
+            <Tooltip title={row.isVisible ? "Hide" : "Show"}>
+              <IconButton size="small" onClick={() => onToggleVisibility(row)}>
+                {row.isVisible ? <VisibilityOffOutlinedIcon /> : <VisibilityOutlinedIcon />}
+              </IconButton>
+            </Tooltip>
+          ) : null}
+
+          {row.isDeleted && canRestore ? (
             <Tooltip title="Restore">
-              <IconButton
-                size="small"
-                color="success"
-                onClick={() =>
-                  onRestore(row)
-                }
-              >
+              <IconButton size="small" color="success" onClick={() => onRestore(row)}>
                 <RestoreOutlinedIcon />
               </IconButton>
             </Tooltip>
           ) : null}
 
-          {!row.isDeleted &&
-          row.isEnabled &&
-          canDisable ? (
+          {!row.isDeleted && row.isEnabled && canDisable ? (
             <Tooltip title="Disable">
-              <IconButton
-                size="small"
-                onClick={() =>
-                  onDisable(row)
-                }
-              >
+              <IconButton size="small" onClick={() => onDisable(row)}>
                 <ToggleOffOutlinedIcon />
               </IconButton>
             </Tooltip>
           ) : null}
 
-          {!row.isDeleted &&
-          !row.isEnabled &&
-          canEnable ? (
+          {!row.isDeleted && !row.isEnabled && canEnable ? (
             <Tooltip title="Enable">
-              <IconButton
-                size="small"
-                color="success"
-                onClick={() =>
-                  onEnable(row)
-                }
-              >
+              <IconButton size="small" color="success" onClick={() => onEnable(row)}>
                 <ToggleOnOutlinedIcon />
               </IconButton>
             </Tooltip>
           ) : null}
 
-          {!row.isDeleted &&
-          canDelete ? (
-            <Tooltip title="Delete">
-              <IconButton
-                size="small"
-                color="error"
-                onClick={() =>
-                  onDelete(row)
-                }
-              >
+          {!row.isDeleted && canDelete ? (
+            <Tooltip title="Soft delete">
+              <IconButton size="small" color="error" onClick={() => onDelete(row)}>
                 <DeleteOutlineIcon />
               </IconButton>
             </Tooltip>
@@ -211,11 +152,7 @@ export default function FormFieldTable({
       loading={loading}
       autoHeight
       disableRowSelectionOnClick
-      pageSizeOptions={[
-        10,
-        20,
-        50,
-      ]}
+      pageSizeOptions={[10, 20, 50]}
       initialState={{
         pagination: {
           paginationModel: {

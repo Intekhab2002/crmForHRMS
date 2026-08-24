@@ -5,78 +5,62 @@ import {
 
 import {
   Alert,
+  Box,
   Button,
-  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControlLabel,
+  Divider,
   Grid,
-  MenuItem,
+  Tab,
+  Tabs,
   TextField,
+  Typography,
 } from "@mui/material";
 
-const FIELD_TYPES = [
-  {
-    value: "text",
-    label: "Text",
-  },
-  {
-    value: "textarea",
-    label: "Textarea",
-  },
-  {
-    value: "number",
-    label: "Number",
-  },
-  {
-    value: "email",
-    label: "Email",
-  },
-  {
-    value: "date",
-    label: "Date",
-  },
-  {
-    value: "select",
-    label: "Select",
-  },
-  {
-    value: "multiselect",
-    label: "Multi Select",
-  },
-  {
-    value: "checkbox",
-    label: "Checkbox",
-  },
-  {
-    value: "radio",
-    label: "Radio",
-  },
-];
+import { Formik } from "formik";
 
-const EMPTY_VALUES = {
-  fieldKey: "",
-  name: "",
-  label: "",
-  description: "",
-  type: "text",
-  dataType: "string",
-  placeholder: "",
-  helpText: "",
-  defaultValue: "",
-  isVisible: true,
-  isEnabled: true,
-  isEditable: true,
-  isReadOnly: false,
-  isRequired: false,
-  isSearchable: false,
-  isFilterable: false,
-  isSortable: false,
-  validationConfig: {},
-  optionsConfig: {},
-};
+import { fieldConfigurationSchema } from "../schemas/fieldConfiguration.schema";
+import { buildFieldDefaults } from "../utils/fieldDefaults";
+
+import FieldTypeSelector from "./FieldTypeSelector";
+import FieldValidationPanel from "./FieldValidationPanel";
+import FieldDisplayPanel from "./FieldDisplayPanel";
+import FieldOptionsEditor from "./FieldOptionsEditor";
+import FieldStoragePanel from "./FieldStoragePanel";
+import FieldPreview from "./FieldPreview";
+
+const TABS = Object.freeze([
+  "Basic",
+  "Behavior",
+  "Validation",
+  "Display & Layout",
+  "Options",
+  "Storage / Advanced",
+]);
+
+function normalizeDataType(type) {
+  const mapping = {
+    text: "string",
+    textarea: "string",
+    number: "number",
+    email: "string",
+    password: "string",
+    select: "string",
+    multi_select: "array",
+    autocomplete: "string",
+    date: "date",
+    datetime: "datetime",
+    time: "time",
+    checkbox: "boolean",
+    switch: "boolean",
+    radio: "string",
+    file: "file",
+  };
+
+  return mapping[type] ?? "string";
+}
 
 export default function FormFieldDialog({
   open,
@@ -86,409 +70,213 @@ export default function FormFieldDialog({
   onClose,
   onSubmit,
 }) {
-  const [
-    values,
-    setValues,
-  ] = useState(EMPTY_VALUES);
+  const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    if (field) {
-      setValues({
-        ...EMPTY_VALUES,
-        ...field,
-      });
-
-      return;
-    }
-
-    setValues({
-      ...EMPTY_VALUES,
-    });
+    if (open) setActiveTab(0);
   }, [open, field]);
-
-  function handleChange(event) {
-    const {
-      name,
-      value,
-      checked,
-      type,
-    } = event.target;
-
-    setValues(
-      (current) => ({
-        ...current,
-        [name]:
-          type === "checkbox"
-            ? checked
-            : value,
-      }),
-    );
-  }
-
-  function handleSubmit(event) {
-    event.preventDefault();
-
-    onSubmit({
-      ...values,
-      defaultValue:
-        values.defaultValue || null,
-    });
-  }
 
   return (
     <Dialog
       open={open}
-      onClose={
-        submitting
-          ? undefined
-          : onClose
-      }
+      onClose={submitting ? undefined : onClose}
       fullWidth
-      maxWidth="md"
+      maxWidth="lg"
     >
       <DialogTitle>
-        {field
-          ? "Edit Form Field"
-          : "Create Form Field"}
+        {field ? "Edit Form Field" : "Create Form Field"}
       </DialogTitle>
 
-      <DialogContent>
-        {error ? (
-          <Alert
-            severity="error"
-            sx={{ mb: 2 }}
-          >
-            {error}
-          </Alert>
-        ) : null}
+      <Formik
+        enableReinitialize
+        initialValues={buildFieldDefaults(field)}
+        validationSchema={fieldConfigurationSchema}
+        onSubmit={(values) => onSubmit({
+          ...values,
+          defaultValue: values.defaultValue === "" ? null : values.defaultValue,
+        })}
+      >
+        {({
+          values,
+          errors,
+          touched,
+          setFieldValue,
+          handleChange,
+          handleBlur,
+          handleSubmit,
+        }) => {
+          function handleTypeChange(nextType) {
+            setFieldValue("type", nextType);
+            setFieldValue("dataType", normalizeDataType(nextType));
+            setFieldValue("defaultValue", "");
+          }
 
-        <Grid
-          container
-          spacing={2}
-          sx={{ mt: 0.5 }}
-        >
-          <Grid
-            size={{
-              xs: 12,
-              md: 6,
-            }}
-          >
-            <TextField
-              fullWidth
-              required
-              label="Field Key"
-              name="fieldKey"
-              value={
-                values.fieldKey
-              }
-              onChange={
-                handleChange
-              }
-              disabled={Boolean(field)}
-            />
-          </Grid>
+          return (
+            <form onSubmit={handleSubmit}>
+              <DialogContent dividers>
+                {error ? (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {error}
+                  </Alert>
+                ) : null}
 
-          <Grid
-            size={{
-              xs: 12,
-              md: 6,
-            }}
-          >
-            <TextField
-              fullWidth
-              required
-              label="Name"
-              name="name"
-              value={values.name}
-              onChange={
-                handleChange
-              }
-            />
-          </Grid>
+                <Tabs
+                  value={activeTab}
+                  onChange={(_, next) => setActiveTab(next)}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  sx={{ mb: 3 }}
+                >
+                  {TABS.map((label) => (
+                    <Tab key={label} label={label} />
+                  ))}
+                </Tabs>
 
-          <Grid
-            size={{
-              xs: 12,
-              md: 6,
-            }}
-          >
-            <TextField
-              fullWidth
-              required
-              label="Label"
-              name="label"
-              value={values.label}
-              onChange={
-                handleChange
-              }
-            />
-          </Grid>
+                {activeTab === 0 ? (
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <TextField
+                        fullWidth
+                        required
+                        label="Field Key"
+                        name="fieldKey"
+                        value={values.fieldKey}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        disabled={Boolean(field)}
+                        error={Boolean(touched.fieldKey && errors.fieldKey)}
+                        helperText={touched.fieldKey && errors.fieldKey}
+                      />
+                    </Grid>
 
-          <Grid
-            size={{
-              xs: 12,
-              md: 6,
-            }}
-          >
-            <TextField
-              fullWidth
-              select
-              label="Field Type"
-              name="type"
-              value={values.type}
-              onChange={
-                handleChange
-              }
-            >
-              {FIELD_TYPES.map(
-                (option) => (
-                  <MenuItem
-                    key={
-                      option.value
-                    }
-                    value={
-                      option.value
-                    }
-                  >
-                    {option.label}
-                  </MenuItem>
-                ),
-              )}
-            </TextField>
-          </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <FieldTypeSelector
+                        values={values}
+                        setFieldValue={(name, value) => {
+                          if (name === "type") handleTypeChange(value);
+                          else setFieldValue(name, value);
+                        }}
+                        errors={errors}
+                        touched={touched}
+                      />
+                    </Grid>
 
-          <Grid
-            size={{
-              xs: 12,
-              md: 6,
-            }}
-          >
-            <TextField
-              fullWidth
-              label="Data Type"
-              name="dataType"
-              value={
-                values.dataType
-              }
-              onChange={
-                handleChange
-              }
-            />
-          </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <TextField
+                        fullWidth
+                        required
+                        label="Name"
+                        name="name"
+                        value={values.name}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={Boolean(touched.name && errors.name)}
+                        helperText={touched.name && errors.name}
+                      />
+                    </Grid>
 
-          <Grid
-            size={{
-              xs: 12,
-              md: 6,
-            }}
-          >
-            <TextField
-              fullWidth
-              label="Placeholder"
-              name="placeholder"
-              value={
-                values.placeholder
-              }
-              onChange={
-                handleChange
-              }
-            />
-          </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <TextField
+                        fullWidth
+                        required
+                        label="Label"
+                        name="label"
+                        value={values.label}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={Boolean(touched.label && errors.label)}
+                        helperText={touched.label && errors.label}
+                      />
+                    </Grid>
 
-          <Grid size={12}>
-            <TextField
-              fullWidth
-              multiline
-              rows={2}
-              label="Description"
-              name="description"
-              value={
-                values.description
-              }
-              onChange={
-                handleChange
-              }
-            />
-          </Grid>
+                    <Grid size={12}>
+                      <TextField
+                        fullWidth
+                        multiline
+                        minRows={3}
+                        label="Description"
+                        name="description"
+                        value={values.description ?? ""}
+                        onChange={handleChange}
+                      />
+                    </Grid>
+                  </Grid>
+                ) : null}
 
-          <Grid size={12}>
-            <TextField
-              fullWidth
-              multiline
-              rows={2}
-              label="Help Text"
-              name="helpText"
-              value={
-                values.helpText
-              }
-              onChange={
-                handleChange
-              }
-            />
-          </Grid>
+                {activeTab === 1 ? (
+                  <Grid container spacing={2}>
+                    <Grid size={12}>
+                      <FieldDisplayPanel values={values} setFieldValue={setFieldValue} />
+                    </Grid>
+                    <Grid size={12}>
+                      <Divider sx={{ my: 1 }} />
+                      <TextField
+                        fullWidth
+                        label="Default Value"
+                        name="defaultValue"
+                        value={values.defaultValue ?? ""}
+                        onChange={handleChange}
+                      />
+                    </Grid>
+                  </Grid>
+                ) : null}
 
-          <Grid size={12}>
-            <TextField
-              fullWidth
-              label="Default Value"
-              name="defaultValue"
-              value={
-                values.defaultValue ?? ""
-              }
-              onChange={
-                handleChange
-              }
-            />
-          </Grid>
+                {activeTab === 2 ? (
+                  <FieldValidationPanel
+                    values={values}
+                    setFieldValue={setFieldValue}
+                  />
+                ) : null}
 
-          <Grid size={12}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isVisible"
-                  checked={
-                    values.isVisible
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
-              }
-              label="Visible"
-            />
+                {activeTab === 3 ? (
+                  <Grid container spacing={3}>
+                    <Grid size={{ xs: 12, md: 7 }}>
+                      <FieldDisplayPanel values={values} setFieldValue={setFieldValue} />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 5 }}>
+                      <FieldPreview values={values} />
+                    </Grid>
+                  </Grid>
+                ) : null}
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isEnabled"
-                  checked={
-                    values.isEnabled
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
-              }
-              label="Enabled"
-            />
+                {activeTab === 4 ? (
+                  <FieldOptionsEditor
+                    values={values}
+                    setFieldValue={setFieldValue}
+                  />
+                ) : null}
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isEditable"
-                  checked={
-                    values.isEditable
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
-              }
-              label="Editable"
-            />
+                {activeTab === 5 ? (
+                  <FieldStoragePanel
+                    values={values}
+                    setFieldValue={setFieldValue}
+                    readOnly={Boolean(field)}
+                  />
+                ) : null}
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isReadOnly"
-                  checked={
-                    values.isReadOnly
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
-              }
-              label="Read only"
-            />
+                <Box sx={{ mt: 3 }}>
+                  <FieldPreview values={values} />
+                </Box>
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isRequired"
-                  checked={
-                    values.isRequired
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
-              }
-              label="Required"
-            />
+                {Object.keys(errors).length > 0 ? (
+                  <Typography color="error" variant="caption" display="block" sx={{ mt: 2 }}>
+                    Review the field configuration before saving.
+                  </Typography>
+                ) : null}
+              </DialogContent>
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isSearchable"
-                  checked={
-                    values.isSearchable
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
-              }
-              label="Searchable"
-            />
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isFilterable"
-                  checked={
-                    values.isFilterable
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
-              }
-              label="Filterable"
-            />
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isSortable"
-                  checked={
-                    values.isSortable
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
-              }
-              label="Sortable"
-            />
-          </Grid>
-        </Grid>
-      </DialogContent>
-
-      <DialogActions>
-        <Button
-          onClick={onClose}
-          disabled={submitting}
-        >
-          Cancel
-        </Button>
-
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={submitting}
-        >
-          {submitting
-            ? "Saving..."
-            : field
-              ? "Update Field"
-              : "Create Field"}
-        </Button>
-      </DialogActions>
+              <DialogActions>
+                <Button onClick={onClose} disabled={submitting}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="contained" disabled={submitting}>
+                  {submitting ? "Saving..." : field ? "Update Field" : "Create Field"}
+                </Button>
+              </DialogActions>
+            </form>
+          );
+        }}
+      </Formik>
     </Dialog>
   );
 }

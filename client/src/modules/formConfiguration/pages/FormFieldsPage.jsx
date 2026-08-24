@@ -20,339 +20,169 @@ import AddIcon from "@mui/icons-material/Add";
 
 import { useAuth } from "../../../context/useAuth";
 
-import {
-  formConfigurationApi,
-} from "../api/formConfiguration.api";
-
-import {
-  FORM_CONFIGURATION_PERMISSIONS,
-} from "../formConfiguration.constants";
+import { formConfigurationApi } from "../api/formConfiguration.api";
+import { FORM_CONFIGURATION_PERMISSIONS } from "../formConfiguration.constants";
 
 import FormFieldTable from "../components/FormFieldTable";
 import FormFieldDialog from "../components/FormFieldDialog";
 
-
-
-function buildFieldUpdatePayload(values) {
-    return {
-        name: values.name,
-        label: values.label,
-        description: values.description ?? null,
-
-        type: values.type,
-        dataType: values.dataType,
-
-        placeholder:
-            values.placeholder ?? null,
-
-        helpText:
-            values.helpText ?? null,
-
-        defaultValue:
-            values.defaultValue ?? null,
-
-        status: values.status,
-
-        isVisible:
-            values.isVisible,
-
-        isEnabled:
-            values.isEnabled,
-
-        isEditable:
-            values.isEditable,
-
-        isReadOnly:
-            values.isReadOnly,
-
-        isRequired:
-            values.isRequired,
-
-        isSearchable:
-            values.isSearchable,
-
-        isFilterable:
-            values.isFilterable,
-
-        isSortable:
-            values.isSortable,
-
-        validationConfig:
-            values.validationConfig ?? {},
-
-        optionsConfig:
-            values.optionsConfig ?? {},
-    };
+function buildFieldPayload(values) {
+  return {
+    fieldKey: values.fieldKey,
+    name: values.name,
+    label: values.label,
+    description: values.description ?? null,
+    type: values.type,
+    dataType: values.dataType,
+    placeholder: values.placeholder ?? null,
+    helpText: values.helpText ?? null,
+    defaultValue: values.defaultValue ?? null,
+    status: values.status ?? "active",
+    isVisible: Boolean(values.isVisible),
+    isEnabled: Boolean(values.isEnabled),
+    isEditable: Boolean(values.isEditable),
+    isReadOnly: Boolean(values.isReadOnly),
+    isRequired: Boolean(values.isRequired),
+    isSearchable: Boolean(values.isSearchable),
+    isFilterable: Boolean(values.isFilterable),
+    isSortable: Boolean(values.isSortable),
+    validationConfig: values.validationConfig ?? {},
+    optionsConfig: values.optionsConfig ?? {},
+    storageType: values.storageType,
+    storageColumn: values.storageColumn || null,
+    storageKey: values.storageKey || null,
+    referenceEntity: values.referenceEntity || null,
+  };
 }
 
 export default function FormFieldsPage() {
-  const {
-    hasPermission,
-  } = useAuth();
+  const { hasPermission } = useAuth();
 
-  const canRead = hasPermission(
-    FORM_CONFIGURATION_PERMISSIONS.FIELD_READ,
-  );
-
-  const canCreate = hasPermission(
-    FORM_CONFIGURATION_PERMISSIONS.FIELD_CREATE,
-  );
-
-  const canUpdate = hasPermission(
-    FORM_CONFIGURATION_PERMISSIONS.FIELD_UPDATE,
-  );
-
-  const canDelete = hasPermission(
-    FORM_CONFIGURATION_PERMISSIONS.FIELD_DELETE,
-  );
-
-  const canRestore = hasPermission(
-    FORM_CONFIGURATION_PERMISSIONS.FIELD_RESTORE,
-  );
-
-  const canEnable = hasPermission(
-    FORM_CONFIGURATION_PERMISSIONS.FIELD_ENABLE,
-  );
-
-  const canDisable = hasPermission(
-    FORM_CONFIGURATION_PERMISSIONS.FIELD_DISABLE,
-  );
+  const canRead = hasPermission(FORM_CONFIGURATION_PERMISSIONS.FIELD_READ);
+  const canCreate = hasPermission(FORM_CONFIGURATION_PERMISSIONS.FIELD_CREATE);
+  const canUpdate = hasPermission(FORM_CONFIGURATION_PERMISSIONS.FIELD_UPDATE);
+  const canDelete = hasPermission(FORM_CONFIGURATION_PERMISSIONS.FIELD_DELETE);
+  const canRestore = hasPermission(FORM_CONFIGURATION_PERMISSIONS.FIELD_RESTORE);
+  const canEnable = hasPermission(FORM_CONFIGURATION_PERMISSIONS.FIELD_ENABLE);
+  const canDisable = hasPermission(FORM_CONFIGURATION_PERMISSIONS.FIELD_DISABLE);
 
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
+  const [type, setType] = useState("all");
 
-  const [dialogOpen, setDialogOpen] =
-    useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingField, setEditingField] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [editingField, setEditingField] =
-    useState(null);
+  const loadFields = useCallback(async () => {
+    setLoading(true);
+    setError("");
 
-  const [submitting, setSubmitting] =
-    useState(false);
+    try {
+      const response = await formConfigurationApi.listFields({
+        page: 1,
+        limit: 100,
+        ...(status !== "all" ? { status } : {}),
+        ...(type !== "all" ? { type } : {}),
+        ...(search.trim() ? { search: search.trim() } : {}),
+      });
 
-  const loadFields = useCallback(
-    async () => {
-      setLoading(true);
-      setError("");
-
-      try {
-        const response =
-          await formConfigurationApi.listFields({
-            page: 1,
-            limit: 100,
-          });
-
-        setFields(
-          response?.data ?? [],
-        );
-      } catch (requestError) {
-        setError(
-          requestError
-            ?.response
-            ?.data
-            ?.message ??
-            requestError.message ??
-            "Unable to load form fields.",
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [],
-  );
+      setFields(response?.data ?? []);
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ??
+        requestError?.message ??
+        "Unable to load form fields.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [search, status, type]);
 
   useEffect(() => {
-    if (canRead) {
-      void loadFields();
-    }
+    if (canRead) void loadFields();
   }, [canRead, loadFields]);
 
-  const filteredFields = useMemo(() => {
-    const normalizedSearch =
-      search
-        .trim()
-        .toLowerCase();
+  const filteredFields = useMemo(() => fields, [fields]);
 
-    if (!normalizedSearch) {
-      return fields;
-    }
-
-    return fields.filter(
-      (field) =>
-        field.fieldKey
-          ?.toLowerCase()
-          .includes(normalizedSearch) ||
-        field.name
-          ?.toLowerCase()
-          .includes(normalizedSearch) ||
-        field.label
-          ?.toLowerCase()
-          .includes(normalizedSearch) ||
-        field.type
-          ?.toLowerCase()
-          .includes(normalizedSearch),
-    );
-  }, [fields, search]);
-
-async function handleSubmit(values) {
+  async function handleSubmit(values) {
     setSubmitting(true);
     setError("");
 
     try {
-        if (editingField) {
-            const payload =
-                buildFieldUpdatePayload(values);
+      const payload = buildFieldPayload(values);
 
-            await formConfigurationApi.updateField(
-                editingField.id,
-                payload,
-            );
-        } else {
-            await formConfigurationApi.createField(
-                values,
-            );
-        }
+      if (editingField) {
+        await formConfigurationApi.updateField(editingField.id, payload);
+      } else {
+        await formConfigurationApi.createField(payload);
+      }
 
-        setDialogOpen(false);
-        setEditingField(null);
-
-        await loadFields();
+      setDialogOpen(false);
+      setEditingField(null);
+      await loadFields();
     } catch (requestError) {
-        setError(
-            requestError?.response?.data?.message ??
-            requestError?.message ??
-            "Unable to save form field.",
-        );
+      setError(
+        requestError?.response?.data?.message ??
+        requestError?.message ??
+        "Unable to save form field.",
+      );
     } finally {
-        setSubmitting(false);
+      setSubmitting(false);
     }
-}
+  }
+
+  async function runAction(action, field, fallbackMessage) {
+    setError("");
+
+    try {
+      await action(field.id);
+      await loadFields();
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ??
+        requestError?.message ??
+        fallbackMessage,
+      );
+    }
+  }
 
   async function handleDelete(field) {
-    if (
-      !window.confirm(
-        `Delete field "${field.label}"?`,
-      )
-    ) {
+    if (!window.confirm(
+      `Soft delete "${field.label}"? This will not physically remove existing data.`,
+    )) {
       return;
     }
 
-    try {
-      await formConfigurationApi.deleteField(
-        field.id,
-      );
-
-      await loadFields();
-    } catch (requestError) {
-      setError(
-        requestError
-          ?.response
-          ?.data
-          ?.message ??
-          requestError.message ??
-          "Unable to delete form field.",
-      );
-    }
-  }
-
-  async function handleRestore(field) {
-    try {
-      await formConfigurationApi.restoreField(
-        field.id,
-      );
-
-      await loadFields();
-    } catch (requestError) {
-      setError(
-        requestError
-          ?.response
-          ?.data
-          ?.message ??
-          requestError.message ??
-          "Unable to restore form field.",
-      );
-    }
-  }
-
-  async function handleEnable(field) {
-    try {
-      await formConfigurationApi.enableField(
-        field.id,
-      );
-
-      await loadFields();
-    } catch (requestError) {
-      setError(
-        requestError
-          ?.response
-          ?.data
-          ?.message ??
-          requestError.message ??
-          "Unable to enable form field.",
-      );
-    }
-  }
-
-  async function handleDisable(field) {
-    try {
-      await formConfigurationApi.disableField(
-        field.id,
-      );
-
-      await loadFields();
-    } catch (requestError) {
-      setError(
-        requestError
-          ?.response
-          ?.data
-          ?.message ??
-          requestError.message ??
-          "Unable to disable form field.",
-      );
-    }
+    await runAction(
+      formConfigurationApi.deleteField,
+      field,
+      "Unable to delete form field.",
+    );
   }
 
   if (!canRead) {
-    return (
-      <Alert severity="error">
-        You do not have permission to
-        manage form fields.
-      </Alert>
-    );
+    return <Alert severity="error">You do not have permission to manage form fields.</Alert>;
   }
 
   return (
     <Box>
       <Stack
-        direction={{
-          xs: "column",
-          sm: "row",
-        }}
+        direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
-        alignItems={{
-          xs: "stretch",
-          sm: "center",
-        }}
+        alignItems={{ xs: "stretch", sm: "center" }}
         gap={2}
         mb={3}
       >
         <Box>
-          <Typography
-            variant="h4"
-            fontWeight={700}
-          >
+          <Typography variant="h4" fontWeight={700}>
             Form Fields
           </Typography>
-
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            mt={0.5}
-          >
-            Manage reusable fields used
-            across CRM forms.
+          <Typography variant="body2" color="text.secondary" mt={0.5}>
+            Configure reusable CRM fields without changing application source code.
           </Typography>
         </Box>
 
@@ -371,28 +201,60 @@ async function handleSubmit(values) {
       </Stack>
 
       {error ? (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
-          onClose={() => setError("")}
-        >
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
           {error}
         </Alert>
       ) : null}
 
       <Card>
         <CardContent>
-          <TextField
-            fullWidth
-            size="small"
-            label="Search fields"
-            placeholder="Search by key, name, label or type"
-            value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
             sx={{ mb: 2 }}
-          />
+          >
+            <TextField
+              fullWidth
+              size="small"
+              label="Search"
+              placeholder="Key, name, label or type"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+
+            <TextField
+              select
+              size="small"
+              label="Status"
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+              SelectProps={{ native: true }}
+              sx={{ minWidth: 160 }}
+            >
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </TextField>
+
+            <TextField
+              select
+              size="small"
+              label="Type"
+              value={type}
+              onChange={(event) => setType(event.target.value)}
+              SelectProps={{ native: true }}
+              sx={{ minWidth: 180 }}
+            >
+              <option value="all">All</option>
+              {[
+                "text", "textarea", "number", "email", "select", "multi_select",
+                "autocomplete", "date", "datetime", "time", "checkbox", "switch",
+                "radio", "file",
+              ].map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </TextField>
+          </Stack>
 
           <FormFieldTable
             rows={filteredFields}
@@ -407,9 +269,22 @@ async function handleSubmit(values) {
               setDialogOpen(true);
             }}
             onDelete={handleDelete}
-            onRestore={handleRestore}
-            onEnable={handleEnable}
-            onDisable={handleDisable}
+            onRestore={(field) =>
+              runAction(formConfigurationApi.restoreField, field, "Unable to restore form field.")
+            }
+            onEnable={(field) =>
+              runAction(formConfigurationApi.enableField, field, "Unable to enable form field.")
+            }
+            onDisable={(field) =>
+              runAction(formConfigurationApi.disableField, field, "Unable to disable form field.")
+            }
+            onToggleVisibility={(field) =>
+              runAction(
+                (id) => formConfigurationApi.updateField(id, { isVisible: !field.isVisible }),
+                field,
+                "Unable to update field visibility.",
+              )
+            }
           />
         </CardContent>
       </Card>

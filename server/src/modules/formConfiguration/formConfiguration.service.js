@@ -13,6 +13,12 @@ import {
     ASSIGNMENT_ERROR_CODES,
 } from "./formConfiguration.constants.js";
 
+import safetyRepository from "./formConfiguration.safety.repository.js";
+
+import {
+    assertSafeFieldStructuralEdit,
+} from "./fieldAdministrationSafety.js";
+
 function assertFieldId(fieldId) {
     if (typeof fieldId !== "string" || fieldId.trim().length === 0) {
         throw AppError.badRequest(
@@ -137,6 +143,19 @@ async function updateField(fieldId, data, actorId) {
             { code: FIELD_ERROR_CODES.NOT_FOUND },
         );
     }
+
+    const usage = await safetyRepository.findFieldUsage({
+        fieldId,
+        storageType: existing.storage_type,
+        storageKey: existing.storage_key,
+        storageColumn: existing.storage_column,
+    });
+
+    assertSafeFieldStructuralEdit(
+        existing,
+        data,
+        usage,
+    );
 
     validateFieldConfiguration(data, existing);
 
