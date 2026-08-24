@@ -145,4 +145,17 @@ async disableField(fieldId) {
 
   return response.data;
 },
+
+async updateAssignment(
+    formId,
+    fieldId,
+    payload,
+) {
+    const response = await apiClient.patch(
+        `${forms}/${formId}/fields/${fieldId}`,
+        payload,
+    );
+
+    return response.data;
+},
 });

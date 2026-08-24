@@ -332,6 +332,24 @@ router.post(
 );
 
 /**
+ * PATCH /forms/:formId/fields/:fieldId
+ */
+router.patch(
+    "/forms/:formId/fields/:fieldId",
+    authenticate,
+    requirePermission(
+        RBAC_PERMISSIONS.FORM_DEFINITION_UPDATE,
+    ),
+    validateParams(
+        validator.assignmentParamSchema,
+    ),
+    validateBody(
+        validator.updateAssignmentSchema,
+    ),
+    controller.updateAssignment,
+);
+
+/**
  * DELETE /forms/:formId/fields/:fieldId
  */
 router.delete(

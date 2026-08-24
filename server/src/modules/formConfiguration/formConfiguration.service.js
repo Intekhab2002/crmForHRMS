@@ -461,6 +461,61 @@ async function getRuntimeForm(formCode) {
     };
 }
 
+async function updateAssignment(
+    formId,
+    fieldId,
+    data,
+    actorId,
+) {
+    const form = await repository.findFormById(formId);
+
+    if (!form || form.is_deleted) {
+        throw AppError.notFound(
+            "Form definition not found.",
+            {
+                code: ASSIGNMENT_ERROR_CODES.FORM_NOT_FOUND,
+            },
+        );
+    }
+
+    const field = await repository.findFieldById(fieldId);
+
+    if (!field || field.is_deleted) {
+        throw AppError.notFound(
+            "Form field not found.",
+            {
+                code: ASSIGNMENT_ERROR_CODES.FIELD_NOT_FOUND,
+            },
+        );
+    }
+
+    const assignment = await repository.findAssignment(
+        formId,
+        fieldId,
+    );
+
+    if (!assignment) {
+        throw AppError.notFound(
+            "Field assignment not found.",
+            {
+                code: ASSIGNMENT_ERROR_CODES.NOT_ASSIGNED,
+            },
+        );
+    }
+
+    await repository.updateAssignment(
+        formId,
+        fieldId,
+        data,
+        actorId,
+    );
+
+    return repository.findAssignment(
+        formId,
+        fieldId,
+    );
+}
+
 export default Object.freeze({
     listFields,
     getFieldById,
@@ -479,4 +534,5 @@ export default Object.freeze({
     removeField,
     getRuntimeForm,
     getFormByIdentifier,
+    updateAssignment,
 });

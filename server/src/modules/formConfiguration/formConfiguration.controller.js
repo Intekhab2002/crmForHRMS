@@ -289,6 +289,24 @@ async function removeField(request, response, next) {
         return next(error);
     }
 }
+async function updateAssignment(request, response, next) {
+    try {
+        const assignment = await service.updateAssignment(
+            request.params.formId,
+            request.params.fieldId,
+            request.body,
+            request.auth.userId,
+        );
+
+        return ApiResponse.success(
+            response,
+            mapper.mapAssignmentToApi(assignment),
+            "Form field assignment updated successfully.",
+        );
+    } catch (error) {
+        return next(error);
+    }
+}
 
 export default Object.freeze({
     getFields,
@@ -307,4 +325,5 @@ export default Object.freeze({
     deleteForm,
     assignField,
     removeField,
+    updateAssignment,
 });

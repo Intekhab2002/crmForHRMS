@@ -568,6 +568,35 @@ const DELETE_ASSIGNMENT = `
     RETURNING id;
 `;
 
+const UPDATE_ASSIGNMENT = `
+    UPDATE form_field_assignments
+    SET
+        is_visible = $3,
+        is_enabled = $4,
+        is_editable = $5,
+        is_read_only = $6,
+        is_required = $7,
+        is_searchable = $8,
+        is_filterable = $9,
+        is_sortable = $10,
+
+        display_order = $11,
+        section = $12,
+        grid_size = $13,
+        column_width = $14,
+
+        label_override = $15,
+        placeholder_override = $16,
+        help_text_override = $17,
+        default_value_override = $18::JSONB,
+
+        updated_by = $19::UUID
+    WHERE
+        form_id = $1::UUID
+        AND field_id = $2::UUID
+    RETURNING id;
+`;
+
 
 /**
  * ============================================================================
@@ -1092,6 +1121,50 @@ async function deleteAssignment(
     return result.rows[0] ?? null;
 }
 
+async function updateAssignment(
+    formId,
+    fieldId,
+    data,
+    actorId,
+    transactionContext = null,
+) {
+    const executor = getExecutor(transactionContext);
+
+    const result = await executor.query(
+        UPDATE_ASSIGNMENT,
+        [
+            formId,
+            fieldId,
+
+            data.isVisible ?? null,
+            data.isEnabled ?? null,
+            data.isEditable ?? null,
+            data.isReadOnly ?? null,
+            data.isRequired ?? null,
+            data.isSearchable ?? null,
+            data.isFilterable ?? null,
+            data.isSortable ?? null,
+
+            data.displayOrder ?? 0,
+            data.section ?? null,
+            data.gridSize ?? null,
+            data.columnWidth ?? null,
+
+            data.labelOverride ?? null,
+            data.placeholderOverride ?? null,
+            data.helpTextOverride ?? null,
+
+            JSON.stringify(
+                data.defaultValueOverride ?? null,
+            ),
+
+            actorId,
+        ],
+    );
+
+    return result.rows[0] ?? null;
+}
+
 export default Object.freeze({
     findFields,
     findFieldById,
@@ -1116,4 +1189,5 @@ export default Object.freeze({
     findAssignment,
     createAssignment,
     deleteAssignment,
+    updateAssignment,
 });

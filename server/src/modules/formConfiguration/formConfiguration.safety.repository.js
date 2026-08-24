@@ -48,7 +48,15 @@ const FIND_FIELD_USAGE = `
         END AS has_relational_data;
 `;
 
-async function findFieldUsage(fieldId, storageType, storageKey, storageColumn, transactionContext = null) {
+async function findFieldUsage(
+    {
+        fieldId,
+        storageType,
+        storageKey,
+        storageColumn,
+    },
+    transactionContext = null,
+) {
     const executor = getExecutor(transactionContext);
 
     const result = await executor.query(FIND_FIELD_USAGE, [

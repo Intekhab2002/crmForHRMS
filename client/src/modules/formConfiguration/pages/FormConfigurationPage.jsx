@@ -183,7 +183,15 @@ export default function FormConfigurationPage() {
     setError("");
 
     try {
-      await formConfigurationApi.assignField(selectedForm.id, values);
+      if (editingAssignment) {
+        await formConfigurationApi.updateAssignment(
+          selectedForm.id,
+          editingAssignment.fieldId,
+          values,
+        );
+      } else {
+        await formConfigurationApi.assignField(selectedForm.id, values);
+      }
 
       const response = await formConfigurationApi.getForm(selectedForm.id);
 
@@ -430,9 +438,7 @@ export default function FormConfigurationPage() {
               loading={submitting}
               canUpdate={canUpdate}
               onEdit={(assignment) => {
-                setEditingAssignment(
-                  assignment,
-                );
+                setEditingAssignment(assignment);
                 setAssignmentDialogOpen(true);
               }}
               onRemove={handleRemoveField}
