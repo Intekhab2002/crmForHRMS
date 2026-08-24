@@ -148,189 +148,117 @@ async function listTickets(query) {
   };
 }
 
-async function createTicket(
-    data,
-    authenticatedUserId,
-) {
-    const {
-        storage,
-        dynamicPayload,
-    } =
-        await ticketDynamicService.prepareCreatePayload(
-            data,
-        );
+async function createTicket(data, authenticatedUserId) {
+  const { storage, dynamicPayload } =
+    await ticketDynamicService.prepareCreatePayload(data);
 
-    const normalized = {
-        ...data,
+  const normalized = {
+    ...data,
 
-        ...storage.relational,
+    ...storage.relational,
 
-        requesterUserId:
-            data.requesterUserId ??
-            authenticatedUserId,
+    requesterUserId: data.requesterUserId ?? authenticatedUserId,
 
-        createdByUserId:
-            authenticatedUserId,
+    createdByUserId: authenticatedUserId,
 
-        subject:
-            storage.relational.subject ??
-            data.subject ??
-            "",
+    subject: storage.relational.subject ?? data.subject ?? "",
 
-        description:
-            storage.relational.description ??
-            data.description ??
-            "",
+    description: storage.relational.description ?? data.description ?? "",
 
-        issueType:
-            data.issueType ??
-            "GENERAL",
+    issueType: data.issueType ?? "GENERAL",
 
-        priority:
-            data.priority ??
-            "MEDIUM",
+    priority: data.priority ?? "MEDIUM",
 
-        organizationId:
-            storage.relational.organization_id ??
-            data.organizationId,
+    organizationId: storage.relational.organization_id ?? data.organizationId,
 
-        departmentId:
-            storage.relational.department_id ??
-            data.departmentId,
+    departmentId: storage.relational.department_id ?? data.departmentId,
 
-        assignedUserId:
-            storage.relational.assigned_user_id  ??
-            data.assignedUserId ??
-            null,
+    assignedUserId:
+      storage.relational.assigned_user_id ?? data.assignedUserId ?? null,
 
-        customData:
-            storage.customData,
-    };
+    customData: storage.customData,
+  };
 
-    await validateReferences(
-        normalized,
+  await validateReferences(normalized);
+
+  const client = await database.getClient();
+
+  const tx = {
+    client,
+  };
+
+  try {
+    await client.query("BEGIN");
+
+    const contact = await contactService.findOrCreateContact(
+      {
+        organizationId: normalized.organizationId,
+
+        name: dynamicPayload.contact_name ?? normalized.contactName ?? "",
+
+        mobile: dynamicPayload.mobile_phone ?? normalized.mobilePhone ?? "",
+      },
+      tx,
     );
 
-    const client =
-        await database.getClient();
+    const ticket = await ticketRepository.createTicket(
+      {
+        ...normalized,
 
-    const tx = {
-        client,
-    };
+        contactId: contact.id,
 
+        customData: normalized.customData,
+      },
+      tx,
+    );
+
+    await ticketLifecycleService.record(
+      {
+        ticketId: ticket.id,
+
+        actorUserId: authenticatedUserId,
+
+        eventType: TICKET_LIFECYCLE_EVENT_TYPE.TICKET,
+
+        eventAction: TICKET_LIFECYCLE_EVENT_ACTION.CREATED,
+
+        metadata: {
+          subject: ticket.subject,
+
+          status: ticket.status,
+
+          dynamicFields: Object.keys(dynamicPayload),
+        },
+      },
+      tx,
+    );
+
+    await client.query("COMMIT");
+
+    return ticket;
+  } catch (error) {
     try {
-        await client.query(
-            "BEGIN",
-        );
-
-        const contact =
-            await contactService.findOrCreateContact(
-                {
-                    organizationId:
-                        normalized.organizationId,
-
-                    name:
-                        dynamicPayload.contact_name ??
-                        normalized.contactName ??
-                        "",
-
-                    mobile:
-                        dynamicPayload.mobile_phone ??
-                        normalized.mobilePhone ??
-                        "",
-                },
-                tx,
-            );
-
-        const ticket =
-            await ticketRepository.createTicket(
-                {
-                    ...normalized,
-
-                    contactId:
-                        contact.id,
-
-                    customData:
-                        normalized.customData,
-                },
-                tx,
-            );
-
-        await ticketLifecycleService.record(
-            {
-                ticketId:
-                    ticket.id,
-
-                actorUserId:
-                    authenticatedUserId,
-
-                eventType:
-                    TICKET_LIFECYCLE_EVENT_TYPE.TICKET,
-
-                eventAction:
-                    TICKET_LIFECYCLE_EVENT_ACTION.CREATED,
-
-                metadata: {
-                    subject:
-                        ticket.subject,
-
-                    status:
-                        ticket.status,
-
-                    dynamicFields:
-                        Object.keys(
-                            dynamicPayload,
-                        ),
-                },
-            },
-            tx,
-        );
-
-        await client.query(
-            "COMMIT",
-        );
-
-        return ticket;
-    } catch (error) {
-        try {
-            await client.query(
-                "ROLLBACK",
-            );
-        } catch (rollbackError) {
-            error.rollbackError =
-                rollbackError;
-        }
-
-        throw error;
-    } finally {
-        client.release();
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      error.rollbackError = rollbackError;
     }
+
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
-async function updateTicket(
-  ticketId,
-  data,
-  authenticatedUserId,
-) {
-  const current =
-    await getTicket(ticketId);
+async function updateTicket(ticketId, data, authenticatedUserId) {
+  const current = await getTicket(ticketId);
 
-  const {
-    dynamicPayload,
-    storage,
-    fieldChanges,
-  } =
-    await ticketDynamicService
-      .prepareUpdatePayload(
-        data,
-        current,
-      );
+  const { dynamicPayload, storage, fieldChanges } =
+    await ticketDynamicService.prepareUpdatePayload(data, current);
 
   const effective = {
     ...current,
 
-    requesterUserId:
-      current.requester_user_id,
+    requesterUserId: current.requester_user_id,
 
     organizationId:
       storage.relational.organization_id ??
@@ -342,251 +270,185 @@ async function updateTicket(
       data.departmentId ??
       current.department_id,
 
-    assignedUserId:
-      Object.prototype.hasOwnProperty.call(
-        storage.relational,
-        "assigned_user_id",
-      )
-        ? storage.relational.assigned_user_id
-        : Object.prototype.hasOwnProperty.call(
-            data,
-            "assignedUserId",
-          )
-          ? data.assignedUserId
-          : current.assigned_user_id,
+    assignedUserId: Object.prototype.hasOwnProperty.call(
+      storage.relational,
+      "assigned_user_id",
+    )
+      ? storage.relational.assigned_user_id
+      : Object.prototype.hasOwnProperty.call(data, "assignedUserId")
+        ? data.assignedUserId
+        : current.assigned_user_id,
   };
 
-  await validateReferences(
-    effective,
-  );
+  await validateReferences(effective);
 
-  if (data.status) {
-    if (
-      data.status ===
+if (
+  data.status &&
+  data.status !== current.status
+) {
+  const allowed =
+    STATUS_TRANSITIONS[
       current.status
-    ) {
-      throw AppError.conflict(
-        "Ticket is already in the requested status.",
-        {
-          code:
-            TICKET_ERROR_CODES
-              .INVALID_STATUS_TRANSITION,
-        },
-      );
-    }
+    ];
 
-    const allowed =
-      STATUS_TRANSITIONS[
-        current.status
-      ];
-
-    if (
-      !allowed?.has(
-        data.status,
-      )
-    ) {
-      throw AppError.conflict(
-        `Ticket cannot transition from ${current.status} to ${data.status}.`,
-        {
-          code:
-            TICKET_ERROR_CODES
-              .INVALID_STATUS_TRANSITION,
-        },
-      );
-    }
-
-    if (
-      data.status ===
-        TICKET_STATUS.ASSIGNED &&
-      !effective.assignedUserId
-    ) {
-      throw AppError.conflict(
-        "An assignee is required before assigning a ticket.",
-        {
-          code:
-            TICKET_ERROR_CODES
-              .ASSIGNEE_REQUIRED,
-        },
-      );
-    }
-
-    if (
-      data.status ===
-        TICKET_STATUS.RESOLVED &&
-      !data.resolutionNote &&
-      !current.resolution_note
-    ) {
-      throw AppError.conflict(
-        "A resolution note is required before resolving a ticket.",
-        {
-          code:
-            TICKET_ERROR_CODES
-              .RESOLUTION_REQUIRED,
-        },
-      );
-    }
+  if (
+    !allowed?.has(
+      data.status,
+    )
+  ) {
+    throw AppError.conflict(
+      `Ticket cannot transition from ${current.status} to ${data.status}.`,
+      {
+        code:
+          TICKET_ERROR_CODES
+            .INVALID_STATUS_TRANSITION,
+      },
+    );
   }
 
-  const mergedCustomData =
-    fieldStorageEngine.mergeCustomData(
-      current.custom_data,
-      storage.customData,
+  if (
+    data.status ===
+      TICKET_STATUS.ASSIGNED &&
+    !effective.assignedUserId
+  ) {
+    throw AppError.conflict(
+      "An assignee is required before assigning a ticket.",
+      {
+        code:
+          TICKET_ERROR_CODES
+            .ASSIGNEE_REQUIRED,
+      },
     );
+  }
 
-  const relational =
-    storage.relational;
+  if (
+    data.status ===
+      TICKET_STATUS.RESOLVED &&
+    !data.resolutionNote &&
+    !current.resolution_note
+  ) {
+    throw AppError.conflict(
+      "A resolution note is required before resolving a ticket.",
+      {
+        code:
+          TICKET_ERROR_CODES
+            .RESOLUTION_REQUIRED,
+      },
+    );
+  }
+}
+
+  const mergedCustomData = fieldStorageEngine.mergeCustomData(
+    current.custom_data,
+    storage.customData,
+  );
+
+  const relational = storage.relational;
 
   const assignmentChanged =
-    Object.prototype.hasOwnProperty.call(
-      relational,
-      "assigned_user_id",
-    ) ||
-    Object.prototype.hasOwnProperty.call(
-      data,
-      "assignedUserId",
-    );
+    Object.prototype.hasOwnProperty.call(relational, "assigned_user_id") ||
+    Object.prototype.hasOwnProperty.call(data, "assignedUserId");
 
-  const resolutionChanged =
-    Object.prototype.hasOwnProperty.call(
-      data,
-      "resolutionNote",
-    );
+  const resolutionChanged = Object.prototype.hasOwnProperty.call(
+    data,
+    "resolutionNote",
+  );
 
   const statusChanged =
-    Object.prototype.hasOwnProperty.call(
-      data,
-      "status",
-    );
+    Object.prototype.hasOwnProperty.call(data, "status") &&
+    data.status !== current.status;
 
-  const client =
-    await database.getClient();
+  const client = await database.getClient();
 
   const tx = {
     client,
   };
 
   try {
-    await client.query(
-      "BEGIN",
+    await client.query("BEGIN");
+
+    const updatedTicket = await ticketRepository.updateTicket(
+      ticketId,
+      {
+        subject: relational.subject,
+
+        description: relational.description,
+
+        issueType: data.issueType,
+
+        priority: data.priority,
+
+        organizationId: effective.organizationId,
+
+        departmentId: effective.departmentId,
+
+        assignedUserId: effective.assignedUserId,
+
+        assignmentChanged,
+
+        status: data.status,
+
+        resolutionChanged,
+
+        resolutionNote: data.resolutionNote,
+
+        hasCustomData: Object.keys(storage.customData).length > 0,
+
+        customData: mergedCustomData,
+      },
+      tx,
     );
-
-    const updatedTicket =
-      await ticketRepository.updateTicket(
-        ticketId,
-        {
-          subject:
-            relational.subject,
-
-          description:
-            relational.description,
-
-          issueType:
-            data.issueType,
-
-          priority:
-            data.priority,
-
-          organizationId:
-            effective.organizationId,
-
-          departmentId:
-            effective.departmentId,
-
-          assignedUserId:
-            effective.assignedUserId,
-
-          assignmentChanged,
-
-          status:
-            data.status,
-
-          resolutionChanged,
-
-          resolutionNote:
-            data.resolutionNote,
-
-          hasCustomData:
-            Object.keys(
-              storage.customData,
-            ).length > 0,
-
-          customData:
-            mergedCustomData,
-        },
-        tx,
-      );
 
     for (const change of fieldChanges) {
       await ticketLifecycleService.record(
         {
           ticketId,
 
-          actorUserId:
-            authenticatedUserId,
+          actorUserId: authenticatedUserId,
 
-          eventType:
-            TICKET_LIFECYCLE_EVENT_TYPE.FIELD,
+          eventType: TICKET_LIFECYCLE_EVENT_TYPE.FIELD,
 
-          eventAction:
-            TICKET_LIFECYCLE_EVENT_ACTION.UPDATED,
+          eventAction: TICKET_LIFECYCLE_EVENT_ACTION.UPDATED,
 
-          fieldName:
-            change.fieldKey,
+          fieldName: change.fieldKey,
 
-          oldValue:
-            change.oldValue,
+          oldValue: change.oldValue,
 
-          newValue:
-            change.newValue,
+          newValue: change.newValue,
         },
         tx,
       );
     }
 
-    if (
-      statusChanged &&
-      data.status !==
-        current.status
-    ) {
+    if (statusChanged && data.status !== current.status) {
       await ticketLifecycleService.record(
         {
           ticketId,
 
-          actorUserId:
-            authenticatedUserId,
+          actorUserId: authenticatedUserId,
 
-          eventType:
-            TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
+          eventType: TICKET_LIFECYCLE_EVENT_TYPE.STATUS,
 
-          eventAction:
-            TICKET_LIFECYCLE_EVENT_ACTION.STATUS_CHANGED,
+          eventAction: TICKET_LIFECYCLE_EVENT_ACTION.STATUS_CHANGED,
 
-          fieldName:
-            "status",
+          fieldName: "status",
 
-          oldValue:
-            current.status,
+          oldValue: current.status,
 
-          newValue:
-            data.status,
+          newValue: data.status,
         },
         tx,
       );
     }
 
-    await client.query(
-      "COMMIT",
-    );
+    await client.query("COMMIT");
 
     return updatedTicket;
   } catch (error) {
     try {
-      await client.query(
-        "ROLLBACK",
-      );
+      await client.query("ROLLBACK");
     } catch (rollbackError) {
-      error.rollbackError =
-        rollbackError;
+      error.rollbackError = rollbackError;
     }
 
     throw error;
@@ -866,11 +728,7 @@ async function getComments(ticketId) {
   return ticketRepository.findTicketComments(ticketId);
 }
 
-async function addComment(
-  ticketId,
-  comment,
-  authenticatedUserId,
-) {
+async function addComment(ticketId, comment, authenticatedUserId) {
   await getTicket(ticketId);
 
   const normalizedComment = comment.trim();
@@ -890,22 +748,19 @@ async function addComment(
   try {
     await client.query("BEGIN");
 
-    const createdComment =
-      await ticketRepository.createTicketComment(
-        ticketId,
-        authenticatedUserId,
-        normalizedComment,
-        tx,
-      );
+    const createdComment = await ticketRepository.createTicketComment(
+      ticketId,
+      authenticatedUserId,
+      normalizedComment,
+      tx,
+    );
 
     await ticketLifecycleService.record(
       {
         ticketId,
         actorUserId: authenticatedUserId,
-        eventType:
-          TICKET_LIFECYCLE_EVENT_TYPE.COMMENT,
-        eventAction:
-          TICKET_LIFECYCLE_EVENT_ACTION.COMMENT_ADDED,
+        eventType: TICKET_LIFECYCLE_EVENT_TYPE.COMMENT,
+        eventAction: TICKET_LIFECYCLE_EVENT_ACTION.COMMENT_ADDED,
         metadata: {
           commentId: createdComment.id,
         },
