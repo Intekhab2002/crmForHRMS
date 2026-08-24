@@ -441,102 +441,6 @@ Object.freeze({
     resource: "employee",
     action: "delete",
 }),
-
-  // -------------------------------------------------------------------------
-  // Form Field Configuration
-  // -------------------------------------------------------------------------
-
-  Object.freeze({
-    code: "form_field:read",
-    name: "Read Form Fields",
-    description: "View dynamic form field definitions.",
-    resource: "form_field",
-    action: "read",
-  }),
-
-  Object.freeze({
-    code: "form_field:create",
-    name: "Create Form Fields",
-    description: "Create dynamic form field definitions.",
-    resource: "form_field",
-    action: "create",
-  }),
-
-  Object.freeze({
-    code: "form_field:update",
-    name: "Update Form Fields",
-    description: "Update dynamic form field definitions.",
-    resource: "form_field",
-    action: "update",
-  }),
-
-  Object.freeze({
-    code: "form_field:delete",
-    name: "Delete Form Fields",
-    description: "Soft delete dynamic form field definitions.",
-    resource: "form_field",
-    action: "delete",
-  }),
-
-  Object.freeze({
-    code: "form_field:restore",
-    name: "Restore Form Fields",
-    description: "Restore soft-deleted form fields.",
-    resource: "form_field",
-    action: "restore",
-  }),
-
-  Object.freeze({
-    code: "form_field:enable",
-    name: "Enable Form Fields",
-    description: "Enable dynamic form fields.",
-    resource: "form_field",
-    action: "enable",
-  }),
-
-  Object.freeze({
-    code: "form_field:disable",
-    name: "Disable Form Fields",
-    description: "Disable dynamic form fields.",
-    resource: "form_field",
-    action: "disable",
-  }),
-
-  // -------------------------------------------------------------------------
-  // Form Definition Configuration
-  // -------------------------------------------------------------------------
-
-  Object.freeze({
-    code: "form_definition:read",
-    name: "Read Form Definitions",
-    description: "View dynamic form definitions.",
-    resource: "form_definition",
-    action: "read",
-  }),
-
-  Object.freeze({
-    code: "form_definition:create",
-    name: "Create Form Definitions",
-    description: "Create dynamic form definitions.",
-    resource: "form_definition",
-    action: "create",
-  }),
-
-  Object.freeze({
-    code: "form_definition:update",
-    name: "Update Form Definitions",
-    description: "Update dynamic form definitions.",
-    resource: "form_definition",
-    action: "update",
-  }),
-
-  Object.freeze({
-    code: "form_definition:delete",
-    name: "Delete Form Definitions",
-    description: "Deactivate or retire dynamic form definitions.",
-    resource: "form_definition",
-    action: "delete",
-  }),
 ]);
 
 /**
@@ -594,10 +498,6 @@ const ROLE_PERMISSION_MATRIX = Object.freeze({
 
     "dashboard:read",
 
-    "employee:read",
-    "employee:create",
-    "employee:update",
-    "employee:delete",
   ]),
 
   agent: Object.freeze([
