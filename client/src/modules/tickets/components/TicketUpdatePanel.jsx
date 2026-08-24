@@ -1,35 +1,19 @@
 import {
-  Alert,
   Paper,
   Stack,
   Typography,
 } from "@mui/material";
 
 import CanAccess from "../../../components/rbac/CanAccess";
-import DynamicForm from "../../../components/forms/DynamicForm";
+import {
+  DynamicFormContainer,
+} from "../../../components/forms/DynamicForm";
 
 export default function TicketUpdatePanel({
   config,
-  runtimeForm,
   ticket,
   onSubmit,
 }) {
-  if (
-    !runtimeForm ||
-    !Array.isArray(runtimeForm.fields)
-  ) {
-    return (
-      <CanAccess
-        permission={config.permission}
-      >
-        <Alert severity="error">
-          Ticket update form configuration
-          is unavailable.
-        </Alert>
-      </CanAccess>
-    );
-  }
-
   return (
     <CanAccess
       permission={config.permission}
@@ -51,10 +35,9 @@ export default function TicketUpdatePanel({
             {config.title}
           </Typography>
 
-          <DynamicForm
-            form={runtimeForm}
+          <DynamicFormContainer
+            formCode="ticket.update"
             initialValues={ticket}
-            mode="update"
             submitLabel={
               config.submitLabel
             }
