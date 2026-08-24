@@ -1,26 +1,15 @@
 import ApiResponse from "../../helpers/ApiResponse.js";
 
 import service from "./formConfiguration.service.js";
-
 import mapper from "./formConfiguration.mapper.js";
 
-
-async function getFields(
-    request,
-    response,
-    next,
-) {
+async function getFields(request, response, next) {
     try {
-        const result =
-            await service.listFields(
-                request.validatedQuery,
-            );
+        const result = await service.listFields(request.validatedQuery);
 
         return ApiResponse.paginated(
             response,
-            result.data.map(
-                mapper.mapFieldToApi,
-            ),
+            result.data.map(mapper.mapFieldToApi),
             result.pagination,
             "Form fields retrieved successfully.",
         );
@@ -29,17 +18,9 @@ async function getFields(
     }
 }
 
-
-async function getFieldById(
-    request,
-    response,
-    next,
-) {
+async function getFieldById(request, response, next) {
     try {
-        const field =
-            await service.getFieldById(
-                request.params.fieldId,
-            );
+        const field = await service.getFieldById(request.params.fieldId);
 
         return ApiResponse.success(
             response,
@@ -51,18 +32,12 @@ async function getFieldById(
     }
 }
 
-
-async function createField(
-    request,
-    response,
-    next,
-) {
+async function createField(request, response, next) {
     try {
-        const field =
-            await service.createField(
-                request.body,
-                request.auth.userId,
-            );
+        const field = await service.createField(
+            request.body,
+            request.auth.userId,
+        );
 
         return ApiResponse.created(
             response,
@@ -74,19 +49,13 @@ async function createField(
     }
 }
 
-
-async function updateField(
-    request,
-    response,
-    next,
-) {
+async function updateField(request, response, next) {
     try {
-        const field =
-            await service.updateField(
-                request.params.fieldId,
-                request.body,
-                request.auth.userId,
-            );
+        const field = await service.updateField(
+            request.params.fieldId,
+            request.body,
+            request.auth.userId,
+        );
 
         return ApiResponse.updated(
             response,
@@ -98,18 +67,12 @@ async function updateField(
     }
 }
 
-
-async function disableField(
-    request,
-    response,
-    next,
-) {
+async function disableField(request, response, next) {
     try {
-        const field =
-            await service.disableField(
-                request.params.fieldId,
-                request.auth.userId,
-            );
+        const field = await service.disableField(
+            request.params.fieldId,
+            request.auth.userId,
+        );
 
         return ApiResponse.updated(
             response,
@@ -121,18 +84,12 @@ async function disableField(
     }
 }
 
-
-async function enableField(
-    request,
-    response,
-    next,
-) {
+async function enableField(request, response, next) {
     try {
-        const field =
-            await service.enableField(
-                request.params.fieldId,
-                request.auth.userId,
-            );
+        const field = await service.enableField(
+            request.params.fieldId,
+            request.auth.userId,
+        );
 
         return ApiResponse.updated(
             response,
@@ -144,18 +101,12 @@ async function enableField(
     }
 }
 
-
-async function deleteField(
-    request,
-    response,
-    next,
-) {
+async function deleteField(request, response, next) {
     try {
-        const field =
-            await service.deleteField(
-                request.params.fieldId,
-                request.auth.userId,
-            );
+        const field = await service.deleteField(
+            request.params.fieldId,
+            request.auth.userId,
+        );
 
         return ApiResponse.deleted(
             response,
@@ -167,18 +118,12 @@ async function deleteField(
     }
 }
 
-
-async function restoreField(
-    request,
-    response,
-    next,
-) {
+async function restoreField(request, response, next) {
     try {
-        const field =
-            await service.restoreField(
-                request.params.fieldId,
-                request.auth.userId,
-            );
+        const field = await service.restoreField(
+            request.params.fieldId,
+            request.auth.userId,
+        );
 
         return ApiResponse.updated(
             response,
@@ -190,23 +135,22 @@ async function restoreField(
     }
 }
 
-async function getRuntimeForm(
-    request,
-    response,
-    next,
-) {
+function runtimeResponse(result) {
+    return result.runtime ?? mapper.mapRuntimeForm(
+        result.form,
+        result.assignments,
+    );
+}
+
+async function getRuntimeForm(request, response, next) {
     try {
-        const result =
-            await service.getRuntimeForm(
-                request.params.formCode,
-            );
+        const result = await service.getRuntimeForm(
+            request.params.formCode,
+        );
 
         return ApiResponse.success(
             response,
-            mapper.mapRuntimeForm(
-                result.form,
-                result.assignments,
-            ),
+            runtimeResponse(result),
             "Form configuration retrieved successfully.",
         );
     } catch (error) {
@@ -214,23 +158,13 @@ async function getRuntimeForm(
     }
 }
 
-
-async function getForms(
-    request,
-    response,
-    next,
-) {
+async function getForms(request, response, next) {
     try {
-        const result =
-            await service.listForms(
-                request.validatedQuery,
-            );
+        const result = await service.listForms(request.validatedQuery);
 
         return ApiResponse.paginated(
             response,
-            result.data.map(
-                mapper.mapFormToApi,
-            ),
+            result.data.map(mapper.mapFormToApi),
             result.pagination,
             "Forms retrieved successfully.",
         );
@@ -239,25 +173,16 @@ async function getForms(
     }
 }
 
-
-async function getFormByIdentifier(
-    request,
-    response,
-    next,
-) {
+async function getFormByIdentifier(request, response, next) {
     try {
-        const result =
-            await service.getFormByIdentifier(
-                request.params.identifier,
-            );
+        const result = await service.getFormByIdentifier(
+            request.params.identifier,
+        );
 
         if (result.mode === "runtime") {
             return ApiResponse.success(
                 response,
-                mapper.mapRuntimeForm(
-                    result.form,
-                    result.assignments,
-                ),
+                runtimeResponse(result),
                 "Form configuration retrieved successfully.",
             );
         }
@@ -265,14 +190,10 @@ async function getFormByIdentifier(
         return ApiResponse.success(
             response,
             {
-                ...mapper.mapFormToApi(
-                    result.form,
+                ...mapper.mapFormToApi(result.form),
+                fields: result.assignments.map(
+                    mapper.mapAssignmentToApi,
                 ),
-
-                fields:
-                    result.assignments.map(
-                        mapper.mapAssignmentToApi,
-                    ),
             },
             "Form definition retrieved successfully.",
         );
@@ -281,18 +202,12 @@ async function getFormByIdentifier(
     }
 }
 
-
-async function createForm(
-    request,
-    response,
-    next,
-) {
+async function createForm(request, response, next) {
     try {
-        const form =
-            await service.createForm(
-                request.body,
-                request.auth.userId,
-            );
+        const form = await service.createForm(
+            request.body,
+            request.auth.userId,
+        );
 
         return ApiResponse.created(
             response,
@@ -304,19 +219,13 @@ async function createForm(
     }
 }
 
-
-async function updateForm(
-    request,
-    response,
-    next,
-) {
+async function updateForm(request, response, next) {
     try {
-        const form =
-            await service.updateForm(
-                request.params.formId,
-                request.body,
-                request.auth.userId,
-            );
+        const form = await service.updateForm(
+            request.params.formId,
+            request.body,
+            request.auth.userId,
+        );
 
         return ApiResponse.updated(
             response,
@@ -328,18 +237,12 @@ async function updateForm(
     }
 }
 
-
-async function deleteForm(
-    request,
-    response,
-    next,
-) {
+async function deleteForm(request, response, next) {
     try {
-        const form =
-            await service.deleteForm(
-                request.params.formId,
-                request.auth.userId,
-            );
+        const form = await service.deleteForm(
+            request.params.formId,
+            request.auth.userId,
+        );
 
         return ApiResponse.deleted(
             response,
@@ -351,26 +254,18 @@ async function deleteForm(
     }
 }
 
-
-async function assignField(
-    request,
-    response,
-    next,
-) {
+async function assignField(request, response, next) {
     try {
-        const assignment =
-            await service.assignField(
-                request.params.formId,
-                request.body.fieldId,
-                request.body,
-                request.auth.userId,
-            );
+        const assignment = await service.assignField(
+            request.params.formId,
+            request.body.fieldId,
+            request.body,
+            request.auth.userId,
+        );
 
         return ApiResponse.created(
             response,
-            mapper.mapAssignmentToApi(
-                assignment,
-            ),
+            mapper.mapAssignmentToApi(assignment),
             "Form field assigned successfully.",
         );
     } catch (error) {
@@ -378,12 +273,7 @@ async function assignField(
     }
 }
 
-
-async function removeField(
-    request,
-    response,
-    next,
-) {
+async function removeField(request, response, next) {
     try {
         await service.removeField(
             request.params.formId,
@@ -399,6 +289,7 @@ async function removeField(
         return next(error);
     }
 }
+
 export default Object.freeze({
     getFields,
     getFieldById,
@@ -407,6 +298,7 @@ export default Object.freeze({
     disableField,
     deleteField,
     restoreField,
+    enableField,
     getForms,
     getFormByIdentifier,
     getRuntimeForm,
@@ -415,5 +307,4 @@ export default Object.freeze({
     deleteForm,
     assignField,
     removeField,
-    enableField,
 });

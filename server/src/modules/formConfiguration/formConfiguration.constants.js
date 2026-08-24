@@ -34,6 +34,13 @@ export const FIELD_DATA_TYPES = Object.freeze([
     "array",
 ]);
 
+export const STORAGE_TYPES = Object.freeze([
+    "relational",
+    "custom_data",
+    "reference",
+    "specialized",
+]);
+
 export const FORM_STATUSES = Object.freeze([
     "active",
     "inactive",
@@ -44,9 +51,11 @@ export const FIELD_ERROR_CODES = Object.freeze({
     CODE_EXISTS: "FORM_FIELD_KEY_EXISTS",
     SYSTEM_PROTECTED: "FORM_FIELD_SYSTEM_PROTECTED",
     INVALID_TYPE: "FORM_FIELD_INVALID_TYPE",
+    INVALID_DATA_TYPE: "FORM_FIELD_INVALID_DATA_TYPE",
+    TYPE_DATA_TYPE_MISMATCH: "FORM_FIELD_TYPE_DATA_TYPE_MISMATCH",
+    INVALID_STORAGE_TYPE: "FORM_FIELD_INVALID_STORAGE_TYPE",
+    INVALID_STORAGE_MAPPING: "FORM_FIELD_INVALID_STORAGE_MAPPING",
 });
-
-
 
 export const FORM_ERROR_CODES = Object.freeze({
     NOT_FOUND: "FORM_DEFINITION_NOT_FOUND",
@@ -65,6 +74,7 @@ export const ASSIGNMENT_ERROR_CODES = Object.freeze({
 export default Object.freeze({
     FIELD_TYPES,
     FIELD_DATA_TYPES,
+    STORAGE_TYPES,
     FORM_STATUSES,
     FIELD_ERROR_CODES,
     FORM_ERROR_CODES,
