@@ -158,6 +158,7 @@ router.post(
     "/",
     authenticate,
     requirePermission(TICKET_CREATE),
+    ticketAttachmentUpload.single("attachment"),
     validateBody(ticketValidator.createTicketSchema),
     ticketController.createTicket,
 );

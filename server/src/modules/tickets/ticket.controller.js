@@ -33,7 +33,19 @@ async function getTicket(req, res, next) {
 
 async function createTicket(req, res, next) {
   try {
-    const ticket = await ticketDynamicService.createTicket(req.body, req.auth.userId);
+    let body = req.body;
+    if (typeof body?.payload === "string") {
+      try {
+        body = JSON.parse(body.payload);
+      } catch {
+        throw new Error("Ticket payload must contain valid JSON.");
+      }
+    }
+    const ticket = await ticketDynamicService.createTicket(
+      body,
+      req.auth.userId,
+      req.file ?? null,
+    );
 
     return ApiResponse.created(res, ticket, TICKET_MESSAGES.CREATE_SUCCESS);
   } catch (error) {
