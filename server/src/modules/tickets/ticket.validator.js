@@ -73,20 +73,45 @@ const createTicketSchema = z
 
 const updateTicketSchema = z
   .object({
-    subject: nonEmptyString("Subject", 255).optional(),
-    description: z.string().trim().min(1).optional(),
-    issueType: nonEmptyString("Issue type", 100).optional(),
-    priority: prioritySchema.optional(),
+    requesterUserId: uuidSchema.optional(),
+
     organizationId: uuidSchema.optional(),
+
     departmentId: uuidSchema.optional(),
-    assignedUserId: uuidSchema.nullable().optional(),
-    status: statusSchema.optional(),
-    resolutionNote: z.string().trim().min(1).nullable().optional(),
+
+    assignedUserId:
+      uuidSchema
+        .nullable()
+        .optional(),
+
+    issueType:
+      nonEmptyString(
+        "Issue type",
+        100,
+      ).optional(),
+
+    priority:
+      prioritySchema.optional(),
+
+    status:
+      statusSchema.optional(),
+
+    resolutionNote:
+      z.string()
+        .trim()
+        .min(1)
+        .nullable()
+        .optional(),
   })
-  .strict()
-  .refine((value) => Object.keys(value).length > 0, {
-    message: "At least one ticket field must be provided.",
-  });
+  .passthrough()
+  .refine(
+    (value) =>
+      Object.keys(value).length > 0,
+    {
+      message:
+        "At least one ticket field must be provided.",
+    },
+  );
 
 const assignTicketSchema = z
   .object({

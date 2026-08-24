@@ -15,6 +15,7 @@ import {
 import formConfigurationService from "../formConfiguration/formConfiguration.service.js";
 import fieldValidationEngine from "../formConfiguration/engines/fieldValidation.engine.js";
 import fieldStorageEngine from "../formConfiguration/engines/fieldStorage.engine.js";
+import fieldChangeEngine from "../formConfiguration/engines/fieldChange.engine.js";
 
 const FORM_CODE = "ticket.create";
 
@@ -106,6 +107,130 @@ async function resolveMetadata(body, authenticatedUserId) {
     fields,
     dynamicPayload: validated,
     storage,
+  };
+}
+
+async function prepareUpdatePayload(
+  body,
+  currentTicket,
+) {
+  const runtimeForm =
+    await formConfigurationService.getRuntimeForm(
+      "ticket.update",
+    );
+
+  const fields =
+    runtimeForm?.runtimeMetadata?.fields ??
+    runtimeForm?.runtime?.fields ??
+    [];
+
+  if (!Array.isArray(fields) || !fields.length) {
+    throw AppError.conflict(
+      "Ticket update form has no runtime fields.",
+      {
+        code:
+          "TICKET_RUNTIME_CONFIGURATION_EMPTY",
+      },
+    );
+  }
+
+  const fieldMap =
+    new Map(
+      fields.map((field) => [
+        field.key,
+        field,
+      ]),
+    );
+
+  const systemKeys = new Set([
+    "requesterUserId",
+    "organizationId",
+    "departmentId",
+    "assignedUserId",
+    "issueType",
+    "priority",
+    "status",
+    "resolutionNote",
+  ]);
+
+  const unknownKeys =
+    Object.keys(body ?? {}).filter(
+      (key) =>
+        !fieldMap.has(key) &&
+        !systemKeys.has(key),
+    );
+
+  if (unknownKeys.length) {
+    throw AppError.validation(
+      "Unknown Ticket fields were submitted.",
+      unknownKeys.map((key) => ({
+        path: key,
+        fieldKey: key,
+        message:
+          `Field '${key}' is not defined for this form.`,
+      })),
+      {
+        code:
+          "FORM_DYNAMIC_FIELD_UNKNOWN",
+      },
+    );
+  }
+
+  const dynamicPayload = {};
+
+  for (const field of fields) {
+    if (
+      field.readOnly ||
+      field.editable === false
+    ) {
+      continue;
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        body,
+        field.key,
+      )
+    ) {
+      dynamicPayload[field.key] =
+        body[field.key];
+    }
+  }
+
+  const validated =
+    fieldValidationEngine.validateDynamicPayload(
+      fields,
+      dynamicPayload,
+      {
+        operation: "update",
+      },
+    );
+
+  const storage =
+    fieldStorageEngine.splitDynamicPayload(
+      fields,
+      validated,
+    );
+
+  const previousValues =
+    fieldStorageEngine.extractDynamicPayload(
+      fields,
+      currentTicket,
+    );
+
+  const fieldChanges =
+    fieldChangeEngine.collectFieldChanges(
+      fields,
+      previousValues,
+      validated,
+    );
+
+  return {
+    fields,
+    dynamicPayload: validated,
+    storage,
+    previousValues,
+    fieldChanges,
   };
 }
 
@@ -312,5 +437,6 @@ async function prepareCreatePayload(body, authenticatedUserId) {
 
 export default Object.freeze({
   prepareCreatePayload,
+  prepareUpdatePayload,
   createTicket,
 });

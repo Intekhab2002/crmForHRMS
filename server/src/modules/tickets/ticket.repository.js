@@ -199,6 +199,12 @@ const UPDATE_TICKET = `
         description = COALESCE($3::TEXT, description),
         issue_type = COALESCE($4::VARCHAR, issue_type),
         priority = COALESCE($5::VARCHAR, priority),
+        custom_data =
+    CASE
+        WHEN $13::BOOLEAN
+            THEN COALESCE($14::JSONB, custom_data)
+        ELSE custom_data
+    END,
         organization_id = COALESCE($6::UUID, organization_id),
         department_id = COALESCE($7::UUID, department_id),
         assigned_user_id =
@@ -438,48 +444,34 @@ async function findEmployee(id, tx = null) {
   return result.rows[0] ?? null;
 }
 
-async function findAssignableUser(
-    id,
-    tx = null,
-) {
-    const executor = getQueryExecutor(tx);
+async function findAssignableUser(id, tx = null) {
+  const executor = getQueryExecutor(tx);
 
-    const result = await executor.query(
-        FIND_ASSIGNABLE_USER,
-        [id],
-    );
+  const result = await executor.query(FIND_ASSIGNABLE_USER, [id]);
 
-    return result.rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 async function createTicket(data, tx) {
-    const executor =
-        tx?.client ??
-        getQueryExecutor();
+  const executor = tx?.client ?? getQueryExecutor();
 
-    const result =
-        await executor.query(
-            CREATE_TICKET,
-            [
-                data.id,
-                data.subject,
-                JSON.stringify(
-                    data.customData ?? {},
-                ),
-                data.description,
-                data.issueType,
-                data.priority,
-                data.status ?? "OPEN",
-                data.requesterUserId,
-                data.createdByUserId,
-                data.organizationId,
-                data.departmentId,
-                data.contactId,
-                data.assignedUserId,
-            ],
-        );
+  const result = await executor.query(CREATE_TICKET, [
+    data.id,
+    data.subject,
+    JSON.stringify(data.customData ?? {}),
+    data.description,
+    data.issueType,
+    data.priority,
+    data.status ?? "OPEN",
+    data.requesterUserId,
+    data.createdByUserId,
+    data.organizationId,
+    data.departmentId,
+    data.contactId,
+    data.assignedUserId,
+  ]);
 
-    return result.rows[0];
+  return result.rows[0];
 }
 
 async function updateTicket(ticketId, data, tx = null) {
@@ -500,6 +492,8 @@ async function updateTicket(ticketId, data, tx = null) {
     data.status ?? null,
     has("resolutionNote"),
     data.resolutionNote ?? null,
+    data.hasCustomData ?? false,
+    data.customData ?? null,
   ]);
 
   return result.rows[0] ?? null;
@@ -508,13 +502,7 @@ async function updateTicket(ticketId, data, tx = null) {
 async function assignTicket(ticketId, userId, tx = null) {
   const executor = getQueryExecutor(tx);
 
-  const result = await executor.query(
-    ASSIGN_TICKET,
-    [
-      ticketId,
-      userId,
-    ],
-  );
+  const result = await executor.query(ASSIGN_TICKET, [ticketId, userId]);
 
   return result.rows[0] ?? null;
 }
@@ -557,30 +545,19 @@ async function findAssignableUsers(tx = null) {
 async function findTicketComments(ticketId, tx = null) {
   const executor = getQueryExecutor(tx);
 
-  const result = await executor.query(
-    FIND_TICKET_COMMENTS,
-    [ticketId],
-  );
+  const result = await executor.query(FIND_TICKET_COMMENTS, [ticketId]);
 
   return result.rows;
 }
-async function createTicketComment(
-  ticketId,
-  userId,
-  comment,
-  tx = null,
-) {
+async function createTicketComment(ticketId, userId, comment, tx = null) {
   const executor = getQueryExecutor(tx);
 
-  const result = await executor.query(
-    CREATE_TICKET_COMMENT,
-    [
-      randomUUID(),
-      ticketId,
-      userId,
-      comment,
-    ],
-  );
+  const result = await executor.query(CREATE_TICKET_COMMENT, [
+    randomUUID(),
+    ticketId,
+    userId,
+    comment,
+  ]);
 
   return result.rows[0];
 }
@@ -601,6 +578,6 @@ export default Object.freeze({
   deleteTicket,
   findAssignableUsers,
   findAssignableUser,
-    findTicketComments,
+  findTicketComments,
   createTicketComment,
 });
