@@ -1165,6 +1165,24 @@ async function updateAssignment(
     return result.rows[0] ?? null;
 }
 
+async function findAssignmentsByFormId(formId) {
+    const result = await db.query(
+        `
+        SELECT
+            id,
+            form_id AS "formId",
+            field_id AS "fieldId",
+            display_order AS "displayOrder"
+        FROM form_field_assignments
+        WHERE form_id = $1::UUID
+        ORDER BY display_order ASC, id ASC
+        `,
+        [formId],
+    );
+
+    return result.rows;
+}
+
 export default Object.freeze({
     findFields,
     findFieldById,
@@ -1190,4 +1208,5 @@ export default Object.freeze({
     createAssignment,
     deleteAssignment,
     updateAssignment,
+    findAssignmentsByFormId
 });
