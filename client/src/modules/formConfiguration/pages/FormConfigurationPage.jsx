@@ -199,7 +199,7 @@ export default function FormConfigurationPage() {
 
       setSelectedForm(updatedForm);
       setAssignmentDialogOpen(false);
-
+      setEditingAssignment(null);
       await loadData();
     } catch (requestError) {
       setError(
