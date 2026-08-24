@@ -60,38 +60,16 @@ const ticketListQuerySchema = z
 
 const createTicketSchema = z
   .object({
-    subject: nonEmptyString("Subject", 255),
-
-    description: z
-      .string()
-      .trim()
-      .min(1, "Description is required."),
-
-    issueType: nonEmptyString("Issue type", 100),
-
+    requesterUserId: uuidSchema.optional(),
+    organizationId: uuidSchema.optional(),
+    departmentId: uuidSchema.optional(),
+    assignedUserId: uuidSchema.optional(),
+    issueType: nonEmptyString("Issue type", 100).optional(),
     priority: prioritySchema
       .optional()
       .default(TICKET_PRIORITY.MEDIUM),
-
-    requesterUserId: uuidSchema.optional(),
-
-    organizationId: uuidSchema,
-
-    departmentId: uuidSchema,
-
-    assignedUserId: uuidSchema.optional(),
-
-    contactName: nonEmptyString(
-      "Contact name",
-      255,
-    ),
-
-    mobilePhone: nonEmptyString(
-      "Mobile number",
-      30,
-    ),
   })
-  .strict();
+  .passthrough();
 
 const updateTicketSchema = z
   .object({

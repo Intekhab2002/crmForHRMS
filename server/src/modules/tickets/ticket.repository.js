@@ -173,18 +173,14 @@ const CREATE_TICKET = `
         $5::VARCHAR,
         $6::VARCHAR,
 
-        CASE
-            WHEN $12::UUID IS NOT NULL
-                THEN 'ASSIGNED'
-            ELSE 'OPEN'
-        END,
+        $7::VARCHAR,
 
-        $7::UUID,
         $8::UUID,
         $9::UUID,
         $10::UUID,
         $11::UUID,
         $12::UUID,
+        $13::UUID,
 
         CASE
             WHEN $12::UUID IS NOT NULL
@@ -473,6 +469,7 @@ async function createTicket(data, tx) {
                 data.description,
                 data.issueType,
                 data.priority,
+                data.status ?? "OPEN",
                 data.requesterUserId,
                 data.createdByUserId,
                 data.organizationId,

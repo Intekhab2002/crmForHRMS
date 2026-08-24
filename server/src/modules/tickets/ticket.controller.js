@@ -1,6 +1,7 @@
 import { ApiResponse } from "../../helpers/ApiResponse.js";
 
 import ticketService from "./ticket.service.js";
+import ticketDynamicService from "./ticketDynamic.service.js";
 import { TICKET_MESSAGES } from "./ticket.constants.js";
 
 async function getTickets(req, res, next) {
@@ -32,7 +33,7 @@ async function getTicket(req, res, next) {
 
 async function createTicket(req, res, next) {
   try {
-    const ticket = await ticketService.createTicket(req.body, req.auth.userId);
+    const ticket = await ticketDynamicService.createTicket(req.body, req.auth.userId);
 
     return ApiResponse.created(res, ticket, TICKET_MESSAGES.CREATE_SUCCESS);
   } catch (error) {

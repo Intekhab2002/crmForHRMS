@@ -1,133 +1,437 @@
+import { randomUUID } from "node:crypto";
+
 import AppError from "../../helpers/AppError.js";
+import database from "../../database/postgres.js";
+
+import ticketRepository from "./ticket.repository.js";
+import contactService from "../contacts/contact.service.js";
+import ticketLifecycleService from "./ticketLifecycle.service.js";
+
+import {
+  TICKET_LIFECYCLE_EVENT_TYPE,
+  TICKET_LIFECYCLE_EVENT_ACTION,
+} from "./ticketLifecycle.constants.js";
 
 import formConfigurationService from "../formConfiguration/formConfiguration.service.js";
-
 import fieldValidationEngine from "../formConfiguration/engines/fieldValidation.engine.js";
 import fieldStorageEngine from "../formConfiguration/engines/fieldStorage.engine.js";
 
 const FORM_CODE = "ticket.create";
 
+const SYSTEM_KEYS = new Set([
+  "requesterUserId",
+  "organizationId",
+  "departmentId",
+  "assignedUserId",
+  "issueType",
+  "priority",
+]);
+
 function getRuntimeFields(runtimeForm) {
-    return (
-        runtimeForm?.runtimeMetadata?.fields ??
-        runtimeForm?.runtime?.fields ??
-        []
+  const fields =
+    runtimeForm?.runtimeMetadata?.fields ??
+    runtimeForm?.runtime?.fields ??
+    [];
+
+  if (!Array.isArray(fields)) {
+    throw AppError.conflict(
+      "Ticket runtime field configuration is invalid.",
+      {
+        code: "TICKET_RUNTIME_CONFIGURATION_INVALID",
+      },
     );
+  }
+
+  return fields;
 }
 
-function getRuntimeFormFields(runtimeForm) {
-    const fields = getRuntimeFields(runtimeForm);
+function buildDynamicPayload(
+  body,
+  fields,
+  authenticatedUserId,
+) {
+  const fieldMap = new Map(
+    fields.map((field) => [field.key, field]),
+  );
 
-    if (!Array.isArray(fields)) {
-        throw AppError.conflict(
-            "Ticket runtime field configuration is invalid.",
-            {
-                code: "TICKET_RUNTIME_CONFIGURATION_INVALID",
-            },
-        );
+  const unknownKeys = Object.keys(body ?? {}).filter(
+    (key) =>
+      !fieldMap.has(key) &&
+      !SYSTEM_KEYS.has(key),
+  );
+
+  if (unknownKeys.length) {
+    throw AppError.validation(
+      "Unknown Ticket fields were submitted.",
+      unknownKeys.map((key) => ({
+        path: key,
+        fieldKey: key,
+        message: `Field '${key}' is not defined for this form.`,
+      })),
+      {
+        code: "FORM_DYNAMIC_FIELD_UNKNOWN",
+      },
+    );
+  }
+
+  const payload = {};
+
+  for (const field of fields) {
+    if (!field.visible) continue;
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        body,
+        field.key,
+      )
+    ) {
+      payload[field.key] =
+        body[field.key];
     }
+  }
 
-    return fields;
+  if (fieldMap.has("created_by")) {
+    payload.created_by =
+      authenticatedUserId;
+  }
+
+  return payload;
 }
 
-function buildWritablePayload(body, fields) {
-    const fieldMap = new Map(
-        fields.map((field) => [field.key, field]),
+async function resolveMetadata(
+  body,
+  authenticatedUserId,
+) {
+  const runtimeForm =
+    await formConfigurationService.getRuntimeForm(
+      FORM_CODE,
     );
 
-    const dynamicPayload = {};
+  const fields =
+    getRuntimeFields(runtimeForm);
 
-    for (const field of fields) {
-        if (!field.visible) {
-            continue;
-        }
+  if (!fields.length) {
+    throw AppError.conflict(
+      "Ticket create form has no runtime fields.",
+      {
+        code: "TICKET_RUNTIME_CONFIGURATION_EMPTY",
+      },
+    );
+  }
 
-        if (
-            field.key === "created_by" &&
-            body[field.key] === undefined
-        ) {
-            continue;
-        }
+  const dynamicPayload =
+    buildDynamicPayload(
+      body,
+      fields,
+      authenticatedUserId,
+    );
 
-        if (
-            Object.prototype.hasOwnProperty.call(
-                body,
-                field.key,
-            )
-        ) {
-            dynamicPayload[field.key] =
-                body[field.key];
-        }
-    }
+  const validated =
+    fieldValidationEngine.validateDynamicPayload(
+      fields,
+      dynamicPayload,
+      {
+        operation: "create",
+      },
+    );
 
-    for (const key of Object.keys(body)) {
-        if (!fieldMap.has(key)) {
-            continue;
-        }
+  const storage =
+    fieldStorageEngine.splitDynamicPayload(
+      fields,
+      validated,
+    );
 
-        dynamicPayload[key] = body[key];
-    }
-
-    return dynamicPayload;
+  return {
+    fields,
+    dynamicPayload: validated,
+    storage,
+  };
 }
 
-async function resolveCreateMetadata() {
-    const runtimeForm =
-        await formConfigurationService.getRuntimeForm(
-            FORM_CODE,
-        );
+async function validateReferences({
+  requesterUserId,
+  organizationId,
+  departmentId,
+  assignedUserId,
+}) {
+  const [
+    requester,
+    department,
+  ] = await Promise.all([
+    ticketRepository.findUser(
+      requesterUserId,
+    ),
+    ticketRepository.findDepartment(
+      departmentId,
+    ),
+  ]);
 
-    const fields =
-        getRuntimeFormFields(runtimeForm);
+  if (!requester) {
+    throw AppError.notFound(
+      "Requester user not found.",
+      {
+        code:
+          "TICKET_REQUESTER_NOT_FOUND",
+      },
+    );
+  }
 
-    if (fields.length === 0) {
-        throw AppError.conflict(
-            "Ticket create form has no runtime fields.",
-            {
-                code: "TICKET_RUNTIME_CONFIGURATION_EMPTY",
-            },
-        );
+  if (requester.status !== "active") {
+    throw AppError.conflict(
+      "Requester must have an active user account.",
+      {
+        code:
+          "TICKET_REQUESTER_INACTIVE",
+      },
+    );
+  }
+
+  if (!department) {
+    throw AppError.notFound(
+      "Department not found.",
+      {
+        code:
+          "TICKET_DEPARTMENT_NOT_FOUND",
+      },
+    );
+  }
+
+  const resolvedOrganizationId =
+    organizationId ??
+    department.organization_id;
+
+  const organization =
+    await ticketRepository.findOrganization(
+      resolvedOrganizationId,
+    );
+
+  if (!organization) {
+    throw AppError.notFound(
+      "Organization not found.",
+      {
+        code:
+          "TICKET_ORGANIZATION_NOT_FOUND",
+      },
+    );
+  }
+
+  if (organization.status !== "active") {
+    throw AppError.conflict(
+      "Ticket must belong to an active organization.",
+      {
+        code:
+          "TICKET_ORGANIZATION_INACTIVE",
+      },
+    );
+  }
+
+  if (
+    department.organization_id !==
+    resolvedOrganizationId
+  ) {
+    throw AppError.conflict(
+      "Department does not belong to the selected organization.",
+      {
+        code:
+          "TICKET_DEPARTMENT_DIFFERENT_ORGANIZATION",
+      },
+    );
+  }
+
+  if (department.status !== "active") {
+    throw AppError.conflict(
+      "Ticket must belong to an active department.",
+      {
+        code:
+          "TICKET_DEPARTMENT_INACTIVE",
+      },
+    );
+  }
+
+  if (assignedUserId) {
+    const assignedUser =
+      await ticketRepository.findAssignableUser(
+        assignedUserId,
+      );
+
+    if (!assignedUser) {
+      throw AppError.notFound(
+        "Assigned user not found.",
+        {
+          code:
+            "TICKET_ASSIGNED_USER_NOT_FOUND",
+        },
+      );
     }
+  }
 
-    return {
-        runtimeForm,
-        fields,
-    };
+  return resolvedOrganizationId;
 }
 
-async function prepareCreatePayload(body) {
-    const { runtimeForm, fields } =
-        await resolveCreateMetadata();
+async function createTicket(
+  body,
+  authenticatedUserId,
+) {
+  const {
+    dynamicPayload,
+    storage,
+  } = await resolveMetadata(
+    body,
+    authenticatedUserId,
+  );
 
-    const dynamicPayload =
-        buildWritablePayload(
-            body,
-            fields,
-        );
+  const departmentId =
+    storage.relational.department_id ??
+    body.departmentId;
 
-    const validated =
-        fieldValidationEngine.validateDynamicPayload(
-            fields,
-            dynamicPayload,
-            {
-                operation: "create",
-            },
-        );
+  if (!departmentId) {
+    throw AppError.validation(
+      "Department is required to create a ticket.",
+      [
+        {
+          path: "department",
+          message: "Department is required.",
+        },
+      ],
+      {
+        code:
+          "TICKET_DEPARTMENT_REQUIRED",
+      },
+    );
+  }
 
-    const storage =
-        fieldStorageEngine.splitDynamicPayload(
-            fields,
-            validated,
-        );
+  const assignedUserId =
+    storage.relational.assigned_user_id ??
+    body.assignedUserId ??
+    null;
 
-    return {
-        runtimeForm,
-        fields,
-        dynamicPayload: validated,
-        storage,
-    };
+  const requesterUserId =
+    body.requesterUserId ??
+    authenticatedUserId;
+
+  const organizationId =
+    await validateReferences({
+      requesterUserId,
+      organizationId:
+        body.organizationId,
+      departmentId,
+      assignedUserId,
+    });
+
+  const client =
+    await database.getClient();
+
+  try {
+    await client.query("BEGIN");
+
+    const contact =
+      await contactService.findOrCreateContact(
+        {
+          organizationId,
+          name:
+            dynamicPayload.contact_name ??
+            "",
+          mobile:
+            dynamicPayload.mobile_phone ??
+            "",
+        },
+        {
+          client,
+        },
+      );
+
+    const ticket =
+      await ticketRepository.createTicket(
+        {
+          id: randomUUID(),
+
+          subject:
+            storage.relational.subject ??
+            "",
+
+          status:
+            storage.relational.status ??
+            "OPEN",
+
+          description:
+            storage.relational.description ??
+            "",
+
+          issueType:
+            body.issueType ??
+            "GENERAL",
+
+          priority:
+            body.priority ??
+            "MEDIUM",
+
+          requesterUserId,
+
+          createdByUserId:
+            authenticatedUserId,
+
+          organizationId,
+
+          departmentId,
+
+          assignedUserId,
+
+          contactId: contact.id,
+
+          customData:
+            storage.customData,
+        },
+        {
+          client,
+        },
+      );
+
+    await ticketLifecycleService.record(
+      {
+        ticketId: ticket.id,
+        actorUserId:
+          authenticatedUserId,
+
+        eventType:
+          TICKET_LIFECYCLE_EVENT_TYPE.TICKET,
+
+        eventAction:
+          TICKET_LIFECYCLE_EVENT_ACTION.CREATED,
+
+        metadata: {
+          dynamicFields:
+            Object.keys(
+              dynamicPayload,
+            ),
+        },
+      },
+      {
+        client,
+      },
+    );
+
+    await client.query("COMMIT");
+
+    return ticket;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function prepareCreatePayload(
+  body,
+  authenticatedUserId,
+) {
+  return resolveMetadata(
+    body,
+    authenticatedUserId,
+  );
 }
 
 export default Object.freeze({
-    prepareCreatePayload,
+  prepareCreatePayload,
+  createTicket,
 });

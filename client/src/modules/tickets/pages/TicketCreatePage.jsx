@@ -6,7 +6,7 @@ import PageHeader from "../../../components/page/PageHeader";
 import DynamicFormContainer from "../../../components/forms/DynamicForm/DynamicFormContainer";
 import { useAppConfig } from "../../../context/useAppConfig";
 import { useAuth } from "../../../context/useAuth";
-import { ticketService } from "../services/ticket.service";
+import { ticketRuntimeService } from "../services/ticketRuntime.service";
 
 export default function TicketCreatePage() {
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export default function TicketCreatePage() {
   async function handleSubmit(values, formikHelpers) {
     try {
       const createdTicket =
-        await ticketService.createTicket(
+        await ticketRuntimeService.createTicket(
           values,
           user,
         );
