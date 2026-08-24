@@ -6,17 +6,15 @@ import {
 import {
   Alert,
   Button,
-  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControlLabel,
+  FormControl,
   Grid,
   MenuItem,
   TextField,
 } from "@mui/material";
-
 
 const EMPTY_ASSIGNMENT = {
   fieldId: "",
@@ -40,104 +38,7 @@ const EMPTY_ASSIGNMENT = {
   defaultValueOverride: null,
 };
 
-export default function FieldAssignmentDialog({
-  open,
-  fields,
-  assignment = null,
-  submitting,
-  error,
-  onClose,
-  onSubmit,
-}) {
-  const [
-    values,
-    setValues,
-  ] = useState({
-    fieldId: "",
-    displayOrder: 0,
-    section: "",
-    gridSize: 12,
-    isVisible: true,
-    isEnabled: true,
-    isEditable: true,
-    isReadOnly: false,
-    isRequired: false,
-  });
-
-useEffect(() => {
-  if (!open) {
-    return;
-  }
-
-  if (assignment) {
-    setValues({
-      fieldId: assignment.fieldId ?? "",
-      isVisible: assignment.isVisible ?? null,
-      isEnabled: assignment.isEnabled ?? null,
-      isEditable: assignment.isEditable ?? null,
-      isReadOnly: assignment.isReadOnly ?? null,
-      isRequired: assignment.isRequired ?? null,
-      isSearchable: assignment.isSearchable ?? null,
-      isFilterable: assignment.isFilterable ?? null,
-      isSortable: assignment.isSortable ?? null,
-
-      displayOrder: assignment.displayOrder ?? 0,
-      section: assignment.section ?? "",
-      gridSize: assignment.gridSize ?? null,
-      columnWidth: assignment.columnWidth ?? "",
-
-      labelOverride: assignment.labelOverride ?? "",
-      placeholderOverride:
-        assignment.placeholderOverride ?? "",
-      helpTextOverride:
-        assignment.helpTextOverride ?? "",
-      defaultValueOverride:
-        assignment.defaultValueOverride ?? null,
-    });
-
-    return;
-  }
-
-  setValues(EMPTY_ASSIGNMENT);
-}, [open, assignment]);
-
-  function handleChange(event) {
-    const {
-      name,
-      value,
-      checked,
-      type,
-    } = event.target;
-
-    setValues(
-      (current) => ({
-        ...current,
-        [name]:
-          type === "checkbox"
-            ? checked
-            : value,
-      }),
-    );
-  }
-
-  function handleSubmit(event) {
-    event.preventDefault();
-
-    if (!values.fieldId) {
-      return;
-    }
-
-    onSubmit({
-      ...values,
-      displayOrder:
-        Number(values.displayOrder),
-      gridSize:
-        Number(values.gridSize),
-    });
-  }
-
-
-  function OverrideSelect({
+function OverrideSelect({
   label,
   name,
   value,
@@ -148,24 +49,20 @@ useEffect(() => {
       fullWidth
       select
       label={label}
-      name={name}
       value={
         value === null
           ? "inherit"
           : String(value)
       }
       onChange={(event) => {
-        const nextValue = event.target.value;
+        const selected = event.target.value;
 
-        onChange({
-          target: {
-            name,
-            value:
-              nextValue === "inherit"
-                ? null
-                : nextValue === "true",
-          },
-        });
+        onChange(
+          name,
+          selected === "inherit"
+            ? null
+            : selected === "true",
+        );
       }}
     >
       <MenuItem value="inherit">
@@ -183,6 +80,116 @@ useEffect(() => {
   );
 }
 
+export default function FieldAssignmentDialog({
+  open,
+  fields,
+  assignment = null,
+  submitting,
+  error,
+  onClose,
+  onSubmit,
+}) {
+  const [values, setValues] = useState(
+    EMPTY_ASSIGNMENT,
+  );
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (assignment) {
+      setValues({
+        fieldId: assignment.fieldId ?? "",
+
+        isVisible:
+          assignment.isVisible ?? null,
+        isEnabled:
+          assignment.isEnabled ?? null,
+        isEditable:
+          assignment.isEditable ?? null,
+        isReadOnly:
+          assignment.isReadOnly ?? null,
+        isRequired:
+          assignment.isRequired ?? null,
+        isSearchable:
+          assignment.isSearchable ?? null,
+        isFilterable:
+          assignment.isFilterable ?? null,
+        isSortable:
+          assignment.isSortable ?? null,
+
+        displayOrder:
+          assignment.displayOrder ?? 0,
+        section:
+          assignment.section ?? "",
+        gridSize:
+          assignment.gridSize ?? null,
+        columnWidth:
+          assignment.columnWidth ?? "",
+
+        labelOverride:
+          assignment.labelOverride ?? "",
+        placeholderOverride:
+          assignment.placeholderOverride ?? "",
+        helpTextOverride:
+          assignment.helpTextOverride ?? "",
+        defaultValueOverride:
+          assignment.defaultValueOverride ?? null,
+      });
+
+      return;
+    }
+
+    setValues({
+      ...EMPTY_ASSIGNMENT,
+    });
+  }, [open, assignment]);
+
+  function handleChange(event) {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setValues((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
+  function handleOverrideChange(
+    name,
+    value,
+  ) {
+    setValues((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    if (!values.fieldId) {
+      return;
+    }
+
+    onSubmit({
+      ...values,
+      displayOrder:
+        Number(values.displayOrder),
+
+      gridSize:
+        values.gridSize === null ||
+        values.gridSize === ""
+          ? null
+          : Number(values.gridSize),
+    });
+  }
+
+  const isEditMode = Boolean(assignment);
+
   return (
     <Dialog
       open={open}
@@ -192,10 +199,12 @@ useEffect(() => {
           : onClose
       }
       fullWidth
-      maxWidth="sm"
+      maxWidth="md"
     >
       <DialogTitle>
-        Assign Field
+        {isEditMode
+          ? "Edit Field Assignment"
+          : "Assign Field"}
       </DialogTitle>
 
       <DialogContent>
@@ -213,6 +222,7 @@ useEffect(() => {
           spacing={2}
           sx={{ mt: 0.5 }}
         >
+          {/* Field */}
           <Grid size={12}>
             <TextField
               fullWidth
@@ -222,25 +232,29 @@ useEffect(() => {
               name="fieldId"
               value={values.fieldId}
               onChange={handleChange}
+              disabled={isEditMode}
             >
-              {fields.map(
-                (field) => (
-                  <MenuItem
-                    key={field.id}
-                    value={field.id}
-                  >
-                    {field.label} (
-                    {field.fieldKey})
-                  </MenuItem>
-                ),
-              )}
+              {fields.map((field) => (
+                <MenuItem
+                  key={field.id}
+                  value={field.id}
+                >
+                  {field.label} (
+                  {field.fieldKey})
+                </MenuItem>
+              ))}
             </TextField>
+          </Grid>
+
+          {/* Layout */}
+          <Grid size={12}>
+            <strong>Layout</strong>
           </Grid>
 
           <Grid
             size={{
               xs: 12,
-              md: 6,
+              md: 3,
             }}
           >
             <TextField
@@ -252,6 +266,148 @@ useEffect(() => {
                 values.displayOrder
               }
               onChange={handleChange}
+              inputProps={{
+                min: 0,
+              }}
+            />
+          </Grid>
+
+          <Grid
+            size={{
+              xs: 12,
+              md: 3,
+            }}
+          >
+            <TextField
+              fullWidth
+              type="number"
+              label="Grid Size"
+              name="gridSize"
+              value={
+                values.gridSize ?? ""
+              }
+              onChange={handleChange}
+              inputProps={{
+                min: 1,
+                max: 12,
+              }}
+            />
+          </Grid>
+
+          <Grid
+            size={{
+              xs: 12,
+              md: 3,
+            }}
+          >
+            <TextField
+              fullWidth
+              label="Section"
+              name="section"
+              value={values.section}
+              onChange={handleChange}
+            />
+          </Grid>
+
+          <Grid
+            size={{
+              xs: 12,
+              md: 3,
+            }}
+          >
+            <TextField
+              fullWidth
+              label="Column Width"
+              name="columnWidth"
+              value={
+                values.columnWidth
+              }
+              onChange={handleChange}
+              placeholder="e.g. 50%"
+            />
+          </Grid>
+
+          {/* Behavior */}
+          <Grid size={12}>
+            <strong>Behavior</strong>
+          </Grid>
+
+          {[
+            [
+              "Visible",
+              "isVisible",
+            ],
+            [
+              "Enabled",
+              "isEnabled",
+            ],
+            [
+              "Editable",
+              "isEditable",
+            ],
+            [
+              "Read Only",
+              "isReadOnly",
+            ],
+            [
+              "Required",
+              "isRequired",
+            ],
+            [
+              "Searchable",
+              "isSearchable",
+            ],
+            [
+              "Filterable",
+              "isFilterable",
+            ],
+            [
+              "Sortable",
+              "isSortable",
+            ],
+          ].map(
+            ([label, name]) => (
+              <Grid
+                key={name}
+                size={{
+                  xs: 12,
+                  sm: 6,
+                  md: 3,
+                }}
+              >
+                <OverrideSelect
+                  label={label}
+                  name={name}
+                  value={values[name]}
+                  onChange={
+                    handleOverrideChange
+                  }
+                />
+              </Grid>
+            ),
+          )}
+
+          {/* Overrides */}
+          <Grid size={12}>
+            <strong>
+              Presentation Overrides
+            </strong>
+          </Grid>
+
+          <Grid
+            size={{
+              xs: 12,
+              md: 6,
+            }}
+          >
+            <TextField
+              fullWidth
+              label="Label Override"
+              name="labelOverride"
+              value={
+                values.labelOverride
+              }
+              onChange={handleChange}
             />
           </Grid>
 
@@ -263,104 +419,42 @@ useEffect(() => {
           >
             <TextField
               fullWidth
-              type="number"
-              label="Grid Size"
-              name="gridSize"
+              label="Placeholder Override"
+              name="placeholderOverride"
               value={
-                values.gridSize
+                values.placeholderOverride
               }
               onChange={handleChange}
-              inputProps={{
-                min: 1,
-                max: 12,
-              }}
             />
           </Grid>
 
           <Grid size={12}>
             <TextField
               fullWidth
-              label="Section"
-              name="section"
-              value={values.section}
+              multiline
+              minRows={2}
+              label="Help Text Override"
+              name="helpTextOverride"
+              value={
+                values.helpTextOverride
+              }
               onChange={handleChange}
             />
           </Grid>
 
           <Grid size={12}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isVisible"
-                  checked={
-                    values.isVisible
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
+            <TextField
+              fullWidth
+              multiline
+              minRows={2}
+              label="Default Value Override"
+              name="defaultValueOverride"
+              value={
+                values.defaultValueOverride ??
+                ""
               }
-              label="Visible"
-            />
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isEnabled"
-                  checked={
-                    values.isEnabled
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
-              }
-              label="Enabled"
-            />
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isEditable"
-                  checked={
-                    values.isEditable
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
-              }
-              label="Editable"
-            />
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isReadOnly"
-                  checked={
-                    values.isReadOnly
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
-              }
-              label="Read only"
-            />
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="isRequired"
-                  checked={
-                    values.isRequired
-                  }
-                  onChange={
-                    handleChange
-                  }
-                />
-              }
-              label="Required"
+              onChange={handleChange}
+              helperText="Enter a declarative value only. Do not enter JavaScript."
             />
           </Grid>
         </Grid>
@@ -383,8 +477,10 @@ useEffect(() => {
           }
         >
           {submitting
-            ? "Assigning..."
-            : "Assign Field"}
+            ? "Saving..."
+            : isEditMode
+              ? "Save Assignment"
+              : "Assign Field"}
         </Button>
       </DialogActions>
     </Dialog>
