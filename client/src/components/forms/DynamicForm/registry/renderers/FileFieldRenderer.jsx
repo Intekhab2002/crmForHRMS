@@ -7,19 +7,32 @@ export default function FileFieldRenderer({ field, formik }) {
 
   function handleChange(event) {
     const files = Array.from(event.target.files ?? []);
-    formik.setFieldValue(name, files.map((file) => ({ name: file.name, size: file.size, type: file.type })));
+    formik.setFieldValue(name, files);
   }
 
   return (
     <Stack spacing={1}>
       <Typography variant="body2" fontWeight={600}>
-        {field.label}{field.required ? " *" : ""}
+        {field.label}
+        {field.required ? " *" : ""}
       </Typography>
-      <Button component="label" variant="outlined" disabled={field.enabled === false}>
+      <Button
+        component="label"
+        variant="outlined"
+        disabled={field.enabled === false}
+      >
         Choose file
-        <input hidden type="file" multiple onChange={handleChange} onBlur={() => formik.setFieldTouched(name, true)} />
+        <input
+          hidden
+          type="file"
+          multiple
+          onChange={handleChange}
+          onBlur={() => formik.setFieldTouched(name, true)}
+        />
       </Button>
-      <FormHelperText error={Boolean(error)}>{error ?? field.helpText ?? ""}</FormHelperText>
+      <FormHelperText error={Boolean(error)}>
+        {error ?? field.helpText ?? ""}
+      </FormHelperText>
     </Stack>
   );
 }
