@@ -11,6 +11,7 @@ import {
   TICKET_LIFECYCLE_EVENT_TYPE,
   TICKET_LIFECYCLE_EVENT_ACTION,
 } from "./ticketLifecycle.constants.js";
+import ticketDynamicService from "./ticketDynamic.service.js";
 
 const STATUS_TRANSITIONS = Object.freeze({
   OPEN: new Set([
@@ -146,87 +147,163 @@ async function listTickets(query) {
   };
 }
 
-async function createTicket(data, authenticatedUserId) {
-  const normalized = {
-    ...data,
+async function createTicket(
+    data,
+    authenticatedUserId,
+) {
+    const {
+        storage,
+        dynamicPayload,
+    } =
+        await ticketDynamicService.prepareCreatePayload(
+            data,
+        );
 
-    requesterUserId: data.requesterUserId ?? authenticatedUserId,
+    const normalized = {
+        ...data,
 
-    subject: data.subject.trim(),
+        ...storage.relational,
 
-    description: data.description.trim(),
+        requesterUserId:
+            data.requesterUserId ??
+            authenticatedUserId,
 
-    issueType: data.issueType.trim(),
+        createdByUserId:
+            authenticatedUserId,
 
-    contactName: data.contactName.trim(),
+        subject:
+            storage.relational.subject ??
+            data.subject ??
+            "",
 
-    mobilePhone: data.mobilePhone.trim(),
-  };
+        description:
+            storage.relational.description ??
+            data.description ??
+            "",
 
-  await validateReferences(normalized);
+        issueType:
+            data.issueType ??
+            "GENERAL",
 
-  const client = await database.getClient();
+        priority:
+            data.priority ??
+            "MEDIUM",
 
-  const tx = {
-    client,
-  };
+        organizationId:
+            storage.relational.organization_id ??
+            data.organizationId,
 
-  try {
-    await client.query("BEGIN");
+        departmentId:
+            storage.relational.department_id ??
+            data.departmentId,
 
-    const contact = await contactService.findOrCreateContact(
-      {
-        organizationId: normalized.organizationId,
+        assignedUserId:
+            storage.relational.assigned_employee_id ??
+            data.assignedUserId ??
+            null,
 
-        name: normalized.contactName,
+        customData:
+            storage.customData,
+    };
 
-        mobile: normalized.mobilePhone,
-      },
-      tx,
+    await validateReferences(
+        normalized,
     );
 
-    const ticket = await ticketRepository.createTicket(
-      {
-        ...normalized,
+    const client =
+        await database.getClient();
 
-        contactId: contact.id,
+    const tx = {
+        client,
+    };
 
-        createdByUserId: authenticatedUserId,
-      },
-      tx,
-    );
-
-    await ticketLifecycleService.record(
-      {
-        ticketId: ticket.id,
-        actorUserId: authenticatedUserId,
-
-        eventType: TICKET_LIFECYCLE_EVENT_TYPE.TICKET,
-
-        eventAction: TICKET_LIFECYCLE_EVENT_ACTION.CREATED,
-
-        metadata: {
-          subject: ticket.subject,
-          status: ticket.status,
-        },
-      },
-      tx,
-    );
-
-    await client.query("COMMIT");
-
-    return ticket;
-  } catch (error) {
     try {
-      await client.query("ROLLBACK");
-    } catch (rollbackError) {
-      error.rollbackError = rollbackError;
-    }
+        await client.query(
+            "BEGIN",
+        );
 
-    throw error;
-  } finally {
-    client.release();
-  }
+        const contact =
+            await contactService.findOrCreateContact(
+                {
+                    organizationId:
+                        normalized.organizationId,
+
+                    name:
+                        dynamicPayload.contact_name ??
+                        normalized.contactName ??
+                        "",
+
+                    mobile:
+                        dynamicPayload.mobile_phone ??
+                        normalized.mobilePhone ??
+                        "",
+                },
+                tx,
+            );
+
+        const ticket =
+            await ticketRepository.createTicket(
+                {
+                    ...normalized,
+
+                    contactId:
+                        contact.id,
+
+                    customData:
+                        normalized.customData,
+                },
+                tx,
+            );
+
+        await ticketLifecycleService.record(
+            {
+                ticketId:
+                    ticket.id,
+
+                actorUserId:
+                    authenticatedUserId,
+
+                eventType:
+                    TICKET_LIFECYCLE_EVENT_TYPE.TICKET,
+
+                eventAction:
+                    TICKET_LIFECYCLE_EVENT_ACTION.CREATED,
+
+                metadata: {
+                    subject:
+                        ticket.subject,
+
+                    status:
+                        ticket.status,
+
+                    dynamicFields:
+                        Object.keys(
+                            dynamicPayload,
+                        ),
+                },
+            },
+            tx,
+        );
+
+        await client.query(
+            "COMMIT",
+        );
+
+        return ticket;
+    } catch (error) {
+        try {
+            await client.query(
+                "ROLLBACK",
+            );
+        } catch (rollbackError) {
+            error.rollbackError =
+                rollbackError;
+        }
+
+        throw error;
+    } finally {
+        client.release();
+    }
 }
 
 async function updateTicket(ticketId, data, authenticatedUserId) {

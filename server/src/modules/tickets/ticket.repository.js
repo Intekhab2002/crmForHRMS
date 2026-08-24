@@ -6,6 +6,7 @@ const TICKET_FIELDS = `
     t.id,
     t.ticket_number,
     t.subject,
+    t.custom_data,
     t.description,
     t.issue_type,
     t.priority,
@@ -50,6 +51,7 @@ const TICKET_RETURNING_FIELDS = `
     id,
     ticket_number,
     subject,
+    custom_data,
     description,
     issue_type,
     priority,
@@ -142,6 +144,7 @@ const CREATE_TICKET = `
         id,
         ticket_number,
         subject,
+        custom_data,
         description,
         issue_type,
         priority,
@@ -156,33 +159,40 @@ const CREATE_TICKET = `
     )
     VALUES (
         $1::UUID,
+
         'TKT-' || TO_CHAR(CURRENT_DATE, 'YYYY') || '-' ||
             LPAD(
                 NEXTVAL('ticket_number_seq')::TEXT,
                 6,
                 '0'
             ),
+
         $2::VARCHAR,
-        $3::TEXT,
-        $4::VARCHAR,
+        $3::JSONB,
+        $4::TEXT,
         $5::VARCHAR,
+        $6::VARCHAR,
+
         CASE
-            WHEN $11::UUID IS NOT NULL
+            WHEN $12::UUID IS NOT NULL
                 THEN 'ASSIGNED'
             ELSE 'OPEN'
         END,
-        $6::UUID,
+
         $7::UUID,
         $8::UUID,
         $9::UUID,
         $10::UUID,
         $11::UUID,
+        $12::UUID,
+
         CASE
-            WHEN $11::UUID IS NOT NULL
+            WHEN $12::UUID IS NOT NULL
                 THEN CURRENT_TIMESTAMP
             ELSE NULL
         END
     )
+
     RETURNING ${TICKET_RETURNING_FIELDS};
 `;
 
@@ -446,28 +456,31 @@ async function findAssignableUser(
     return result.rows[0] ?? null;
 }
 
-async function createTicket(
-    data,
-    tx = null,
-) {
-    const executor = getQueryExecutor(tx);
+async function createTicket(data, tx) {
+    const executor =
+        tx?.client ??
+        getQueryExecutor();
 
-    const result = await executor.query(
-        CREATE_TICKET,
-        [
-            randomUUID(),
-            data.subject,
-            data.description,
-            data.issueType,
-            data.priority,
-            data.requesterUserId,
-            data.createdByUserId,
-            data.organizationId,
-            data.departmentId,
-            data.contactId,
-            data.assignedUserId ?? null,
-        ],
-    );
+    const result =
+        await executor.query(
+            CREATE_TICKET,
+            [
+                data.id,
+                data.subject,
+                JSON.stringify(
+                    data.customData ?? {},
+                ),
+                data.description,
+                data.issueType,
+                data.priority,
+                data.requesterUserId,
+                data.createdByUserId,
+                data.organizationId,
+                data.departmentId,
+                data.contactId,
+                data.assignedUserId,
+            ],
+        );
 
     return result.rows[0];
 }
