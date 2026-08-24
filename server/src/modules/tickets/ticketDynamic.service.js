@@ -75,19 +75,27 @@ function buildDynamicPayload(
 
   const payload = {};
 
-  for (const field of fields) {
-    if (!field.visible) continue;
+for (const field of fields) {
+  if (!field.visible) continue;
 
-    if (
-      Object.prototype.hasOwnProperty.call(
-        body,
-        field.key,
-      )
-    ) {
-      payload[field.key] =
-        body[field.key];
-    }
+  // System/read-only fields are never accepted from the client.
+  if (
+    field.readOnly ||
+    field.editable === false
+  ) {
+    continue;
   }
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      body,
+      field.key,
+    )
+  ) {
+    payload[field.key] =
+      body[field.key];
+  }
+}
 
 
   return payload;
