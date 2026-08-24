@@ -19,15 +19,8 @@ import DefaultEntryPage from "../pages/common/DefaultEntryPage";
 import LoginPage from "../modules/auth/pages/LoginPage";
 import UserManagementPage from "../modules/users/pages/UserManagementPage";
 import { APP_MODULE_CONFIG, SYSTEM_ROUTES } from "../config/module.config";
-import FormConfigurationPage
-  from "../modules/formConfiguration/pages/FormConfigurationPage";
-
 import PermissionRoute from "./PermissionRoute";
-import FormFieldsPage
-  from "../modules/formConfiguration/pages/FormFieldsPage";
 
-  import DynamicFormTestPage from
-  "../modules/formConfiguration/pages/DynamicFormTestPage";
 
 const LAYOUTS = Object.freeze({ public: PublicLayout, auth: AuthLayout, dashboard: DashboardLayout });
 const GUARDS = Object.freeze({ auth: ProtectedRoute, guest: PublicRoute });
@@ -45,9 +38,7 @@ const COMPONENTS = Object.freeze({
   forbidden: ForbiddenPage,
   notFound: NotFoundPage,
   defaultEntry: DefaultEntryPage,
-  formConfiguration: FormConfigurationPage,
-    formFields: FormFieldsPage,
-    dynamicFormTest: DynamicFormTestPage
+
 });
 
 function withAccess(route, element) {

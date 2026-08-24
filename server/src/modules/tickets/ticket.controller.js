@@ -1,195 +1,78 @@
 import { ApiResponse } from "../../helpers/ApiResponse.js";
 
 import ticketService from "./ticket.service.js";
-import ticketDynamicService from "./ticketDynamic.service.js";
 import { TICKET_MESSAGES } from "./ticket.constants.js";
 
 async function getTickets(req, res, next) {
-  try {
-    const result = await ticketService.listTickets(
-      req.validatedQuery ?? req.query,
-    );
+    try {
+        const result = await ticketService.listTickets(
+            req.validatedQuery ?? req.query,
+        );
 
-    return ApiResponse.paginated(
-      res,
-      result.data,
-      result.meta,
-      TICKET_MESSAGES.LIST_SUCCESS,
-    );
-  } catch (error) {
-    return next(error);
-  }
+        return ApiResponse.paginated(
+            res,
+            result.data,
+            result.meta,
+            TICKET_MESSAGES.LIST_SUCCESS,
+        );
+    } catch (error) {
+        return next(error);
+    }
 }
 
 async function getTicket(req, res, next) {
-  try {
-    const ticket = await ticketService.getTicket(req.params.ticketId);
+    try {
+        const ticket = await ticketService.getTicket(
+            req.params.ticketId,
+        );
 
-    return ApiResponse.success(res, ticket, TICKET_MESSAGES.GET_SUCCESS);
-  } catch (error) {
-    return next(error);
-  }
+        return ApiResponse.success(
+            res,
+            ticket,
+            TICKET_MESSAGES.GET_SUCCESS,
+        );
+    } catch (error) {
+        return next(error);
+    }
 }
 
 async function createTicket(req, res, next) {
-  try {
-    let body = req.body;
-    if (typeof body?.payload === "string") {
-      try {
-        body = JSON.parse(body.payload);
-      } catch {
-        throw new Error("Ticket payload must contain valid JSON.");
-      }
-    }
-    const ticket = await ticketDynamicService.createTicket(
-      body,
-      req.auth.userId,
-      req.file ?? null,
-    );
+    try {
+        const ticket = await ticketService.createTicket(
+            req.body,
+            req.auth.userId,
+        );
 
-    return ApiResponse.created(res, ticket, TICKET_MESSAGES.CREATE_SUCCESS);
-  } catch (error) {
-    return next(error);
-  }
+        return ApiResponse.created(
+            res,
+            ticket,
+            TICKET_MESSAGES.CREATE_SUCCESS,
+        );
+    } catch (error) {
+        return next(error);
+    }
 }
 
 async function updateTicket(req, res, next) {
-  try {
-    const ticket = await ticketService.updateTicket(
-      req.params.ticketId,
-      req.body,
-      req.auth.userId,
-    );
+    try {
+        const ticket = await ticketService.updateTicket(
+            req.params.ticketId,
+            req.body,
+        );
 
-    return ApiResponse.updated(
-      res,
-      ticket,
-      TICKET_MESSAGES.UPDATE_SUCCESS,
-    );
-  } catch (error) {
-    return next(error);
-  }
-}
-
-async function assignTicket(req, res, next) {
-  try {
-    const ticket = await ticketService.assignTicket(
-      req.params.ticketId,
-      req.body.assignedUserId,
-      req.auth.userId,
-    );
-
-    return ApiResponse.updated(res, ticket, TICKET_MESSAGES.ASSIGN_SUCCESS);
-  } catch (error) {
-    return next(error);
-  }
-}
-
-async function resolveTicket(req, res, next) {
-  try {
-    const ticket = await ticketService.resolveTicket(
-      req.params.ticketId,
-      req.body.resolutionNote,
-      req.auth.userId,
-    );
-
-    return ApiResponse.updated(res, ticket, TICKET_MESSAGES.RESOLVE_SUCCESS);
-  } catch (error) {
-    return next(error);
-  }
-}
-
-async function closeTicket(req, res, next) {
-  try {
-    const ticket = await ticketService.closeTicket(
-      req.params.ticketId,
-      req.auth.userId,
-    );
-
-    return ApiResponse.updated(res, ticket, TICKET_MESSAGES.CLOSE_SUCCESS);
-  } catch (error) {
-    return next(error);
-  }
-}
-
-async function reopenTicket(req, res, next) {
-  try {
-    const ticket = await ticketService.reopenTicket(
-      req.params.ticketId,
-      req.auth.userId,
-    );
-
-    return ApiResponse.updated(res, ticket, TICKET_MESSAGES.REOPEN_SUCCESS);
-  } catch (error) {
-    return next(error);
-  }
-}
-
-async function deleteTicket(req, res, next) {
-  try {
-    const ticket = await ticketService.deleteTicket(
-      req.params.ticketId,
-      req.auth.userId,
-    );
-
-    return ApiResponse.deleted(res, ticket, TICKET_MESSAGES.DELETE_SUCCESS);
-  } catch (error) {
-    return next(error);
-  }
-}
-async function getAssignableUsers(req, res, next) {
-  try {
-    const users = await ticketService.getAssignableUsers();
-
-    return ApiResponse.success(
-      res,
-      users,
-      TICKET_MESSAGES.ASSIGNABLE_USERS_SUCCESS,
-    );
-  } catch (error) {
-    return next(error);
-  }
-}
-
-async function getComments(req, res, next) {
-  try {
-    const comments = await ticketService.getComments(req.params.ticketId);
-
-    return ApiResponse.success(res, comments, TICKET_MESSAGES.COMMENTS_SUCCESS);
-  } catch (error) {
-    return next(error);
-  }
-}
-
-async function addComment(req, res, next) {
-  try {
-    const comment = await ticketService.addComment(
-      req.params.ticketId,
-      req.body.comment,
-      req.auth.userId,
-    );
-
-    return ApiResponse.created(
-      res,
-      comment,
-      TICKET_MESSAGES.COMMENT_CREATE_SUCCESS,
-    );
-  } catch (error) {
-    return next(error);
-  }
+        return ApiResponse.updated(
+            res,
+            ticket,
+            TICKET_MESSAGES.UPDATE_SUCCESS,
+        );
+    } catch (error) {
+        return next(error);
+    }
 }
 
 export default Object.freeze({
-  getTickets,
-  getTicket,
-  createTicket,
-  updateTicket,
-  assignTicket,
-  resolveTicket,
-  closeTicket,
-  reopenTicket,
-  deleteTicket,
-  getAssignableUsers,
-  getComments,
-  addComment,
+    getTickets,
+    getTicket,
+    createTicket,
+    updateTicket,
 });

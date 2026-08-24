@@ -1,107 +1,133 @@
 import AppError from "../../helpers/AppError.js";
 
 import contactRepository from "./contact.repository.js";
-
 import {
     CONTACT_ERROR_CODES,
 } from "./contact.constant.js";
 
 function normalizeMobile(mobile) {
-    return mobile.trim();
+    return String(mobile ?? "").trim();
 }
 
-async function getContactByMobile(
-    organizationId,
-    mobile,
-) {
+async function getContactByMobile(organizationId, mobile, tx = null) {
     const normalizedMobile = normalizeMobile(mobile);
 
-    const contact =
-        await contactRepository.findContactByMobile(
-            organizationId,
-            normalizedMobile,
-        );
+    const contact = await contactRepository.findContactByMobile(
+        organizationId,
+        normalizedMobile,
+        tx,
+    );
 
     if (!contact) {
         throw AppError.notFound(
             "Contact not found.",
-            {
-                code: CONTACT_ERROR_CODES.NOT_FOUND,
-            },
+            { code: CONTACT_ERROR_CODES.NOT_FOUND },
         );
     }
 
     return contact;
 }
 
-async function findOrCreateContact(
-    {
-        organizationId,
-        name,
-        mobile,
-    },
-    tx = null,
-) {
-    const normalizedMobile = normalizeMobile(mobile);
+async function findOrCreateContact(data, tx = null) {
+    const normalizedMobile = normalizeMobile(data.mobile);
 
-    const existingContact =
-        await contactRepository.findContactByMobile(
-            organizationId,
-            normalizedMobile,
+    const existingContact = await contactRepository.findContactByMobile(
+        data.organizationId,
+        normalizedMobile,
+        tx,
+    );
+
+    if (existingContact) {
+        await contactRepository.updateContact(
+            existingContact.id,
+            {
+                name: data.name,
+                email: data.email,
+                district: data.district,
+                departmentId: data.departmentId,
+            },
             tx,
         );
 
-    if (existingContact) {
-        return existingContact;
+        return contactRepository.findContactById(
+            existingContact.id,
+            tx,
+        );
     }
 
     try {
         return await contactRepository.createContact(
             {
-                organizationId,
-                name,
+                organizationId: data.organizationId,
+                name: data.name,
                 mobile: normalizedMobile,
+                email: data.email,
+                district: data.district,
+                departmentId: data.departmentId,
             },
             tx,
         );
     } catch (error) {
-        /*
-         * Another concurrent ticket creation may have created
-         * the same contact between our SELECT and INSERT.
-         *
-         * PostgreSQL unique constraint:
-         *
-         * organization_id + mobile_phone
-         *
-         * protects the database from duplicates.
-         */
         if (error?.code === "23505") {
-            const contact =
-                await contactRepository.findContactByMobile(
-                    organizationId,
-                    normalizedMobile,
-                    tx,
-                );
+            const contact = await contactRepository.findContactByMobile(
+                data.organizationId,
+                normalizedMobile,
+                tx,
+            );
 
             if (contact) {
                 return contact;
             }
-
-            throw AppError.conflict(
-                "A contact with this mobile number already exists.",
-                {
-                    code:
-                        CONTACT_ERROR_CODES.ALREADY_EXISTS,
-                    cause: error,
-                },
-            );
         }
 
         throw error;
     }
 }
 
+async function updateContactFromTicket(
+    contactId,
+    data,
+    tx = null,
+) {
+    if (!contactId) {
+        throw AppError.notFound(
+            "Contact not found.",
+            { code: CONTACT_ERROR_CODES.NOT_FOUND },
+        );
+    }
+
+    const contact = await contactRepository.findContactById(
+        contactId,
+        tx,
+    );
+
+    if (!contact) {
+        throw AppError.notFound(
+            "Contact not found.",
+            { code: CONTACT_ERROR_CODES.NOT_FOUND },
+        );
+    }
+
+    await contactRepository.updateContact(
+        contactId,
+        {
+            name: data.name,
+            mobile: data.mobile,
+            email: data.email,
+            district: data.district,
+            departmentId: data.departmentId,
+        },
+        tx,
+    );
+
+    return contactRepository.findContactById(
+        contactId,
+        tx,
+    );
+}
+
 export default Object.freeze({
     getContactByMobile,
     findOrCreateContact,
+    updateContactFromTicket,
 });

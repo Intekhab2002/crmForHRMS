@@ -3,10 +3,8 @@ import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import { Link, useNavigate } from "react-router";
 
 import PageHeader from "../../../components/page/PageHeader";
-import DynamicFormContainer from "../../../components/forms/DynamicForm/DynamicFormContainer";
 import { useAppConfig } from "../../../context/useAppConfig";
 import { useAuth } from "../../../context/useAuth";
-import { ticketRuntimeService } from "../services/ticketRuntime.service";
 
 export default function TicketCreatePage() {
   const navigate = useNavigate();
@@ -15,11 +13,7 @@ export default function TicketCreatePage() {
 
   async function handleSubmit(values, formikHelpers) {
     try {
-      const createdTicket =
-        await ticketRuntimeService.createTicket(
-          values,
-          user,
-        );
+   
 
       navigate(
         `/tickets/${createdTicket.id}`,

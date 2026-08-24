@@ -42,12 +42,8 @@ import organizationRouter from "../modules/organizations/organization.routes.js"
 
 import departmentRouter from "../modules/departments/department.routes.js";
 
-import employeeRouter from "../modules/employees/employee.routes.js";
 
 import ticketRouter from "../modules/tickets/ticket.routes.js";
-
-import formConfigurationModule
-    from "../modules/formConfiguration/index.js";
 
 import contactRouter
     from "../modules/contacts/contact.routes.js";
@@ -90,14 +86,7 @@ router.use(`/${apiVersion}/organizations`, organizationRouter);
 
 router.use(`/${apiVersion}/departments`, departmentRouter);
 
-router.use(`/${apiVersion}/employees`, employeeRouter);
-
 router.use(`/${apiVersion}/tickets`, ticketRouter);
-
-router.use(
-    `/${apiVersion}`,
-    formConfigurationModule.routes,
-);
 
 router.use(
     `/${apiVersion}/contacts`,

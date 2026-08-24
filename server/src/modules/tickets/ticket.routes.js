@@ -6,10 +6,6 @@ import { RBAC_PERMISSIONS } from "../rbac/rbac.constants.js";
 
 import ticketController from "./ticket.controller.js";
 import ticketValidator from "./ticket.validator.js";
-import ticketAttachmentController from "./ticketAttachment.controller.js";
-import { ticketAttachmentUpload } from "./ticketAttachment.upload.js";
-import ticketLifecycleController
-    from "./ticketLifecycle.controller.js";
 
 const { authenticate } = authMiddleware;
 const { requirePermission } = rbacMiddleware;
@@ -18,10 +14,6 @@ const {
     TICKET_READ,
     TICKET_CREATE,
     TICKET_UPDATE,
-    TICKET_ASSIGN,
-    TICKET_RESOLVE,
-    TICKET_CLOSE,
-    TICKET_ATTACHMENT,
 } = RBAC_PERMISSIONS;
 
 const router = Router();
@@ -68,85 +60,6 @@ router.get(
 );
 
 router.get(
-    "/assignable-users",
-    authenticate,
-    requirePermission(TICKET_READ),
-    ticketController.getAssignableUsers,
-);
-
-router.get(
-    "/:ticketId/comments",
-    authenticate,
-    requirePermission(TICKET_READ),
-    validateParams(ticketValidator.ticketIdParamSchema),
-    ticketController.getComments,
-);
-
-router.post(
-    "/:ticketId/comments",
-    authenticate,
-    requirePermission(TICKET_UPDATE),
-    validateParams(ticketValidator.ticketIdParamSchema),
-    validateBody(ticketValidator.createCommentSchema),
-    ticketController.addComment,
-);
-
-router.get(
-    "/:ticketId/attachments",
-    authenticate,
-    requirePermission(TICKET_ATTACHMENT),
-    validateParams(ticketValidator.ticketIdParamSchema),
-    ticketAttachmentController.listAttachments,
-);
-
-router.post(
-    "/:ticketId/attachments",
-    authenticate,
-    requirePermission(TICKET_ATTACHMENT),
-    validateParams(ticketValidator.ticketIdParamSchema),
-    ticketAttachmentUpload.single("file"),
-    ticketAttachmentController.uploadAttachment,
-);
-
-router.get(
-    "/:ticketId/attachments/:attachmentId/view",
-    authenticate,
-    requirePermission(TICKET_ATTACHMENT),
-    validateParams(
-        ticketValidator.ticketAttachmentParamSchema,
-    ),
-    ticketAttachmentController.viewAttachment,
-);
-
-router.get(
-    "/:ticketId/attachments/:attachmentId/download",
-    authenticate,
-    requirePermission(TICKET_ATTACHMENT),
-    validateParams(
-        ticketValidator.ticketAttachmentParamSchema,
-    ),
-    ticketAttachmentController.downloadAttachment,
-);
-
-router.delete(
-    "/:ticketId/attachments/:attachmentId",
-    authenticate,
-    requirePermission(TICKET_ATTACHMENT),
-    validateParams(
-        ticketValidator.ticketAttachmentParamSchema,
-    ),
-    ticketAttachmentController.deleteAttachment,
-);
-
-router.get(
-  "/:ticketId/lifecycle",
-  authenticate,
-  requirePermission(TICKET_READ),
-  validateParams(ticketValidator.ticketIdParamSchema),
-  ticketLifecycleController.getLifecycle,
-);
-
-router.get(
     "/:ticketId",
     authenticate,
     requirePermission(TICKET_READ),
@@ -158,7 +71,6 @@ router.post(
     "/",
     authenticate,
     requirePermission(TICKET_CREATE),
-    ticketAttachmentUpload.single("attachment"),
     validateBody(ticketValidator.createTicketSchema),
     ticketController.createTicket,
 );
@@ -171,41 +83,5 @@ router.patch(
     validateBody(ticketValidator.updateTicketSchema),
     ticketController.updateTicket,
 );
-
-router.patch(
-    "/:ticketId/assign",
-    authenticate,
-    requirePermission(TICKET_ASSIGN),
-    validateParams(ticketValidator.ticketIdParamSchema),
-    validateBody(ticketValidator.assignTicketSchema),
-    ticketController.assignTicket,
-);
-
-router.patch(
-    "/:ticketId/resolve",
-    authenticate,
-    requirePermission(TICKET_RESOLVE),
-    validateParams(ticketValidator.ticketIdParamSchema),
-    validateBody(ticketValidator.resolveTicketSchema),
-    ticketController.resolveTicket,
-);
-
-router.patch(
-    "/:ticketId/close",
-    authenticate,
-    requirePermission(TICKET_CLOSE),
-    validateParams(ticketValidator.ticketIdParamSchema),
-    ticketController.closeTicket,
-);
-
-router.patch(
-    "/:ticketId/reopen",
-    authenticate,
-    requirePermission(TICKET_UPDATE),
-    validateParams(ticketValidator.ticketIdParamSchema),
-    ticketController.reopenTicket,
-);
-
-
 
 export default router;

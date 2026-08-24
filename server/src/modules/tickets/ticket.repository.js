@@ -1,92 +1,127 @@
 import { randomUUID } from "node:crypto";
 
-import { getQueryExecutor } from "../../database/queryExecutor.js";
+import {
+    getQueryExecutor,
+} from "../../database/queryExecutor.js";
+import { getField } from "./ticket.config.js";
 
-const TICKET_FIELDS = `
+const TICKET_COLUMNS = Object.freeze([
+    "id",
+    "ticket_number",
+    "subject",
+    "description",
+    "issue_type",
+    "priority",
+    "status",
+    "requester_user_id",
+    "created_by_user_id",
+    "organization_id",
+    "department_id",
+    "assigned_user_id",
+    "contact_id",
+    "service_type",
+    "category",
+    "problem_statement",
+    "employee_current_office_name_id",
+    "employee_id",
+    "current_bill_status",
+    "bill_reference_no",
+    "severity",
+    "expected_resolution_date",
+    "duplicate_ticket",
+    "issue_category",
+    "letter_no",
+    "dependency_category",
+    "initial_diagnosis",
+    "solution",
+    "resolution",
+    "created_at",
+    "updated_at",
+]);
+
+const TICKET_COLUMN_SET = new Set(TICKET_COLUMNS);
+
+function quoteIdentifier(identifier) {
+    if (!TICKET_COLUMN_SET.has(identifier)) {
+        throw new Error(`Unsupported ticket database column: ${identifier}`);
+    }
+
+    return `t.${identifier}`;
+}
+
+const TICKET_SELECT = `
     t.id,
     t.ticket_number,
     t.subject,
-    t.custom_data,
     t.description,
     t.issue_type,
     t.priority,
     t.status,
     t.requester_user_id,
-    requester.username AS requester_username,
-    requester.email AS requester_email,
+    requester.display_name AS requester_name,
     t.created_by_user_id,
+    creator.display_name AS created_by_name,
     t.organization_id,
     organization.name AS organization_name,
     t.department_id,
     department.name AS department_name,
+    t.assigned_user_id,
+    assignee.display_name AS assigned_user_name,
     t.contact_id,
     contact.name AS contact_name,
-    contact.mobile_phone AS contact_mobile_phone,
-    t.assigned_user_id,
-    assignee.username AS assignee_username,
-    assignee.email AS assignee_email,
-    t.resolution_note,
-    t.assigned_at,
-    t.resolved_at,
-    t.closed_at,
+    contact.mobile_phone,
+    contact.email AS contact_email,
+    contact.district AS contact_district,
+    contact.department_id AS contact_department_id,
+    caller_department.name AS caller_department_name,
+    t.service_type,
+    t.category,
+    t.problem_statement,
+    t.employee_current_office_name_id,
+    t.employee_id,
+    t.current_bill_status,
+    t.bill_reference_no,
+    t.severity,
+    t.expected_resolution_date,
+    t.duplicate_ticket,
+    t.issue_category,
+    t.letter_no,
+    t.dependency_category,
+    t.initial_diagnosis,
+    t.solution,
+    t.resolution,
     t.created_at,
     t.updated_at
 `;
 
-const TICKET_FROM = `
+const FROM = `
     FROM tickets t
     INNER JOIN users requester
         ON requester.id = t.requester_user_id
-    INNER JOIN organizations organization
+    LEFT JOIN users creator
+        ON creator.id = t.created_by_user_id
+    LEFT JOIN users assignee
+        ON assignee.id = t.assigned_user_id
+    LEFT JOIN organizations organization
         ON organization.id = t.organization_id
     INNER JOIN departments department
         ON department.id = t.department_id
     LEFT JOIN contacts contact
         ON contact.id = t.contact_id
-    LEFT JOIN users assignee
-        ON assignee.id = t.assigned_user_id
+    LEFT JOIN departments caller_department
+        ON caller_department.id = contact.department_id
 `;
 
-const TICKET_RETURNING_FIELDS = `
-    id,
-    ticket_number,
-    subject,
-    custom_data,
-    description,
-    issue_type,
-    priority,
-    status,
-    requester_user_id,
-    created_by_user_id,
-    organization_id,
-    department_id,
-    contact_id,
-    assigned_user_id,
-    resolution_note,
-    assigned_at,
-    resolved_at,
-    closed_at,
-    created_at,
-    updated_at
-`;
+const RETURNING_COLUMNS = TICKET_COLUMNS
+    .filter((column) => !["created_at", "updated_at"].includes(column))
+    .map((column) => column)
+    .join(",\n        ");
 
-const FIND_TICKETS = `
-    SELECT
-        ${TICKET_FIELDS}
-    ${TICKET_FROM}
-    WHERE
-        ($1::VARCHAR IS NULL
-            OR t.ticket_number ILIKE '%' || $1::VARCHAR || '%'
-            OR t.subject ILIKE '%' || $1::VARCHAR || '%')
-        AND ($2::VARCHAR IS NULL OR t.status = $2::VARCHAR)
-        AND ($3::VARCHAR IS NULL OR t.priority = $3::VARCHAR)
-        AND ($4::UUID IS NULL OR t.organization_id = $4::UUID)
-        AND ($5::UUID IS NULL OR t.department_id = $5::UUID)
-        AND ($6::UUID IS NULL OR t.requester_user_id = $6::UUID)
-AND ($7::UUID IS NULL OR t.assigned_user_id = $7::UUID)
-    ORDER BY t.created_at DESC
-    LIMIT $8::INTEGER
-    OFFSET $9::INTEGER;
+const FIND_TICKET_BY_ID = `
+    SELECT ${TICKET_SELECT}
+    ${FROM}
+    WHERE t.id = $1::UUID
+    LIMIT 1;
 `;
 
 const COUNT_TICKETS = `
@@ -95,489 +130,213 @@ const COUNT_TICKETS = `
     WHERE
         ($1::VARCHAR IS NULL
             OR t.ticket_number ILIKE '%' || $1::VARCHAR || '%'
-            OR t.subject ILIKE '%' || $1::VARCHAR || '%')
+            OR t.subject ILIKE '%' || $1::VARCHAR || '%'
+            OR t.employee_id ILIKE '%' || $1::VARCHAR || '%')
         AND ($2::VARCHAR IS NULL OR t.status = $2::VARCHAR)
-        AND ($3::VARCHAR IS NULL OR t.priority = $3::VARCHAR)
-        AND ($4::UUID IS NULL OR t.organization_id = $4::UUID)
-        AND ($5::UUID IS NULL OR t.department_id = $5::UUID)
-        AND ($6::UUID IS NULL OR t.requester_user_id = $6::UUID)
-AND ($7::UUID IS NULL OR t.assigned_user_id = $7::UUID)`;
-
-const FIND_TICKET_BY_ID = `
-    SELECT
-        ${TICKET_FIELDS}
-    ${TICKET_FROM}
-    WHERE t.id = $1::UUID
-    LIMIT 1;
+        AND ($3::UUID IS NULL OR t.department_id = $3::UUID)
+        AND ($4::UUID IS NULL OR t.assigned_user_id = $4::UUID)
+        AND ($5::UUID IS NULL OR t.contact_id = $5::UUID)
 `;
 
-const FIND_USER = `
-    SELECT id, status
-    FROM users
-    WHERE id = $1::UUID
-    LIMIT 1;
-`;
+function getColumnForField(fieldKey) {
+    const field = getField(fieldKey);
 
-const FIND_ORGANIZATION = `
-    SELECT id, status
-    FROM organizations
-    WHERE id = $1::UUID
-    LIMIT 1;
-`;
+    if (!field || field.entity !== "ticket") {
+        return null;
+    }
 
-const FIND_DEPARTMENT = `
-    SELECT id, organization_id, status
-    FROM departments
-    WHERE id = $1::UUID
-    LIMIT 1;
-`;
+    return field.column;
+}
 
-const FIND_EMPLOYEE = `
-    SELECT id, organization_id, department_id, status
-    FROM employees
-    WHERE id = $1::UUID
-    LIMIT 1;
-`;
+function buildInsert(fields) {
+    const columns = fields.map((fieldKey) => getColumnForField(fieldKey));
 
-const CREATE_TICKET = `
-    INSERT INTO tickets (
-        id,
-        ticket_number,
-        subject,
-        custom_data,
-        description,
-        issue_type,
-        priority,
-        status,
-        requester_user_id,
-        created_by_user_id,
-        organization_id,
-        department_id,
-        contact_id,
-        assigned_user_id,
-        assigned_at
-    )
-    VALUES (
-        $1::UUID,
+    if (columns.some((column) => !column)) {
+        throw new Error("Ticket configuration contains an invalid insert field.");
+    }
 
-        'TKT-' || TO_CHAR(CURRENT_DATE, 'YYYY') || '-' ||
-            LPAD(
-                NEXTVAL('ticket_number_seq')::TEXT,
-                6,
-                '0'
-            ),
+    const placeholders = columns.map((_, index) => `$${index + 1}`);
 
-        $2::VARCHAR,
-        $3::JSONB,
-        $4::TEXT,
-        $5::VARCHAR,
-        $6::VARCHAR,
+    return `
+        INSERT INTO tickets (
+            id,
+            ${columns.join(",\n            ")}
+        )
+        VALUES (
+            $1::UUID,
+            ${placeholders.slice(1).join(",\n            ")}
+        )
+        RETURNING ${RETURNING_COLUMNS};
+    `;
+}
 
-        $7::VARCHAR,
+function buildUpdate(fields) {
+    const assignments = fields.map((fieldKey, index) => {
+        const column = getColumnForField(fieldKey);
+        if (!column) {
+            throw new Error("Ticket configuration contains an invalid update field.");
+        }
+        return `${column} = $${index + 2}`;
+    });
 
-        $8::UUID,
-        $9::UUID,
-        $10::UUID,
-        $11::UUID,
-        $12::UUID,
-        $13::UUID,
-
-        CASE
-            WHEN $12::UUID IS NOT NULL
-                THEN CURRENT_TIMESTAMP
-            ELSE NULL
-        END
-    )
-
-    RETURNING ${TICKET_RETURNING_FIELDS};
-`;
-
-const UPDATE_TICKET = `
-    UPDATE tickets
-    SET
-        subject = COALESCE($2::VARCHAR, subject),
-        description = COALESCE($3::TEXT, description),
-        issue_type = COALESCE($4::VARCHAR, issue_type),
-        priority = COALESCE($5::VARCHAR, priority),
-        custom_data =
-    CASE
-        WHEN $13::BOOLEAN
-            THEN COALESCE($14::JSONB, custom_data)
-        ELSE custom_data
-    END,
-        organization_id = COALESCE($6::UUID, organization_id),
-        department_id = COALESCE($7::UUID, department_id),
-        assigned_user_id =
-            CASE
-                WHEN $8::BOOLEAN THEN $9::UUID
-                ELSE assigned_user_id
-            END,
-        status = COALESCE($10::VARCHAR, status),
-        resolution_note =
-            CASE
-                WHEN $11::BOOLEAN THEN $12::TEXT
-                ELSE resolution_note
-            END,
-        assigned_at =
-            CASE
-                WHEN $8::BOOLEAN AND $9::UUID IS NOT NULL
-                    THEN COALESCE(assigned_at, CURRENT_TIMESTAMP)
-                WHEN $8::BOOLEAN AND $9::UUID IS NULL
-                    THEN NULL
-                ELSE assigned_at
-            END,
-        resolved_at =
-            CASE
-                WHEN $10::VARCHAR = 'RESOLVED'
-                    THEN COALESCE(resolved_at, CURRENT_TIMESTAMP)
-                WHEN $10::VARCHAR IN ('OPEN', 'ASSIGNED', 'IN_PROGRESS', 'PENDING', 'REOPENED')
-                    THEN NULL
-                ELSE resolved_at
-            END,
-        closed_at =
-            CASE
-                WHEN $10::VARCHAR = 'CLOSED'
-                    THEN COALESCE(closed_at, CURRENT_TIMESTAMP)
-                WHEN $10::VARCHAR <> 'CLOSED'
-                    THEN NULL
-                ELSE closed_at
-            END
-    WHERE id = $1::UUID
-    RETURNING ${TICKET_RETURNING_FIELDS};
-`;
-
-const ASSIGN_TICKET = `
-    UPDATE tickets
-    SET
-        assigned_user_id = $2::UUID,
-        assigned_at = CURRENT_TIMESTAMP,
-        status = CASE
-            WHEN status IN ('OPEN', 'REOPENED') THEN 'ASSIGNED'
-            ELSE status
-        END
-    WHERE id = $1::UUID
-    RETURNING ${TICKET_RETURNING_FIELDS};
-`;
-
-const RESOLVE_TICKET = `
-    UPDATE tickets
-    SET
-        status = 'RESOLVED',
-        resolution_note = $2::TEXT,
-        resolved_at = CURRENT_TIMESTAMP
-    WHERE id = $1::UUID
-    RETURNING ${TICKET_RETURNING_FIELDS};
-`;
-
-const CLOSE_TICKET = `
-    UPDATE tickets
-    SET
-        status = 'CLOSED',
-        closed_at = CURRENT_TIMESTAMP,
-        resolved_at = COALESCE(resolved_at, CURRENT_TIMESTAMP)
-    WHERE id = $1::UUID
-    RETURNING ${TICKET_RETURNING_FIELDS};
-`;
-
-const REOPEN_TICKET = `
-    UPDATE tickets
-    SET
-        status = 'REOPENED',
-        resolved_at = NULL,
-        closed_at = NULL,
-        resolution_note = NULL
-    WHERE id = $1::UUID
-    RETURNING ${TICKET_RETURNING_FIELDS};
-`;
-
-const DELETE_TICKET = `
-    UPDATE tickets
-    SET
-        status = 'CLOSED',
-        closed_at = COALESCE(closed_at, CURRENT_TIMESTAMP)
-    WHERE id = $1::UUID
-    RETURNING ${TICKET_RETURNING_FIELDS};
-`;
-
-const FIND_ASSIGNABLE_USERS = `
-    SELECT
-        u.id,
-        u.username,
-        u.email,
-        u.status
-    FROM users u
-    WHERE u.status = 'active'
-      AND NOT EXISTS (
-          SELECT 1
-          FROM user_roles ur
-          INNER JOIN roles r
-              ON r.id = ur.role_id
-          WHERE ur.user_id = u.id
-            AND LOWER(r.code) = 'developer'
-            AND r.is_active = TRUE
-      )
-    ORDER BY u.username ASC;
-`;
-
-const FIND_CONTACT = `
-    SELECT
-        id,
-        organization_id,
-        name,
-        mobile_phone
-    FROM contacts
-    WHERE organization_id = $1::UUID
-      AND mobile_phone = $2::VARCHAR
-    LIMIT 1;
-`;
-
-const FIND_ASSIGNABLE_USER = `
-    SELECT
-        u.id,
-        u.username,
-        u.email,
-        u.status
-    FROM users u
-    WHERE u.id = $1::UUID
-      AND u.status = 'active'
-      AND NOT EXISTS (
-          SELECT 1
-          FROM user_roles ur
-          INNER JOIN roles r
-              ON r.id = ur.role_id
-          WHERE ur.user_id = u.id
-            AND LOWER(r.code) = 'developer'
-            AND r.is_active = TRUE
-      )
-    LIMIT 1;
-`;
-
-const FIND_TICKET_COMMENTS = `
-    SELECT
-        tc.id,
-        tc.ticket_id,
-        tc.user_id,
-        u.username,
-        u.email,
-        tc.comment,
-        tc.created_at,
-        tc.updated_at
-    FROM ticket_comments tc
-    INNER JOIN users u
-        ON u.id = tc.user_id
-    WHERE tc.ticket_id = $1::UUID
-    ORDER BY tc.created_at DESC;
-`;
-
-const CREATE_TICKET_COMMENT = `
-    INSERT INTO ticket_comments (
-        id,
-        ticket_id,
-        user_id,
-        comment
-    )
-    VALUES (
-        $1::UUID,
-        $2::UUID,
-        $3::UUID,
-        $4::TEXT
-    )
-    RETURNING
-        id,
-        ticket_id,
-        user_id,
-        comment,
-        created_at,
-        updated_at;
-`;
-async function findTickets(filters, tx = null) {
-  const executor = getQueryExecutor(tx);
-
-  const values = [
-    filters.search ?? null,
-    filters.status ?? null,
-    filters.priority ?? null,
-    filters.organizationId ?? null,
-    filters.departmentId ?? null,
-    filters.requesterUserId ?? null,
-    filters.assignedUserId ?? null,
-  ];
-
-  const [rowsResult, countResult] = await Promise.all([
-    executor.query(FIND_TICKETS, [...values, filters.limit, filters.offset]),
-    executor.query(COUNT_TICKETS, values),
-  ]);
-
-  return {
-    rows: rowsResult.rows,
-    total: Number(countResult.rows[0]?.total ?? 0),
-  };
+    return `
+        UPDATE tickets t
+        SET
+            ${assignments.join(",\n            ")},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE t.id = $1::UUID
+        RETURNING ${RETURNING_COLUMNS};
+    `;
 }
 
 async function findTicketById(id, tx = null) {
-  const executor = getQueryExecutor(tx);
-  const result = await executor.query(FIND_TICKET_BY_ID, [id]);
-  return result.rows[0] ?? null;
+    const executor = getQueryExecutor(tx);
+    const result = await executor.query(FIND_TICKET_BY_ID, [id]);
+    return result.rows[0] ?? null;
+}
+
+async function findTickets(filters, tx = null) {
+    const executor = getQueryExecutor(tx);
+
+    const values = [
+        filters.search ?? null,
+        filters.status ?? null,
+        filters.departmentId ?? null,
+        filters.assignedUserId ?? null,
+        filters.contactId ?? null,
+    ];
+
+    const listQuery = `
+        SELECT ${TICKET_SELECT}
+        ${FROM}
+        WHERE
+            ($1::VARCHAR IS NULL
+                OR t.ticket_number ILIKE '%' || $1::VARCHAR || '%'
+                OR t.subject ILIKE '%' || $1::VARCHAR || '%'
+                OR t.employee_id ILIKE '%' || $1::VARCHAR || '%')
+            AND ($2::VARCHAR IS NULL OR t.status = $2::VARCHAR)
+            AND ($3::UUID IS NULL OR t.department_id = $3::UUID)
+            AND ($4::UUID IS NULL OR t.assigned_user_id = $4::UUID)
+            AND ($5::UUID IS NULL OR t.contact_id = $5::UUID)
+        ORDER BY t.created_at DESC
+        LIMIT $6::INTEGER
+        OFFSET $7::INTEGER;
+    `;
+
+    const [rowsResult, countResult] = await Promise.all([
+        executor.query(listQuery, [
+            ...values,
+            filters.limit,
+            filters.offset,
+        ]),
+        executor.query(COUNT_TICKETS, values),
+    ]);
+
+    return {
+        rows: rowsResult.rows,
+        total: Number(countResult.rows[0]?.total ?? 0),
+    };
+}
+
+async function createTicket(data, tx = null) {
+    const executor = getQueryExecutor(tx);
+    const fieldKeys = Object.keys(data).filter(
+        (key) => key !== "id" && getColumnForField(key),
+    );
+
+    const query = buildInsert(fieldKeys);
+    const values = [
+        data.id ?? randomUUID(),
+        ...fieldKeys.map((key) => data[key]),
+    ];
+
+    const result = await executor.query(query, values);
+    return result.rows[0];
+}
+
+async function updateTicket(id, data, tx = null) {
+    const executor = getQueryExecutor(tx);
+    const fieldKeys = Object.keys(data).filter(
+        (key) => getColumnForField(key),
+    );
+
+    if (!fieldKeys.length) {
+        return findTicketById(id, tx);
+    }
+
+    const query = buildUpdate(fieldKeys);
+    const values = [
+        id,
+        ...fieldKeys.map((key) => data[key]),
+    ];
+
+    const result = await executor.query(query, values);
+    return result.rows[0] ?? null;
 }
 
 async function findUser(id, tx = null) {
-  const executor = getQueryExecutor(tx);
-  const result = await executor.query(FIND_USER, [id]);
-  return result.rows[0] ?? null;
+    const executor = getQueryExecutor(tx);
+    const result = await executor.query(
+        `SELECT id, status FROM users WHERE id = $1::UUID LIMIT 1;`,
+        [id],
+    );
+    return result.rows[0] ?? null;
 }
 
 async function findOrganization(id, tx = null) {
-  const executor = getQueryExecutor(tx);
-  const result = await executor.query(FIND_ORGANIZATION, [id]);
-  return result.rows[0] ?? null;
+    const executor = getQueryExecutor(tx);
+    const result = await executor.query(
+        `SELECT id, status FROM organizations WHERE id = $1::UUID LIMIT 1;`,
+        [id],
+    );
+    return result.rows[0] ?? null;
 }
 
 async function findDepartment(id, tx = null) {
-  const executor = getQueryExecutor(tx);
-  const result = await executor.query(FIND_DEPARTMENT, [id]);
-  return result.rows[0] ?? null;
+    const executor = getQueryExecutor(tx);
+    const result = await executor.query(
+        `SELECT id, organization_id, status FROM departments WHERE id = $1::UUID LIMIT 1;`,
+        [id],
+    );
+    return result.rows[0] ?? null;
 }
 
-async function findEmployee(id, tx = null) {
-  const executor = getQueryExecutor(tx);
-  const result = await executor.query(FIND_EMPLOYEE, [id]);
-  return result.rows[0] ?? null;
+async function findUserForAssignment(id, tx = null) {
+    const executor = getQueryExecutor(tx);
+    const result = await executor.query(
+        `
+            SELECT id, status
+            FROM users
+            WHERE id = $1::UUID
+            LIMIT 1;
+        `,
+        [id],
+    );
+    return result.rows[0] ?? null;
 }
 
-async function findAssignableUser(id, tx = null) {
-  const executor = getQueryExecutor(tx);
-
-  const result = await executor.query(FIND_ASSIGNABLE_USER, [id]);
-
-  return result.rows[0] ?? null;
-}
-
-async function createTicket(data, tx) {
-  const executor = tx?.client ?? getQueryExecutor();
-
-  const result = await executor.query(CREATE_TICKET, [
-    data.id,
-    data.subject,
-    JSON.stringify(data.customData ?? {}),
-    data.description,
-    data.issueType,
-    data.priority,
-    data.status ?? "OPEN",
-    data.requesterUserId,
-    data.createdByUserId,
-    data.organizationId,
-    data.departmentId,
-    data.contactId,
-    data.assignedUserId,
-  ]);
-
-  return result.rows[0];
-}
-
-async function updateTicket(ticketId, data, tx = null) {
-  const executor = getQueryExecutor(tx);
-
-  const has = (key) => Object.prototype.hasOwnProperty.call(data, key);
-
-  const result = await executor.query(UPDATE_TICKET, [
-    ticketId,
-    data.subject ?? null,
-    data.description ?? null,
-    data.issueType ?? null,
-    data.priority ?? null,
-    data.organizationId ?? null,
-    data.departmentId ?? null,
-    has("assignedUserId"),
-    data.assignedUserId ?? null,
-    data.status ?? null,
-    has("resolutionNote"),
-    data.resolutionNote ?? null,
-    data.hasCustomData ?? false,
-    data.customData ?? null,
-  ]);
-
-  return result.rows[0] ?? null;
-}
-
-async function assignTicket(ticketId, userId, tx = null) {
-  const executor = getQueryExecutor(tx);
-
-  const result = await executor.query(ASSIGN_TICKET, [ticketId, userId]);
-
-  return result.rows[0] ?? null;
-}
-
-async function resolveTicket(ticketId, resolutionNote, tx = null) {
-  const executor = getQueryExecutor(tx);
-  const result = await executor.query(RESOLVE_TICKET, [
-    ticketId,
-    resolutionNote,
-  ]);
-  return result.rows[0] ?? null;
-}
-
-async function closeTicket(ticketId, tx = null) {
-  const executor = getQueryExecutor(tx);
-  const result = await executor.query(CLOSE_TICKET, [ticketId]);
-  return result.rows[0] ?? null;
-}
-
-async function reopenTicket(ticketId, tx = null) {
-  const executor = getQueryExecutor(tx);
-  const result = await executor.query(REOPEN_TICKET, [ticketId]);
-  return result.rows[0] ?? null;
-}
-
-async function deleteTicket(ticketId, tx = null) {
-  const executor = getQueryExecutor(tx);
-  const result = await executor.query(DELETE_TICKET, [ticketId]);
-  return result.rows[0] ?? null;
-}
-
-async function findAssignableUsers(tx = null) {
-  const executor = getQueryExecutor(tx);
-
-  const result = await executor.query(FIND_ASSIGNABLE_USERS);
-
-  return result.rows;
-}
-
-async function findTicketComments(ticketId, tx = null) {
-  const executor = getQueryExecutor(tx);
-
-  const result = await executor.query(FIND_TICKET_COMMENTS, [ticketId]);
-
-  return result.rows;
-}
-async function createTicketComment(ticketId, userId, comment, tx = null) {
-  const executor = getQueryExecutor(tx);
-
-  const result = await executor.query(CREATE_TICKET_COMMENT, [
-    randomUUID(),
-    ticketId,
-    userId,
-    comment,
-  ]);
-
-  return result.rows[0];
+async function findContact(id, tx = null) {
+    const executor = getQueryExecutor(tx);
+    const result = await executor.query(
+        `
+            SELECT id, organization_id, department_id
+            FROM contacts
+            WHERE id = $1::UUID
+            LIMIT 1;
+        `,
+        [id],
+    );
+    return result.rows[0] ?? null;
 }
 
 export default Object.freeze({
-  findTickets,
-  findTicketById,
-  findUser,
-  findOrganization,
-  findDepartment,
-  findEmployee,
-  createTicket,
-  updateTicket,
-  assignTicket,
-  resolveTicket,
-  closeTicket,
-  reopenTicket,
-  deleteTicket,
-  findAssignableUsers,
-  findAssignableUser,
-  findTicketComments,
-  createTicketComment,
+    findTickets,
+    findTicketById,
+    createTicket,
+    updateTicket,
+    findUser,
+    findOrganization,
+    findDepartment,
+    findUserForAssignment,
+    findContact,
 });

@@ -7,12 +7,10 @@ import TicketCommentComposer from "../components/TicketCommentComposer";
 import TicketComments from "../components/TicketComments";
 import TicketLifecycleTimeline from "../components/TicketLifecycleTimeline";
 import TicketOverview from "../components/TicketOverview";
-import TicketUpdatePanel from "../components/TicketUpdatePanel";
 import { useAppConfig } from "../../../context/useAppConfig";
 import { ticketService } from "../services/ticket.service";
 import TicketStatusActions from "../components/TicketStatusActions";
 import TicketAttachmentList from "../components/TicketAttachmentList";
-import { ticketRuntimeService } from "../services/ticketRuntime.service";
 
 
 
@@ -252,11 +250,6 @@ const handleUpdate = async (values) => {
         fallback={ticketConfig.labels.notAvailable}
       />
 
-      <TicketUpdatePanel
-        config={ticketConfig.update}
-        ticket={ticket}
-        onSubmit={handleUpdate}
-      />
 
       <TicketComments comments={comments} loading={commentsLoading} />
       <TicketCommentComposer
