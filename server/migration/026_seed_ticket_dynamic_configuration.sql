@@ -754,7 +754,7 @@ VALUES (
     '{"required":false}'::JSONB,
     '{"dataSource":{"type":"api","endpoint":"/api/v1/tickets/assignable-users"}}'::JSONB,
     'relational',
-    'assigned_employee_id',
+    'assigned_user_id',
     NULL
 )
 ON CONFLICT (field_key) DO NOTHING;

@@ -198,7 +198,7 @@ async function createTicket(
             data.departmentId,
 
         assignedUserId:
-            storage.relational.assigned_employee_id ??
+            storage.relational.assigned_user_id  ??
             data.assignedUserId ??
             null,
 
