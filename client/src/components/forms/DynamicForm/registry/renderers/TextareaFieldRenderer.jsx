@@ -4,7 +4,7 @@ import {
   getCommonFieldProps,
 } from "./rendererUtils";
 
-export default function TextFieldRenderer({
+export default function TextareaFieldRenderer({
   field,
   formik,
 }) {
@@ -15,7 +15,8 @@ export default function TextFieldRenderer({
         formik,
       )}
       fullWidth
-      type="text"
+      multiline
+      minRows={4}
       slotProps={{
         input: {
           readOnly: Boolean(

@@ -4,7 +4,7 @@ import {
   getCommonFieldProps,
 } from "./rendererUtils";
 
-export default function TextFieldRenderer({
+export default function TimeFieldRenderer({
   field,
   formik,
 }) {
@@ -15,8 +15,11 @@ export default function TextFieldRenderer({
         formik,
       )}
       fullWidth
-      type="text"
+      type="time"
       slotProps={{
+        inputLabel: {
+          shrink: true,
+        },
         input: {
           readOnly: Boolean(
             field.readOnly,

@@ -4,7 +4,7 @@ import {
   getCommonFieldProps,
 } from "./rendererUtils";
 
-export default function TextFieldRenderer({
+export default function EmailFieldRenderer({
   field,
   formik,
 }) {
@@ -15,7 +15,7 @@ export default function TextFieldRenderer({
         formik,
       )}
       fullWidth
-      type="text"
+      type="email"
       slotProps={{
         input: {
           readOnly: Boolean(

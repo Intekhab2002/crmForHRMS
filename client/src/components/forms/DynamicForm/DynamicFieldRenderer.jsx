@@ -3,11 +3,9 @@ import {
   Box,
 } from "@mui/material";
 
-// import {
-//   FIELD_RENDERERS,
-// } from "./registry/fieldRegistry";
-
-import {FIELD_RENDERERS} from "../DynamicForm/registry/fieldRegistry"
+import {
+  getFieldRenderer,
+} from "./registry/rendererRegistry";
 
 export default function DynamicFieldRenderer({
   field,
@@ -17,14 +15,13 @@ export default function DynamicFieldRenderer({
     return null;
   }
 
-  const renderer =
-    FIELD_RENDERERS[field.type];
+  const Renderer =
+    getFieldRenderer(field.type);
 
-  if (!renderer) {
+  if (!Renderer) {
     return (
       <Alert severity="warning">
-        Unsupported field type:
-        {" "}
+        Unsupported field type:{" "}
         {field.type}
       </Alert>
     );
@@ -36,10 +33,10 @@ export default function DynamicFieldRenderer({
         width: "100%",
       }}
     >
-      {renderer({
-        field,
-        formik,
-      })}
+      <Renderer
+        field={field}
+        formik={formik}
+      />
     </Box>
   );
 }
