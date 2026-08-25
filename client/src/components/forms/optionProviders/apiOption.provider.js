@@ -22,7 +22,9 @@ function extractRows(response) {
   return [];
 }
 
-export async function apiOptionProvider(config = {}) {
+export async function apiOptionProvider({
+  config = {},
+}) {
   const endpoint = config.endpoint;
 
   if (!endpoint) {

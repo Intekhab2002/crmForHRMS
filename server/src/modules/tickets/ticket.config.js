@@ -284,18 +284,6 @@ const TICKET_FIELD_CONFIG = Object.freeze({
         reference: "departments",
     }),
 
-    contact: Object.freeze({
-        key: "contact",
-        label: "Contact",
-        entity: "ticket",
-        column: "contact_id",
-        type: "autocomplete",
-        dataType: "uuid",
-        required: true,
-        editable: true,
-        reference: "contacts",
-    }),
-
     organization: Object.freeze({
         key: "organization",
         label: "Organization",

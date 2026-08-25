@@ -1,4 +1,7 @@
-export function authenticatedUserOptionProvider(user, config = {}) {
+export function authenticatedUserOptionProvider({
+  user,
+  config = {},
+}) {
   if (!user?.id) {
     return [];
   }
@@ -6,7 +9,8 @@ export function authenticatedUserOptionProvider(user, config = {}) {
   const firstName = user.first_name ?? "";
   const lastName = user.last_name ?? "";
 
-  const constructedFullName = `${firstName} ${lastName}`.trim();
+  const constructedFullName =
+    `${firstName} ${lastName}`.trim();
 
   const fullName =
     user.full_name ||

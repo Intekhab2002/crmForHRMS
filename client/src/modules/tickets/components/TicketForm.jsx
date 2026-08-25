@@ -21,15 +21,11 @@ import {
 import { getOptionProvider } from "../../../components/forms/optionProviders/optionProvider.registry";
 
 async function getOptionSource(field, user) {
-  console.log("[TicketForm] Loading options:", field.key, field.options);
-
   if (Array.isArray(field.options)) {
     return field.options;
   }
 
   const source = field.options?.source;
-
-  console.log("[TicketForm] Option source:", field.key, source);
 
   if (!source) {
     return [];
@@ -37,13 +33,15 @@ async function getOptionSource(field, user) {
 
   const provider = getOptionProvider(source);
 
-  console.log("[TicketForm] Provider:", field.key, provider);
-
   if (!provider) {
     return [];
   }
 
-  return provider(user, field.options);
+  return provider({
+    user,
+    field,
+    config: field.options,
+  });
 }
 
 function buildInitialValues(fields, values, user) {
