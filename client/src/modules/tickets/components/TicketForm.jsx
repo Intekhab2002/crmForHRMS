@@ -18,54 +18,26 @@ import {
   TICKET_FORM_CONFIG,
   TICKET_FIELD_MAP,
 } from "../../../config/ticket.config";
+import { getOptionProvider } from "../../../components/forms/optionProviders/optionProvider.registry"
 
-function getOptionSource(field) {
+async function getOptionSource(field, user) {
   if (Array.isArray(field.options)) {
-    return Promise.resolve(field.options);
+    return field.options;
   }
 
-   if (field.options?.source === "authenticatedUser") {
-    if (!user?.id) {
-      return [];
-    }
+  const source = field.options?.source;
 
-    const valueKey = field.options.valueKey ?? "id";
-    const labelKey = field.options.labelKey ?? "full_name";
-
-    const fullName = user?.full_name
-      
-
-    return [
-      {
-        value: user[valueKey] ?? user.id,
-        label:
-          labelKey === "full_name"
-            ? fullName
-            : user[labelKey] ?? fullName,
-      },
-    ];
-  }
-  
-  if (field.options?.source !== "api") {
-    return Promise.resolve([]);
+  if (!source) {
+    return [];
   }
 
-  return apiClient.get(field.options.endpoint).then((response) => {
-    const rows = response.data?.data ?? response.data?.items ?? response.data ?? [];
-    if (!Array.isArray(rows)) return [];
+  const provider = getOptionProvider(source);
 
-    return rows
-      .map((row) => ({
-        value: row[field.options.valueKey] ?? row.id,
-        label:
-          row[field.options.labelKey] ??
-          row.name ??
-          row.username ??
-          row.label ??
-          String(row[field.options.valueKey] ?? row.id ?? ""),
-      }))
-      .filter((option) => option.value !== undefined && option.value !== null);
-  });
+  if (!provider) {
+    return [];
+  }
+
+  return provider(user, field.options);
 }
 
 function buildInitialValues(fields, values, user) {
@@ -76,9 +48,7 @@ function buildInitialValues(fields, values, user) {
     }
 
     if (field.autoPopulate === "authenticatedUser") {
-      result[field.key] =
-        user?.id ??
-        "";
+      result[field.key] = user?.id ?? "";
       return result;
     }
 
@@ -136,11 +106,7 @@ function FieldRenderer({ field, formik, options, loading }) {
 
   if (field.type === "select") {
     return (
-      <TextField
-        {...common}
-        select
-        onChange={formik.handleChange}
-      >
+      <TextField {...common} select onChange={formik.handleChange}>
         <MenuItem value="">
           <em>Select {field.label}</em>
         </MenuItem>
@@ -155,8 +121,7 @@ function FieldRenderer({ field, formik, options, loading }) {
   }
 
   if (field.type === "autocomplete") {
-    const selected =
-      options.find((option) => option.value === value) ?? null;
+    const selected = options.find((option) => option.value === value) ?? null;
 
     return (
       <Autocomplete
@@ -209,9 +174,7 @@ function FieldRenderer({ field, formik, options, loading }) {
     <TextField
       {...common}
       type={field.type === "date" ? "date" : field.type}
-      InputLabelProps={
-        field.type === "date" ? { shrink: true } : undefined
-      }
+      InputLabelProps={field.type === "date" ? { shrink: true } : undefined}
       placeholder={field.placeholder}
       inputProps={{
         maxLength: field.maxLength,
@@ -251,7 +214,7 @@ export default function TicketForm({
           }));
 
           try {
-            return [field.key, await getOptionSource(field)];
+            return [field.key, await getOptionSource(field, user)];
           } catch {
             return [field.key, []];
           } finally {
@@ -275,7 +238,7 @@ export default function TicketForm({
     return () => {
       active = false;
     };
-  }, [fields]);
+  }, [fields, user]);
 
   const formInitialValues = useMemo(
     () => buildInitialValues(fields, initialValues, user),
@@ -336,7 +299,7 @@ export default function TicketForm({
             >
               {submitting
                 ? "Saving..."
-                : submitLabel ?? TICKET_FORM_CONFIG[mode].submitLabel}
+                : (submitLabel ?? TICKET_FORM_CONFIG[mode].submitLabel)}
             </Button>
           </Stack>
         </Form>
