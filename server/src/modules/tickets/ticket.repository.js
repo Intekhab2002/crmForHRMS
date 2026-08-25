@@ -329,6 +329,48 @@ async function findContact(id, tx = null) {
     return result.rows[0] ?? null;
 }
 
+async function getAssignableUsers(tx = null) {
+    const executor = getQueryExecutor(tx);
+
+    const result = await executor.query(
+        `
+        SELECT
+            u.id,
+            u.first_name,
+            u.last_name,
+            TRIM(
+                CONCAT_WS(
+                    ' ',
+                    u.first_name,
+                    u.last_name
+                )
+            ) AS full_name,
+            u.username,
+            u.email,
+            u.mobile_phone,
+            u.employee_code,
+            u.designation
+        FROM users u
+        WHERE u.status = 'active'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM user_roles ur
+              INNER JOIN roles r
+                  ON r.id = ur.role_id
+              WHERE ur.user_id = u.id
+                AND LOWER(r.code) = 'developer'
+                AND r.is_active = TRUE
+          )
+        ORDER BY
+            u.first_name ASC,
+            u.last_name ASC,
+            u.username ASC
+        `,
+    );
+
+    return result.rows;
+}
+
 export default Object.freeze({
     findTickets,
     findTicketById,
@@ -339,4 +381,5 @@ export default Object.freeze({
     findDepartment,
     findUserForAssignment,
     findContact,
+    getAssignableUsers
 });

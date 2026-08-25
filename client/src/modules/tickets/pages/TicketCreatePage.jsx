@@ -1,51 +1,61 @@
-import { Alert, Button, Paper, Stack } from "@mui/material";
-import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
-import { Link, useNavigate } from "react-router";
+import { useState } from "react";
+import {
+  Alert,
+  Paper,
+  Stack,
+} from "@mui/material";
+import { Link } from "react-router";
 
 import PageHeader from "../../../components/page/PageHeader";
-import { useAppConfig } from "../../../context/useAppConfig";
-import { useAuth } from "../../../context/useAuth";
+import TicketForm from "../components/TicketForm";
+import { useNotification } from "../../../components/feedback";
+import {
+  TICKET_FORM_CONFIG,
+  TICKET_MODULE_CONFIG,
+} from "../../../config/ticket.config";
+import { ticketService } from "../services/ticket.service";
 
 export default function TicketCreatePage() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { ticket } = useAppConfig();
+  const { success, error: notifyError } = useNotification();
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(values, formikHelpers) {
-    try {
-   
+    setError("");
+    setSubmitting(true);
 
-      navigate(
-        `/tickets/${createdTicket.id}`,
-      );
-    } catch (error) {
-      formikHelpers.setStatus({
-        message:
-          error?.response?.data?.message ??
-          error?.message ??
-          "Unable to create ticket.",
-      });
+    try {
+      const ticket = await ticketService.createTicket(values);
+      success("Ticket created successfully.");
+
+      window.location.assign(`/tickets/${ticket.id}`);
+    } catch (requestError) {
+      const message =
+        requestError?.response?.data?.message ??
+        requestError?.message ??
+        "Unable to create ticket.";
+
+      setError(message);
+      notifyError(message);
+      formikHelpers.setStatus(message);
+    } finally {
+      setSubmitting(false);
     }
   }
 
   return (
     <Stack spacing={3}>
       <PageHeader
-        title={ticket.create.title}
-        description={ticket.create.description}
+        title={TICKET_FORM_CONFIG.create.title}
+        description={TICKET_FORM_CONFIG.create.description}
         actions={
-          <Button
-            component={Link}
-            to="/tickets"
-            variant="outlined"
-            startIcon={
-              <ArrowBackOutlinedIcon />
-            }
-          >
-            {ticket.labels.backToTickets}
-          </Button>
+          <Link to="/tickets">
+            {TICKET_MODULE_CONFIG.labels.backToTickets}
+          </Link>
         }
       />
+
+      {error ? <Alert severity="error">{error}</Alert> : null}
 
       <Paper
         variant="outlined"
@@ -56,12 +66,11 @@ export default function TicketCreatePage() {
           },
         }}
       >
-        <DynamicFormContainer
-          formCode="ticket.create"
+        <TicketForm
+          mode="create"
           onSubmit={handleSubmit}
-          submitLabel={
-            ticket.create.submitLabel
-          }
+          submitting={submitting}
+          submitLabel={TICKET_FORM_CONFIG.create.submitLabel}
         />
       </Paper>
     </Stack>

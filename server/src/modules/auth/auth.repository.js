@@ -88,6 +88,15 @@ const FIND_USER_BY_ID = `
     SELECT
         id,
         username,
+        first_name,
+        last_name,
+        TRIM(
+            CONCAT_WS(
+                ' ',
+                first_name,
+                last_name
+            )
+        ) AS full_name,
         email,
         password_hash,
         status,

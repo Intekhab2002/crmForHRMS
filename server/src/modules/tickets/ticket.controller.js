@@ -70,9 +70,24 @@ async function updateTicket(req, res, next) {
     }
 }
 
+async function getAssignableUsers(req, res, next) {
+    try {
+        const users = await ticketService.getAssignableUsers();
+
+        return ApiResponse.success(
+            res,
+            users,
+            TICKET_MESSAGES.ASSIGNABLE_USERS_SUCCESS,
+        );
+    } catch (error) {
+        return next(error);
+    }
+}
+
 export default Object.freeze({
     getTickets,
     getTicket,
     createTicket,
     updateTicket,
+    getAssignableUsers,
 });

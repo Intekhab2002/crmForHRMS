@@ -13,7 +13,7 @@
 const option = (value, label = value) =>
     Object.freeze({ value, label });
 
-const TICKET_FIELDS = Object.freeze({
+const TICKET_FIELD_CONFIG = Object.freeze({
     subject: Object.freeze({
         key: "subject",
         label: "Subject",
@@ -388,7 +388,7 @@ const TICKET_FIELDS = Object.freeze({
 });
 
 const fields = Object.freeze(
-    Object.values(TICKET_FIELDS),
+    Object.values(TICKET_FIELD_CONFIG),
 );
 
 const fieldsByKey = Object.freeze(

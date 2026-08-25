@@ -1,256 +1,446 @@
+const option = (value, label = value) => Object.freeze({ value, label });
+
+const BIHAR_DISTRICTS = Object.freeze(
+  [
+    "Araria",
+    "Arwal",
+    "Aurangabad",
+    "Banka",
+    "Begusarai",
+    "Bhagalpur",
+    "Bhojpur",
+    "Buxar",
+    "Darbhanga",
+    "East Champaran",
+    "Gaya",
+    "Gopalganj",
+    "Jamui",
+    "Jehanabad",
+    "Kaimur",
+    "Katihar",
+    "Khagaria",
+    "Kishanganj",
+    "Lakhisarai",
+    "Madhepura",
+    "Madhubani",
+    "Munger",
+    "Muzaffarpur",
+    "Nalanda",
+    "Nawada",
+    "Patna",
+    "Purnia",
+    "Rohtas",
+    "Saharsa",
+    "Samastipur",
+    "Saran",
+    "Sheikhpura",
+    "Sheohar",
+    "Sitamarhi",
+    "Siwan",
+    "Supaul",
+    "Vaishali",
+    "West Champaran",
+  ].map((value) => option(value)),
+);
+
+const apiOptions = (endpoint, valueKey = "id", labelKey = "name") =>
+  Object.freeze({
+    source: "api",
+    endpoint,
+    valueKey,
+    labelKey,
+  });
+
 export const TICKET_STATUS_OPTIONS = Object.freeze([
-  { value: "open", label: "Open", color: "info" },
-  { value: "in_progress", label: "In progress", color: "warning" },
-  {
-    value: "waiting_on_customer",
-    label: "Waiting on customer",
-    color: "secondary",
-  },
-  { value: "resolved", label: "Resolved", color: "success" },
-  { value: "closed", label: "Closed", color: "default" },
+  option("OPEN", "Open"),
+  option("IN_PROGRESS", "Inprogress"),
+  option("WAIT_FOR_RESPONSE", "Wait for Response"),
+  option("CLOSED", "Closed"),
 ]);
 
-export const TICKET_PRIORITY_OPTIONS = Object.freeze([
-  { value: "low", label: "Low", color: "success" },
-  { value: "medium", label: "Medium", color: "info" },
-  { value: "high", label: "High", color: "warning" },
-  { value: "urgent", label: "Urgent", color: "error" },
+export const PROBLEM_STATEMENT_OPTIONS = Object.freeze([
+  option("LTC_RELATED", "LTC Related"),
+  option("GPF_NPS_RELATED_PROBLEM", "GPF/NPS Related Problem"),
+  option("PF_TAX_DEDUCTION_PROBLEM", "PF Tax Deduction Problem"),
+  option("RECOVERY_RELATED_PROBLEM", "Recovery Related Problem"),
+  option("HOA_OFFICE_NOT_PRESENT", "HOA Office Not Present"),
+  option("GPF_PRAN_MISMATCH", "GPF PRAN Mismatch"),
 ]);
 
-export const TICKET_ISSUE_TYPE_OPTIONS = Object.freeze([
-  { value: "access", label: "Access" },
-  { value: "payroll", label: "Payroll" },
-  { value: "leave", label: "Leave" },
-  { value: "employee_profile", label: "Employee profile" },
-  { value: "system", label: "System" },
+export const TICKET_CATEGORY_OPTIONS = Object.freeze([
+  option("ENQUIRY", "Enquiry"),
+  option("ISSUE", "Issue"),
+  option("ENHANCEMENT", "Enhancement"),
+]);
+
+export const TICKET_SERVICE_TYPE_OPTIONS = Object.freeze([
+  option("MISCELLANEOUS", "Miscellaneous"),
+  option("GENERAL_INFORMATION", "General Information"),
+]);
+
+export const TICKET_SEVERITY_OPTIONS = Object.freeze([
+  option("SEVERITY1", "Severity1"),
+  option("SEVERITY2", "Severity2"),
+  option("SEVERITY3", "Severity3"),
+]);
+
+export const TICKET_ISSUE_CATEGORY_OPTIONS = Object.freeze([
+  option("SUSPECTED_ERROR", "Suspected Error"),
+  option("PROCESS_VIOLATION", "Process violation"),
+]);
+
+export const TICKET_DEPENDENCY_CATEGORY_OPTIONS = Object.freeze([
+  option("CFMS", "CFMS"),
+  option("DEV_TEAM", "Dev. Team"),
+  option("POLICY_MATTER", "Policy Matter"),
+  option("USER_END", "User-End"),
+]);
+
+export const CURRENT_BILL_STATUS_OPTIONS = Object.freeze([
+  option("HRMS_MAKER", "HRMS Maker"),
+  option("HRMS_CHECKER", "HRMS Checker"),
+  option("HRMS_APPROVER", "HRMS Approver"),
+  option("HRMS_APPROVER_UNCONFIRN", "HRMS Approver Unconfirmed"),
+  option("FAILED_TO_PREPARE_INTG_FILI", "Failed to Prepare Intg Fili"),
 ]);
 
 export const TICKET_FIELD_CONFIG = Object.freeze([
   {
-    name: "reference",
-    label: "Ticket number",
+    key: "name",
+    label: "Name",
     type: "text",
-    contexts: { list: true, detail: true, public: true },
-    permissions: { read: "ticket:read" },
-    grid: { xs: 12, md: 4 },
+    entity: "contact",
+    required: true,
+    maxLength: 200,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: false },
   },
   {
-    name: "subject",
+    key: "mobile_phone",
+    label: "Mobile Phone",
+    type: "text",
+    entity: "contact",
+    required: true,
+    maxLength: 30,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 150 },
+  },
+  {
+    key: "service_type",
+    label: "Service Type",
+    type: "select",
+    entity: "ticket",
+    options: TICKET_SERVICE_TYPE_OPTIONS,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 170 },
+  },
+  {
+    key: "contact_name",
+    label: "Contact Name",
+    type: "text",
+    entity: "contact",
+    searchable: true,
+    placeholder: "Contact name",
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 180 },
+  },
+  {
+    key: "email_id",
+    label: "Email Id",
+    type: "email",
+    entity: "contact",
+    maxLength: 320,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: false },
+  },
+  {
+    key: "district",
+    label: "District",
+    type: "select",
+    entity: "contact",
+    options: BIHAR_DISTRICTS,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 150 },
+  },
+  {
+    key: "caller_department",
+    label: "Caller Department",
+    type: "select",
+    entity: "contact",
+    options: apiOptions("/departments"),
+    form: { create: true, update: true, detail: true },
+    grid: { visible: false },
+  },
+  {
+    key: "department",
+    label: "Department",
+    type: "select",
+    entity: "ticket",
+    required: true,
+    options: apiOptions("/departments"),
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 190 },
+  },
+  {
+    key: "category",
+    label: "Category",
+    type: "select",
+    entity: "ticket",
+    required: true,
+    options: TICKET_CATEGORY_OPTIONS,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 140 },
+  },
+  {
+    key: "subject",
     label: "Subject",
     type: "text",
+    entity: "ticket",
     required: true,
-    placeholder: "Short summary of the request",
-    contexts: {
-      create: true,
-      update: true,
-      list: true,
-      detail: true,
-      public: true,
-    },
-    permissions: {
-      create: "ticket:create",
-      update: "ticket:update",
-      read: "ticket:read",
-    },
-    grid: { xs: 12, md: 8 },
+    maxLength: 255,
+    placeholder: "Enter ticket subject",
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 240, flex: 1 },
   },
   {
-    name: "description",
-    label: "Description",
-    type: "textarea",
-    required: true,
-    placeholder: "Describe the issue, impact, and expected outcome",
-    minRows: 4,
-    contexts: { create: true, update: true, detail: true },
-    permissions: {
-      create: "ticket:create",
-      update: "ticket:update",
-      read: "ticket:read",
-    },
-    grid: { xs: 12 },
-  },
-  {
-    name: "issueType",
-    label: "Issue type",
+    key: "problem_statement",
+    label: "Problem Statement",
     type: "select",
-    required: true,
-    defaultValue: "system",
-    options: TICKET_ISSUE_TYPE_OPTIONS,
-    contexts: {
-      create: true,
-      update: true,
-      list: true,
-      detail: true,
-      public: true,
-    },
-    permissions: {
-      create: "ticket:create",
-      update: "ticket:update",
-      read: "ticket:read",
-    },
-    grid: { xs: 12, md: 4 },
+    entity: "ticket",
+    options: PROBLEM_STATEMENT_OPTIONS,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: false },
   },
   {
-    name: "priority",
-    label: "Priority",
+    key: "employee_current_office_name_id",
+    label: "Employee Current Office Name Id",
+    type: "text",
+    entity: "ticket",
+    maxLength: 100,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: false },
+  },
+  {
+    key: "employee_id",
+    label: "Employee ID",
+    type: "text",
+    entity: "ticket",
+    maxLength: 100,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 130 },
+  },
+  {
+    key: "current_bill_status",
+    label: "Current Bill Status",
     type: "select",
-    required: true,
-    defaultValue: "medium",
-    options: TICKET_PRIORITY_OPTIONS,
-    contexts: {
-      create: true,
-      update: true,
-      list: true,
-      detail: true,
-      public: true,
-    },
-    permissions: {
-      create: "ticket:create",
-      update: "ticket:update",
-      read: "ticket:read",
-    },
-    grid: { xs: 12, md: 4 },
+    entity: "ticket",
+    options: CURRENT_BILL_STATUS_OPTIONS,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: false },
   },
   {
-    name: "status",
+    key: "bill_reference_no",
+    label: "Bill Reference No",
+    type: "text",
+    entity: "ticket",
+    maxLength: 100,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: false },
+  },
+  {
+    key: "status",
     label: "Status",
     type: "select",
+    entity: "ticket",
     required: true,
-    defaultValue: "open",
+    defaultValue: "OPEN",
     options: TICKET_STATUS_OPTIONS,
-    contexts: { update: true, list: true, detail: true, public: true },
-    permissions: { update: "ticket:update", read: "ticket:read" },
-    grid: { xs: 12, md: 4 },
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 160 },
   },
   {
-    name: "requesterName",
-    label: "Requester name",
-    type: "text",
-    required: true,
-    placeholder: "Employee or customer name",
-    contexts: {
-      create: true,
-      update: true,
-      list: true,
-      detail: true,
-      public: true,
-    },
-    permissions: {
-      create: "ticket:create",
-      update: "ticket:update",
-      read: "ticket:read",
-    },
-    grid: { xs: 12, md: 4 },
+    key: "assigned_to",
+    label: "Assigned To",
+    type: "select",
+    entity: "ticket",
+    options: apiOptions("/tickets/assignable-users", "id", "full_name"),
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 170 },
   },
   {
-    name: "requesterEmail",
-    label: "Requester email",
-    type: "email",
-    required: true,
-    placeholder: "requester@company.com",
-    contexts: { create: true, update: true, detail: true },
-    permissions: {
-      create: "ticket:create",
-      update: "ticket:update",
-      read: "ticket:read",
-    },
-    grid: { xs: 12, md: 4 },
+    key: "severity",
+    label: "Severity",
+    type: "select",
+    entity: "ticket",
+    options: TICKET_SEVERITY_OPTIONS,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 130 },
   },
   {
-    name: "requesterPhone",
-    label: "Requester phone",
-    type: "text",
-    contexts: { create: true, update: true, detail: true },
-    permissions: {
-      create: "ticket:create",
-      update: "ticket:update",
-      read: "ticket:read",
-    },
-    grid: { xs: 12, md: 4 },
-  },
-  {
-    name: "organization",
-    label: "Organization",
-    type: "text",
-    contexts: { create: true, update: true, list: true, detail: true },
-    permissions: {
-      create: "ticket:create",
-      update: "ticket:update",
-      read: "ticket:read",
-    },
-    grid: { xs: 12, md: 4 },
-  },
-  {
-    name: "department",
-    label: "Department",
-    type: "text",
-    contexts: { create: true, update: true, list: true, detail: true },
-    permissions: {
-      create: "ticket:create",
-      update: "ticket:update",
-      read: "ticket:read",
-    },
-    grid: { xs: 12, md: 4 },
-  },
-  {
-    name: "assignee",
-    label: "Assignee",
-    type: "text",
-    placeholder: "Agent or queue owner",
-    contexts: {
-      create: true,
-      update: true,
-      list: true,
-      detail: true,
-      public: true,
-    },
-    permissions: {
-      create: "ticket:assign",
-      update: "ticket:assign",
-      read: "ticket:read",
-    },
-    grid: { xs: 12, md: 4 },
-  },
-  {
-    name: "dueDate",
-    label: "Due date",
+    key: "expected_resolution_date",
+    label: "Expected Resolution Date",
     type: "date",
-    contexts: { create: true, update: true, detail: true },
-    permissions: {
-      create: "ticket:create",
-      update: "ticket:update",
-      read: "ticket:read",
-    },
-    grid: { xs: 12, md: 4 },
+    entity: "ticket",
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 180 },
   },
   {
-    name: "resolutionNotes",
-    label: "Resolution notes",
+    key: "duplicate_ticket",
+    label: "Duplicate Ticket - If Any",
+    type: "text",
+    entity: "ticket",
+    maxLength: 255,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: false },
+  },
+  {
+    key: "created_by",
+    label: "Created By",
+    type: "select",
+    entity: "ticket",
+    readOnly: true,
+
+    options: {
+      source: "authenticatedUser",
+      valueKey: "id",
+      labelKey: "full_name",
+    },
+
+    autoPopulate: "authenticatedUser",
+
+    form: {
+      create: true,
+      update: false,
+      detail: true,
+    },
+
+    grid: {
+      visible: false,
+    },
+  },
+  {
+    key: "issue_category",
+    label: "Issue Category",
+    type: "select",
+    entity: "ticket",
+    options: TICKET_ISSUE_CATEGORY_OPTIONS,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 180 },
+  },
+  {
+    key: "letter_no",
+    label: "Letter No. - If Any",
+    type: "text",
+    entity: "ticket",
+    maxLength: 100,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: false },
+  },
+  {
+    key: "dependency_category",
+    label: "Dependency Category",
+    type: "select",
+    entity: "ticket",
+    options: TICKET_DEPENDENCY_CATEGORY_OPTIONS,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: true, width: 170 },
+  },
+  {
+    key: "description",
+    label: "Description",
     type: "textarea",
-    minRows: 3,
-    contexts: { update: true, detail: true },
-    permissions: { update: "ticket:update", read: "ticket:read" },
-    grid: { xs: 12 },
+    entity: "ticket",
+    required: true,
+    minRows: 5,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: false },
+  },
+  {
+    key: "initial_diagnosis",
+    label: "Initial Diagnosis",
+    type: "textarea",
+    entity: "ticket",
+    minRows: 4,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: false },
+  },
+  {
+    key: "solution",
+    label: "Solution",
+    type: "textarea",
+    entity: "ticket",
+    minRows: 4,
+    form: { create: true, update: true, detail: true },
+    grid: { visible: false },
+  },
+  {
+    key: "resolution",
+    label: "Resolution",
+    type: "text",
+    entity: "ticket",
+    maxLength: 5000,
+    form: { create: false, update: true, detail: true },
+    grid: { visible: false },
+  },
+  {
+    key: "attachment",
+    label: "Attachment",
+    type: "file",
+    entity: "ticket",
+    specialized: true,
+    form: { create: false, update: false, detail: false },
+    grid: { visible: false },
   },
 ]);
 
+export const TICKET_FIELD_MAP = Object.freeze(
+  Object.fromEntries(TICKET_FIELD_CONFIG.map((field) => [field.key, field])),
+);
+
+export const TICKET_FORM_CONFIG = Object.freeze({
+  create: {
+    title: "Create Ticket",
+    description: "Create a new CRM ticket.",
+    submitLabel: "Create Ticket",
+    fields: TICKET_FIELD_CONFIG.filter((field) => field.form.create),
+  },
+  update: {
+    title: "Update Ticket",
+    submitLabel: "Save Changes",
+    fields: TICKET_FIELD_CONFIG.filter((field) => field.form.update),
+  },
+});
+
+export const TICKET_GRID_CONFIG = Object.freeze({
+  columns: TICKET_FIELD_CONFIG.filter((field) => field.grid.visible).map(
+    (field) => ({
+      field: field.key,
+      headerName: field.label,
+      width: field.grid.width,
+      flex: field.grid.flex,
+      presentation: field.type === "select" ? "optionLabel" : undefined,
+    }),
+  ),
+  action: {
+    field: "actions",
+    type: "actions",
+    headerName: "Actions",
+    width: 90,
+    actionLabel: "Open ticket",
+  },
+  pageSizeOptions: [10, 25, 50],
+  defaultPageSize: 10,
+});
+
 export const TICKET_MODULE_CONFIG = Object.freeze({
   moduleId: "tickets",
-  storage: {
-    ticketsKey: "crm_hrms.tickets",
-    sequenceKey: "crm_hrms.ticket_sequence",
-  },
-  ticketNumber: {
-    prefix: "TKT",
-    padding: 4,
-  },
   permissions: {
     read: "ticket:read",
     create: "ticket:create",
     update: "ticket:update",
     assign: "ticket:assign",
     comment: "ticket:comment",
-    attach: "ticket:attach",
+    attachment: "ticket:attachment",
   },
   labels: {
     notAvailable: "Not available",
@@ -258,267 +448,24 @@ export const TICKET_MODULE_CONFIG = Object.freeze({
     backToTickets: "Back to tickets",
     notFound: "Ticket not found.",
   },
-  create: {
-    title: "Create ticket",
-    description:
-      "Capture a new support request with fields controlled by configuration.",
-    submitLabel: "Create ticket",
-    successMessage: "Ticket created successfully.",
-    fields: [
-      "subject",
-      "description",
-      "issueType",
-      "priority",
-      "requesterName",
-      "requesterEmail",
-      "requesterPhone",
-      "organization",
-      "department",
-      "assignee",
-      "dueDate",
-    ],
-  },
   list: {
     title: "Tickets",
-    description: "Search, filter, sort, export, and inspect all tickets.",
+    description: "Search, filter, sort, and inspect tickets.",
     createAction: {
-      label: "Create ticket",
+      label: "Create Ticket",
       path: "/tickets/create",
       permission: "ticket:create",
     },
     emptyMessage: "No tickets found.",
-    pageSizeOptions: [10, 25, 50],
-    defaultPageSize: 10,
-    columns: [
-      { field: "reference", headerName: "Ticket #", width: 150 },
-      { field: "subject", headerName: "Subject", flex: 1.2, minWidth: 220 },
-      {
-        field: "status",
-        headerName: "Status",
-        width: 160,
-        presentation: "statusChip",
-      },
-      {
-        field: "priority",
-        headerName: "Priority",
-        width: 130,
-        presentation: "priorityChip",
-      },
-      {
-        field: "issueType",
-        headerName: "Issue type",
-        width: 160,
-        presentation: "optionLabel",
-      },
-      { field: "requesterName", headerName: "Requester", width: 180 },
-      { field: "assignee", headerName: "Assignee", width: 180 },
-      { field: "department", headerName: "Department", width: 160 },
-      {
-        field: "updatedAt",
-        headerName: "Last updated",
-        width: 180,
-        presentation: "dateTime",
-      },
-      {
-        field: "actions",
-        type: "actions",
-        headerName: "Actions",
-        width: 90,
-        permission: "ticket:read",
-        actionLabel: "Open ticket",
-      },
-    ],
-  },
-  detail: {
-    title: "Ticket lifecycle",
-    description: "View the full activity trail and update ticket details.",
-    fields: [
-      "reference",
-      "status",
-      "priority",
-      "issueType",
-      "requesterName",
-      "requesterEmail",
-      "requesterPhone",
-      "organization",
-      "department",
-      "assignee",
-      "dueDate",
-      "subject",
-      "description",
-      "resolutionNotes",
-    ],
-  },
-  update: {
-    title: "Update ticket details",
-    submitLabel: "Save changes",
-    successMessage: "Ticket details updated.",
-    permission: "ticket:update",
-    fields: [
-      "subject",
-      "description",
-      "status",
-      "priority",
-      "issueType",
-      "requesterName",
-      "requesterEmail",
-      "requesterPhone",
-      "organization",
-      "department",
-      "assignee",
-      "dueDate",
-      "resolutionNotes",
-    ],
-  },
-  comments: {
-    title: "Comments",
-    placeholder: "Add a comment for the ticket lifecycle",
-    submitLabel: "Add comment",
-    successMessage: "Comment added.",
-    permission: "ticket:comment",
-  },
-  attachments: {
-    title: "Attachments",
-    selectLabel: "Select files",
-    uploadLabel: "Upload files",
-    successMessage: "Files uploaded successfully.",
-    permission: "ticket:attachment",
-  },
-  lifecycle: {
-    title: "Lifecycle",
-    description:
-      "A complete audit trail of creation, updates, comments, and attachments.",
-    emptyMessage: "No lifecycle activity yet.",
-    eventTypes: {
-      CREATED: {
-        label: "Created",
-        color: "success",
-        public: true,
-      },
-
-      UPDATED: {
-        label: "Updated",
-        color: "info",
-        public: true,
-      },
-
-      STATUS_CHANGED: {
-        label: "Status changed",
-        color: "info",
-        public: true,
-      },
-
-      ASSIGNED: {
-        label: "Assigned",
-        color: "primary",
-        public: true,
-      },
-
-      UNASSIGNED: {
-        label: "Unassigned",
-        color: "warning",
-        public: true,
-      },
-
-      ASSIGNMENT_CHANGED: {
-        label: "Assignment changed",
-        color: "primary",
-        public: true,
-      },
-
-      RESOLVED: {
-        label: "Resolved",
-        color: "success",
-        public: true,
-      },
-
-      CLOSED: {
-        label: "Closed",
-        color: "default",
-        public: true,
-      },
-
-      REOPENED: {
-        label: "Reopened",
-        color: "warning",
-        public: true,
-      },
-
-      COMMENT_ADDED: {
-        label: "Comment added",
-        color: "secondary",
-        public: true,
-      },
-
-      ATTACHMENT_UPLOADED: {
-        label: "Attachment uploaded",
-        color: "warning",
-        public: true,
-      },
-
-      ATTACHMENT_DELETED: {
-        label: "Attachment deleted",
-        color: "error",
-        public: true,
-      },
-    },
-  },
-  publicStatus: {
-    title: "Check ticket status",
-    description:
-      "Enter a ticket number to view the current status without signing in.",
-    submitLabel: "Check status",
-    notFoundMessage: "No ticket matches that information.",
-    lookupFields: [
-      {
-        name: "reference",
-        label: "Ticket number",
-        type: "text",
-        required: true,
-        placeholder: "TKT-2026-0001",
-        grid: { xs: 12, md: 6 },
-      },
-      {
-        name: "requesterEmail",
-        label: "Requester email",
-        type: "email",
-        required: false,
-        placeholder: "Optional",
-        grid: { xs: 12, md: 6 },
-      },
-    ],
-    visibleFields: [
-      "reference",
-      "subject",
-      "status",
-      "priority",
-      "issueType",
-      "requesterName",
-      "assignee",
-      "createdAt",
-      "updatedAt",
-    ],
-  },
-  actions: {
-    assign: {
-      enabled: true,
-      label: "Assign",
-    },
-
-    resolve: {
-      enabled: true,
-      label: "Resolve",
-      requireResolutionNote: true,
-    },
-
-    close: {
-      enabled: true,
-      label: "Close",
-    },
-
-    reopen: {
-      enabled: true,
-      label: "Reopen",
-    },
   },
 });
+
+export function getTicketField(key) {
+  return TICKET_FIELD_MAP[key] ?? null;
+}
+
+export function getTicketFields(context) {
+  return TICKET_FIELD_CONFIG.filter((field) => Boolean(field.form?.[context]));
+}
+
+export default TICKET_MODULE_CONFIG;

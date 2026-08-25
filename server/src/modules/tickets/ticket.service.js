@@ -382,10 +382,14 @@ async function updateTicket(ticketId, payload) {
         return ticketRepository.updateTicket(ticketId, ticket, tx);
     });
 }
+async function getAssignableUsers() {
+    return ticketRepository.getAssignableUsers();
+}
 
 export default Object.freeze({
     listTickets,
     getTicket,
     createTicket,
     updateTicket,
+    getAssignableUsers,
 });

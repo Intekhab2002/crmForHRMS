@@ -1,1 +1,7 @@
-export { TICKET_FIELD_CONFIG } from "./ticket.config";
+export {
+  TICKET_FIELD_CONFIG,
+  TICKET_FIELD_MAP,
+  TICKET_FORM_CONFIG,
+  TICKET_GRID_CONFIG,
+  TICKET_MODULE_CONFIG,
+} from "./ticket.config";

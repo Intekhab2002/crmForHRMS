@@ -2,40 +2,36 @@ import { useEffect, useState } from "react";
 import { Alert, Button, Stack } from "@mui/material";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import { Link, useNavigate } from "react-router";
+
 import CanAccess from "../../../components/rbac/CanAccess";
 import PageHeader from "../../../components/page/PageHeader";
 import TicketDataGrid from "../components/TicketDataGrid";
-import { useAppConfig } from "../../../context/useAppConfig";
+import {
+  TICKET_GRID_CONFIG,
+  TICKET_MODULE_CONFIG,
+  TICKET_FIELD_CONFIG,
+} from "../../../config/ticket.config";
 import { ticketService } from "../services/ticket.service";
 
 export default function TicketsListPage() {
   const navigate = useNavigate();
-  const { ticket } = useAppConfig();
   const [rows, setRows] = useState([]);
-  const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
 
-    Promise.all([
-      ticketService.listTickets({
+    ticketService
+      .listTickets({
         page: 1,
-        limit: ticket.list.defaultPageSize,
-      }),
-      ticketService.getFields("detail"),
-    ])
-      .then(([tickets, schema]) => {
-        if (!active) return;
-
-        setRows(tickets?? []);
-        setFields(schema);
+        limit: TICKET_GRID_CONFIG.defaultPageSize,
+      })
+      .then((tickets) => {
+        if (active) setRows(tickets ?? []);
       })
       .catch((requestError) => {
-        if (!active) {
-          return;
-        }
+        if (!active) return;
 
         setError(
           requestError.response?.data?.message ??
@@ -52,24 +48,24 @@ export default function TicketsListPage() {
     };
   }, []);
 
-  const handleOpenTicket = (row) => {
-    navigate(`/tickets/${row.id}`);
-  };
-
   return (
     <Stack spacing={3}>
       <PageHeader
-        title={ticket.list.title}
-        description={ticket.list.description}
+        title={TICKET_MODULE_CONFIG.list.title}
+        description={TICKET_MODULE_CONFIG.list.description}
         actions={
-          <CanAccess permission={ticket.list.createAction.permission}>
+          <CanAccess
+            permission={
+              TICKET_MODULE_CONFIG.list.createAction.permission
+            }
+          >
             <Button
               component={Link}
-              to={ticket.list.createAction.path}
+              to={TICKET_MODULE_CONFIG.list.createAction.path}
               variant="contained"
               startIcon={<AddOutlinedIcon />}
             >
-              {ticket.list.createAction.label}
+              {TICKET_MODULE_CONFIG.list.createAction.label}
             </Button>
           </CanAccess>
         }
@@ -79,14 +75,17 @@ export default function TicketsListPage() {
 
       <TicketDataGrid
         rows={rows}
-        fields={fields}
-        columns={ticket.list.columns}
-        pageSizeOptions={ticket.list.pageSizeOptions}
-        defaultPageSize={ticket.list.defaultPageSize}
-        title={ticket.list.title}
-        fallback={ticket.labels.notAvailable}
+        fields={TICKET_FIELD_CONFIG}
+        columns={[
+          ...TICKET_GRID_CONFIG.columns,
+          TICKET_GRID_CONFIG.action,
+        ]}
+        pageSizeOptions={TICKET_GRID_CONFIG.pageSizeOptions}
+        defaultPageSize={TICKET_GRID_CONFIG.defaultPageSize}
+        title={TICKET_MODULE_CONFIG.list.title}
+        fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
         loading={loading}
-        onOpenTicket={handleOpenTicket}
+        onOpenTicket={(row) => navigate(`/tickets/${row.id}`)}
       />
     </Stack>
   );

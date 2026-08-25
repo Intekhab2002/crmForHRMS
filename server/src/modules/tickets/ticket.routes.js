@@ -60,6 +60,13 @@ router.get(
 );
 
 router.get(
+    "/assignable-users",
+    authenticate,
+    requirePermission(TICKET_READ),
+    ticketController.getAssignableUsers,
+);
+
+router.get(
     "/:ticketId",
     authenticate,
     requirePermission(TICKET_READ),
