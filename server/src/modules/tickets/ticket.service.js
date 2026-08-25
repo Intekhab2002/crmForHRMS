@@ -303,7 +303,7 @@ async function createTicket(payload, authenticatedUserId) {
       ticket.closed_at = createdAt;
     }
 
-    return ticketRepository.createTicket(ticket, tx);
+    await ticketRepository.createTicket(ticket, tx);
   });
 }
 

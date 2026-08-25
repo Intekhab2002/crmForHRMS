@@ -118,14 +118,84 @@ export default function TicketLifecyclePage() {
 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [pendingStatus, setPendingStatus] = useState("");
 
-  const loadTicket = useCallback(async () => {
-    const result = await ticketService.getTicket(ticketId);
+  const refreshTicket = useCallback(
+    async ({ initial = false, showRefreshing = true } = {}) => {
+      if (initial) {
+        setLoading(true);
+      } else if (showRefreshing) {
+        setRefreshing(true);
+      }
 
-    setTicket(result);
+      setError("");
 
-    return result;
-  }, [ticketId]);
+      try {
+        const [
+          ticketResult,
+          commentsResult,
+          lifecycleResult,
+          attachmentsResult,
+        ] = await Promise.all([
+          ticketService.getTicket(ticketId),
+          ticketService.listComments(ticketId),
+          ticketService.listLifecycle(ticketId),
+          ticketService.listAttachments(ticketId),
+        ]);
+
+        if (!ticketResult) {
+          setTicket(null);
+          setComments([]);
+          setLifecycle([]);
+          setError(TICKET_MODULE_CONFIG.labels.notFound);
+
+          return null;
+        }
+
+        const normalizedComments = Array.isArray(commentsResult)
+          ? commentsResult
+          : [];
+
+        const normalizedLifecycle = Array.isArray(lifecycleResult)
+          ? lifecycleResult
+          : [];
+
+        const normalizedAttachments = Array.isArray(attachmentsResult)
+          ? attachmentsResult
+          : [];
+
+        const completeTicket = {
+          ...ticketResult,
+          comments: normalizedComments,
+          lifecycle: normalizedLifecycle,
+          attachments: normalizedAttachments,
+        };
+
+        setTicket(completeTicket);
+        setComments(normalizedComments);
+        setLifecycle(normalizedLifecycle);
+
+        return completeTicket;
+      } catch (requestError) {
+        setError(
+          requestError?.response?.data?.message ??
+            requestError?.message ??
+            "Unable to load ticket.",
+        );
+
+        throw requestError;
+      } finally {
+        if (initial) {
+          setLoading(false);
+        }
+
+        if (showRefreshing) {
+          setRefreshing(false);
+        }
+      }
+    },
+    [ticketId],
+  );
 
   const loadComments = useCallback(async () => {
     setCommentsLoading(true);
@@ -133,7 +203,30 @@ export default function TicketLifecyclePage() {
     try {
       const result = await ticketService.listComments(ticketId);
 
-      setComments(Array.isArray(result) ? result : []);
+      const normalizedComments = Array.isArray(result) ? result : [];
+
+      setComments(normalizedComments);
+
+      setTicket((currentTicket) => {
+        if (!currentTicket) {
+          return currentTicket;
+        }
+
+        return {
+          ...currentTicket,
+          comments: normalizedComments,
+        };
+      });
+
+      return normalizedComments;
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ??
+          requestError?.message ??
+          "Unable to load ticket comments.",
+      );
+
+      return [];
     } finally {
       setCommentsLoading(false);
     }
@@ -145,102 +238,56 @@ export default function TicketLifecyclePage() {
     try {
       const result = await ticketService.listLifecycle(ticketId);
 
-      setLifecycle(Array.isArray(result) ? result : []);
+      const normalizedLifecycle = Array.isArray(result) ? result : [];
+
+      setLifecycle(normalizedLifecycle);
+
+      setTicket((currentTicket) => {
+        if (!currentTicket) {
+          return currentTicket;
+        }
+
+        return {
+          ...currentTicket,
+          lifecycle: normalizedLifecycle,
+        };
+      });
+
+      return normalizedLifecycle;
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ??
           requestError?.message ??
           "Unable to load ticket activity.",
       );
+
+      return [];
     } finally {
       setLifecycleLoading(false);
     }
   }, [ticketId]);
 
-const loadAll = useCallback(
-  async (initial = false) => {
-    if (initial) {
-      setLoading(true);
-    } else {
-      setRefreshing(true);
-    }
-
-    setCommentsLoading(true);
-    setLifecycleLoading(true);
-    setError("");
-
-    try {
-      const [
-        ticketRecord,
-        commentsResult,
-        lifecycleResult,
-        attachmentsResult,
-      ] = await Promise.all([
-        ticketService.getTicket(ticketId),
-        ticketService.listComments(ticketId),
-        ticketService.listLifecycle(ticketId),
-        ticketService.listAttachments(ticketId),
-      ]);
-
-      if (!ticketRecord) {
-        setTicket(null);
-        setComments([]);
-        setLifecycle([]);
-        setError(
-          TICKET_MODULE_CONFIG.labels.notFound,
-        );
-
-        return;
+  const loadAll = useCallback(
+    async (initial = false) => {
+      try {
+        await refreshTicket({
+          initial,
+          showRefreshing: !initial,
+        });
+      } catch {
+        // refreshTicket already updates the page error state.
       }
-
-      const normalizedComments =
-        Array.isArray(commentsResult)
-          ? commentsResult
-          : [];
-
-      const normalizedLifecycle =
-        Array.isArray(lifecycleResult)
-          ? lifecycleResult
-          : [];
-
-      const normalizedAttachments =
-        Array.isArray(attachmentsResult)
-          ? attachmentsResult
-          : [];
-
-      const completeTicket = {
-        ...ticketRecord,
-        comments: normalizedComments,
-        lifecycle: normalizedLifecycle,
-        attachments: normalizedAttachments,
-      };
-
-      setTicket(completeTicket);
-      setComments(normalizedComments);
-      setLifecycle(normalizedLifecycle);
-    } catch (requestError) {
-      setError(
-        requestError?.response?.data?.message ??
-          requestError?.message ??
-          "Unable to load ticket.",
-      );
-    } finally {
-      setCommentsLoading(false);
-      setLifecycleLoading(false);
-
-      if (initial) {
-        setLoading(false);
-      } else {
-        setRefreshing(false);
-      }
-    }
-  },
-  [ticketId],
-);
+    },
+    [refreshTicket],
+  );
 
   useEffect(() => {
     loadAll(true);
   }, [loadAll]);
+
+  useEffect(() => {
+    setPendingStatus(ticket?.status ?? "");
+  }, [ticket?.status]);
 
   const updateValues = useMemo(
     () => (ticket ? buildUpdateValues(ticket) : {}),
@@ -250,34 +297,15 @@ const loadAll = useCallback(
   const handleUpdate = async (values) => {
     setSaving(true);
     setError("");
+    setNotice("");
 
     try {
-      const updated = await ticketService.updateTicket(ticketId, values);
+      await ticketService.updateTicket(ticketId, values);
 
-      const [commentsResult, lifecycleResult, attachmentsResult] =
-        await Promise.all([
-          ticketService.listComments(ticketId),
-
-          ticketService.listLifecycle(ticketId),
-
-          ticketService.listAttachments(ticketId),
-        ]);
-
-      const completeTicket = {
-        ...updated,
-
-        comments: Array.isArray(commentsResult) ? commentsResult : [],
-
-        lifecycle: Array.isArray(lifecycleResult) ? lifecycleResult : [],
-
-        attachments: Array.isArray(attachmentsResult) ? attachmentsResult : [],
-      };
-
-      setTicket(completeTicket);
-
-      setComments(completeTicket.comments);
-
-      setLifecycle(completeTicket.lifecycle);
+      await refreshTicket({
+        initial: false,
+        showRefreshing: false,
+      });
 
       setEditOpen(false);
 
@@ -293,46 +321,33 @@ const loadAll = useCallback(
     }
   };
 
-  const handleStatusChange = async (event) => {
-    const status = event.target.value;
+  const handleStatusChange = (event) => {
+    setPendingStatus(event.target.value);
+  };
 
-    if (!status || status === ticket.status) {
+  const handleStatusUpdate = async () => {
+    if (!pendingStatus || pendingStatus === ticket?.status) {
       return;
     }
 
     setSaving(true);
     setError("");
+    setNotice("");
 
     try {
-      const updated = await ticketService.updateTicket(ticketId, { status });
+      await ticketService.updateTicket(ticketId, {
+        status: pendingStatus,
+      });
 
-      const [commentsResult, lifecycleResult, attachmentsResult] =
-        await Promise.all([
-          ticketService.listComments(ticketId),
-
-          ticketService.listLifecycle(ticketId),
-
-          ticketService.listAttachments(ticketId),
-        ]);
-
-      const completeTicket = {
-        ...updated,
-
-        comments: Array.isArray(commentsResult) ? commentsResult : [],
-
-        lifecycle: Array.isArray(lifecycleResult) ? lifecycleResult : [],
-
-        attachments: Array.isArray(attachmentsResult) ? attachmentsResult : [],
-      };
-
-      setTicket(completeTicket);
-
-      setComments(completeTicket.comments);
-
-      setLifecycle(completeTicket.lifecycle);
+      await refreshTicket({
+        initial: false,
+        showRefreshing: false,
+      });
 
       setNotice("Ticket status updated successfully.");
     } catch (requestError) {
+      setPendingStatus(ticket?.status ?? "");
+
       setError(
         requestError?.response?.data?.message ??
           requestError?.message ??
@@ -342,7 +357,6 @@ const loadAll = useCallback(
       setSaving(false);
     }
   };
-
   const handleComment = async (comment) => {
     await ticketService.addComment(ticketId, comment);
 
@@ -474,19 +488,33 @@ const loadAll = useCallback(
               md: 4,
             }}
           >
-            <Select
-              fullWidth
-              size="small"
-              value={ticket.status ?? ""}
-              onChange={handleStatusChange}
-              disabled={saving}
-            >
-              {TICKET_STATUS_OPTIONS.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Select
+                fullWidth
+                size="small"
+                value={pendingStatus}
+                onChange={handleStatusChange}
+                disabled={saving}
+              >
+                {TICKET_STATUS_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+
+              <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
+                <Button
+                  variant="contained"
+                  onClick={handleStatusUpdate}
+                  disabled={
+                    saving || !pendingStatus || pendingStatus === ticket.status
+                  }
+                >
+                  Update
+                </Button>
+              </CanAccess>
+            </Stack>
           </Grid>
 
           <Grid
