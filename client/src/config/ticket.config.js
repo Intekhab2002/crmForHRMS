@@ -187,7 +187,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     type: "select",
     entity: "contact",
     options: apiOptions("/departments"),
-    form: { create: true, update: true, detail: true },
+    form: { create: true, update: true, detail: false },
     grid: { visible: false },
   },
   {

@@ -563,6 +563,7 @@ export default function TicketLifecyclePage() {
               p: 1,
             }}
           >
+            
             <TicketOverview
               ticket={ticket}
               fields={TICKET_FIELD_CONFIG}

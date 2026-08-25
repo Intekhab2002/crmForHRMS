@@ -1,9 +1,15 @@
 export function getOption(options = [], value) {
-  return options.find((option) => option.value === value);
+  if (!Array.isArray(options)) {
+    return null;
+  }
+
+  return options.find(
+    (option) => option.value === value,
+  );
 }
 
-export function getField(fields = [], key) {
-  return fields.find((field) => field.key === key);
+export function getField(fields = [], name) {
+  return fields.find((field) => field.name === name);
 }
 
 export function formatDateTime(value, fallback = "Not available") {
@@ -46,7 +52,7 @@ export function formatTicketValue(field, value, fallback = "Not available") {
   if (value === null || value === undefined || value === "") return fallback;
 
   if (field?.type === "select") {
-    return getOption(field?.options, value)?.label ?? value;
+    return getOption(field.options, value)?.label ?? value;
   }
 
   if (field?.type === "date") {
