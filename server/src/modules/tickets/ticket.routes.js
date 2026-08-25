@@ -140,7 +140,7 @@ router.get(
   "/:ticketId/attachments/:attachmentId/view",
   authenticate,
   requirePermission(TICKET_ATTACHMENT),
-  validateParams(ticketValidator.ticketIdParamSchema),
+  validateParams(ticketValidator.ticketAttachmentParamSchema),
   ticketAttachmentController.viewAttachment,
 );
 
@@ -148,7 +148,7 @@ router.get(
   "/:ticketId/attachments/:attachmentId/download",
   authenticate,
   requirePermission(TICKET_ATTACHMENT),
-  validateParams(ticketValidator.ticketIdParamSchema),
+  validateParams(ticketValidator.ticketAttachmentParamSchema),
   ticketAttachmentController.downloadAttachment,
 );
 
@@ -156,7 +156,7 @@ router.delete(
   "/:ticketId/attachments/:attachmentId",
   authenticate,
   requirePermission(TICKET_ATTACHMENT),
-  validateParams(ticketValidator.ticketIdParamSchema),
+  validateParams(ticketValidator.ticketAttachmentParamSchema),
   ticketAttachmentController.deleteAttachment,
 );
 

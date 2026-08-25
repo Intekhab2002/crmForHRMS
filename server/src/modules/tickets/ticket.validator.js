@@ -78,6 +78,13 @@ const ticketIdParamSchema = z.object({
     ticketId: uuidSchema,
 }).strict();
 
+const ticketAttachmentParamSchema = z
+    .object({
+        ticketId: uuidSchema,
+        attachmentId: uuidSchema,
+    })
+    .strict();
+
 const positiveIntegerQuery = z
     .string()
     .regex(/^\d+$/, "Value must be a positive integer.")
@@ -137,6 +144,7 @@ export function validateConfiguredOptions(payload) {
 
 export default Object.freeze({
     ticketIdParamSchema,
+    ticketAttachmentParamSchema,
     ticketListQuerySchema,
     createTicketSchema,
     updateTicketSchema,

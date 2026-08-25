@@ -22,14 +22,47 @@ export function formatDateTime(value, fallback = "Not available") {
   }).format(date);
 }
 
-export function formatDate(value, fallback = "Not available") {
-  if (!value) return fallback;
+export function formatDate(
+  value,
+  fallback = "Not available",
+) {
+  if (value === null || value === undefined || value === "") {
+    return fallback;
+  }
 
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return fallback;
+  const normalizedValue = String(value).trim();
 
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
+  // API may return either:
+  // 2026-08-04
+  // or:
+  // 2026-08-04T18:30:00.000Z
+  const datePart = normalizedValue.slice(0, 10);
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+    return fallback;
+  }
+
+  const [year, month, day] = datePart
+    .split("-")
+    .map(Number);
+
+  const date = new Date(
+    Date.UTC(
+      year,
+      month - 1,
+      day,
+    ),
+  );
+
+  if (Number.isNaN(date.getTime())) {
+    return fallback;
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
   }).format(date);
 }
 
@@ -57,29 +90,7 @@ export function formatTicketValue(field, value, fallback = "Not available") {
     return formatDate(value, fallback);
   }
 
-  if (field.type === "date") {
-    return formatDateValue(value);
-  }
+
 
   return String(value);
-}
-export function formatDateValue(
-  value,
-  fallback = "Not available",
-) {
-  if (!value) {
-    return fallback;
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return fallback;
-  }
-
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date);
 }

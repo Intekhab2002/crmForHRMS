@@ -8,6 +8,7 @@ import ticketValidator from "./ticket.validator.js";
 import { TICKET_ERROR_CODES, TICKET_STATUS } from "./ticket.constants.js";
 import { TICKET_CONFIG } from "./ticket.config.js";
 import ticketNumberService from "./ticketNumber.service.js";
+import { randomUUID } from "node:crypto";
 
 function getContactValue(payload, key) {
   if (key === "name") {
@@ -207,6 +208,7 @@ async function createTicket(payload, authenticatedUserId) {
 
   return executeTransaction(async (tx) => {
     const { ticket, contact } = splitPayload(payload);
+    ticket.id ??= randomUUID();
     ticket.ticket_number = await ticketNumberService.generateTicketNumber(tx);
 
     ticket.created_by = authenticatedUserId;
@@ -304,6 +306,8 @@ async function createTicket(payload, authenticatedUserId) {
     }
 
     await ticketRepository.createTicket(ticket, tx);
+
+    return ticketRepository.findTicketById(ticket.id ?? ticket.ticket_id, tx);
   });
 }
 
@@ -379,7 +383,9 @@ async function updateTicket(ticketId, payload) {
       ticket.contact = payload.contact;
     }
 
-    return ticketRepository.updateTicket(ticketId, ticket, tx);
+    await ticketRepository.updateTicket(ticketId, ticket, tx);
+
+    return ticketRepository.findTicketById(ticketId, tx);
   });
 }
 async function getAssignableUsers() {
