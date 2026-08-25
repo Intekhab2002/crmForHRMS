@@ -136,23 +136,16 @@ async function validateReferences(data, tx) {
     }
   }
 
-  if (data.caller_department) {
-    const callerDepartment = await ticketRepository.findDepartment(
-      data.caller_department,
-      tx,
-    );
+  if (!callerDepartment) {
+    throw AppError.notFound("Caller department not found.", {
+      code: TICKET_ERROR_CODES.DEPARTMENT_NOT_FOUND,
+    });
+  }
 
-    if (!callerDepartment) {
-      throw AppError.notFound("Caller department not found.", {
-        code: TICKET_ERROR_CODES.DEPARTMENT_NOT_FOUND,
-      });
-    }
-
-    if (callerDepartment.status !== "active") {
-      throw AppError.conflict("Caller department is inactive.", {
-        code: TICKET_ERROR_CODES.DEPARTMENT_INACTIVE,
-      });
-    }
+  if (callerDepartment.status !== "active") {
+    throw AppError.conflict("Caller department is inactive.", {
+      code: TICKET_ERROR_CODES.DEPARTMENT_INACTIVE,
+    });
   }
 }
 
@@ -244,13 +237,7 @@ async function createTicket(payload, authenticatedUserId) {
       );
     }
 
-    await validateReferences(
-      {
-        ...ticket,
-        caller_department: contact.caller_department,
-      },
-      tx,
-    );
+    await validateReferences(ticket, tx);
 
     let contactId = ticket.contact ?? null;
 
@@ -282,7 +269,7 @@ async function createTicket(payload, authenticatedUserId) {
           mobile,
           email: getContactValue(contact, "email_id"),
           district: getContactValue(contact, "district"),
-          departmentId: getContactValue(contact, "caller_department"),
+          departmentId: getContactValue(contact, "ticket.department ?? null"),
         },
         tx,
       );
@@ -354,7 +341,7 @@ async function updateTicket(ticketId, payload) {
           mobile: contact.mobile_phone,
           email: contact.email_id,
           district: contact.district,
-          departmentId: contact.caller_department,
+          departmentId: ticket.department ?? current.department_id,
         },
         tx,
       );

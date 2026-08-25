@@ -154,16 +154,6 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     grid: { visible: true, width: 170 },
   },
   {
-    key: "contact_name",
-    label: "Contact Name",
-    type: "text",
-    entity: "contact",
-    searchable: true,
-    placeholder: "Contact name",
-    form: { create: true, update: true, detail: true },
-    grid: { visible: true, width: 180 },
-  },
-  {
     key: "email_id",
     label: "Email Id",
     type: "email",
@@ -180,15 +170,6 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     options: BIHAR_DISTRICTS,
     form: { create: true, update: true, detail: true },
     grid: { visible: true, width: 150 },
-  },
-  {
-    key: "caller_department",
-    label: "Caller Department",
-    type: "select",
-    entity: "contact",
-    options: apiOptions("/departments"),
-    form: { create: true, update: true, detail: false },
-    grid: { visible: false },
   },
   {
     key: "department",

@@ -351,17 +351,6 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     maxLength: 320,
   }),
 
-  contact_name: Object.freeze({
-    key: "contact_name",
-    label: "Contact Name",
-    entity: "contact",
-    column: "name",
-    type: "text",
-    dataType: "string",
-    editable: true,
-    maxLength: 200,
-  }),
-
   district: Object.freeze({
     key: "district",
     label: "District",
@@ -371,17 +360,6 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "string",
     editable: true,
     options: Object.freeze([]),
-  }),
-
-  caller_department: Object.freeze({
-    key: "caller_department",
-    label: "Caller Department",
-    entity: "contact",
-    column: "department_id",
-    type: "select",
-    dataType: "uuid",
-    editable: true,
-    reference: "departments",
   }),
 });
 
