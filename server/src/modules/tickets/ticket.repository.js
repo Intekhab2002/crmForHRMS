@@ -45,9 +45,7 @@ function quoteIdentifier(identifier) {
 
   return `t.${identifier}`;
 }
-const SYSTEM_TICKET_COLUMNS = Object.freeze([
-    "ticket_number",
-]);
+const SYSTEM_TICKET_COLUMNS = Object.freeze(["ticket_number"]);
 
 const TICKET_SELECT = `
     t.id,
@@ -237,12 +235,12 @@ async function findTickets(filters, tx = null) {
 async function createTicket(data, tx = null) {
   const executor = getQueryExecutor(tx);
 
-const fieldKeys = Object.keys(data).filter(
+  const fieldKeys = Object.keys(data).filter(
     (key) =>
-        key !== "id" &&
-        !SYSTEM_TICKET_COLUMNS.includes(key) &&
-        getColumnForField(key),
-);
+      key !== "id" &&
+      !SYSTEM_TICKET_COLUMNS.includes(key) &&
+      getColumnForField(key),
+  );
 
   const columns = [
     "ticket_number",

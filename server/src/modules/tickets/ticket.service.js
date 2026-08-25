@@ -207,8 +207,7 @@ async function createTicket(payload, authenticatedUserId) {
 
   return executeTransaction(async (tx) => {
     const { ticket, contact } = splitPayload(payload);
-    ticket.ticket_number =
-    await ticketNumberService.generateTicketNumber(tx);
+    ticket.ticket_number = await ticketNumberService.generateTicketNumber(tx);
 
     ticket.created_by = authenticatedUserId;
 
@@ -290,6 +289,19 @@ async function createTicket(payload, authenticatedUserId) {
     }
 
     ticket.contact = contactId;
+
+    const createdAt = new Date();
+    if (ticket.assigned_user_id) {
+      ticket.assigned_at = createdAt;
+    }
+
+    if (ticket.status === "RESOLVED" || ticket.status === "CLOSED") {
+      ticket.resolved_at = createdAt;
+    }
+
+    if (ticket.status === "CLOSED") {
+      ticket.closed_at = createdAt;
+    }
 
     return ticketRepository.createTicket(ticket, tx);
   });
