@@ -157,87 +157,86 @@ export default function TicketLifecyclePage() {
     }
   }, [ticketId]);
 
-  const loadAll = useCallback(
-    async (initial = false) => {
-      if (initial) {
-        setLoading(true);
-      } else {
-        setRefreshing(true);
+const loadAll = useCallback(
+  async (initial = false) => {
+    if (initial) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
+
+    setCommentsLoading(true);
+    setLifecycleLoading(true);
+    setError("");
+
+    try {
+      const [
+        ticketRecord,
+        commentsResult,
+        lifecycleResult,
+        attachmentsResult,
+      ] = await Promise.all([
+        ticketService.getTicket(ticketId),
+        ticketService.listComments(ticketId),
+        ticketService.listLifecycle(ticketId),
+        ticketService.listAttachments(ticketId),
+      ]);
+
+      if (!ticketRecord) {
+        setTicket(null);
+        setComments([]);
+        setLifecycle([]);
+        setError(
+          TICKET_MODULE_CONFIG.labels.notFound,
+        );
+
+        return;
       }
 
-      setError("");
-
-      try {
-        const [
-          ticketRecord,
-          commentsResult,
-          lifecycleResult,
-          attachmentsResult,
-        ] = await Promise.all([
-          ticketService.getTicket(ticketId),
-
-          ticketService.listComments(ticketId),
-
-          ticketService.listLifecycle(ticketId),
-
-          ticketService.listAttachments(ticketId),
-        ]);
-
-        if (!ticketRecord) {
-          setTicket(null);
-
-          setComments([]);
-
-          setLifecycle([]);
-
-          setError(TICKET_MODULE_CONFIG.labels.notFound);
-
-          return;
-        }
-
-        const normalizedComments = Array.isArray(commentsResult)
+      const normalizedComments =
+        Array.isArray(commentsResult)
           ? commentsResult
           : [];
 
-        const normalizedLifecycle = Array.isArray(lifecycleResult)
+      const normalizedLifecycle =
+        Array.isArray(lifecycleResult)
           ? lifecycleResult
           : [];
 
-        const normalizedAttachments = Array.isArray(attachmentsResult)
+      const normalizedAttachments =
+        Array.isArray(attachmentsResult)
           ? attachmentsResult
           : [];
 
-        const completeTicket = {
-          ...ticketRecord,
+      const completeTicket = {
+        ...ticketRecord,
+        comments: normalizedComments,
+        lifecycle: normalizedLifecycle,
+        attachments: normalizedAttachments,
+      };
 
-          comments: normalizedComments,
+      setTicket(completeTicket);
+      setComments(normalizedComments);
+      setLifecycle(normalizedLifecycle);
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ??
+          requestError?.message ??
+          "Unable to load ticket.",
+      );
+    } finally {
+      setCommentsLoading(false);
+      setLifecycleLoading(false);
 
-          lifecycle: normalizedLifecycle,
-
-          attachments: normalizedAttachments,
-        };
-
-        setTicket(completeTicket);
-
-        setComments(normalizedComments);
-
-        setLifecycle(normalizedLifecycle);
-      } catch (requestError) {
-        setError(
-          requestError?.response?.data?.message ??
-            requestError?.message ??
-            "Unable to load ticket.",
-        );
-      } finally {
-        if (initial) {
-          setLoading(false);
-        } else {
-          setRefreshing(false);
-        }
+      if (initial) {
+        setLoading(false);
+      } else {
+        setRefreshing(false);
       }
-    },
-    [ticketId],
-  );
+    }
+  },
+  [ticketId],
+);
 
   useEffect(() => {
     loadAll(true);
