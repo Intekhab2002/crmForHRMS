@@ -55,15 +55,33 @@ const TICKET_SELECT = `
     t.priority,
     t.status,
     t.requester_user_id,
-    requester.display_name AS requester_name,
+    TRIM(
+    CONCAT_WS(
+        ' ',
+        requester.first_name,
+        requester.last_name
+    )
+) AS requester_name,
     t.created_by_user_id,
-    creator.display_name AS created_by_name,
+    TRIM(
+    CONCAT_WS(
+        ' ',
+        creator.first_name,
+        creator.last_name
+    )
+) AS created_by_name,
     t.organization_id,
     organization.name AS organization_name,
     t.department_id,
     department.name AS department_name,
     t.assigned_user_id,
-    assignee.display_name AS assigned_user_name,
+    TRIM(
+    CONCAT_WS(
+        ' ',
+        assignee.first_name,
+        assignee.last_name
+    )
+) AS assigned_user_name,
     t.contact_id,
     contact.name AS contact_name,
     contact.mobile_phone,

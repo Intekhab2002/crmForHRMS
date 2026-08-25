@@ -2,8 +2,8 @@ export function getOption(options = [], value) {
   return options.find((option) => option.value === value);
 }
 
-export function getField(fields = [], name) {
-  return fields.find((field) => field.name === name);
+export function getField(fields = [], key) {
+  return fields.find((field) => field.key === key);
 }
 
 export function formatDateTime(value, fallback = "Not available") {

@@ -1,4 +1,4 @@
-import  { useMemo } from "react";
+import { useMemo } from "react";
 import { Box, Paper, Typography } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import { DataGrid, GridActionsCellItem } from "@mui/x-data-grid";
@@ -15,7 +15,10 @@ function canReadColumn(column, hasPermission) {
 }
 
 function renderColumnCell(column, field, fallback) {
-  if (column.presentation === "statusChip" || column.presentation === "priorityChip") {
+  if (
+    column.presentation === "statusChip" ||
+    column.presentation === "priorityChip"
+  ) {
     return (params) => (
       <OptionChip
         value={params.row[column.field]}
@@ -28,7 +31,13 @@ function renderColumnCell(column, field, fallback) {
   if (column.presentation === "optionLabel") {
     return (params) => (
       <Typography variant="body2">
-        {formatTicketValue(field, params.row[column.field], fallback)}
+        {column.valueIsDisplay
+          ? params.row[column.field] ?? fallback
+          : formatTicketValue(
+              field,
+              params.row[column.field],
+              fallback,
+            )}
       </Typography>
     );
   }
@@ -36,14 +45,16 @@ function renderColumnCell(column, field, fallback) {
   if (column.presentation === "dateTime") {
     return (params) => (
       <Typography variant="body2">
-        {formatDateTime(params.row[column.field], fallback)}
+        {formatDateTime(
+          params.row[column.field],
+          fallback,
+        )}
       </Typography>
     );
   }
 
   return undefined;
 }
-
 export default function TicketDataGrid({
   rows,
   fields,
@@ -80,7 +91,7 @@ export default function TicketDataGrid({
             };
           }
 
-          const field = getField(fields, column.field);
+          const field = getField(fields, column.sourceField ?? column.field);
 
           return {
             ...column,

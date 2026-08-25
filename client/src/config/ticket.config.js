@@ -179,7 +179,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     required: true,
     options: apiOptions("/departments"),
     form: { create: true, update: true, detail: true },
-    grid: { visible: true, width: 190 },
+    grid: { visible: true, width: 190, valueField: "departmentName",valueIsDisplay: true, },
   },
   {
     key: "category",
@@ -265,7 +265,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     entity: "ticket",
     options: apiOptions("/tickets/assignable-users", "id", "full_name"),
     form: { create: true, update: true, detail: true },
-    grid: { visible: true, width: 170 },
+    grid: { visible: true, width: 170, valueField: "assignedUserName",valueIsDisplay: true, },
   },
   {
     key: "severity",
@@ -412,15 +412,26 @@ export const TICKET_FORM_CONFIG = Object.freeze({
 });
 
 export const TICKET_GRID_CONFIG = Object.freeze({
-  columns: TICKET_FIELD_CONFIG.filter((field) => field.grid.visible).map(
-    (field) => ({
-      field: field.key,
-      headerName: field.label,
-      width: field.grid.width,
-      flex: field.grid.flex,
-      presentation: field.type === "select" ? "optionLabel" : undefined,
+  columns: TICKET_FIELD_CONFIG
+    .filter((field) => field.grid?.visible)
+    .map((field) => {
+      const grid = field.grid ?? {};
+
+      return {
+        field: grid.valueField ?? field.key,
+        sourceField: field.key,
+        headerName: field.label,
+        width: grid.width,
+        flex: grid.flex,
+        presentation:
+          grid.presentation ??
+          (field.type === "select"
+            ? "optionLabel"
+            : undefined),
+        valueIsDisplay: grid.valueIsDisplay === true,
+      };
     }),
-  ),
+
   action: {
     field: "actions",
     type: "actions",
@@ -428,6 +439,7 @@ export const TICKET_GRID_CONFIG = Object.freeze({
     width: 90,
     actionLabel: "Open ticket",
   },
+
   pageSizeOptions: [10, 25, 50],
   defaultPageSize: 10,
 });
