@@ -401,16 +401,6 @@ export const TICKET_CONFIG = Object.freeze({
     contactFields,
 });
 
-export const TICKET_NUMBER_CONFIG = Object.freeze({
-    prefix: "TKT",
-    separator: "-",
-    includeYear: true,
-    restartEachYear: true,
-    startingNumber: 1,
-    padding: 6,
-});
-
- TICKET_NUMBER_CONFIG;
 export function getField(fieldKey) {
     return fieldsByKey[fieldKey] ?? null;
 }
