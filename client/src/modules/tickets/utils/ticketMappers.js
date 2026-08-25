@@ -55,6 +55,8 @@ export function mapTicketFromApi(ticket) {
 
   return {
     id: ticket.id,
+    ticketNumber:ticket.ticket_number,
+    mobilePhone: ticket.mobile_phone,
     reference: ticket.ticket_number,
     subject: ticket.subject ?? "",
     description: ticket.description ?? "",

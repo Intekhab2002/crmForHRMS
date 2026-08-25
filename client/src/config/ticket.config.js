@@ -106,6 +106,25 @@ export const CURRENT_BILL_STATUS_OPTIONS = Object.freeze([
 
 export const TICKET_FIELD_CONFIG = Object.freeze([
   {
+    key: "ticketNumber",
+    label: "Ticket Number",
+    type: "text",
+    entity: "ticket",
+    readOnly: true,
+
+    form: {
+      create: false,
+      update: false,
+      detail: true,
+    },
+
+    grid: {
+      visible: true,
+      width: 180,
+    },
+  },
+
+  {
     key: "name",
     label: "Name",
     type: "text",
@@ -179,7 +198,12 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     required: true,
     options: apiOptions("/departments"),
     form: { create: true, update: true, detail: true },
-    grid: { visible: true, width: 190, valueField: "departmentName",valueIsDisplay: true, },
+    grid: {
+      visible: true,
+      width: 190,
+      valueField: "departmentName",
+      valueIsDisplay: true,
+    },
   },
   {
     key: "category",
@@ -200,7 +224,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     maxLength: 255,
     placeholder: "Enter ticket subject",
     form: { create: true, update: true, detail: true },
-    grid: { visible: true, width: 240, flex: 1 },
+    grid: { visible: true, width: 200 },
   },
   {
     key: "problem_statement",
@@ -265,7 +289,12 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     entity: "ticket",
     options: apiOptions("/tickets/assignable-users", "id", "full_name"),
     form: { create: true, update: true, detail: true },
-    grid: { visible: true, width: 170, valueField: "assignedUserName",valueIsDisplay: true, },
+    grid: {
+      visible: true,
+      width: 170,
+      valueField: "assignedUserName",
+      valueIsDisplay: true,
+    },
   },
   {
     key: "severity",
@@ -282,7 +311,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     type: "date",
     entity: "ticket",
     form: { create: true, update: true, detail: true },
-    grid: { visible: true, width: 180 },
+    grid: { visible: true, width: 180, presentation: "dateTime" },
   },
   {
     key: "duplicate_ticket",
@@ -299,7 +328,6 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     type: "select",
     entity: "ticket",
     readOnly: true,
-
     options: {
       source: "authenticatedUser",
       valueKey: "id",
