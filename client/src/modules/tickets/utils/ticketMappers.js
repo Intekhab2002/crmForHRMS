@@ -58,7 +58,6 @@ export function mapTicketFromApi(ticket) {
     reference: ticket.ticket_number,
     subject: ticket.subject ?? "",
     description: ticket.description ?? "",
-    issueType: ticket.issue_type ?? "",
     priority: ticket.priority ?? "",
     status: ticket.status ?? "",
 

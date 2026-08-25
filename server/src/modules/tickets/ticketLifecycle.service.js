@@ -70,10 +70,6 @@ function collectFieldChanges(current, data) {
             database: "description",
         },
         {
-            input: "issueType",
-            database: "issue_type",
-        },
-        {
             input: "priority",
             database: "priority",
         },
