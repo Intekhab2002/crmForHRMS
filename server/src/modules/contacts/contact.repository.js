@@ -4,7 +4,7 @@ import {
     getQueryExecutor,
 } from "../../database/queryExecutor.js";
 
-const CONTACT_FIELDS = `
+const CONTACT_SELECT_FIELDS = `
     c.id,
     c.organization_id,
     c.department_id,
@@ -16,8 +16,20 @@ const CONTACT_FIELDS = `
     c.updated_at
 `;
 
+const CONTACT_RETURNING_FIELDS = `
+    id,
+    organization_id,
+    department_id,
+    name,
+    mobile_phone,
+    email,
+    district,
+    created_at,
+    updated_at
+`;
+
 const FIND_CONTACT_BY_MOBILE = `
-    SELECT ${CONTACT_FIELDS}
+    SELECT ${CONTACT_SELECT_FIELDS}
     FROM contacts c
     WHERE
         c.organization_id = $1::UUID
@@ -26,7 +38,7 @@ const FIND_CONTACT_BY_MOBILE = `
 `;
 
 const FIND_CONTACT_BY_ID = `
-    SELECT ${CONTACT_FIELDS}
+    SELECT ${CONTACT_SELECT_FIELDS}
     FROM contacts c
     WHERE c.id = $1::UUID
     LIMIT 1;
@@ -51,7 +63,7 @@ const CREATE_CONTACT = `
         $6::VARCHAR,
         $7::VARCHAR
     )
-    RETURNING ${CONTACT_FIELDS};
+    RETURNING ${CONTACT_RETURNING_FIELDS};
 `;
 
 const UPDATE_CONTACT = `
@@ -64,7 +76,7 @@ const UPDATE_CONTACT = `
         district = COALESCE($6::VARCHAR, district),
         updated_at = CURRENT_TIMESTAMP
     WHERE id = $1::UUID
-    RETURNING ${CONTACT_FIELDS};
+    RETURNING ${CONTACT_RETURNING_FIELDS};
 `;
 
 async function findContactByMobile(organizationId, mobile, tx = null) {

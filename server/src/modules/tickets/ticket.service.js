@@ -133,6 +133,25 @@ async function validateReferences(data, tx) {
       });
     }
   }
+
+  if (data.caller_department) {
+    const callerDepartment = await ticketRepository.findDepartment(
+      data.caller_department,
+      tx,
+    );
+
+    if (!callerDepartment) {
+      throw AppError.notFound("Caller department not found.", {
+        code: TICKET_ERROR_CODES.DEPARTMENT_NOT_FOUND,
+      });
+    }
+
+    if (callerDepartment.status !== "active") {
+      throw AppError.conflict("Caller department is inactive.", {
+        code: TICKET_ERROR_CODES.DEPARTMENT_INACTIVE,
+      });
+    }
+  }
 }
 
 async function getTicket(ticketId) {
@@ -221,7 +240,13 @@ async function createTicket(payload, authenticatedUserId) {
       );
     }
 
-    await validateReferences(ticket, tx);
+    await validateReferences(
+      {
+        ...ticket,
+        caller_department: contact.caller_department,
+      },
+      tx,
+    );
 
     let contactId = ticket.contact ?? null;
 
