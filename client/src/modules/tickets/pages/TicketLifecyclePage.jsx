@@ -47,8 +47,7 @@ import {
   TICKET_STATUS_OPTIONS,
 } from "../../../config/ticket.config";
 
-const DETAIL_FIELDS = TICKET_FIELD_CONFIG
-  .filter((field) => field.form?.detail)
+const DETAIL_FIELDS = TICKET_FIELD_CONFIG.filter((field) => field.form?.detail)
   .map((field) => field.key)
   .filter((key) => key !== "ticketNumber");
 
@@ -75,9 +74,8 @@ function toFormDate(value) {
 }
 
 function buildUpdateValues(ticket) {
-  return TICKET_FIELD_CONFIG
-    .filter((field) => field.form?.update)
-    .reduce((values, field) => {
+  return TICKET_FIELD_CONFIG.filter((field) => field.form?.update).reduce(
+    (values, field) => {
       let value = ticket[field.key] ?? "";
 
       if (field.key === "expected_resolution_date") {
@@ -87,14 +85,15 @@ function buildUpdateValues(ticket) {
       values[field.key] = value;
 
       return values;
-    }, {});
+    },
+    {},
+  );
 }
 
 function getStatusLabel(status) {
   return (
-    TICKET_STATUS_OPTIONS?.find(
-      (option) => option.value === status,
-    )?.label ?? status
+    TICKET_STATUS_OPTIONS?.find((option) => option.value === status)?.label ??
+    status
   );
 }
 
@@ -132,14 +131,9 @@ export default function TicketLifecyclePage() {
     setCommentsLoading(true);
 
     try {
-      const result =
-        await ticketService.listComments(ticketId);
+      const result = await ticketService.listComments(ticketId);
 
-      setComments(
-        Array.isArray(result)
-          ? result
-          : [],
-      );
+      setComments(Array.isArray(result) ? result : []);
     } finally {
       setCommentsLoading(false);
     }
@@ -149,14 +143,9 @@ export default function TicketLifecyclePage() {
     setLifecycleLoading(true);
 
     try {
-      const result =
-        await ticketService.listLifecycle(ticketId);
+      const result = await ticketService.listLifecycle(ticketId);
 
-      setLifecycle(
-        Array.isArray(result)
-          ? result
-          : [],
-      );
+      setLifecycle(Array.isArray(result) ? result : []);
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ??
@@ -179,18 +168,60 @@ export default function TicketLifecyclePage() {
       setError("");
 
       try {
-        const [ticketRecord] =
-          await Promise.all([
-            loadTicket(),
-            loadComments(),
-            loadLifecycle(),
-          ]);
+        const [
+          ticketRecord,
+          commentsResult,
+          lifecycleResult,
+          attachmentsResult,
+        ] = await Promise.all([
+          ticketService.getTicket(ticketId),
+
+          ticketService.listComments(ticketId),
+
+          ticketService.listLifecycle(ticketId),
+
+          ticketService.listAttachments(ticketId),
+        ]);
 
         if (!ticketRecord) {
-          setError(
-            TICKET_MODULE_CONFIG.labels.notFound,
-          );
+          setTicket(null);
+
+          setComments([]);
+
+          setLifecycle([]);
+
+          setError(TICKET_MODULE_CONFIG.labels.notFound);
+
+          return;
         }
+
+        const normalizedComments = Array.isArray(commentsResult)
+          ? commentsResult
+          : [];
+
+        const normalizedLifecycle = Array.isArray(lifecycleResult)
+          ? lifecycleResult
+          : [];
+
+        const normalizedAttachments = Array.isArray(attachmentsResult)
+          ? attachmentsResult
+          : [];
+
+        const completeTicket = {
+          ...ticketRecord,
+
+          comments: normalizedComments,
+
+          lifecycle: normalizedLifecycle,
+
+          attachments: normalizedAttachments,
+        };
+
+        setTicket(completeTicket);
+
+        setComments(normalizedComments);
+
+        setLifecycle(normalizedLifecycle);
       } catch (requestError) {
         setError(
           requestError?.response?.data?.message ??
@@ -205,11 +236,7 @@ export default function TicketLifecyclePage() {
         }
       }
     },
-    [
-      loadComments,
-      loadLifecycle,
-      loadTicket,
-    ],
+    [ticketId],
   );
 
   useEffect(() => {
@@ -217,10 +244,7 @@ export default function TicketLifecyclePage() {
   }, [loadAll]);
 
   const updateValues = useMemo(
-    () =>
-      ticket
-        ? buildUpdateValues(ticket)
-        : {},
+    () => (ticket ? buildUpdateValues(ticket) : {}),
     [ticket],
   );
 
@@ -229,24 +253,36 @@ export default function TicketLifecyclePage() {
     setError("");
 
     try {
-      const updated =
-        await ticketService.updateTicket(
-          ticketId,
-          values,
-        );
+      const updated = await ticketService.updateTicket(ticketId, values);
 
-      setTicket(updated);
+      const [commentsResult, lifecycleResult, attachmentsResult] =
+        await Promise.all([
+          ticketService.listComments(ticketId),
+
+          ticketService.listLifecycle(ticketId),
+
+          ticketService.listAttachments(ticketId),
+        ]);
+
+      const completeTicket = {
+        ...updated,
+
+        comments: Array.isArray(commentsResult) ? commentsResult : [],
+
+        lifecycle: Array.isArray(lifecycleResult) ? lifecycleResult : [],
+
+        attachments: Array.isArray(attachmentsResult) ? attachmentsResult : [],
+      };
+
+      setTicket(completeTicket);
+
+      setComments(completeTicket.comments);
+
+      setLifecycle(completeTicket.lifecycle);
 
       setEditOpen(false);
 
-      await Promise.all([
-        loadComments(),
-        loadLifecycle(),
-      ]);
-
-      setNotice(
-        "Ticket updated successfully.",
-      );
+      setNotice("Ticket updated successfully.");
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ??
@@ -261,10 +297,7 @@ export default function TicketLifecyclePage() {
   const handleStatusChange = async (event) => {
     const status = event.target.value;
 
-    if (
-      !status ||
-      status === ticket.status
-    ) {
+    if (!status || status === ticket.status) {
       return;
     }
 
@@ -272,19 +305,34 @@ export default function TicketLifecyclePage() {
     setError("");
 
     try {
-      const updated =
-        await ticketService.updateTicket(
-          ticketId,
-          { status },
-        );
+      const updated = await ticketService.updateTicket(ticketId, { status });
 
-      setTicket(updated);
+      const [commentsResult, lifecycleResult, attachmentsResult] =
+        await Promise.all([
+          ticketService.listComments(ticketId),
 
-      await loadLifecycle();
+          ticketService.listLifecycle(ticketId),
 
-      setNotice(
-        "Ticket status updated successfully.",
-      );
+          ticketService.listAttachments(ticketId),
+        ]);
+
+      const completeTicket = {
+        ...updated,
+
+        comments: Array.isArray(commentsResult) ? commentsResult : [],
+
+        lifecycle: Array.isArray(lifecycleResult) ? lifecycleResult : [],
+
+        attachments: Array.isArray(attachmentsResult) ? attachmentsResult : [],
+      };
+
+      setTicket(completeTicket);
+
+      setComments(completeTicket.comments);
+
+      setLifecycle(completeTicket.lifecycle);
+
+      setNotice("Ticket status updated successfully.");
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ??
@@ -297,39 +345,21 @@ export default function TicketLifecyclePage() {
   };
 
   const handleComment = async (comment) => {
-    await ticketService.addComment(
-      ticketId,
-      comment,
-    );
+    await ticketService.addComment(ticketId, comment);
 
-    await Promise.all([
-      loadComments(),
-      loadLifecycle(),
-    ]);
+    await Promise.all([loadComments(), loadLifecycle()]);
 
-    setNotice(
-      COMMENT_CONFIG.successMessage,
-    );
+    setNotice(COMMENT_CONFIG.successMessage);
   };
 
   if (loading) {
     return (
       <Stack spacing={2}>
-        <Skeleton
-          variant="text"
-          width={320}
-          height={48}
-        />
+        <Skeleton variant="text" width={320} height={48} />
 
-        <Skeleton
-          variant="rounded"
-          height={120}
-        />
+        <Skeleton variant="rounded" height={120} />
 
-        <Skeleton
-          variant="rounded"
-          height={500}
-        />
+        <Skeleton variant="rounded" height={500} />
       </Stack>
     );
   }
@@ -344,9 +374,7 @@ export default function TicketLifecyclePage() {
               component={Link}
               to="/tickets"
               variant="outlined"
-              startIcon={
-                <ArrowBackOutlinedIcon />
-              }
+              startIcon={<ArrowBackOutlinedIcon />}
             >
               Back to Tickets
             </Button>
@@ -356,17 +384,12 @@ export default function TicketLifecyclePage() {
         <Alert
           severity="error"
           action={
-            <Button
-              color="inherit"
-              size="small"
-              onClick={() => loadAll(true)}
-            >
+            <Button color="inherit" size="small" onClick={() => loadAll(true)}>
               Retry
             </Button>
           }
         >
-          {error ||
-            TICKET_MODULE_CONFIG.labels.notFound}
+          {error || TICKET_MODULE_CONFIG.labels.notFound}
         </Alert>
       </Stack>
     );
@@ -380,16 +403,10 @@ export default function TicketLifecyclePage() {
       }}
     >
       <PageHeader
-        title={
-          ticket.ticketNumber ??
-          ticket.reference
-        }
+        title={ticket.ticketNumber ?? ticket.reference}
         description={ticket.subject}
         actions={
-          <Stack
-            direction="row"
-            spacing={1}
-          >
+          <Stack direction="row" spacing={1}>
             <IconButton
               onClick={() => loadAll(false)}
               disabled={refreshing}
@@ -402,9 +419,7 @@ export default function TicketLifecyclePage() {
               component={Link}
               to="/tickets"
               variant="outlined"
-              startIcon={
-                <ArrowBackOutlinedIcon />
-              }
+              startIcon={<ArrowBackOutlinedIcon />}
             >
               Back
             </Button>
@@ -413,30 +428,16 @@ export default function TicketLifecyclePage() {
       />
 
       {notice ? (
-        <Alert
-          severity="success"
-          onClose={() => setNotice("")}
-        >
+        <Alert severity="success" onClose={() => setNotice("")}>
           {notice}
         </Alert>
       ) : null}
 
-      {error ? (
-        <Alert severity="error">
-          {error}
-        </Alert>
-      ) : null}
+      {error ? <Alert severity="error">{error}</Alert> : null}
 
       {/* Compact ticket header */}
-      <Paper
-        variant="outlined"
-        sx={{ p: 2 }}
-      >
-        <Grid
-          container
-          spacing={2}
-          alignItems="center"
-        >
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Grid container spacing={2} alignItems="center">
           <Grid
             size={{
               xs: 12,
@@ -449,33 +450,22 @@ export default function TicketLifecyclePage() {
               alignItems="center"
               flexWrap="wrap"
             >
-              <Typography
-                variant="h6"
-                fontWeight={800}
-              >
-                {ticket.ticketNumber ??
-                  ticket.reference}
+              <Typography variant="h6" fontWeight={800}>
+                {ticket.ticketNumber ?? ticket.reference}
               </Typography>
 
               <Chip
-                label={getStatusLabel(
-                  ticket.status,
-                )}
+                label={getStatusLabel(ticket.status)}
                 size="small"
                 color="primary"
               />
             </Stack>
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 0.5 }}
-            >
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Created by{" "}
               {ticket.createdBy?.name ||
                 ticket.createdByName ||
-                TICKET_MODULE_CONFIG.labels
-                  .notAvailable}
+                TICKET_MODULE_CONFIG.labels.notAvailable}
             </Typography>
           </Grid>
 
@@ -492,16 +482,11 @@ export default function TicketLifecyclePage() {
               onChange={handleStatusChange}
               disabled={saving}
             >
-              {TICKET_STATUS_OPTIONS.map(
-                (option) => (
-                  <MenuItem
-                    key={option.value}
-                    value={option.value}
-                  >
-                    {option.label}
-                  </MenuItem>
-                ),
-              )}
+              {TICKET_STATUS_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
             </Select>
           </Grid>
 
@@ -511,21 +496,12 @@ export default function TicketLifecyclePage() {
               md: 3,
             }}
           >
-            <CanAccess
-              permission={
-                TICKET_MODULE_CONFIG
-                  .permissions.update
-              }
-            >
+            <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
               <Button
                 fullWidth
                 variant="contained"
-                startIcon={
-                  <EditOutlinedIcon />
-                }
-                onClick={() =>
-                  setEditOpen(true)
-                }
+                startIcon={<EditOutlinedIcon />}
+                onClick={() => setEditOpen(true)}
                 disabled={saving}
               >
                 Edit Ticket
@@ -563,16 +539,12 @@ export default function TicketLifecyclePage() {
               p: 1,
             }}
           >
-            
             <TicketOverview
               ticket={ticket}
               fields={TICKET_FIELD_CONFIG}
               fieldNames={DETAIL_FIELDS}
               title="Ticket Information"
-              fallback={
-                TICKET_MODULE_CONFIG.labels
-                  .notAvailable
-              }
+              fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
               enforcePermissions={false}
             />
           </Paper>
@@ -599,34 +571,26 @@ export default function TicketLifecyclePage() {
           >
             <Tabs
               value={activeTab}
-              onChange={(_, value) =>
-                setActiveTab(value)
-              }
+              onChange={(_, value) => setActiveTab(value)}
               variant="fullWidth"
             >
               <Tab
                 value="activity"
-                icon={
-                  <HistoryOutlinedIcon />
-                }
+                icon={<HistoryOutlinedIcon />}
                 iconPosition="start"
                 label="Activity"
               />
 
               <Tab
                 value="comments"
-                icon={
-                  <CommentOutlinedIcon />
-                }
+                icon={<CommentOutlinedIcon />}
                 iconPosition="start"
                 label="Comments"
               />
 
               <Tab
                 value="attachments"
-                icon={
-                  <AttachFileOutlinedIcon />
-                }
+                icon={<AttachFileOutlinedIcon />}
                 iconPosition="start"
                 label="Files"
               />
@@ -644,18 +608,10 @@ export default function TicketLifecyclePage() {
               {activeTab === "activity" ? (
                 <TicketLifecycleTimeline
                   events={lifecycle}
-                  fields={
-                    TICKET_FIELD_CONFIG
-                  }
+                  fields={TICKET_FIELD_CONFIG}
                   emptyMessage="No activity recorded yet."
-                  fallback={
-                    TICKET_MODULE_CONFIG
-                      .labels
-                      .notAvailable
-                  }
-                  loading={
-                    lifecycleLoading
-                  }
+                  fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
+                  loading={lifecycleLoading}
                 />
               ) : null}
 
@@ -663,26 +619,18 @@ export default function TicketLifecyclePage() {
                 <Stack spacing={1.5}>
                   <TicketComments
                     comments={comments}
-                    loading={
-                      commentsLoading
-                    }
+                    loading={commentsLoading}
                   />
 
                   <TicketCommentComposer
-                    config={
-                      COMMENT_CONFIG
-                    }
-                    onSubmit={
-                      handleComment
-                    }
+                    config={COMMENT_CONFIG}
+                    onSubmit={handleComment}
                   />
                 </Stack>
               ) : null}
 
               {activeTab === "attachments" ? (
-                <TicketAttachmentList
-                  ticketId={ticket.id}
-                />
+                <TicketAttachmentList ticketId={ticket.id} />
               ) : null}
             </Box>
           </Paper>
@@ -700,9 +648,7 @@ export default function TicketLifecyclePage() {
         fullWidth
         maxWidth="lg"
       >
-        <DialogTitle>
-          Edit Ticket
-        </DialogTitle>
+        <DialogTitle>Edit Ticket</DialogTitle>
 
         <DialogContent dividers>
           <TicketForm

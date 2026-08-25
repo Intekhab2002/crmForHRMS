@@ -5,35 +5,29 @@ import {
   mapTicketsFromApi,
   mapTicketFromApi,
   mapLifecycleFromApi,
+  mapCommentsFromApi,
 } from "../utils/ticketMappers";
 
 function getErrorMessage(error, fallback) {
-  return (
-    error?.response?.data?.message ??
-    error?.message ??
-    fallback
-  );
+  return error?.response?.data?.message ?? error?.message ?? fallback;
 }
 
 export const ticketService = {
   async getFields(context) {
-    const { getTicketFields } = await import(
-      "../../../config/ticket.config"
-    );
+    const { getTicketFields } = await import("../../../config/ticket.config");
 
     return getTicketFields(context);
   },
 
   async listTickets(params = {}) {
-    const response = await apiClient.get(
-      API_CONFIG.endpoints.tickets,
-      { params },
-    );
+    const response = await apiClient.get(API_CONFIG.endpoints.tickets, {
+      params,
+    });
 
     const payload = response.data?.data ?? response.data;
     const rows = Array.isArray(payload)
       ? payload
-      : payload?.data ?? payload?.rows ?? [];
+      : (payload?.data ?? payload?.rows ?? []);
 
     return mapTicketsFromApi(rows);
   },
@@ -44,9 +38,7 @@ export const ticketService = {
         `${API_CONFIG.endpoints.tickets}/${ticketId}`,
       );
 
-      return mapTicketFromApi(
-        response.data?.data ?? response.data,
-      );
+      return mapTicketFromApi(response.data?.data ?? response.data);
     } catch (error) {
       if (error.response?.status === 404) {
         return null;
@@ -57,14 +49,9 @@ export const ticketService = {
   },
 
   async createTicket(values) {
-    const response = await apiClient.post(
-      API_CONFIG.endpoints.tickets,
-      values,
-    );
+    const response = await apiClient.post(API_CONFIG.endpoints.tickets, values);
 
-    return mapTicketFromApi(
-      response.data?.data ?? response.data,
-    );
+    return mapTicketFromApi(response.data?.data ?? response.data);
   },
 
   async updateTicket(ticketId, values) {
@@ -73,9 +60,7 @@ export const ticketService = {
       values,
     );
 
-    return mapTicketFromApi(
-      response.data?.data ?? response.data,
-    );
+    return mapTicketFromApi(response.data?.data ?? response.data);
   },
 
   async assignTicket(ticketId, assignedUserId) {
@@ -126,7 +111,7 @@ export const ticketService = {
       `${API_CONFIG.endpoints.tickets}/${ticketId}/comments`,
     );
 
-    return response.data?.data ?? [];
+    return mapCommentsFromApi(response.data?.data);
   },
 
   async listLifecycle(ticketId) {
@@ -179,8 +164,7 @@ export const ticketService = {
 
     return {
       blob: response.data,
-      contentDisposition:
-        response.headers["content-disposition"] ?? "",
+      contentDisposition: response.headers["content-disposition"] ?? "",
     };
   },
 
