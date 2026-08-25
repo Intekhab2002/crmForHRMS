@@ -16,37 +16,93 @@ function formatLifecycleFieldName(fieldName) {
 }
 
 function mapLifecycleEvent(event) {
-  if (!event) return null;
+  if (!event) {
+    return null;
+  }
 
   const metadata =
-    event.metadata && typeof event.metadata === "object"
+    event.metadata &&
+    typeof event.metadata === "object"
       ? event.metadata
       : {};
+
+  const fieldName =
+    event.field_name ?? null;
+
+  const change = fieldName
+    ? {
+        field: fieldName,
+        label: formatLifecycleFieldName(
+          fieldName,
+        ),
+        from:
+          event.old_value ?? null,
+        to:
+          event.new_value ?? null,
+      }
+    : null;
 
   return {
     id: event.id,
     ticketId: event.ticket_id,
-    actorUserId: event.actor_user_id,
+
+    actorUserId:
+      event.actor_user_id,
+
     actor: mapActor({
       id: event.actor_user_id,
       username: event.username,
       email: event.email,
+      name: event.actor_name,
     }),
+
     type: event.event_type,
     action: event.event_action,
-    fieldName: event.field_name ?? null,
-    oldValue: event.old_value ?? null,
-    newValue: event.new_value ?? null,
+
+    fieldName,
+
+    oldValue:
+      event.old_value ?? null,
+
+    newValue:
+      event.new_value ?? null,
+
+    changes: change
+      ? [change]
+      : [],
+
+    comment:
+      metadata.comment ??
+      null,
+
+    files:
+      Array.isArray(metadata.files)
+        ? metadata.files
+        : [],
+
     metadata,
-    createdAt: event.created_at,
-    summary: event.field_name
-      ? `${formatLifecycleFieldName(event.field_name)} was updated.`
-      : event.event_action
-        ? event.event_action
-            .replaceAll("_", " ")
-            .toLowerCase()
-            .replace(/^./, (character) => character.toUpperCase())
-        : "Ticket activity.",
+
+    createdAt:
+      event.created_at,
+
+    summary:
+      event.field_name
+        ? `${formatLifecycleFieldName(
+            event.field_name,
+          )} was updated.`
+        : event.event_action
+          ? event.event_action
+              .replaceAll(
+                "_",
+                " ",
+              )
+              .toLowerCase()
+              .replace(
+                /^./,
+                (character) =>
+                  character.toUpperCase(),
+              )
+          : "Ticket activity.",
   };
 }
 

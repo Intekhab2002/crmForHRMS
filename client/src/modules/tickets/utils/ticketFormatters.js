@@ -46,7 +46,7 @@ export function formatTicketValue(field, value, fallback = "Not available") {
   if (value === null || value === undefined || value === "") return fallback;
 
   if (field?.type === "select") {
-    return getOption(field.options, value)?.label ?? value;
+    return getOption(field?.options, value)?.label ?? value;
   }
 
   if (field?.type === "date") {
