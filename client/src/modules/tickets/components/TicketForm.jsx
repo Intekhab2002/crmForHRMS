@@ -18,20 +18,26 @@ import {
   TICKET_FORM_CONFIG,
   TICKET_FIELD_MAP,
 } from "../../../config/ticket.config";
-import { getOptionProvider } from "../../../components/forms/optionProviders/optionProvider.registry"
+import { getOptionProvider } from "../../../components/forms/optionProviders/optionProvider.registry";
 
 async function getOptionSource(field, user) {
+  console.log("[TicketForm] Loading options:", field.key, field.options);
+
   if (Array.isArray(field.options)) {
     return field.options;
   }
 
   const source = field.options?.source;
 
+  console.log("[TicketForm] Option source:", field.key, source);
+
   if (!source) {
     return [];
   }
 
   const provider = getOptionProvider(source);
+
+  console.log("[TicketForm] Provider:", field.key, provider);
 
   if (!provider) {
     return [];
@@ -206,6 +212,15 @@ export default function TicketForm({
         (field) => field.type === "select" || field.type === "autocomplete",
       );
 
+      console.log(
+        "[TicketForm] Option fields:",
+        optionFields.map((field) => ({
+          key: field.key,
+          source: field.options?.source,
+          endpoint: field.options?.endpoint,
+        })),
+      );
+
       const results = await Promise.all(
         optionFields.map(async (field) => {
           setLoadingOptions((current) => ({
@@ -215,7 +230,12 @@ export default function TicketForm({
 
           try {
             return [field.key, await getOptionSource(field, user)];
-          } catch {
+          } catch (error) {
+            console.error(
+              `Failed to load options for field "${field.key}"`,
+              error,
+            );
+
             return [field.key, []];
           } finally {
             if (active) {

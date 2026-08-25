@@ -1,8 +1,28 @@
 import apiClient from "../../../services/api/apiClient";
 
-export async function apiOptionProvider(
-  config = {},
-) {
+function extractRows(response) {
+  const responseData = response?.data;
+
+  if (Array.isArray(responseData)) {
+    return responseData;
+  }
+
+  if (Array.isArray(responseData?.data)) {
+    return responseData.data;
+  }
+
+  if (Array.isArray(responseData?.items)) {
+    return responseData.items;
+  }
+
+  if (Array.isArray(responseData?.results)) {
+    return responseData.results;
+  }
+
+  return [];
+}
+
+export async function apiOptionProvider(config = {}) {
   const endpoint = config.endpoint;
 
   if (!endpoint) {
@@ -11,24 +31,17 @@ export async function apiOptionProvider(
 
   const response = await apiClient.get(endpoint);
 
-  const payload = response.data;
-
-  const rows =
-    payload?.data ??
-    payload?.items ??
-    payload?.results ??
-    payload ??
-    [];
-
-  if (!Array.isArray(rows)) {
-    return [];
-  }
+  const rows = extractRows(response);
 
   const valueKey = config.valueKey ?? "id";
   const labelKey = config.labelKey ?? "name";
 
   return rows
     .map((row) => {
+      if (!row || typeof row !== "object") {
+        return null;
+      }
+
       const value = row[valueKey];
 
       const label =
@@ -37,17 +50,20 @@ export async function apiOptionProvider(
         row.label ??
         row.username ??
         row.email ??
-        value;
+        String(value ?? "");
+
+      if (
+        value === undefined ||
+        value === null ||
+        value === ""
+      ) {
+        return null;
+      }
 
       return {
         value,
         label,
       };
     })
-    .filter(
-      (option) =>
-        option.value !== undefined &&
-        option.value !== null &&
-        option.value !== "",
-    );
+    .filter(Boolean);
 }
