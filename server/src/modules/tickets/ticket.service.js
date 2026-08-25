@@ -7,6 +7,7 @@ import ticketRepository from "./ticket.repository.js";
 import ticketValidator from "./ticket.validator.js";
 import { TICKET_ERROR_CODES, TICKET_STATUS } from "./ticket.constants.js";
 import { TICKET_CONFIG } from "./ticket.config.js";
+import ticketNumberService from "./ticketNumber.service.js";
 
 function getContactValue(payload, key) {
   if (key === "name") {
@@ -206,6 +207,8 @@ async function createTicket(payload, authenticatedUserId) {
 
   return executeTransaction(async (tx) => {
     const { ticket, contact } = splitPayload(payload);
+    ticket.ticket_number =
+    await ticketNumberService.generateTicketNumber(tx);
 
     ticket.created_by = authenticatedUserId;
 
