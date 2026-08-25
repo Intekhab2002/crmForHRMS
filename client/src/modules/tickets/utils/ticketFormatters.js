@@ -3,9 +3,7 @@ export function getOption(options = [], value) {
     return null;
   }
 
-  return options.find(
-    (option) => option.value === value,
-  );
+  return options.find((option) => option.value === value);
 }
 
 export function getField(fields = [], name) {
@@ -59,5 +57,29 @@ export function formatTicketValue(field, value, fallback = "Not available") {
     return formatDate(value, fallback);
   }
 
+  if (field.type === "date") {
+    return formatDateValue(value);
+  }
+
   return String(value);
+}
+export function formatDateValue(
+  value,
+  fallback = "Not available",
+) {
+  if (!value) {
+    return fallback;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return fallback;
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
 }
