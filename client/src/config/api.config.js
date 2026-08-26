@@ -9,7 +9,25 @@ export const API_CONFIG = Object.freeze({
       me: "/auth/me",
     }),
     users: "/users",
-    roles: "/roles",
+    roles: Object.freeze({
+      base: "/roles",
+
+      byId: (roleId) => `/roles/${encodeURIComponent(roleId)}`,
+
+      permissions: (roleId) =>
+        `/roles/${encodeURIComponent(roleId)}/permissions`,
+
+      permissionMatrix: (roleId) =>
+        `/roles/${encodeURIComponent(roleId)}/permissions/matrix`,
+
+      users: (roleId) => `/roles/${encodeURIComponent(roleId)}/users`,
+
+      assignUser: (roleId, userId) =>
+        `/roles/${encodeURIComponent(roleId)}/users/${encodeURIComponent(userId)}`,
+
+      removeUser: (roleId, userId) =>
+        `/roles/${encodeURIComponent(roleId)}/users/${encodeURIComponent(userId)}`,
+    }),
     employees: "/employees",
     tickets: "/tickets",
     dashboard: "/dashboard",

@@ -27,6 +27,8 @@ import LoginPage from "../modules/auth/pages/LoginPage";
 import ForbiddenPage from "../pages/common/ForbiddenPage";
 import NotFoundPage from "../pages/common/NotFoundPage";
 import DefaultEntryPage from "../pages/common/DefaultEntryPage";
+import RoleManagementPage
+    from "../modules/roles/pages/RoleManagementPage";
 
 import {
   APP_MODULE_CONFIG,
@@ -51,6 +53,7 @@ const COMPONENTS = Object.freeze({
   login: LoginPage,
   dashboard: DashboardPage,
   users: UserManagementPage,
+  roles: RoleManagementPage,
   publicTicketStatus: PublicTicketStatusPage,
   ticketsList: TicketsListPage,
   ticketCreate: TicketCreatePage,

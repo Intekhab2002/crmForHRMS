@@ -105,6 +105,23 @@ export const APP_MODULE_CONFIG = Object.freeze({
       }),
 
       createRoute({
+        id: "roles",
+        path: "/roles",
+        label: "Role Management",
+        component: "roles",
+
+        access: {
+          permissions: [PERMISSIONS.ROLE_READ],
+        },
+
+        navigation: {
+          section: "app",
+          icon: "roles",
+          order: 25,
+        },
+      }),
+
+      createRoute({
         id: "tickets",
         path: "/tickets",
         label: "Tickets",
