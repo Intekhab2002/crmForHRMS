@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   Autocomplete,
   Box,
@@ -20,6 +20,7 @@ import {
 } from "../../../config/ticket.config";
 import { getOptionProvider } from "../../../components/forms/optionProviders/optionProvider.registry";
 import { findContactByMobile } from "../../contacts/services/contact.service";
+import TicketFormContent from "./TicketFormContent";
 
 async function getOptionSource(field, user) {
   if (Array.isArray(field.options)) {
@@ -202,12 +203,6 @@ export default function TicketForm({
 
   const [options, setOptions] = useState({});
   const [loadingOptions, setLoadingOptions] = useState({});
-  const [contactLookup, setContactLookup] = useState({
-    status: "idle",
-    mobile: "",
-  });
-  const lookupRequestRef = useRef(0);
-  const lookupTimerRef = useRef(null);
   const organizationId =
     user?.organization_id ??
     user?.organizationId ??

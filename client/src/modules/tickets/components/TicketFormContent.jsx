@@ -12,7 +12,7 @@ import {
 
 import { Form } from "formik";
 
-import FieldRenderer from "./FieldRenderer";
+import FieldRenderer from "";
 import { useContactLookup } from "../hooks/useContactLookup";
 
 export default function TicketFormContent({
