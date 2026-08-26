@@ -24,7 +24,6 @@ export default function UserTable({ users, loading, currentRoles, onEdit, onStat
       width: 150,
       renderCell: ({ row }) => {
         const targetRole = row.role?.code;
-        const allowed = canManageUser(currentRoles, targetRole);
 
         return (
           <Box>
