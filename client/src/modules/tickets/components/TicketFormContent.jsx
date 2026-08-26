@@ -12,8 +12,8 @@ import {
 
 import { Form } from "formik";
 
-import FieldRenderer from "";
 import { useContactLookup } from "../hooks/useContactLookup";
+import FieldRenderer from "./FieldRenderer";
 
 export default function TicketFormContent({
   formik,
