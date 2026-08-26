@@ -26,10 +26,12 @@ export function useContactLookup({
   ).trim();
 
   const lookup = useCallback(async () => {
-    if (
-      !organizationId ||
-      normalizedMobile.length < MIN_MOBILE_LENGTH
-    ) {
+    if (!organizationId) {
+      setStatus("idle");
+      return;
+    }
+
+    if (normalizedMobile.length < MIN_MOBILE_LENGTH) {
       setStatus("idle");
       return;
     }
@@ -53,6 +55,7 @@ export function useContactLookup({
       if (!contact) {
         setStatus("not_found");
         onContactNotFound?.();
+
         return;
       }
 
@@ -77,13 +80,13 @@ export function useContactLookup({
   ]);
 
   useEffect(() => {
-    const timer = setTimeout(
+    const timer = window.setTimeout(
       lookup,
       LOOKUP_DEBOUNCE_MS,
     );
 
     return () => {
-      clearTimeout(timer);
+      window.clearTimeout(timer);
     };
   }, [lookup]);
 
