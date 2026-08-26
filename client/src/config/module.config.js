@@ -1,4 +1,4 @@
-import { APP_ROLES, USER_MANAGEMENT_ACCESS } from "./access.config";
+import { APP_ROLES } from "./access.config";
 
 /**
  * Single data-driven application definition.
@@ -63,7 +63,9 @@ export const APP_MODULE_CONFIG = Object.freeze({
         path: "/dashboard",
         label: "Dashboard",
         component: "dashboard",
-        access: { roles: Object.values(APP_ROLES) },
+        access: {
+          permissions: [PERMISSIONS.DASHBOARD_READ],
+        },
         navigation: { section: "app", icon: "dashboard", order: 10 },
       }),
       Object.freeze({
@@ -71,7 +73,9 @@ export const APP_MODULE_CONFIG = Object.freeze({
         path: "/users",
         label: "User Management",
         component: "users",
-        access: USER_MANAGEMENT_ACCESS,
+        access: {
+          permissions: [PERMISSIONS.USER_READ],
+        },
         navigation: { section: "app", icon: "users", order: 20 },
       }),
       Object.freeze({
@@ -79,14 +83,18 @@ export const APP_MODULE_CONFIG = Object.freeze({
         path: "/tickets",
         label: "Tickets",
         component: null,
-        access: { roles: Object.values(APP_ROLES) },
+        access: {
+          permissions: [PERMISSIONS.DASHBOARD_READ],
+        },
         navigation: { section: "app", icon: "tickets", order: 30 },
         children: Object.freeze([
           Object.freeze({
             id: "tickets.list",
             index: true,
             component: "ticketsList",
-            access: { roles: Object.values(APP_ROLES) },
+            access: {
+              permissions: [PERMISSIONS.TICKET_READ],
+            },
           }),
           Object.freeze({
             id: "tickets.create",
@@ -94,14 +102,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
             label: "Create Ticket",
             component: "ticketCreate",
             access: {
-              roles: [
-                APP_ROLES.DEVELOPER,
-                APP_ROLES.SUPERADMIN,
-                APP_ROLES.ADMIN,
-                APP_ROLES.MANAGER,
-                APP_ROLES.AGENT,
-                APP_ROLES.CUSTOMER,
-              ],
+              permissions: [PERMISSIONS.TICKET_READ],
             },
           }),
           Object.freeze({
@@ -109,7 +110,9 @@ export const APP_MODULE_CONFIG = Object.freeze({
             path: ":ticketId",
             label: "Ticket Details",
             component: "ticketLifecycle",
-            access: { roles: Object.values(APP_ROLES) },
+            access: {
+              permissions: [PERMISSIONS.TICKET_READ],
+            },
           }),
         ]),
       }),

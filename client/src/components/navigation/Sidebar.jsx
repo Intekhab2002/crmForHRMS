@@ -1,13 +1,19 @@
 import { useMemo } from "react";
-import { Box, List, ListItemButton, ListItemText, Toolbar, Typography } from "@mui/material";
+import {
+  Box,
+  List,
+  ListItemButton,
+  ListItemText,
+  Toolbar,
+  Typography,
+} from "@mui/material";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../../context/useAuth";
 import { useAppConfig } from "../../context/useAppConfig";
-import DynamicFormOutlinedIcon
-  from "@mui/icons-material/DynamicFormOutlined";
+import DynamicFormOutlinedIcon from "@mui/icons-material/DynamicFormOutlined";
 
 const ICONS = Object.freeze({
   dashboard: DashboardOutlinedIcon,
@@ -18,26 +24,14 @@ const ICONS = Object.freeze({
 
 export default function Sidebar({ onNavigate }) {
   const location = useLocation();
-const {
-  roles,
-  permissions,
-} = useAuth();  const { navigation } = useAppConfig();
+  const { canAccess } = useAuth();
+  const { navigation } = useAppConfig();
 
-const items = useMemo(
-  () =>
-    navigation.app.filter(
-      (item) =>
-        item.accessible(
-          roles,
-          permissions,
-        ),
-    ),
-  [
-    navigation.app,
-    permissions,
-    roles,
-  ],
-);
+  const visibleItems = navigation.filter((item) =>
+    canAccess({
+      allPermissions: item.permissions ?? [],
+    }),
+  );
 
   return (
     <Box sx={{ width: "100%" }}>
@@ -45,9 +39,11 @@ const items = useMemo(
         <Typography fontWeight={800}>CRM for HRMS</Typography>
       </Toolbar>
       <List disablePadding>
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const Icon = ICONS[item.icon];
-          const selected = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+          const selected =
+            location.pathname === item.path ||
+            location.pathname.startsWith(`${item.path}/`);
 
           return (
             <ListItemButton

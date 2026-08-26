@@ -41,28 +41,29 @@ const COMPONENTS = Object.freeze({
 
 });
 
-function withAccess(route, element) {
-  let protectedElement = element ?? <Outlet />;
+function withAccess(
+    route,
+    element,
+) {
+    let protectedElement =
+        element ?? <Outlet />;
 
-  if (route.access?.roles?.length) {
-    protectedElement = (
-      <RoleRoute roles={route.access.roles}>
-        {protectedElement}
-      </RoleRoute>
-    );
-  }
+    if (
+        route.access?.permissions
+            ?.length
+    ) {
+        protectedElement = (
+            <PermissionRoute
+                allPermissions={
+                    route.access.permissions
+                }
+            >
+                {protectedElement}
+            </PermissionRoute>
+        );
+    }
 
-  if (route.access?.permissions?.length) {
-    protectedElement = (
-      <PermissionRoute
-        allPermissions={route.access.permissions}
-      >
-        {protectedElement}
-      </PermissionRoute>
-    );
-  }
-
-  return protectedElement;
+    return protectedElement;
 }
 
 function buildRoute(route) {

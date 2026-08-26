@@ -28,7 +28,7 @@ function collectNavigation(routes, section, parentPath = "") {
         id: route.id,
         label: route.label,
         path,
-        permission: route.permission,
+        permissions: route.access?.permissions ?? [],
         iconKey: route.navigation.iconKey,
         order: route.navigation.order ?? 0,
       },
@@ -42,6 +42,8 @@ function sortNavigation(items) {
 }
 
 export const NAVIGATION_CONFIG = Object.freeze({
-  public: Object.freeze(sortNavigation(collectNavigation(ROUTES_CONFIG, "public"))),
+  public: Object.freeze(
+    sortNavigation(collectNavigation(ROUTES_CONFIG, "public")),
+  ),
   app: Object.freeze(sortNavigation(collectNavigation(ROUTES_CONFIG, "app"))),
 });

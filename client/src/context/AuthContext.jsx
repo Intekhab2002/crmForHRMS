@@ -1,9 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AUTH_CONFIG } from "../config/auth.config";
 import { authService } from "../modules/auth/services/auth.service";
 import {
@@ -14,6 +9,7 @@ import {
   setStoredValue,
 } from "../utils/storage";
 import {
+  canAccess,
   hasAllPermissions,
   hasAnyPermission,
   hasPermission,
@@ -23,7 +19,6 @@ import {
 } from "../utils/permissions";
 import { setAuthenticationFailureHandler } from "../services/api/apiClient";
 import { AuthContext } from "./AuthContextValue";
-
 
 function extractAuthData(response) {
   return response?.data ?? response;
@@ -82,14 +77,8 @@ export function AuthProvider({ children }) {
           throw new Error("Invalid authentication response.");
         }
 
-        setStoredValue(
-          AUTH_CONFIG.storageKeys.accessToken,
-          data.accessToken,
-        );
-        setStoredValue(
-          AUTH_CONFIG.storageKeys.refreshToken,
-          data.refreshToken,
-        );
+        setStoredValue(AUTH_CONFIG.storageKeys.accessToken, data.accessToken);
+        setStoredValue(AUTH_CONFIG.storageKeys.refreshToken, data.refreshToken);
 
         return applyAuthentication(data);
       } catch (error) {
@@ -139,14 +128,8 @@ export function AuthProvider({ children }) {
         const response = await authService.refresh(refreshToken);
         const data = extractAuthData(response);
 
-        setStoredValue(
-          AUTH_CONFIG.storageKeys.accessToken,
-          data.accessToken,
-        );
-        setStoredValue(
-          AUTH_CONFIG.storageKeys.refreshToken,
-          data.refreshToken,
-        );
+        setStoredValue(AUTH_CONFIG.storageKeys.accessToken, data.accessToken);
+        setStoredValue(AUTH_CONFIG.storageKeys.refreshToken, data.refreshToken);
 
         applyAuthentication(data);
       } catch {
@@ -155,27 +138,27 @@ export function AuthProvider({ children }) {
     }
   }, [applyAuthentication, clearAuthentication]);
 
-useEffect(() => {
-  setAuthenticationFailureHandler(() => {
-    clearAuthentication();
-  });
+  useEffect(() => {
+    setAuthenticationFailureHandler(() => {
+      clearAuthentication();
+    });
 
-  let cancelled = false;
+    let cancelled = false;
 
-  const initializeSession = async () => {
-    if (cancelled) {
-      return;
-    }
+    const initializeSession = async () => {
+      if (cancelled) {
+        return;
+      }
 
-    await restoreSession();
-  };
+      await restoreSession();
+    };
 
-  void initializeSession();
+    void initializeSession();
 
-  return () => {
-    cancelled = true;
-  };
-}, [clearAuthentication, restoreSession]);
+    return () => {
+      cancelled = true;
+    };
+  }, [clearAuthentication, restoreSession]);
 
   const value = useMemo(
     () => ({
@@ -189,29 +172,14 @@ useEffect(() => {
       login,
       logout,
       restoreSession,
-      hasPermission: (permission) =>
-        hasPermission(permissions, permission),
+      hasPermission: (permission) => hasPermission(permissions, permission),
       hasRole: (role) => hasRole(roles, role),
-      hasAnyPermission: (required) =>
-        hasAnyPermission(permissions, required),
-      hasAllPermissions: (required) =>
-        hasAllPermissions(permissions, required),
+      hasAnyPermission: (required) => hasAnyPermission(permissions, required),
+      hasAllPermissions: (required) => hasAllPermissions(permissions, required),
+      canAccess: (config) => canAccess(permissions, config),
     }),
-    [
-      login,
-      logout,
-      permissions,
-      restoreSession,
-      roles,
-      status,
-      user,
-    ],
+    [login, logout, permissions, restoreSession, roles, status, user],
   );
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
