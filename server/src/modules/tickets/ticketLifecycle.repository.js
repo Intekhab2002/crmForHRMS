@@ -43,6 +43,8 @@ const FIND_BY_TICKET = `
         tle.actor_user_id,
         u.username,
         u.email,
+        u.first_name,
+        u.last_name,
         tle.event_type,
         tle.event_action,
         tle.field_name,
@@ -58,51 +60,45 @@ const FIND_BY_TICKET = `
 `;
 
 async function create(
-    {
-        id,
-        ticketId,
-        actorUserId,
-        eventType,
-        eventAction,
-        fieldName = null,
-        oldValue = null,
-        newValue = null,
-        metadata = {},
-    },
-    tx = null,
+  {
+    id,
+    ticketId,
+    actorUserId,
+    eventType,
+    eventAction,
+    fieldName = null,
+    oldValue = null,
+    newValue = null,
+    metadata = {},
+  },
+  tx = null,
 ) {
-    const executor = getQueryExecutor(tx);
+  const executor = getQueryExecutor(tx);
 
-    const result = await executor.query(
-        CREATE,
-        [
-            id,
-            ticketId,
-            actorUserId,
-            eventType,
-            eventAction,
-            fieldName,
-            oldValue,
-            newValue,
-            JSON.stringify(metadata),
-        ],
-    );
+  const result = await executor.query(CREATE, [
+    id,
+    ticketId,
+    actorUserId,
+    eventType,
+    eventAction,
+    fieldName,
+    oldValue,
+    newValue,
+    JSON.stringify(metadata),
+  ]);
 
-    return result.rows[0];
+  return result.rows[0];
 }
 
 async function findByTicket(ticketId, tx = null) {
-    const executor = getQueryExecutor(tx);
+  const executor = getQueryExecutor(tx);
 
-    const result = await executor.query(
-        FIND_BY_TICKET,
-        [ticketId],
-    );
+  const result = await executor.query(FIND_BY_TICKET, [ticketId]);
 
-    return result.rows;
+  return result.rows;
 }
 
 export default Object.freeze({
-    create,
-    findByTicket,
+  create,
+  findByTicket,
 });

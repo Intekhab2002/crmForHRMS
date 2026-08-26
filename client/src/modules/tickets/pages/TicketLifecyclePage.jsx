@@ -120,87 +120,91 @@ export default function TicketLifecyclePage() {
   const [notice, setNotice] = useState("");
   const [pendingStatus, setPendingStatus] = useState("");
 
-const refreshTicket = useCallback(
-  async ({ initial = false, showRefreshing = true } = {}) => {
-    if (initial) {
-      setLoading(true);
-    } else if (showRefreshing) {
-      setRefreshing(true);
-    }
-
-    setCommentsLoading(true);
-    setLifecycleLoading(true);
-    setError("");
-
-    try {
-      const [
-        ticketResult,
-        commentsResult,
-        lifecycleResult,
-        attachmentsResult,
-      ] = await Promise.all([
-        ticketService.getTicket(ticketId),
-        ticketService.listComments(ticketId),
-        ticketService.listLifecycle(ticketId),
-        ticketService.listAttachments(ticketId),
-      ]);
-
-      if (!ticketResult) {
-        setTicket(null);
-        setComments([]);
-        setLifecycle([]);
-        setError(TICKET_MODULE_CONFIG.labels.notFound);
-
-        return null;
-      }
-
-      const normalizedComments = Array.isArray(commentsResult)
-        ? commentsResult
-        : [];
-
-      const normalizedLifecycle = Array.isArray(lifecycleResult)
-        ? lifecycleResult
-        : [];
-
-      const normalizedAttachments = Array.isArray(attachmentsResult)
-        ? attachmentsResult
-        : [];
-
-      const completeTicket = {
-        ...ticketResult,
-        comments: normalizedComments,
-        lifecycle: normalizedLifecycle,
-        attachments: normalizedAttachments,
-      };
-
-      setTicket(completeTicket);
-      setComments(normalizedComments);
-      setLifecycle(normalizedLifecycle);
-
-      return completeTicket;
-    } catch (requestError) {
-      setError(
-        requestError?.response?.data?.message ??
-          requestError?.message ??
-          "Unable to load ticket.",
-      );
-
-      throw requestError;
-    } finally {
-      setCommentsLoading(false);
-      setLifecycleLoading(false);
-
+  const refreshTicket = useCallback(
+    async ({ initial = false, showRefreshing = true } = {}) => {
       if (initial) {
-        setLoading(false);
+        setLoading(true);
+      } else if (showRefreshing) {
+        setRefreshing(true);
       }
 
-      if (showRefreshing) {
-        setRefreshing(false);
+      setCommentsLoading(true);
+      setLifecycleLoading(true);
+      setError("");
+
+      try {
+        const [
+          ticketResult,
+          commentsResult,
+          lifecycleResult,
+          attachmentsResult,
+        ] = await Promise.all([
+          ticketService.getTicket(ticketId),
+          ticketService.listComments(ticketId),
+          ticketService.listLifecycle(ticketId),
+          ticketService.listAttachments(ticketId),
+        ]);
+
+        if (!ticketResult) {
+          setTicket(null);
+          setComments([]);
+          setLifecycle([]);
+          setError(TICKET_MODULE_CONFIG.labels.notFound);
+
+          return null;
+        }
+
+        const normalizedComments = Array.isArray(commentsResult)
+          ? commentsResult
+          : [];
+
+        const normalizedLifecycle = Array.isArray(lifecycleResult)
+          ? lifecycleResult
+          : [];
+
+        const normalizedAttachments = Array.isArray(attachmentsResult)
+          ? attachmentsResult
+          : [];
+
+        const completeTicket = {
+          ...ticketResult,
+          comments: normalizedComments,
+          lifecycle: normalizedLifecycle,
+          attachments: normalizedAttachments,
+        };
+
+        setTicket(completeTicket);
+        setComments(normalizedComments);
+        setLifecycle(normalizedLifecycle);
+
+        console.log("ticketResult", ticketResult);
+        console.log("commentsResult", commentsResult);
+        console.log("lifecycleResult", lifecycleResult);
+
+        return completeTicket;
+      } catch (requestError) {
+        setError(
+          requestError?.response?.data?.message ??
+            requestError?.message ??
+            "Unable to load ticket.",
+        );
+
+        throw requestError;
+      } finally {
+        setCommentsLoading(false);
+        setLifecycleLoading(false);
+
+        if (initial) {
+          setLoading(false);
+        }
+
+        if (showRefreshing) {
+          setRefreshing(false);
+        }
       }
-    }
-  },
-  [ticketId],
-);
+    },
+    [ticketId],
+  );
 
   const loadComments = useCallback(async () => {
     setCommentsLoading(true);

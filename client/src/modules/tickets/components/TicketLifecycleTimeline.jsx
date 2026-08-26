@@ -1,16 +1,24 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+
 import {
   Alert,
   Avatar,
   Box,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
+  IconButton,
   Paper,
   Stack,
   Typography,
+  Button,
 } from "@mui/material";
 
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import AddCircleOutlineRoundedIcon from "@mui/icons-material/AddCircleOutlineRounded";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import SwapHorizRoundedIcon from "@mui/icons-material/SwapHorizRounded";
@@ -29,6 +37,9 @@ import {
   getField,
 } from "../utils/ticketFormatters";
 
+const PREVIEW_MAX_LENGTH = 220;
+const PREVIEW_MAX_LINES = 5;
+
 function sortEvents(events) {
   return [...events].sort(
     (first, second) =>
@@ -37,17 +48,35 @@ function sortEvents(events) {
   );
 }
 
-function actorLabel(actor) {
-  return actor?.name || actor?.email || "System";
+function getActorName(actor) {
+  // console.log("actor Name", actor)
+  if (!actor) {
+    return "System";
+  }
+
+  return (
+    actor.first_name||
+    actor.name ||
+    actor.username ||
+    actor.displayName ||
+    actor.email ||
+    "System"
+  );
 }
 
 function getInitials(actor) {
-  const label = actorLabel(actor);
+  const name = getActorName(actor);
 
-  return label
+  const parts = name
     .split(/\s+/)
     .filter(Boolean)
-    .slice(0, 2)
+    .slice(0, 2);
+
+  if (!parts.length) {
+    return "?";
+  }
+
+  return parts
     .map((part) => part[0]?.toUpperCase())
     .join("");
 }
@@ -66,15 +95,21 @@ function getEventIcon(type, action) {
     action === "UNASSIGNED" ||
     action === "ASSIGNMENT_CHANGED"
   ) {
-    return <AssignmentIndOutlinedIcon fontSize="small" />;
+    return (
+      <AssignmentIndOutlinedIcon fontSize="small" />
+    );
   }
 
   if (action === "STATUS_CHANGED") {
-    return <SwapHorizRoundedIcon fontSize="small" />;
+    return (
+      <SwapHorizRoundedIcon fontSize="small" />
+    );
   }
 
   if (action === "RESOLVED") {
-    return <CheckCircleOutlineRoundedIcon fontSize="small" />;
+    return (
+      <CheckCircleOutlineRoundedIcon fontSize="small" />
+    );
   }
 
   if (action === "CLOSED") {
@@ -82,26 +117,322 @@ function getEventIcon(type, action) {
   }
 
   if (action === "REOPENED") {
-    return <LockOpenOutlinedIcon fontSize="small" />;
+    return (
+      <LockOpenOutlinedIcon fontSize="small" />
+    );
   }
 
   if (action === "COMMENT_ADDED") {
-    return <ChatBubbleOutlineRoundedIcon fontSize="small" />;
+    return (
+      <ChatBubbleOutlineRoundedIcon fontSize="small" />
+    );
   }
 
   if (action === "ATTACHMENT_UPLOADED") {
-    return <AttachFileOutlinedIcon fontSize="small" />;
+    return (
+      <AttachFileOutlinedIcon fontSize="small" />
+    );
   }
 
   if (action === "ATTACHMENT_DELETED") {
-    return <DeleteOutlineRoundedIcon fontSize="small" />;
-  }
-
-  if (type === "created") {
-    return <AddCircleOutlineRoundedIcon fontSize="small" />;
+    return (
+      <DeleteOutlineRoundedIcon fontSize="small" />
+    );
   }
 
   return <EditOutlinedIcon fontSize="small" />;
+}
+
+function normalizeValue(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "Not available";
+  }
+
+  return String(value);
+}
+
+function getPreview(value) {
+  const normalized = normalizeValue(value);
+
+  const lines = normalized.split(/\r?\n/);
+
+  if (
+    lines.length <= PREVIEW_MAX_LINES &&
+    normalized.length <= PREVIEW_MAX_LENGTH
+  ) {
+    return {
+      text: normalized,
+      truncated: false,
+    };
+  }
+
+  let preview = lines
+    .slice(0, PREVIEW_MAX_LINES)
+    .join("\n");
+
+  if (preview.length > PREVIEW_MAX_LENGTH) {
+    preview =
+      preview.slice(0, PREVIEW_MAX_LENGTH);
+  }
+
+  return {
+    text: `${preview.trimEnd()}…`,
+    truncated: true,
+  };
+}
+
+function ValuePreview({
+  field,
+  value,
+  onOpen,
+  fallback,
+}) {
+  const formatted = formatTicketValue(
+    field,
+    value,
+    fallback,
+  );
+
+  const preview =
+    getPreview(formatted);
+
+  return (
+    <Box
+      sx={{
+        minWidth: 0,
+        cursor: preview.truncated
+          ? "pointer"
+          : "default",
+      }}
+      onClick={
+        preview.truncated
+          ? onOpen
+          : undefined
+      }
+    >
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{
+          whiteSpace: "pre-wrap",
+          overflowWrap: "anywhere",
+          display: "-webkit-box",
+          WebkitLineClamp:
+            PREVIEW_MAX_LINES,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}
+      >
+        {preview.text}
+      </Typography>
+
+      {preview.truncated ? (
+        <Typography
+          variant="caption"
+          color="primary"
+          fontWeight={700}
+          sx={{
+            display: "inline-block",
+            mt: 0.5,
+          }}
+        >
+          Click to view full value
+        </Typography>
+      ) : null}
+    </Box>
+  );
+}
+
+function DetailDialog({
+  open,
+  onClose,
+  change,
+  field,
+  fallback,
+}) {
+  if (!change) {
+    return null;
+  }
+
+  const fromValue =
+    formatTicketValue(
+      field,
+      change.from,
+      fallback,
+    );
+
+  const toValue =
+    formatTicketValue(
+      field,
+      change.to,
+      fallback,
+    );
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="md"
+      fullScreen={false}
+      PaperProps={{
+        sx: {
+          width: "100%",
+          maxHeight: {
+            xs: "92vh",
+            sm: "85vh",
+          },
+          borderRadius: {
+            xs: 2,
+            sm: 3,
+          },
+          m: {
+            xs: 1,
+            sm: 2,
+          },
+        },
+      }}
+    >
+      <DialogTitle
+        sx={{
+          pr: 6,
+          borderBottom: 1,
+          borderColor: "divider",
+        }}
+      >
+        <Typography
+          variant="h6"
+          fontWeight={800}
+        >
+          {change.label}
+        </Typography>
+
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ mt: 0.5 }}
+        >
+          Complete change details
+        </Typography>
+
+        <IconButton
+          onClick={onClose}
+          aria-label="Close"
+          sx={{
+            position: "absolute",
+            right: 12,
+            top: 12,
+          }}
+        >
+          <CloseRoundedIcon />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent
+        dividers
+        sx={{
+          p: {
+            xs: 1.5,
+            sm: 2.5,
+          },
+        }}
+      >
+        <Stack spacing={2}>
+          <ValuePanel
+            label="Previous value"
+            value={fromValue}
+          />
+
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <SwapHorizRoundedIcon
+              color="action"
+            />
+          </Box>
+
+          <ValuePanel
+            label="New value"
+            value={toValue}
+          />
+        </Stack>
+      </DialogContent>
+
+      <DialogActions
+        sx={{
+          px: {
+            xs: 1.5,
+            sm: 2.5,
+          },
+          py: 1.5,
+        }}
+      >
+        <Button
+          variant="contained"
+          onClick={onClose}
+        >
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function ValuePanel({
+  label,
+  value,
+}) {
+  return (
+    <Box>
+      <Typography
+        variant="subtitle2"
+        fontWeight={800}
+        sx={{ mb: 0.75 }}
+      >
+        {label}
+      </Typography>
+
+      <Paper
+        variant="outlined"
+        sx={{
+          p: {
+            xs: 1.25,
+            sm: 1.75,
+          },
+          maxHeight: {
+            xs: "30vh",
+            sm: "36vh",
+          },
+          overflow: "auto",
+          backgroundColor:
+            "background.default",
+        }}
+      >
+        <Typography
+          variant="body2"
+          sx={{
+            whiteSpace: "pre-wrap",
+            overflowWrap: "anywhere",
+            wordBreak: "break-word",
+            fontFamily:
+              value.length > 300
+                ? "monospace"
+                : "inherit",
+            lineHeight: 1.65,
+          }}
+        >
+          {value}
+        </Typography>
+      </Paper>
+    </Box>
+  );
 }
 
 export default function TicketLifecycleTimeline({
@@ -113,21 +444,43 @@ export default function TicketLifecycleTimeline({
   fallback = "Not available",
   loading = false,
 }) {
-  const visibleEvents = useMemo(() => {
-    return sortEvents(events).filter((event) => {
-      if (!publicOnly) {
-        return true;
-      }
 
-      return Boolean(eventTypes[event.type]?.public);
-    });
-  }, [events, eventTypes, publicOnly]);
+  // console.log("events",events)
+  const [selectedChange, setSelectedChange] =
+    useState(null);
+
+  const visibleEvents = useMemo(() => {
+    return sortEvents(events).filter(
+      (event) => {
+        if (!publicOnly) {
+          return true;
+        }
+
+        return Boolean(
+          eventTypes[event.type]?.public,
+        );
+      },
+    );
+  }, [
+    events,
+    eventTypes,
+    publicOnly,
+  ]);
 
   if (loading) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
+      <Stack
+        alignItems="center"
+        justifyContent="center"
+        sx={{ py: 6 }}
+      >
         <CircularProgress size={28} />
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ mt: 1.5 }}
+        >
           Loading ticket history...
         </Typography>
       </Stack>
@@ -135,265 +488,518 @@ export default function TicketLifecycleTimeline({
   }
 
   if (!visibleEvents.length) {
-    return <Alert severity="info">{emptyMessage}</Alert>;
+    return (
+      <Alert severity="info">
+        {emptyMessage}
+      </Alert>
+    );
   }
 
   return (
-    <Box sx={{ position: "relative", pl: { xs: 1, md: 2 } }}>
+    <>
       <Box
         sx={{
-          position: "absolute",
-          left: { xs: 20, md: 24 },
-          top: 28,
-          bottom: 28,
-          width: 2,
-          bgcolor: "divider",
+          position: "relative",
+          pl: {
+            xs: 0,
+            sm: 1,
+            md: 2,
+          },
+          minWidth: 0,
         }}
-      />
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            left: {
+              xs: 20,
+              sm: 24,
+            },
+            top: 28,
+            bottom: 28,
+            width: 2,
+            bgcolor: "divider",
+          }}
+        />
 
-      <Stack spacing={0}>
-        {visibleEvents.map((event, index) => {
-          const eventType =
-            eventTypes[event.action] ?? eventTypes[event.type] ?? {};
+        <Stack spacing={0}>
+          {visibleEvents.map(
+            (event, index) => {
+              const eventType =
+                eventTypes[
+                  event.action
+                ] ??
+                eventTypes[
+                  event.type
+                ] ??
+                {};
 
-          const actor = actorLabel(event.actor);
+              const actor =
+                getActorName(
+                  event.actor,
+                );
 
-          return (
-            <Box
-              key={event.id}
-              sx={{
-                position: "relative",
-                pb: index === visibleEvents.length - 1 ? 0 : 3,
-              }}
-            >
-              <Box
-                sx={{
-                  position: "relative",
-                  zIndex: 2,
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 2,
-                }}
-              >
-                <Avatar
+              return (
+                <Box
+                  key={event.id}
                   sx={{
-                    width: 48,
-                    height: 48,
-                    flexShrink: 0,
-                    bgcolor:
-                      eventType.color === "success"
-                        ? "success.main"
-                        : eventType.color === "warning"
-                          ? "warning.main"
-                          : eventType.color === "error"
-                            ? "error.main"
-                            : "primary.main",
+                    position:
+                      "relative",
+                    pb:
+                      index ===
+                      visibleEvents.length -
+                        1
+                        ? 0
+                        : 2.5,
+                    minWidth: 0,
                   }}
                 >
-                  {getEventIcon(event.type, event.action)}
-                </Avatar>
+                  <Box
+                    sx={{
+                      position:
+                        "relative",
+                      zIndex: 2,
+                      display:
+                        "flex",
+                      alignItems:
+                        "flex-start",
+                      gap: {
+                        xs: 1.25,
+                        sm: 2,
+                      },
+                      minWidth: 0,
+                    }}
+                  >
+                    <Avatar
+                      sx={{
+                        width: {
+                          xs: 40,
+                          sm: 48,
+                        },
+                        height: {
+                          xs: 40,
+                          sm: 48,
+                        },
+                        flexShrink: 0,
+                        bgcolor:
+                          eventType.color ===
+                          "success"
+                            ? "success.main"
+                            : eventType.color ===
+                                "warning"
+                              ? "warning.main"
+                              : eventType.color ===
+                                  "error"
+                                ? "error.main"
+                                : "primary.main",
+                      }}
+                    >
+                      {getEventIcon(
+                        event.type,
+                        event.action,
+                      )}
+                    </Avatar>
 
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    flex: 1,
-                    p: { xs: 1.75, md: 2.25 },
-                    borderRadius: 2.5,
-                    transition: "box-shadow 0.2s ease, transform 0.2s ease",
-                    "&:hover": {
-                      boxShadow: 3,
-                      transform: "translateY(-1px)",
-                    },
-                  }}
-                >
-                  <Stack spacing={1.5}>
-                    <Stack
-                      direction={{
-                        xs: "column",
-                        sm: "row",
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        flex: 1,
+                        minWidth: 0,
+                        p: {
+                          xs: 1.25,
+                          sm: 1.75,
+                          md: 2,
+                        },
+                        borderRadius: 2.5,
+                        cursor:
+                          event.changes?.length
+                            ? "pointer"
+                            : "default",
+                        transition:
+                          "box-shadow 0.2s ease, transform 0.2s ease",
+                        "&:hover":
+                          event.changes?.length
+                            ? {
+                                boxShadow: 3,
+                                transform:
+                                  "translateY(-1px)",
+                              }
+                            : undefined,
                       }}
-                      justifyContent="space-between"
-                      alignItems={{
-                        xs: "flex-start",
-                        sm: "center",
-                      }}
-                      gap={1}
                     >
                       <Stack
-                        direction="row"
-                        spacing={1}
-                        alignItems="center"
-                        flexWrap="wrap"
-                      >
-                        <Chip
-                          size="small"
-                          label={
-                            eventType.label ??
-                            event.action ??
-                            event.type ??
-                            "Activity"
-                          }
-                          color={eventType.color ?? "default"}
-                        />
-
-                        <Typography variant="subtitle1" fontWeight={800}>
-                          {event.summary || "Ticket activity"}
-                        </Typography>
-                      </Stack>
-
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ whiteSpace: "nowrap" }}
-                      >
-                        {formatDateTime(event.createdAt, fallback)}
-                      </Typography>
-                    </Stack>
-
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Avatar
-                        sx={{
-                          width: 28,
-                          height: 28,
-                          fontSize: 12,
+                        spacing={{
+                          xs: 1,
+                          sm: 1.25,
                         }}
+                        minWidth={0}
                       >
-                        {getInitials(event.actor)}
-                      </Avatar>
-
-                      <Typography variant="body2" fontWeight={600}>
-                        {actor}
-                      </Typography>
-                    </Stack>
-
-                    {event.changes?.length ? (
-                      <Box>
-                        <Divider sx={{ mb: 1.5 }} />
-
-                        <Stack spacing={1}>
-                          {event.changes.map((change) => {
-                            const field = getField(fields, change.field);
-
-                            return (
-                              <Box
-                                key={`${event.id}-${change.field}`}
-                                sx={{
-                                  display: "grid",
-                                  gridTemplateColumns: {
-                                    xs: "1fr",
-                                    md: "180px 1fr",
-                                  },
-                                  gap: 1,
-                                }}
-                              >
-                                <Typography variant="body2" fontWeight={700}>
-                                  {change.label}
-                                </Typography>
-
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  {formatTicketValue(
-                                    field,
-                                    change.from,
-                                    fallback,
-                                  )}
-
-                                  <Box
-                                    component="span"
-                                    sx={{
-                                      mx: 1,
-                                      fontWeight: 700,
-                                      color: "text.primary",
-                                    }}
-                                  >
-                                    →
-                                  </Box>
-
-                                  {formatTicketValue(
-                                    field,
-                                    change.to,
-                                    fallback,
-                                  )}
-                                </Typography>
-                              </Box>
-                            );
-                          })}
-                        </Stack>
-                      </Box>
-                    ) : null}
-
-                    {event.comment ? (
-                      <Box>
-                        <Divider sx={{ mb: 1.5 }} />
-
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            whiteSpace: "pre-wrap",
+                        {/* Header */}
+                        <Stack
+                          direction={{
+                            xs: "column",
+                            sm: "row",
                           }}
+                          justifyContent="space-between"
+                          alignItems={{
+                            xs: "flex-start",
+                            sm: "center",
+                          }}
+                          gap={1}
+                          minWidth={0}
                         >
-                          {event.comment}
-                        </Typography>
-                      </Box>
-                    ) : null}
+                          <Stack
+                            direction="row"
+                            spacing={0.75}
+                            alignItems="center"
+                            flexWrap="wrap"
+                            minWidth={0}
+                          >
+                            <Chip
+                              size="small"
+                              label={
+                                eventType.label ??
+                                event.action ??
+                                event.type ??
+                                "Activity"
+                              }
+                              color={
+                                eventType.color ??
+                                "default"
+                              }
+                            />
 
-                    {event.files?.length ? (
-                      <Box>
-                        <Divider sx={{ mb: 1.5 }} />
-
-                        <Stack spacing={1}>
-                          {event.files.map((file) => (
-                            <Paper
-                              key={file.id}
-                              variant="outlined"
+                            <Typography
+                              variant="subtitle2"
+                              fontWeight={800}
                               sx={{
-                                p: 1.25,
-                                bgcolor: "action.hover",
+                                overflowWrap:
+                                  "anywhere",
                               }}
                             >
-                              <Stack
-                                direction="row"
-                                spacing={1.5}
-                                alignItems="center"
-                              >
-                                <AttachFileOutlinedIcon fontSize="small" />
+                              {event.summary ||
+                                "Ticket activity"}
+                            </Typography>
+                          </Stack>
 
-                                <Box
-                                  sx={{
-                                    minWidth: 0,
-                                    flex: 1,
-                                  }}
-                                >
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={700}
-                                    noWrap
-                                  >
-                                    {file.name}
-                                  </Typography>
-
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    {formatFileSize(file.size)}
-                                  </Typography>
-                                </Box>
-                              </Stack>
-                            </Paper>
-                          ))}
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{
+                              flexShrink: 0,
+                              whiteSpace:
+                                {
+                                  xs: "normal",
+                                  sm: "nowrap",
+                                },
+                            }}
+                          >
+                            {formatDateTime(
+                              event.createdAt,
+                              fallback,
+                            )}
+                          </Typography>
                         </Stack>
-                      </Box>
-                    ) : null}
-                  </Stack>
-                </Paper>
-              </Box>
-            </Box>
-          );
-        })}
-      </Stack>
-    </Box>
+
+                        {/* Actor */}
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                          minWidth={0}
+                        >
+                          <Avatar
+                            sx={{
+                              width: 28,
+                              height: 28,
+                              flexShrink: 0,
+                              fontSize: 12,
+                            }}
+                          >
+                            {getInitials(
+                              event.actor,
+                            )}
+                          </Avatar>
+
+                          <Typography
+                            variant="body2"
+                            fontWeight={700}
+                            sx={{
+                              minWidth: 0,
+                              overflow:
+                                "hidden",
+                              textOverflow:
+                                "ellipsis",
+                              whiteSpace:
+                                "nowrap",
+                            }}
+                          >
+                            {actor}
+                          </Typography>
+
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{
+                              display: {
+                                xs: "none",
+                                sm: "block",
+                              },
+                            }}
+                          >
+                            changed this ticket
+                          </Typography>
+                        </Stack>
+
+                        {/* Changes */}
+                        {event.changes?.length ? (
+                          <Box>
+                            <Divider
+                              sx={{
+                                mb: 1.25,
+                              }}
+                            />
+
+                            <Stack spacing={1}>
+                              {event.changes.map(
+                                (change) => {
+                                  const field =
+                                    getField(
+                                      fields,
+                                      change.field,
+                                    );
+
+                                  return (
+                                    <Box
+                                      key={`${event.id}-${change.field}`}
+                                      sx={{
+                                        display:
+                                          "grid",
+                                        gridTemplateColumns:
+                                          {
+                                            xs: "1fr",
+                                            sm: "minmax(120px, 160px) minmax(0, 1fr)",
+                                          },
+                                        gap: {
+                                          xs: 0.5,
+                                          sm: 1.5,
+                                        },
+                                        minWidth:
+                                          0,
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={800}
+                                        sx={{
+                                          overflowWrap:
+                                            "anywhere",
+                                        }}
+                                      >
+                                        {change.label}
+                                      </Typography>
+
+                                      <Stack
+                                        direction="row"
+                                        spacing={1}
+                                        alignItems="flex-start"
+                                        minWidth={0}
+                                      >
+                                        <Box
+                                          sx={{
+                                            minWidth:
+                                              0,
+                                            flex: 1,
+                                          }}
+                                        >
+                                          <ValuePreview
+                                            field={
+                                              field
+                                            }
+                                            value={
+                                              change.from
+                                            }
+                                            fallback={
+                                              fallback
+                                            }
+                                            onOpen={() =>
+                                              setSelectedChange(
+                                                change,
+                                              )
+                                            }
+                                          />
+                                        </Box>
+
+                                        <Typography
+                                          variant="body2"
+                                          fontWeight={800}
+                                          sx={{
+                                            flexShrink: 0,
+                                            color:
+                                              "text.primary",
+                                          }}
+                                        >
+                                          →
+                                        </Typography>
+
+                                        <Box
+                                          sx={{
+                                            minWidth:
+                                              0,
+                                            flex: 1,
+                                          }}
+                                        >
+                                          <ValuePreview
+                                            field={
+                                              field
+                                            }
+                                            value={
+                                              change.to
+                                            }
+                                            fallback={
+                                              fallback
+                                            }
+                                            onOpen={() =>
+                                              setSelectedChange(
+                                                change,
+                                              )
+                                            }
+                                          />
+                                        </Box>
+                                      </Stack>
+                                    </Box>
+                                  );
+                                },
+                              )}
+                            </Stack>
+                          </Box>
+                        ) : null}
+
+                        {/* Comment */}
+                        {event.comment ? (
+                          <Box>
+                            <Divider
+                              sx={{
+                                mb: 1.25,
+                              }}
+                            />
+
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                whiteSpace:
+                                  "pre-wrap",
+                                overflowWrap:
+                                  "anywhere",
+                                display:
+                                  "-webkit-box",
+                                WebkitLineClamp: 5,
+                                WebkitBoxOrient:
+                                  "vertical",
+                                overflow:
+                                  "hidden",
+                              }}
+                            >
+                              {event.comment}
+                            </Typography>
+                          </Box>
+                        ) : null}
+
+                        {/* Attachments */}
+                        {event.files?.length ? (
+                          <Box>
+                            <Divider
+                              sx={{
+                                mb: 1.25,
+                              }}
+                            />
+
+                            <Stack spacing={1}>
+                              {event.files.map(
+                                (file) => (
+                                  <Paper
+                                    key={
+                                      file.id
+                                    }
+                                    variant="outlined"
+                                    sx={{
+                                      p: 1,
+                                      bgcolor:
+                                        "action.hover",
+                                      minWidth: 0,
+                                    }}
+                                  >
+                                    <Stack
+                                      direction="row"
+                                      spacing={1}
+                                      alignItems="center"
+                                      minWidth={0}
+                                    >
+                                      <AttachFileOutlinedIcon fontSize="small" />
+
+                                      <Box
+                                        sx={{
+                                          minWidth:
+                                            0,
+                                          flex: 1,
+                                        }}
+                                      >
+                                        <Typography
+                                          variant="body2"
+                                          fontWeight={700}
+                                          noWrap
+                                        >
+                                          {
+                                            file.name
+                                          }
+                                        </Typography>
+
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                        >
+                                          {formatFileSize(
+                                            file.size,
+                                          )}
+                                        </Typography>
+                                      </Box>
+                                    </Stack>
+                                  </Paper>
+                                ),
+                              )}
+                            </Stack>
+                          </Box>
+                        ) : null}
+                      </Stack>
+                    </Paper>
+                  </Box>
+                </Box>
+              );
+            },
+          )}
+        </Stack>
+      </Box>
+
+      <DetailDialog
+        open={Boolean(
+          selectedChange,
+        )}
+        onClose={() =>
+          setSelectedChange(null)
+        }
+        change={
+          selectedChange
+        }
+        field={
+          selectedChange
+            ? getField(
+                fields,
+                selectedChange.field,
+              )
+            : null
+        }
+        fallback={fallback}
+      />
+    </>
   );
 }

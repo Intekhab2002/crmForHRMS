@@ -107,7 +107,6 @@ function renderValue(field, ticket, fallback) {
   }
 
   if (field.type === "dateTime") {
-    console.log("date and time found");
     return formatDateTime(value, fallback);
   }
 
@@ -158,13 +157,6 @@ export default function TicketOverview({
   enforcePermissions = true,
 }) {
   const { hasPermission } = useAuth();
-  // console.log("ticket",ticket)
-  // console.log("TicketOverview fields:", fields);
-  // console.log("TicketOverview fieldNames:", fieldNames);
-  // console.log(
-  //   "TicketOverview detail fields:",
-  //   fields.filter((field) => field.form?.detail),
-  // );
   const visibleFields = useMemo(() => {
     const detailFieldKeys = new Set(fieldNames);
 
@@ -174,7 +166,6 @@ export default function TicketOverview({
         canReadField(field, enforcePermissions, hasPermission),
       );
   }, [enforcePermissions, fieldNames, fields, hasPermission]);
-  // console.log("visibleFields", visibleFields);
   return (
     <Paper
       variant="outlined"
@@ -198,7 +189,6 @@ export default function TicketOverview({
 
         <Grid container spacing={2}>
           {visibleFields.map((field) => {
-            console.log(renderValue(field, ticket, fallback));
             return (
               <Grid
                 key={field.key}
