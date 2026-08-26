@@ -115,26 +115,6 @@ function validateParams(
  *
  * @returns {import("express").RequestHandler}
  */
-// function validateQuery(
-//     schema,
-// ) {
-//     return (
-//         req,
-//         res,
-//         next,
-//     ) => {
-//         try {
-//             req.query =
-//                 schema.parse(
-//                     req.query,
-//                 );
-
-//             return next();
-//         } catch (error) {
-//             return next(error);
-//         }
-//     };
-// }
 
 function validateQuery(schema) {
     return (
@@ -255,6 +235,24 @@ router.patch(
         userValidator.updateUserStatusSchema,
     ),
     userController.updateUserStatus,
+);
+
+/**
+ * POST /users/:userId/sessions/revoke
+ *
+ * Permission:
+ *     user:update
+ */
+router.post(
+    "/:userId/sessions/revoke",
+    authenticate,
+    requirePermission(
+        USER_UPDATE,
+    ),
+    validateParams(
+        userValidator.userIdParamSchema,
+    ),
+    userController.revokeUserSessions,
 );
 
 /**

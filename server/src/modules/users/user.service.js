@@ -112,17 +112,45 @@ async function getUserById(userId) {
  *     pagination: object,
  * }>}
  */
-async function getUsers({ page = 1, limit = 20 } = {}) {
+async function getUsers({
+  page = 1,
+  limit = 20,
+  search = "",
+  status = null,
+  roleCode = null,
+} = {}) {
   const normalizedPage = Math.max(Number(page) || 1, 1);
 
   const normalizedLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const normalizedSearch =
+  String(search || "").trim();
 
+const normalizedStatus =
+  status?.trim() || null;
+
+const normalizedRoleCode =
+  roleCode?.trim().toLowerCase() || null;
   const offset = (normalizedPage - 1) * normalizedLimit;
 
   const [users, total] = await Promise.all([
-    userRepository.findUsers(normalizedLimit, offset),
-    userRepository.countUsers(),
-  ]);
+  userRepository.findUsers(
+    normalizedLimit,
+    offset,
+    {
+      search: normalizedSearch,
+      status: normalizedStatus,
+      roleCode: normalizedRoleCode,
+    },
+  ),
+
+  userRepository.countUsers({
+    search: normalizedSearch,
+    status: normalizedStatus,
+    roleCode: normalizedRoleCode,
+  }),
+]);
+
+
 
   const totalPages = Math.ceil(total / normalizedLimit);
 
@@ -158,12 +186,34 @@ async function getUsers({ page = 1, limit = 20 } = {}) {
  * @returns {Promise<object>}
  */
 async function createUser(
-  { username, email, password, status = USER_STATUS.ACTIVE, roleCode = null },
+  {
+    username,
+    email,
+    password,
+    status = USER_STATUS.ACTIVE,
+    roleCode = null,
+
+    firstName = null,
+    lastName = null,
+    phone = null,
+    designation = null,
+
+    organizationId = null,
+    departmentId = null,
+  },
   actorUserId,
 ) {
-  const normalizedUsername = normalizeUsername(username);
-  const normalizedEmail = normalizeEmail(email);
-  const normalizedRoleCode = roleCode?.trim().toLowerCase() || null;
+  const normalizedFirstName = firstName?.trim() || null;
+
+  const normalizedLastName = lastName?.trim() || null;
+
+  const normalizedPhone = phone?.trim() || null;
+
+  const normalizedDesignation = designation?.trim() || null;
+
+  const normalizedOrganizationId = organizationId || null;
+
+  const normalizedDepartmentId = departmentId || null;
 
   const [existingUsername, existingEmail] = await Promise.all([
     userRepository.findUserByUsername(normalizedUsername),
@@ -182,6 +232,11 @@ async function createUser(
 
   return executeTransaction(
     async (transactionContext) => {
+      await validateOrganizationDepartment(
+        normalizedOrganizationId,
+        normalizedDepartmentId,
+        transactionContext,
+      );
       let targetRole = null;
 
       if (normalizedRoleCode) {
@@ -269,6 +324,14 @@ async function createUser(
           email: normalizedEmail,
           passwordHash,
           status,
+
+          firstName: normalizedFirstName,
+          lastName: normalizedLastName,
+          phone: normalizedPhone,
+          designation: normalizedDesignation,
+
+          organizationId: normalizedOrganizationId,
+          departmentId: normalizedDepartmentId,
         },
         transactionContext,
       );
@@ -318,7 +381,23 @@ async function createUser(
  *
  * @returns {Promise<object>}
  */
-async function updateUser(userId, { username, email, roleCode }, actorUserId) {
+async function updateUser(
+  userId,
+  {
+    username,
+    email,
+    roleCode,
+
+    firstName,
+    lastName,
+    phone,
+    designation,
+
+    organizationId,
+    departmentId,
+  },
+  actorUserId,
+) {
   await requireUser(userId);
 
   await assertUserIsMutable(userId, actorUserId);
@@ -328,6 +407,24 @@ async function updateUser(userId, { username, email, roleCode }, actorUserId) {
 
   const normalizedEmail =
     email !== undefined ? normalizeEmail(email) : undefined;
+
+  const normalizedFirstName =
+    firstName !== undefined ? firstName?.trim() || null : undefined;
+
+  const normalizedLastName =
+    lastName !== undefined ? lastName?.trim() || null : undefined;
+
+  const normalizedPhone =
+    phone !== undefined ? phone?.trim() || null : undefined;
+
+  const normalizedDesignation =
+    designation !== undefined ? designation?.trim() || null : undefined;
+
+  const normalizedOrganizationId =
+    organizationId !== undefined ? organizationId || null : undefined;
+
+  const normalizedDepartmentId =
+    departmentId !== undefined ? departmentId || null : undefined;
 
   if (normalizedUsername) {
     const existing =
@@ -368,11 +465,45 @@ async function updateUser(userId, { username, email, roleCode }, actorUserId) {
         );
       }
 
+      if (
+        normalizedOrganizationId !== undefined ||
+        normalizedDepartmentId !== undefined
+      ) {
+        const currentUser = await userRepository.findUserById(
+          userId,
+          transactionContext,
+        );
+
+        const effectiveOrganizationId =
+          normalizedOrganizationId !== undefined
+            ? normalizedOrganizationId
+            : currentUser.organization_id;
+
+        const effectiveDepartmentId =
+          normalizedDepartmentId !== undefined
+            ? normalizedDepartmentId
+            : currentUser.department_id;
+
+        await validateOrganizationDepartment(
+          effectiveOrganizationId,
+          effectiveDepartmentId,
+          transactionContext,
+        );
+      }
+
       const updatedUser = await userRepository.updateUser(
         userId,
         {
           username: normalizedUsername,
           email: normalizedEmail,
+
+          firstName: normalizedFirstName,
+          lastName: normalizedLastName,
+          phone: normalizedPhone,
+          designation: normalizedDesignation,
+
+          organizationId: normalizedOrganizationId,
+          departmentId: normalizedDepartmentId,
         },
         transactionContext,
       );
@@ -395,6 +526,48 @@ async function updateUser(userId, { username, email, roleCode }, actorUserId) {
           throw AppError.badRequest("The requested role does not exist.", {
             code: "ROLE_NOT_FOUND",
           });
+        }
+
+        if (targetRole.code === ROLE_SYSTEM_CODES.SUPERADMIN) {
+          const actorRoles = await roleService.getActorRoles(
+            actorUserId,
+            transactionContext,
+          );
+
+          const actorIsDeveloper = actorRoles.some(
+            ({ code }) => code === ROLE_SYSTEM_CODES.DEVELOPER,
+          );
+
+          if (!actorIsDeveloper) {
+            throw AppError.forbidden(
+              "Only the Developer can assign the Super Admin role.",
+              {
+                code: ROLE_ERROR_CODES.ROLE_ASSIGNMENT_FORBIDDEN,
+              },
+            );
+          }
+
+          const existingSuperadmins =
+            await roleRepository.countRoleUsersForUpdate(
+              targetRole.id,
+              transactionContext,
+            );
+
+          /*
+           * The current target may already be the singleton Super Admin.
+           */
+          const targetAlreadyHasSuperadmin = currentRoles.some(
+            ({ code }) => code === ROLE_SYSTEM_CODES.SUPERADMIN,
+          );
+
+          if (existingSuperadmins > 0 && !targetAlreadyHasSuperadmin) {
+            throw AppError.conflict(
+              "Only one Super Admin account is permitted.",
+              {
+                code: ROLE_ERROR_CODES.ROLE_SINGLETON_VIOLATION,
+              },
+            );
+          }
         }
 
         await roleService.assertCanAssignRole(
@@ -448,31 +621,47 @@ async function updateUser(userId, { username, email, roleCode }, actorUserId) {
  * @returns {Promise<object>}
  */
 async function updateUserStatus(userId, status, actorUserId) {
-  const user = await requireUser(userId);
+  return executeTransaction(
+    async (transactionContext) => {
+      const user = await requireUser(userId);
 
-  if (user.status === status) {
-    return user;
-  }
+      if (user.status === status) {
+        return user;
+      }
 
-  await assertUserIsMutable(userId, actorUserId);
+      await assertTargetUserMutable(
+        actorUserId,
+        userId,
+        "status",
+        transactionContext,
+      );
 
-  const updatedUser = await userRepository.updateUserStatus(userId, status);
+      const updatedUser = await userRepository.updateUserStatus(
+        userId,
+        status,
+        transactionContext,
+      );
 
-  if (!updatedUser) {
-    throw AppError.notFound("User not found.", {
-      code: USER_ERROR_CODES.USER_NOT_FOUND,
-    });
-  }
+      if (!updatedUser) {
+        throw AppError.notFound("User not found.", {
+          code: USER_ERROR_CODES.USER_NOT_FOUND,
+        });
+      }
 
-  if (
-    status === USER_STATUS.INACTIVE ||
-    status === USER_STATUS.SUSPENDED ||
-    status === USER_STATUS.LOCKED
-  ) {
-    await sessionService.revokeUserSessions(userId);
-  }
+      if (
+        status === USER_STATUS.INACTIVE ||
+        status === USER_STATUS.SUSPENDED ||
+        status === USER_STATUS.LOCKED
+      ) {
+        await authRepository.revokeActiveSessions(userId, transactionContext);
+      }
 
-  return updatedUser;
+      return updatedUser;
+    },
+    {
+      isolationLevel: "SERIALIZABLE",
+    },
+  );
 }
 
 /**
@@ -494,7 +683,7 @@ async function updateUserStatus(userId, status, actorUserId) {
 async function deleteUser(userId, actorUserId) {
   return executeTransaction(
     async (transactionContext) => {
-      await assertCanManageTargetUser(
+      await assertTargetUserMutable(
         actorUserId,
         userId,
         "delete",
@@ -603,8 +792,13 @@ async function validateOrganizationDepartment(
 async function assertTargetUserMutable(
   actorUserId,
   targetUserId,
+  operation,
   transactionContext = null,
 ) {
+  if (!actorUserId) {
+    throw AppError.unauthorized("Authenticated user context is required.");
+  }
+
   if (actorUserId === targetUserId) {
     throw AppError.forbidden(
       "You cannot perform this administrative operation on your own account.",
@@ -614,24 +808,63 @@ async function assertTargetUserMutable(
     );
   }
 
+  const actorRoles = await roleService.getActorRoles(
+    actorUserId,
+    transactionContext,
+  );
+
   const targetRoles = await roleService.getActorRoles(
     targetUserId,
     transactionContext,
   );
 
-  const targetRoleCodes = new Set(targetRoles.map(({ code }) => code));
+  const actorCodes = new Set(actorRoles.map(({ code }) => code));
 
-  if (targetRoleCodes.has("developer")) {
+  const targetCodes = new Set(targetRoles.map(({ code }) => code));
+
+  const actorIsDeveloper = actorCodes.has(ROLE_SYSTEM_CODES.DEVELOPER);
+
+  const actorIsSuperAdmin = actorCodes.has(ROLE_SYSTEM_CODES.SUPERADMIN);
+
+  const targetIsDeveloper = targetCodes.has(ROLE_SYSTEM_CODES.DEVELOPER);
+
+  const targetIsSuperAdmin = targetCodes.has(ROLE_SYSTEM_CODES.SUPERADMIN);
+
+  /*
+   * Developer account is immutable.
+   */
+  if (targetIsDeveloper) {
     throw AppError.forbidden("The Developer account is protected.", {
       code: USER_ERROR_CODES.SYSTEM_USER_PROTECTED,
     });
   }
 
-  if (targetRoleCodes.has("superadmin")) {
-    throw AppError.forbidden("The Super Admin account is protected.", {
-      code: USER_ERROR_CODES.SYSTEM_USER_PROTECTED,
-    });
+  /*
+   * Super Admin may only be administrated by Developer.
+   */
+  if (targetIsSuperAdmin && !actorIsDeveloper) {
+    throw AppError.forbidden(
+      "Only the Developer can manage the Super Admin account.",
+      {
+        code: USER_ERROR_CODES.SYSTEM_USER_PROTECTED,
+      },
+    );
   }
+
+  /*
+   * Developer and Super Admin cannot manipulate themselves.
+   */
+  if (actorIsDeveloper && targetIsDeveloper) {
+    throw AppError.forbidden("The Developer account is protected.");
+  }
+
+  if (actorIsSuperAdmin && targetIsSuperAdmin) {
+    throw AppError.forbidden(
+      "The Super Admin account cannot be modified by itself.",
+    );
+  }
+
+  return true;
 }
 
 /**
@@ -647,7 +880,6 @@ const userService = Object.freeze({
   updateUser,
   updateUserStatus,
   deleteUser,
-  revokeUserSessions
 });
 
 export default userService;

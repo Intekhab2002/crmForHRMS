@@ -261,12 +261,70 @@ const DELETE_USER = `
 `;
 
 const COUNT_USERS = `
-    SELECT COUNT(*)::bigint AS total
-    FROM users;
+    SELECT COUNT(DISTINCT u.id)::bigint AS total
+    FROM users u
+    WHERE
+        (
+            $1::TEXT = ''
+            OR u.username ILIKE '%' || $1 || '%'
+            OR u.email ILIKE '%' || $1 || '%'
+            OR COALESCE(u.first_name, '') ILIKE '%' || $1 || '%'
+            OR COALESCE(u.last_name, '') ILIKE '%' || $1 || '%'
+            OR CONCAT_WS(
+                ' ',
+                u.first_name,
+                u.last_name
+            ) ILIKE '%' || $1 || '%'
+        )
+        AND (
+            $2::TEXT IS NULL
+            OR u.status = $2
+        )
+        AND (
+            $3::TEXT IS NULL
+            OR EXISTS (
+                SELECT 1
+                FROM user_roles ur_filter
+                INNER JOIN roles r_filter
+                    ON r_filter.id = ur_filter.role_id
+                WHERE ur_filter.user_id = u.id
+                  AND r_filter.code = $3
+                  AND r_filter.is_active = TRUE
+            )
+        );
 `;
 
 const FIND_USERS = `
     ${SELECT_USER_FIELDS}
+    WHERE
+        (
+            $3::TEXT = ''
+            OR u.username ILIKE '%' || $3 || '%'
+            OR u.email ILIKE '%' || $3 || '%'
+            OR COALESCE(u.first_name, '') ILIKE '%' || $3 || '%'
+            OR COALESCE(u.last_name, '') ILIKE '%' || $3 || '%'
+            OR CONCAT_WS(
+                ' ',
+                u.first_name,
+                u.last_name
+            ) ILIKE '%' || $3 || '%'
+        )
+        AND (
+            $4::TEXT IS NULL
+            OR u.status = $4
+        )
+        AND (
+            $5::TEXT IS NULL
+            OR EXISTS (
+                SELECT 1
+                FROM user_roles ur_filter
+                INNER JOIN roles r_filter
+                    ON r_filter.id = ur_filter.role_id
+                WHERE ur_filter.user_id = u.id
+                  AND r_filter.code = $5
+                  AND r_filter.is_active = TRUE
+            )
+        )
     ORDER BY u.created_at DESC
     LIMIT $1
     OFFSET $2;
@@ -478,10 +536,21 @@ async function deleteUser(userId, transactionContext = null) {
  *
  * @returns {Promise<Array<object>>}
  */
-async function findUsers(limit, offset, transactionContext = null) {
+async function findUsers(
+  limit,
+  offset,
+  { search = "", status = null, roleCode = null } = {},
+  transactionContext = null,
+) {
   const executor = getExecutor(transactionContext);
 
-  const result = await executor.query(FIND_USERS, [limit, offset]);
+  const result = await executor.query(FIND_USERS, [
+    limit,
+    offset,
+    search,
+    status,
+    roleCode,
+  ]);
 
   return result.rows;
 }
@@ -493,23 +562,34 @@ async function findUsers(limit, offset, transactionContext = null) {
  *
  * @returns {Promise<number>}
  */
-async function countUsers(transactionContext = null) {
-  const executor = getExecutor(transactionContext);
+async function countUsers(
+  {
+    search = "",
+    status = null,
+    roleCode = null,
+  } = {},
+  transactionContext = null,
+) {
+  const executor =
+    getExecutor(transactionContext);
 
-  const result = await executor.query(COUNT_USERS);
+  const result = await executor.query(
+    COUNT_USERS,
+    [
+      search,
+      status,
+      roleCode,
+    ],
+  );
 
-  return Number(result.rows[0]?.total ?? 0);
+  return Number(
+    result.rows[0]?.total ?? 0,
+  );
 }
 
-async function findOrganizationById(
-    organizationId,
-    transactionContext = null,
-) {
-    const result =
-        await getExecutor(
-            transactionContext,
-        ).query(
-            `
+async function findOrganizationById(organizationId, transactionContext = null) {
+  const result = await getExecutor(transactionContext).query(
+    `
                 SELECT
                     id,
                     code,
@@ -519,22 +599,15 @@ async function findOrganizationById(
                 WHERE id = $1::UUID
                 LIMIT 1;
             `,
-            [organizationId],
-        );
+    [organizationId],
+  );
 
-    return result.rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
-
-async function findDepartmentById(
-    departmentId,
-    transactionContext = null,
-) {
-    const result =
-        await getExecutor(
-            transactionContext,
-        ).query(
-            `
+async function findDepartmentById(departmentId, transactionContext = null) {
+  const result = await getExecutor(transactionContext).query(
+    `
                 SELECT
                     id,
                     organization_id,
@@ -545,10 +618,10 @@ async function findDepartmentById(
                 WHERE id = $1::UUID
                 LIMIT 1;
             `,
-            [departmentId],
-        );
+    [departmentId],
+  );
 
-    return result.rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 /**
@@ -569,8 +642,9 @@ const userRepository = Object.freeze({
 
   findUsers,
   countUsers,
+
   findDepartmentById,
-  findOrganizationById
+  findOrganizationById,
 });
 
 export default userRepository;

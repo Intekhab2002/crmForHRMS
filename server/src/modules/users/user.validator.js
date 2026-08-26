@@ -134,10 +134,12 @@ const userListQuerySchema =
                     .default("20"),
 
             search:
-                z.string()
-                    .trim()
-                    .max(100)
-                    .optional(),
+            z
+            .string()
+            .trim()
+            .max(100)
+            .optional()
+            .default(""),
 
             status:
                 statusSchema
