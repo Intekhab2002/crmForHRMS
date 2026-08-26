@@ -1,20 +1,21 @@
+import { PERMISSIONS } from "./permission.config";
+
 export const DASHBOARD_CONFIG = Object.freeze([
-  {
+  Object.freeze({
     id: "system-overview",
     title: "System Overview",
-    permission: "dashboard:read",
-    roles: ["developer"],
-  },
-  {
+    permission: PERMISSIONS.DASHBOARD_READ,
+  }),
+
+  Object.freeze({
     id: "ticket-volume",
     title: "Ticket Volume",
-    permission: "ticket:read",
-    roles: ["developer", "admin", "manager"],
-  },
-  {
+    permission: PERMISSIONS.TICKET_READ,
+  }),
+
+  Object.freeze({
     id: "my-tickets",
     title: "My Tickets",
-    permission: "ticket:read",
-    roles: ["agent", "customer"],
-  },
+    permission: PERMISSIONS.TICKET_READ,
+  }),
 ]);

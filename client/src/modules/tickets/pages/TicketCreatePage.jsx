@@ -1,9 +1,5 @@
 import { useState } from "react";
-import {
-  Alert,
-  Paper,
-  Stack,
-} from "@mui/material";
+import { Alert, Paper, Stack } from "@mui/material";
 import { Link } from "react-router";
 
 import PageHeader from "../../../components/page/PageHeader";
@@ -14,6 +10,7 @@ import {
   TICKET_MODULE_CONFIG,
 } from "../../../config/ticket.config";
 import { ticketService } from "../services/ticket.service";
+import CanAccess from "../../../components/rbac/CanAccess";
 
 export default function TicketCreatePage() {
   const { success, error: notifyError } = useNotification();
@@ -49,30 +46,29 @@ export default function TicketCreatePage() {
         title={TICKET_FORM_CONFIG.create.title}
         description={TICKET_FORM_CONFIG.create.description}
         actions={
-          <Link to="/tickets">
-            {TICKET_MODULE_CONFIG.labels.backToTickets}
-          </Link>
+          <Link to="/tickets">{TICKET_MODULE_CONFIG.labels.backToTickets}</Link>
         }
       />
 
       {error ? <Alert severity="error">{error}</Alert> : null}
-
-      <Paper
-        variant="outlined"
-        sx={{
-          p: {
-            xs: 2,
-            md: 3,
-          },
-        }}
-      >
-        <TicketForm
-          mode="create"
-          onSubmit={handleSubmit}
-          submitting={submitting}
-          submitLabel={TICKET_FORM_CONFIG.create.submitLabel}
-        />
-      </Paper>
+      <CanAccess permission={TICKET_MODULE_CONFIG.permissions.create}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: {
+              xs: 2,
+              md: 3,
+            },
+          }}
+        >
+          <TicketForm
+            mode="create"
+            onSubmit={handleSubmit}
+            submitting={submitting}
+            submitLabel={TICKET_FORM_CONFIG.create.submitLabel}
+          />
+        </Paper>
+      </CanAccess>
     </Stack>
   );
 }

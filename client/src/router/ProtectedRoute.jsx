@@ -1,11 +1,25 @@
+import {
+  Navigate,
+  Outlet,
+  useLocation,
+} from "react-router";
 
-import { Navigate, Outlet, useLocation } from "react-router";
-import { CircularProgress, Stack } from "@mui/material";
+import {
+  CircularProgress,
+  Stack,
+} from "@mui/material";
+
 import { useAuth } from "../context/useAuth";
 import { AUTH_CONFIG } from "../config/auth.config";
 
-export default function ProtectedRoute() {
-  const { isInitializing, isAuthenticated } = useAuth();
+export default function ProtectedRoute({
+  children,
+}) {
+  const {
+    isInitializing,
+    isAuthenticated,
+  } = useAuth();
+
   const location = useLocation();
 
   if (isInitializing) {
@@ -30,5 +44,5 @@ export default function ProtectedRoute() {
     );
   }
 
-  return <Outlet />;
+  return children ?? <Outlet />;
 }
