@@ -10,134 +10,271 @@ import {
   Button,
   Card,
   CardContent,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
+import RestartAltOutlinedIcon from "@mui/icons-material/RestartAltOutlined";
 
 import { useAuth } from "../../../context/useAuth";
 
-import { PERMISSIONS } from "../../../config/permission.config";
-
 import {
+  isDeveloper,
+  isSuperAdmin,
   getPrimaryRoleObject,
   getRoleOptions,
 } from "../users.config";
 
-import { userService } from "../services/user.service";
-import { roleService } from "../../roles/services/role.service";
+import {
+  SYSTEM_ROLE_CODES,
+} from "../../../config/access.config";
+
+import {
+  PERMISSIONS,
+} from "../../../config/permission.config";
+
+import {
+  userService,
+} from "../services/user.service";
+
+import {
+  roleService,
+} from "../../roles/services/role.service";
 
 import UserFormDialog from "../components/UserFormDialog";
 import UserTable from "../components/UserTable";
 
+const DEFAULT_PAGE_SIZE = 20;
+
+const EMPTY_PAGINATION =
+  Object.freeze({
+    page: 1,
+    limit: DEFAULT_PAGE_SIZE,
+    total: 0,
+    totalPages: 0,
+  });
+
+function getErrorMessage(error) {
+  return (
+    error?.response?.data?.message ??
+    error?.response?.data?.error
+      ?.message ??
+    error?.message ??
+    "Unable to complete the request."
+  );
+}
+
 export default function UserManagementPage() {
   const {
+    user: currentUser,
+    roles: currentRoles,
     hasPermission,
   } = useAuth();
 
-  const [users, setUsers] = useState([]);
-  const [roles, setRoles] = useState([]);
+  const currentUserIsDeveloper =
+    currentRoles?.some(
+      (role) =>
+        (
+          typeof role === "string"
+            ? role
+            : role?.code
+        ) ===
+        SYSTEM_ROLE_CODES.DEVELOPER,
+    ) ?? false;
 
-  const [loading, setLoading] = useState(true);
-  const [rolesLoading, setRolesLoading] = useState(false);
+  const canCreate =
+    hasPermission(
+      PERMISSIONS.USER_CREATE,
+    );
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
+  const canUpdate =
+    hasPermission(
+      PERMISSIONS.USER_UPDATE,
+    );
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const canDelete =
+    hasPermission(
+      PERMISSIONS.USER_DELETE,
+    );
 
-  const canCreate = hasPermission(
-    PERMISSIONS.USER_CREATE,
-  );
+  const [users, setUsers] =
+    useState([]);
 
-  const canUpdate = hasPermission(
-    PERMISSIONS.USER_UPDATE,
-  );
+  const [roles, setRoles] =
+    useState([]);
 
-  const canDelete = hasPermission(
-    PERMISSIONS.USER_DELETE,
-  );
+  const [loading, setLoading] =
+    useState(true);
+
+  const [rolesLoading, setRolesLoading] =
+    useState(false);
+
+  const [dialogOpen, setDialogOpen] =
+    useState(false);
+
+  const [editingUser, setEditingUser] =
+    useState(null);
+
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState("");
+
+  const [searchInput, setSearchInput] =
+    useState("");
+
+  const [search, setSearch] =
+    useState("");
+
+  const [status, setStatus] =
+    useState("");
+
+  const [roleCode, setRoleCode] =
+    useState("");
+
+  const [pagination, setPagination] =
+    useState(EMPTY_PAGINATION);
+
+  const [paginationModel, setPaginationModel] =
+    useState({
+      page: 0,
+      pageSize: DEFAULT_PAGE_SIZE,
+    });
 
   const roleOptions = useMemo(
     () =>
       getRoleOptions(
         roles,
-        editingUser?.role?.code,
+        editingUser?.role?.code ??
+          editingUser?.roles?.[0]?.code,
+        currentUserIsDeveloper,
       ),
     [
       roles,
       editingUser,
+      currentUserIsDeveloper,
     ],
   );
 
-  const loadRoles = useCallback(async () => {
-    if (!canCreate && !canUpdate) {
-      setRoles([]);
-      return;
-    }
+  const loadRoles = useCallback(
+    async () => {
+      if (!canCreate && !canUpdate) {
+        setRoles([]);
+        return;
+      }
 
-    setRolesLoading(true);
+      setRolesLoading(true);
 
-    try {
-      const response =
-        await roleService.list({
-          page: 1,
-          limit: 100,
-          isActive: "true",
-        });
+      try {
+        const response =
+          await roleService.list({
+            page: 1,
+            limit: 100,
+            isActive: "true",
+          });
 
-      setRoles(
-        Array.isArray(response?.data)
-          ? response.data
-          : [],
-      );
-    } catch (requestError) {
-      setError(
-        requestError?.response?.data?.message ??
-          "Unable to load roles.",
-      );
-    } finally {
-      setRolesLoading(false);
-    }
-  }, [canCreate, canUpdate]);
+        setRoles(
+          Array.isArray(
+            response?.data,
+          )
+            ? response.data
+            : [],
+        );
+      } catch (requestError) {
+        setError(
+          getErrorMessage(
+            requestError,
+          ),
+        );
+      } finally {
+        setRolesLoading(false);
+      }
+    },
+    [canCreate, canUpdate],
+  );
 
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
-
-    try {
-      const response =
-        await userService.list({
-          page: 1,
-          limit: 100,
-        });
-
-      const data = Array.isArray(
-        response?.data,
-      )
-        ? response.data
-        : [];
-
-      setUsers(
-        data.map((user) => ({
-          ...user,
-          role:
-            user.role ??
-            getPrimaryRoleObject(user),
-        })),
-      );
-
+  const loadUsers = useCallback(
+    async () => {
+      setLoading(true);
       setError("");
-    } catch (requestError) {
-      setError(
-        requestError?.response?.data?.message ??
-          "Unable to load users.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+
+      try {
+        const response =
+          await userService.list({
+            page:
+              paginationModel.page + 1,
+
+            limit:
+              paginationModel.pageSize,
+
+            search,
+
+            status: status || undefined,
+
+            roleCode:
+              roleCode || undefined,
+          });
+
+        const data =
+          Array.isArray(
+            response?.data,
+          )
+            ? response.data
+            : [];
+
+        /*
+         * Developer must never be presented
+         * as an ordinary user-management row.
+         */
+        const visibleUsers =
+          data.filter(
+            (user) =>
+              !isDeveloper(user),
+          );
+
+        setUsers(
+          visibleUsers.map(
+            (user) => ({
+              ...user,
+              role:
+                user.role ??
+                getPrimaryRoleObject(
+                  user,
+                ),
+            }),
+          ),
+        );
+
+        setPagination(
+          response?.pagination ??
+            EMPTY_PAGINATION,
+        );
+      } catch (requestError) {
+        setError(
+          getErrorMessage(
+            requestError,
+          ),
+        );
+
+        setUsers([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [
+      paginationModel,
+      search,
+      status,
+      roleCode,
+    ],
+  );
 
   useEffect(() => {
     void loadUsers();
@@ -147,75 +284,221 @@ export default function UserManagementPage() {
     void loadRoles();
   }, [loadRoles]);
 
-  const handleSave = async (values) => {
+  const handleSearch = () => {
+    setPaginationModel(
+      (current) => ({
+        ...current,
+        page: 0,
+      }),
+    );
+
+    setSearch(
+      searchInput.trim(),
+    );
+  };
+
+  const handleSearchKeyDown = (
+    event,
+  ) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleSearch();
+    }
+  };
+
+  const handleStatusFilter = (
+    event,
+  ) => {
+    setStatus(
+      event.target.value,
+    );
+
+    setPaginationModel(
+      (current) => ({
+        ...current,
+        page: 0,
+      }),
+    );
+  };
+
+  const handleRoleFilter = (
+    event,
+  ) => {
+    setRoleCode(
+      event.target.value,
+    );
+
+    setPaginationModel(
+      (current) => ({
+        ...current,
+        page: 0,
+      }),
+    );
+  };
+
+  const handleResetFilters = () => {
+    setSearchInput("");
+    setSearch("");
+    setStatus("");
+    setRoleCode("");
+
+    setPaginationModel({
+      page: 0,
+      pageSize: DEFAULT_PAGE_SIZE,
+    });
+  };
+
+  const handleOpenCreate = () => {
+    setEditingUser(null);
+    setDialogOpen(true);
+  };
+
+  const handleOpenEdit = (
+    user,
+  ) => {
+    if (!canUpdate) {
+      return;
+    }
+
+    if (isDeveloper(user)) {
+      return;
+    }
+
+    if (
+      isSuperAdmin(user) &&
+      !currentUserIsDeveloper
+    ) {
+      return;
+    }
+
+    setEditingUser(user);
+    setDialogOpen(true);
+  };
+
+  const handleSave = async (
+    values,
+  ) => {
     setError("");
     setSuccess("");
 
-    if (editingUser) {
-      const payload = {
-        ...values,
-      };
-
-      delete payload.password;
-
-      await userService.update(
-        editingUser.id,
-        payload,
-      );
-
-      setSuccess(
-        "User updated successfully.",
-      );
-    } else {
-      await userService.create(values);
-
-      setSuccess(
-        "User created successfully.",
-      );
-    }
-
-    await loadUsers();
-    setDialogOpen(false);
-    setEditingUser(null);
-  };
-
-  const handleStatusChange = async (user) => {
-    setError("");
-
     try {
-      await userService.updateStatus(
-        user.id,
-        user.status === "active"
-          ? "inactive"
-          : "active",
-      );
+      if (editingUser) {
+        await userService.update(
+          editingUser.id,
+          values,
+        );
 
-      setSuccess(
-        "User status updated successfully.",
-      );
+        setSuccess(
+          "User updated successfully.",
+        );
+      } else {
+        await userService.create(
+          values,
+        );
+
+        setSuccess(
+          "User created successfully.",
+        );
+      }
+
+      setDialogOpen(false);
+      setEditingUser(null);
 
       await loadUsers();
     } catch (requestError) {
-      setError(
-        requestError?.response?.data?.message ??
-          "Unable to update user status.",
-      );
+      throw requestError;
     }
   };
 
-  const handleDelete = async (user) => {
+  const handleStatusChange = async (
+    user,
+  ) => {
+    if (!canUpdate) {
+      return;
+    }
+
+    if (isDeveloper(user)) {
+      return;
+    }
+
     if (
-      !window.confirm(
-        `Delete user '${user.username}'?`,
-      )
+      isSuperAdmin(user) &&
+      !currentUserIsDeveloper
     ) {
       return;
     }
 
     setError("");
+    setSuccess("");
 
     try {
-      await userService.remove(user.id);
+      const nextStatus =
+        user.status === "active"
+          ? "inactive"
+          : "active";
+
+      await userService.updateStatus(
+        user.id,
+        nextStatus,
+      );
+
+      setSuccess(
+        `User ${nextStatus === "active" ? "activated" : "deactivated"} successfully.`,
+      );
+
+      await loadUsers();
+    } catch (requestError) {
+      setError(
+        getErrorMessage(
+          requestError,
+        ),
+      );
+    }
+  };
+
+  const handleDelete = async (
+    user,
+  ) => {
+    if (!canDelete) {
+      return;
+    }
+
+    if (isDeveloper(user)) {
+      return;
+    }
+
+    if (
+      isSuperAdmin(user) &&
+      !currentUserIsDeveloper
+    ) {
+      return;
+    }
+
+    if (
+      user.id === currentUser?.id
+    ) {
+      setError(
+        "You cannot delete your own user account.",
+      );
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `Delete user '${user.username}'?`,
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+
+    try {
+      await userService.remove(
+        user.id,
+      );
 
       setSuccess(
         "User deleted successfully.",
@@ -224,11 +507,17 @@ export default function UserManagementPage() {
       await loadUsers();
     } catch (requestError) {
       setError(
-        requestError?.response?.data?.message ??
-          "Unable to delete user.",
+        getErrorMessage(
+          requestError,
+        ),
       );
     }
   };
+
+  const hasFilters =
+    Boolean(search) ||
+    Boolean(status) ||
+    Boolean(roleCode);
 
   return (
     <Stack spacing={3}>
@@ -252,8 +541,8 @@ export default function UserManagementPage() {
           </Typography>
 
           <Typography color="text.secondary">
-            Manage application users
-            and their roles.
+            Manage application users,
+            status and role assignment.
           </Typography>
         </Stack>
 
@@ -263,10 +552,9 @@ export default function UserManagementPage() {
             startIcon={
               <AddOutlinedIcon />
             }
-            onClick={() => {
-              setEditingUser(null);
-              setDialogOpen(true);
-            }}
+            onClick={
+              handleOpenCreate
+            }
             disabled={
               rolesLoading ||
               roleOptions.length === 0
@@ -278,46 +566,234 @@ export default function UserManagementPage() {
       </Stack>
 
       {error ? (
-        <Alert severity="error">
+        <Alert
+          severity="error"
+          onClose={() =>
+            setError("")
+          }
+        >
           {error}
         </Alert>
       ) : null}
 
       {success ? (
-        <Alert severity="success">
+        <Alert
+          severity="success"
+          onClose={() =>
+            setSuccess("")
+          }
+        >
           {success}
         </Alert>
       ) : null}
 
       <Card>
         <CardContent>
-          <UserTable
-            users={users}
-            loading={loading}
-            canUpdate={canUpdate}
-            canDelete={canDelete}
-            onEdit={(user) => {
-              setEditingUser(user);
-              setDialogOpen(true);
-            }}
-            onStatusChange={
-              handleStatusChange
-            }
-            onDelete={handleDelete}
-          />
+          <Stack spacing={2}>
+            <Stack
+              direction={{
+                xs: "column",
+                md: "row",
+              }}
+              spacing={1.5}
+            >
+              <TextField
+                fullWidth
+                size="small"
+                label="Search users"
+                placeholder="Username, email or name"
+                value={searchInput}
+                onChange={(event) =>
+                  setSearchInput(
+                    event.target.value,
+                  )
+                }
+                onKeyDown={
+                  handleSearchKeyDown
+                }
+              />
+
+              <Button
+                variant="outlined"
+                onClick={
+                  handleSearch
+                }
+              >
+                Search
+              </Button>
+
+              <FormControl
+                size="small"
+                sx={{
+                  minWidth: 160,
+                }}
+              >
+                <InputLabel>
+                  Status
+                </InputLabel>
+
+                <Select
+                  label="Status"
+                  value={status}
+                  onChange={
+                    handleStatusFilter
+                  }
+                >
+                  <MenuItem value="">
+                    All statuses
+                  </MenuItem>
+
+                  <MenuItem value="pending">
+                    Pending
+                  </MenuItem>
+
+                  <MenuItem value="active">
+                    Active
+                  </MenuItem>
+
+                  <MenuItem value="inactive">
+                    Inactive
+                  </MenuItem>
+
+                  <MenuItem value="suspended">
+                    Suspended
+                  </MenuItem>
+
+                  <MenuItem value="locked">
+                    Locked
+                  </MenuItem>
+                </Select>
+              </FormControl>
+
+              <FormControl
+                size="small"
+                sx={{
+                  minWidth: 180,
+                }}
+              >
+                <InputLabel>
+                  Role
+                </InputLabel>
+
+                <Select
+                  label="Role"
+                  value={roleCode}
+                  onChange={
+                    handleRoleFilter
+                  }
+                >
+                  <MenuItem value="">
+                    All roles
+                  </MenuItem>
+
+                  {roles
+                    .filter(
+                      (role) =>
+                        role.code !==
+                        SYSTEM_ROLE_CODES.DEVELOPER,
+                    )
+                    .map(
+                      (role) => (
+                        <MenuItem
+                          key={
+                            role.code
+                          }
+                          value={
+                            role.code
+                          }
+                        >
+                          {role.name ??
+                            role.code}
+                        </MenuItem>
+                      ),
+                    )}
+                </Select>
+              </FormControl>
+
+              <Button
+                variant="text"
+                startIcon={
+                  <RestartAltOutlinedIcon />
+                }
+                disabled={
+                  !hasFilters &&
+                  !searchInput
+                }
+                onClick={
+                  handleResetFilters
+                }
+              >
+                Reset
+              </Button>
+            </Stack>
+
+            <UserTable
+              users={users}
+              loading={loading}
+              pagination={
+                pagination
+              }
+              paginationModel={
+                paginationModel
+              }
+              onPaginationModelChange={(
+                model,
+              ) => {
+                setPaginationModel(
+                  model,
+                );
+              }}
+              canUpdate={
+                canUpdate
+              }
+              canDelete={
+                canDelete
+              }
+              currentUserIsDeveloper={
+                currentUserIsDeveloper
+              }
+              onEdit={
+                handleOpenEdit
+              }
+              onStatusChange={
+                handleStatusChange
+              }
+              onDelete={
+                handleDelete
+              }
+            />
+          </Stack>
         </CardContent>
       </Card>
 
-      <UserFormDialog
-        open={dialogOpen}
-        onClose={() => {
-          setDialogOpen(false);
-          setEditingUser(null);
-        }}
-        onSubmit={handleSave}
-        roleOptions={roleOptions}
-        user={editingUser}
-      />
+      {canCreate ||
+      canUpdate ? (
+        <UserFormDialog
+          open={dialogOpen}
+          onClose={() => {
+            setDialogOpen(
+              false,
+            );
+            setEditingUser(
+              null,
+            );
+          }}
+          onSubmit={
+            handleSave
+          }
+          roleOptions={
+            roleOptions
+          }
+          user={
+            editingUser
+          }
+          canEdit={
+            editingUser
+              ? canUpdate
+              : canCreate
+          }
+        />
+      ) : null}
     </Stack>
   );
 }
