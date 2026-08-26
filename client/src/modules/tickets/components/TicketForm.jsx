@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import {
   Autocomplete,
   Box,
@@ -19,6 +19,7 @@ import {
   TICKET_FIELD_MAP,
 } from "../../../config/ticket.config";
 import { getOptionProvider } from "../../../components/forms/optionProviders/optionProvider.registry";
+import { findContactByMobile } from "../../contacts/services/contact.service";
 
 async function getOptionSource(field, user) {
   if (Array.isArray(field.options)) {
@@ -201,6 +202,102 @@ export default function TicketForm({
 
   const [options, setOptions] = useState({});
   const [loadingOptions, setLoadingOptions] = useState({});
+  const [contactLookup, setContactLookup] = useState({
+    status: "idle",
+    mobile: "",
+  });
+  const lookupRequestRef = useRef(0);
+  const lookupTimerRef = useRef(null);
+  const organizationId =
+    user?.organization_id ??
+    user?.organizationId ??
+    user?.organization?.id ??
+    "";
+
+  const lookupContact = useCallback(
+    async (mobilePhone, formik) => {
+      const mobile = String(mobilePhone ?? "").trim();
+
+      if (!mobile || !organizationId) {
+        setContactLookup({
+          status: "idle",
+          mobile,
+        });
+
+        return;
+      }
+
+      const requestId = ++lookupRequestRef.current;
+
+      setContactLookup({
+        status: "loading",
+        mobile,
+      });
+
+      try {
+        const response = await findContactByMobile(organizationId, mobile);
+
+        if (requestId !== lookupRequestRef.current) {
+          return;
+        }
+
+        const contact = response?.data;
+
+        if (!contact) {
+          setContactLookup({
+            status: "not_found",
+            mobile,
+          });
+
+          return;
+        }
+
+        formik.setFieldValue("name", contact.name ?? "", false);
+
+        formik.setFieldValue("email_id", contact.email ?? "", false);
+
+        formik.setFieldValue("district", contact.district ?? "", false);
+
+        formik.setFieldValue("department", contact.department_id ?? "", false);
+
+        setContactLookup({
+          status: "found",
+          mobile,
+        });
+
+        /*
+         * Use your project's existing notification/message
+         * constant here.
+         */
+        notifyContactFound();
+      } catch (error) {
+        if (requestId !== lookupRequestRef.current) {
+          return;
+        }
+
+        if (error.response?.status === 404) {
+          setContactLookup({
+            status: "not_found",
+            mobile,
+          });
+
+          notifyContactNotFound();
+
+          return;
+        }
+
+        console.error("[TicketForm] Contact lookup failed.", error);
+
+        setContactLookup({
+          status: "error",
+          mobile,
+        });
+
+        notifyContactLookupFailed();
+      }
+    },
+    [organizationId],
+  );
 
   useEffect(() => {
     let active = true;
@@ -275,53 +372,81 @@ export default function TicketForm({
       validationSchema={validationSchema}
       onSubmit={onSubmit}
     >
-      {(formik) => (
-        <Form noValidate>
-          <Grid container spacing={1}>
-            {fields.map((field) => (
-              <Grid
-                key={field.key}
-                size={field.form?.width ?? { xs: 6, md: 4 }}
-              >
-                <FieldRenderer
-                  field={field}
-                  formik={formik}
-                  options={options[field.key] ?? []}
-                  loading={Boolean(loadingOptions[field.key])}
-                />
-              </Grid>
-            ))}
-          </Grid>
+      {(formik) => {
+        const mobilePhone = formik.values.mobile_phone;
+        useEffect(() => {
+          const mobile = String(mobilePhone ?? "").trim();
 
-          <Stack
-            direction="row"
-            justifyContent="flex-end"
-            spacing={2}
-            sx={{ mt: 2 }}
-          >
-            {onCancel ? (
-              <Button
-                type="button"
-                variant="outlined"
-                disabled={submitting}
-                onClick={onCancel}
-              >
-                Cancel
-              </Button>
-            ) : null}
+          if (lookupTimerRef.current) {
+            clearTimeout(lookupTimerRef.current);
+          }
 
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={submitting || formik.isSubmitting}
+          if (!mobile || !organizationId) {
+            return undefined;
+          }
+
+          if (mobile.length < 7) {
+            return undefined;
+          }
+
+          lookupTimerRef.current = setTimeout(() => {
+            lookupContact(mobile, formik);
+          }, 400);
+
+          return () => {
+            if (lookupTimerRef.current) {
+              clearTimeout(lookupTimerRef.current);
+            }
+          };
+        }, [mobilePhone, organizationId, lookupContact]);
+        return (
+          <Form noValidate>
+            <Grid container spacing={1}>
+              {fields.map((field) => (
+                <Grid
+                  key={field.key}
+                  size={field.form?.width ?? { xs: 6, md: 4 }}
+                >
+                  <FieldRenderer
+                    field={field}
+                    formik={formik}
+                    options={options[field.key] ?? []}
+                    loading={Boolean(loadingOptions[field.key])}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+
+            <Stack
+              direction="row"
+              justifyContent="flex-end"
+              spacing={2}
+              sx={{ mt: 2 }}
             >
-              {submitting
-                ? "Saving..."
-                : (submitLabel ?? TICKET_FORM_CONFIG[mode].submitLabel)}
-            </Button>
-          </Stack>
-        </Form>
-      )}
+              {onCancel ? (
+                <Button
+                  type="button"
+                  variant="outlined"
+                  disabled={submitting}
+                  onClick={onCancel}
+                >
+                  Cancel
+                </Button>
+              ) : null}
+
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={submitting || formik.isSubmitting}
+              >
+                {submitting
+                  ? "Saving..."
+                  : (submitLabel ?? TICKET_FORM_CONFIG[mode].submitLabel)}
+              </Button>
+            </Stack>
+          </Form>
+        );
+      }}
     </Formik>
   );
 }

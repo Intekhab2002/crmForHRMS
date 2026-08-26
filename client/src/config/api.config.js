@@ -1,7 +1,5 @@
 export const API_CONFIG = Object.freeze({
-  baseURL:
-    import.meta.env.VITE_API_BASE_URL ||
-    "http://localhost:5000/api/v1",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1",
   timeout: Number(import.meta.env.VITE_API_TIMEOUT || 15000),
   endpoints: Object.freeze({
     auth: Object.freeze({
@@ -16,8 +14,13 @@ export const API_CONFIG = Object.freeze({
     tickets: "/tickets",
     dashboard: "/dashboard",
     formConfiguration: Object.freeze({
-  forms: "/forms",
-  formFields: "/form-fields",
-}),
+      forms: "/forms",
+      formFields: "/form-fields",
+      contacts: Object.freeze({
+        base: "/contacts",
+        byMobile: (organizationId, mobilePhone) =>
+          `/contacts/${organizationId}/by-mobile/${encodeURIComponent(mobilePhone)}`,
+      }),
+    }),
   }),
 });
