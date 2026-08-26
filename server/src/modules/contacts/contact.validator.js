@@ -16,18 +16,19 @@ const mobileParamSchema = z.object({
     mobile: mobileSchema,
 }).strict();
 
+const mobileLookupParamSchema = z.object({
+    organizationId: z.uuid(),
+    mobilePhone: z
+        .string()
+        .trim()
+        .min(1)
+        .max(30),
+}).strict();
+
 const contactValidator = Object.freeze({
     organizationIdParamSchema,
     mobileParamSchema,
-});
-
-const mobileLookupParamSchema = z.object({
-  organizationId: z.uuid(),
-  mobilePhone: z
-    .string()
-    .trim()
-    .min(1)
-    .max(30),
+    mobileLookupParamSchema,
 });
 
 export default contactValidator;
