@@ -36,7 +36,7 @@ function validateParams(schema) {
 }
 
 router.get(
-    "/:organizationId/by-mobile/:mobile",
+    "/:organizationId/by-mobile/:mobilePhone",
     authenticate,
     requirePermission(TICKET_CREATE),
     validateParams(
