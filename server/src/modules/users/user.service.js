@@ -71,7 +71,11 @@ async function requireUser(userId) {
  * @param {string} userId
  * @returns {Promise<void>}
  */
-async function assertUserIsMutable(userId, actorUserId, transactionContext = null) {
+async function assertUserIsMutable(
+  userId,
+  actorUserId,
+  transactionContext = null,
+) {
   await roleService.assertCanManageUser(
     actorUserId,
     userId,
@@ -108,58 +112,31 @@ async function getUserById(userId) {
  *     pagination: object,
  * }>}
  */
-async function getUsers({
-    page = 1,
-    limit = 20,
-} = {}) {
-    const normalizedPage =
-        Math.max(
-            Number(page) || 1,
-            1,
-        );
+async function getUsers({ page = 1, limit = 20 } = {}) {
+  const normalizedPage = Math.max(Number(page) || 1, 1);
 
-    const normalizedLimit =
-        Math.min(
-            Math.max(
-                Number(limit) || 20,
-                1,
-            ),
-            100,
-        );
+  const normalizedLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
 
-    const offset =
-        (normalizedPage - 1) *
-        normalizedLimit;
+  const offset = (normalizedPage - 1) * normalizedLimit;
 
-    const [
-        users,
-        total,
-    ] = await Promise.all([
-        userRepository.findUsers(
-            normalizedLimit,
-            offset,
-        ),
-        userRepository.countUsers(),
-    ]);
+  const [users, total] = await Promise.all([
+    userRepository.findUsers(normalizedLimit, offset),
+    userRepository.countUsers(),
+  ]);
 
-    const totalPages =
-        Math.ceil(
-            total / normalizedLimit,
-        );
+  const totalPages = Math.ceil(total / normalizedLimit);
 
-    return {
-        data: users,
-        pagination: {
-            page: normalizedPage,
-            limit: normalizedLimit,
-            total,
-            totalPages,
-            hasNextPage:
-                normalizedPage < totalPages,
-            hasPreviousPage:
-                normalizedPage > 1,
-        },
-    };
+  return {
+    data: users,
+    pagination: {
+      page: normalizedPage,
+      limit: normalizedLimit,
+      total,
+      totalPages,
+      hasNextPage: normalizedPage < totalPages,
+      hasPreviousPage: normalizedPage > 1,
+    },
+  };
 }
 
 /**
@@ -180,13 +157,10 @@ async function getUsers({
  *
  * @returns {Promise<object>}
  */
-async function createUser({
-  username,
-  email,
-  password,
-  status = USER_STATUS.ACTIVE,
-  roleCode = null,
-}, actorUserId) {
+async function createUser(
+  { username, email, password, status = USER_STATUS.ACTIVE, roleCode = null },
+  actorUserId,
+) {
   const normalizedUsername = normalizeUsername(username);
   const normalizedEmail = normalizeEmail(email);
   const normalizedRoleCode = roleCode?.trim().toLowerCase() || null;
@@ -206,114 +180,125 @@ async function createUser({
 
   const passwordHash = await passwordService.hashPassword(password);
 
-  return executeTransaction(async (transactionContext) => {
-    let targetRole = null;
+  return executeTransaction(
+    async (transactionContext) => {
+      let targetRole = null;
 
-    if (normalizedRoleCode) {
-      targetRole = await roleRepository.findRoleByCode(
-        normalizedRoleCode,
-        transactionContext,
-      );
-
-      if (!targetRole) {
-        throw AppError.badRequest("The requested role does not exist.", {
-          code: "ROLE_NOT_FOUND",
-        });
-      }
-
-      await roleService.assertCanAssignRole(
-        actorUserId,
-        targetRole,
-        transactionContext,
-      );
-
-      if (!targetRole.is_active) {
-        throw AppError.conflict("An inactive role cannot be assigned to a user.", {
-          code: ROLE_ERROR_CODES.ROLE_INVALID,
-        });
-      }
-
-      if (targetRole.code === ROLE_SYSTEM_CODES.SUPERADMIN) {
-        const developerRole = await roleRepository.findRoleByCode(
-          ROLE_SYSTEM_CODES.DEVELOPER,
+      if (normalizedRoleCode) {
+        targetRole = await roleRepository.findRoleByCode(
+          normalizedRoleCode,
           transactionContext,
         );
 
-        if (!developerRole) {
-          throw AppError.conflict(
-            "The protected developer role is missing. Superadmin provisioning has been refused.",
-            { code: "DEVELOPER_ROLE_MISSING" },
-          );
+        if (!targetRole) {
+          throw AppError.badRequest("The requested role does not exist.", {
+            code: "ROLE_NOT_FOUND",
+          });
         }
 
-        const developerAssignments = await roleRepository.countRoleUsersForUpdate(
-          developerRole.id,
-          transactionContext,
-        );
-
-        const actorRoles = await roleService.getActorRoles(
+        await roleService.assertCanAssignRole(
           actorUserId,
+          targetRole,
           transactionContext,
         );
 
-        const actorIsDeveloper = actorRoles.some(
-          ({ code }) => code === ROLE_SYSTEM_CODES.DEVELOPER,
-        );
-
-        if (!actorIsDeveloper || developerAssignments !== 1) {
-          throw AppError.forbidden(
-            "Superadmin provisioning requires exactly one valid developer account.",
-            { code: "DEVELOPER_INTEGRITY_CHECK_FAILED" },
+        if (!targetRole.is_active) {
+          throw AppError.conflict(
+            "An inactive role cannot be assigned to a user.",
+            {
+              code: ROLE_ERROR_CODES.ROLE_INVALID,
+            },
           );
         }
 
-        const existingSuperadmins = await roleRepository.countRoleUsersForUpdate(
+        if (targetRole.code === ROLE_SYSTEM_CODES.SUPERADMIN) {
+          const developerRole = await roleRepository.findRoleByCode(
+            ROLE_SYSTEM_CODES.DEVELOPER,
+            transactionContext,
+          );
+
+          if (!developerRole) {
+            throw AppError.conflict(
+              "The protected developer role is missing. Superadmin provisioning has been refused.",
+              { code: "DEVELOPER_ROLE_MISSING" },
+            );
+          }
+
+          const developerAssignments =
+            await roleRepository.countRoleUsersForUpdate(
+              developerRole.id,
+              transactionContext,
+            );
+
+          const actorRoles = await roleService.getActorRoles(
+            actorUserId,
+            transactionContext,
+          );
+
+          const actorIsDeveloper = actorRoles.some(
+            ({ code }) => code === ROLE_SYSTEM_CODES.DEVELOPER,
+          );
+
+          if (!actorIsDeveloper || developerAssignments !== 1) {
+            throw AppError.forbidden(
+              "Superadmin provisioning requires exactly one valid developer account.",
+              { code: "DEVELOPER_INTEGRITY_CHECK_FAILED" },
+            );
+          }
+
+          const existingSuperadmins =
+            await roleRepository.countRoleUsersForUpdate(
+              targetRole.id,
+              transactionContext,
+            );
+
+          if (existingSuperadmins > 0) {
+            throw AppError.conflict(
+              "Only one superadmin account is permitted.",
+              {
+                code: ROLE_ERROR_CODES.ROLE_SINGLETON_VIOLATION,
+              },
+            );
+          }
+        }
+      }
+
+      const user = await userRepository.createUser(
+        {
+          username: normalizedUsername,
+          email: normalizedEmail,
+          passwordHash,
+          status,
+        },
+        transactionContext,
+      );
+
+      if (targetRole) {
+        await roleRepository.assignRoleToUser(
+          user.id,
           targetRole.id,
           transactionContext,
         );
-
-        if (existingSuperadmins > 0) {
-          throw AppError.conflict("Only one superadmin account is permitted.", {
-            code: ROLE_ERROR_CODES.ROLE_SINGLETON_VIOLATION,
-          });
-        }
       }
-    }
 
-    const user = await userRepository.createUser(
-      {
-        username: normalizedUsername,
-        email: normalizedEmail,
-        passwordHash,
-        status,
-      },
-      transactionContext,
-    );
-
-    if (targetRole) {
-      await roleRepository.assignRoleToUser(
+      const createdUser = await userRepository.findUserById(
         user.id,
-        targetRole.id,
         transactionContext,
       );
-    }
 
-    const createdUser = await userRepository.findUserById(
-      user.id,
-      transactionContext,
-    );
-
-    return {
-      ...createdUser,
-      role: targetRole
-        ? {
-            id: targetRole.id,
-            code: targetRole.code,
-            name: targetRole.name,
-          }
-        : null,
-    };
-  }, { isolationLevel: "SERIALIZABLE" });
+      return {
+        ...createdUser,
+        role: targetRole
+          ? {
+              id: targetRole.id,
+              code: targetRole.code,
+              name: targetRole.name,
+            }
+          : null,
+      };
+    },
+    { isolationLevel: "SERIALIZABLE" },
+  );
 }
 
 /**
@@ -345,7 +330,8 @@ async function updateUser(userId, { username, email, roleCode }, actorUserId) {
     email !== undefined ? normalizeEmail(email) : undefined;
 
   if (normalizedUsername) {
-    const existing = await userRepository.findUserByUsername(normalizedUsername);
+    const existing =
+      await userRepository.findUserByUsername(normalizedUsername);
     if (existing && existing.id !== userId) {
       throw AppError.conflict("Username is already in use.", {
         code: USER_ERROR_CODES.USERNAME_ALREADY_EXISTS,
@@ -364,84 +350,87 @@ async function updateUser(userId, { username, email, roleCode }, actorUserId) {
 
   const normalizedRoleCode = roleCode?.trim().toLowerCase() || null;
 
-  return executeTransaction(async (transactionContext) => {
-    const currentRoles = await roleService.getActorRoles(
-      userId,
-      transactionContext,
-    );
-
-    const isDeveloper = currentRoles.some(
-      ({ code }) => code === ROLE_SYSTEM_CODES.DEVELOPER,
-    );
-
-    if (isDeveloper && normalizedRoleCode) {
-      throw AppError.forbidden(
-        "The developer role is protected and cannot be changed.",
-        { code: ROLE_ERROR_CODES.ROLE_DEVELOPER_PROTECTED },
-      );
-    }
-
-    const updatedUser = await userRepository.updateUser(
-      userId,
-      {
-        username: normalizedUsername,
-        email: normalizedEmail,
-      },
-      transactionContext,
-    );
-
-    if (!updatedUser) {
-      throw AppError.notFound("User not found.", {
-        code: USER_ERROR_CODES.USER_NOT_FOUND,
-      });
-    }
-
-    let role = currentRoles[0] ?? null;
-
-    if (normalizedRoleCode) {
-      const targetRole = await roleRepository.findRoleByCode(
-        normalizedRoleCode,
+  return executeTransaction(
+    async (transactionContext) => {
+      const currentRoles = await roleService.getActorRoles(
+        userId,
         transactionContext,
       );
 
-      if (!targetRole) {
-        throw AppError.badRequest("The requested role does not exist.", {
-          code: "ROLE_NOT_FOUND",
-        });
-      }
-
-      await roleService.assertCanAssignRole(
-        actorUserId,
-        targetRole,
-        transactionContext,
+      const isDeveloper = currentRoles.some(
+        ({ code }) => code === ROLE_SYSTEM_CODES.DEVELOPER,
       );
 
-      if (!targetRole.is_active) {
-        throw AppError.conflict(
-          "An inactive role cannot be assigned to a user.",
-          { code: ROLE_ERROR_CODES.ROLE_INVALID },
+      if (isDeveloper && normalizedRoleCode) {
+        throw AppError.forbidden(
+          "The developer role is protected and cannot be changed.",
+          { code: ROLE_ERROR_CODES.ROLE_DEVELOPER_PROTECTED },
         );
       }
 
-      await roleRepository.replaceUserRole(
+      const updatedUser = await userRepository.updateUser(
         userId,
-        targetRole.id,
+        {
+          username: normalizedUsername,
+          email: normalizedEmail,
+        },
         transactionContext,
       );
 
-      role = targetRole;
-    }
+      if (!updatedUser) {
+        throw AppError.notFound("User not found.", {
+          code: USER_ERROR_CODES.USER_NOT_FOUND,
+        });
+      }
 
-    const refreshedUser = await userRepository.findUserById(
-      userId,
-      transactionContext,
-    );
+      let role = currentRoles[0] ?? null;
 
-    return {
-      ...refreshedUser,
-      role,
-    };
-  }, { isolationLevel: "SERIALIZABLE" });
+      if (normalizedRoleCode) {
+        const targetRole = await roleRepository.findRoleByCode(
+          normalizedRoleCode,
+          transactionContext,
+        );
+
+        if (!targetRole) {
+          throw AppError.badRequest("The requested role does not exist.", {
+            code: "ROLE_NOT_FOUND",
+          });
+        }
+
+        await roleService.assertCanAssignRole(
+          actorUserId,
+          targetRole,
+          transactionContext,
+        );
+
+        if (!targetRole.is_active) {
+          throw AppError.conflict(
+            "An inactive role cannot be assigned to a user.",
+            { code: ROLE_ERROR_CODES.ROLE_INVALID },
+          );
+        }
+
+        await roleRepository.replaceUserRole(
+          userId,
+          targetRole.id,
+          transactionContext,
+        );
+
+        role = targetRole;
+      }
+
+      const refreshedUser = await userRepository.findUserById(
+        userId,
+        transactionContext,
+      );
+
+      return {
+        ...refreshedUser,
+        role,
+      };
+    },
+    { isolationLevel: "SERIALIZABLE" },
+  );
 }
 
 /**
@@ -475,6 +464,14 @@ async function updateUserStatus(userId, status, actorUserId) {
     });
   }
 
+  if (
+    status === USER_STATUS.INACTIVE ||
+    status === USER_STATUS.SUSPENDED ||
+    status === USER_STATUS.LOCKED
+  ) {
+    await sessionService.revokeUserSessions(userId);
+  }
+
   return updatedUser;
 }
 
@@ -495,19 +492,146 @@ async function updateUserStatus(userId, status, actorUserId) {
  * @returns {Promise<object>}
  */
 async function deleteUser(userId, actorUserId) {
-  await requireUser(userId);
+  return executeTransaction(
+    async (transactionContext) => {
+      await assertCanManageTargetUser(
+        actorUserId,
+        userId,
+        "delete",
+        transactionContext,
+      );
 
-  await assertUserIsMutable(userId, actorUserId);
+      const user = await userRepository.findUserById(
+        userId,
+        transactionContext,
+      );
 
-  const deletedUser = await userRepository.deleteUser(userId);
+      if (!user) {
+        throw AppError.notFound("User not found.", {
+          code: USER_ERROR_CODES.USER_NOT_FOUND,
+        });
+      }
 
-  if (!deletedUser) {
-    throw AppError.notFound("User not found.", {
-      code: USER_ERROR_CODES.USER_NOT_FOUND,
+      const deletedUser = await userRepository.deleteUser(
+        userId,
+        transactionContext,
+      );
+
+      if (!deletedUser) {
+        throw AppError.notFound("User not found.", {
+          code: USER_ERROR_CODES.USER_NOT_FOUND,
+        });
+      }
+
+      await authRepository.revokeActiveSessions(userId, transactionContext);
+
+      return deletedUser;
+    },
+    {
+      isolationLevel: "SERIALIZABLE",
+    },
+  );
+}
+
+async function validateOrganizationDepartment(
+  organizationId,
+  departmentId,
+  transactionContext,
+) {
+  let organization = null;
+  let department = null;
+
+  if (organizationId) {
+    organization = await userRepository.findOrganizationById(
+      organizationId,
+      transactionContext,
+    );
+
+    if (!organization) {
+      throw AppError.badRequest("The requested organization does not exist.", {
+        code: USER_ERROR_CODES.ORGANIZATION_NOT_FOUND,
+      });
+    }
+
+    if (organization.status !== "active") {
+      throw AppError.conflict(
+        "An inactive organization cannot be assigned to a user.",
+        {
+          code: USER_ERROR_CODES.ORGANIZATION_NOT_FOUND,
+        },
+      );
+    }
+  }
+
+  if (departmentId) {
+    department = await userRepository.findDepartmentById(
+      departmentId,
+      transactionContext,
+    );
+
+    if (!department) {
+      throw AppError.badRequest("The requested department does not exist.", {
+        code: USER_ERROR_CODES.DEPARTMENT_NOT_FOUND,
+      });
+    }
+
+    if (department.status !== "active") {
+      throw AppError.conflict(
+        "An inactive department cannot be assigned to a user.",
+        {
+          code: USER_ERROR_CODES.DEPARTMENT_NOT_FOUND,
+        },
+      );
+    }
+
+    if (organizationId && department.organization_id !== organizationId) {
+      throw AppError.badRequest(
+        "The selected department does not belong to the selected organization.",
+        {
+          code: USER_ERROR_CODES.DEPARTMENT_ORGANIZATION_MISMATCH,
+        },
+      );
+    }
+  }
+
+  return {
+    organization,
+    department,
+  };
+}
+
+async function assertTargetUserMutable(
+  actorUserId,
+  targetUserId,
+  transactionContext = null,
+) {
+  if (actorUserId === targetUserId) {
+    throw AppError.forbidden(
+      "You cannot perform this administrative operation on your own account.",
+      {
+        code: USER_ERROR_CODES.SELF_DEACTIVATION_NOT_ALLOWED,
+      },
+    );
+  }
+
+  const targetRoles = await roleService.getActorRoles(
+    targetUserId,
+    transactionContext,
+  );
+
+  const targetRoleCodes = new Set(targetRoles.map(({ code }) => code));
+
+  if (targetRoleCodes.has("developer")) {
+    throw AppError.forbidden("The Developer account is protected.", {
+      code: USER_ERROR_CODES.SYSTEM_USER_PROTECTED,
     });
   }
 
-  return deletedUser;
+  if (targetRoleCodes.has("superadmin")) {
+    throw AppError.forbidden("The Super Admin account is protected.", {
+      code: USER_ERROR_CODES.SYSTEM_USER_PROTECTED,
+    });
+  }
 }
 
 /**
@@ -523,6 +647,7 @@ const userService = Object.freeze({
   updateUser,
   updateUserStatus,
   deleteUser,
+  revokeUserSessions
 });
 
 export default userService;

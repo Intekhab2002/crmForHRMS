@@ -26,9 +26,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import {
-    getQueryExecutor,
-} from "../../database/queryExecutor.js";
+import { getQueryExecutor } from "../../database/queryExecutor.js";
 
 /**
  * ============================================================================
@@ -41,6 +39,20 @@ const SELECT_USER_FIELDS = `
         u.id,
         u.username,
         u.email,
+
+        u.first_name,
+        u.last_name,
+        u.phone,
+        u.designation,
+
+        u.organization_id,
+        o.code AS organization_code,
+        o.name AS organization_name,
+
+        u.department_id,
+        d.code AS department_code,
+        d.name AS department_name,
+
         u.status,
         u.email_verified_at,
         u.password_changed_at,
@@ -48,6 +60,7 @@ const SELECT_USER_FIELDS = `
         u.deactivated_at,
         u.created_at,
         u.updated_at,
+
         COALESCE(
             (
                 SELECT jsonb_agg(
@@ -66,7 +79,14 @@ const SELECT_USER_FIELDS = `
             ),
             '[]'::jsonb
         ) AS roles
+
     FROM users u
+
+    LEFT JOIN organizations o
+        ON o.id = u.organization_id
+
+    LEFT JOIN departments d
+        ON d.id = u.department_id
 `;
 
 const FIND_USER_BY_ID = `
@@ -103,19 +123,37 @@ const CREATE_USER = `
         username,
         email,
         password_hash,
-        status
+        status,
+        first_name,
+        last_name,
+        phone,
+        designation,
+        organization_id,
+        department_id
     )
     VALUES (
-        $1,
+        $1::UUID,
         $2,
         $3,
         $4,
-        $5
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10::UUID,
+        $11::UUID
     )
     RETURNING
         id,
         username,
         email,
+        first_name,
+        last_name,
+        phone,
+        designation,
+        organization_id,
+        department_id,
         status,
         email_verified_at,
         password_changed_at,
@@ -128,13 +166,58 @@ const CREATE_USER = `
 const UPDATE_USER = `
     UPDATE users
     SET
-        username = COALESCE($2, username),
-        email = COALESCE($3, email)
-    WHERE id = $1
+        username = CASE
+            WHEN $2::BOOLEAN THEN $3
+            ELSE username
+        END,
+
+        email = CASE
+            WHEN $4::BOOLEAN THEN $5
+            ELSE email
+        END,
+
+        first_name = CASE
+            WHEN $6::BOOLEAN THEN $7
+            ELSE first_name
+        END,
+
+        last_name = CASE
+            WHEN $8::BOOLEAN THEN $9
+            ELSE last_name
+        END,
+
+        phone = CASE
+            WHEN $10::BOOLEAN THEN $11
+            ELSE phone
+        END,
+
+        designation = CASE
+            WHEN $12::BOOLEAN THEN $13
+            ELSE designation
+        END,
+
+        organization_id = CASE
+            WHEN $14::BOOLEAN THEN $15::UUID
+            ELSE organization_id
+        END,
+
+        department_id = CASE
+            WHEN $16::BOOLEAN THEN $17::UUID
+            ELSE department_id
+        END
+
+    WHERE id = $1::UUID
+
     RETURNING
         id,
         username,
         email,
+        first_name,
+        last_name,
+        phone,
+        designation,
+        organization_id,
+        department_id,
         status,
         email_verified_at,
         password_changed_at,
@@ -202,12 +285,8 @@ const FIND_USERS = `
  *
  * @returns {object}
  */
-function getExecutor(
-    transactionContext = null,
-) {
-    return getQueryExecutor(
-        transactionContext,
-    );
+function getExecutor(transactionContext = null) {
+  return getQueryExecutor(transactionContext);
 }
 
 /**
@@ -224,22 +303,12 @@ function getExecutor(
  *
  * @returns {Promise<object|null>}
  */
-async function findUserById(
-    userId,
-    transactionContext = null,
-) {
-    const executor =
-        getExecutor(
-            transactionContext,
-        );
+async function findUserById(userId, transactionContext = null) {
+  const executor = getExecutor(transactionContext);
 
-    const result =
-        await executor.query(
-            FIND_USER_BY_ID,
-            [userId],
-        );
+  const result = await executor.query(FIND_USER_BY_ID, [userId]);
 
-    return result.rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 /**
@@ -250,22 +319,12 @@ async function findUserById(
  *
  * @returns {Promise<object|null>}
  */
-async function findUserByUsername(
-    username,
-    transactionContext = null,
-) {
-    const executor =
-        getExecutor(
-            transactionContext,
-        );
+async function findUserByUsername(username, transactionContext = null) {
+  const executor = getExecutor(transactionContext);
 
-    const result =
-        await executor.query(
-            FIND_USER_BY_USERNAME,
-            [username],
-        );
+  const result = await executor.query(FIND_USER_BY_USERNAME, [username]);
 
-    return result.rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 /**
@@ -276,22 +335,12 @@ async function findUserByUsername(
  *
  * @returns {Promise<object|null>}
  */
-async function findUserByEmail(
-    email,
-    transactionContext = null,
-) {
-    const executor =
-        getExecutor(
-            transactionContext,
-        );
+async function findUserByEmail(email, transactionContext = null) {
+  const executor = getExecutor(transactionContext);
 
-    const result =
-        await executor.query(
-            FIND_USER_BY_EMAIL,
-            [email],
-        );
+  const result = await executor.query(FIND_USER_BY_EMAIL, [email]);
 
-    return result.rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 /**
@@ -308,32 +357,37 @@ async function findUserByEmail(
  * @returns {Promise<object>}
  */
 async function createUser(
-    {
-        username,
-        email,
-        passwordHash,
-        status,
-    },
-    transactionContext = null,
+  {
+    username,
+    email,
+    passwordHash,
+    status,
+    firstName = null,
+    lastName = null,
+    phone = null,
+    designation = null,
+    organizationId = null,
+    departmentId = null,
+  },
+  transactionContext = null,
 ) {
-    const executor =
-        getExecutor(
-            transactionContext,
-        );
+  const executor = getExecutor(transactionContext);
 
-    const result =
-        await executor.query(
-            CREATE_USER,
-            [
-                randomUUID(),
-                username,
-                email,
-                passwordHash,
-                status,
-            ],
-        );
+  const result = await executor.query(CREATE_USER, [
+    randomUUID(),
+    username,
+    email,
+    passwordHash,
+    status,
+    firstName,
+    lastName,
+    phone,
+    designation,
+    organizationId,
+    departmentId,
+  ]);
 
-    return result.rows[0];
+  return result.rows[0];
 }
 
 /**
@@ -348,30 +402,38 @@ async function createUser(
  *
  * @returns {Promise<object|null>}
  */
-async function updateUser(
+async function updateUser(userId, data, transactionContext = null) {
+  const executor = getExecutor(transactionContext);
+
+  const result = await executor.query(UPDATE_USER, [
     userId,
-    {
-        username = null,
-        email = null,
-    },
-    transactionContext = null,
-) {
-    const executor =
-        getExecutor(
-            transactionContext,
-        );
 
-    const result =
-        await executor.query(
-            UPDATE_USER,
-            [
-                userId,
-                username,
-                email,
-            ],
-        );
+    data.username !== undefined,
+    data.username ?? null,
 
-    return result.rows[0] ?? null;
+    data.email !== undefined,
+    data.email ?? null,
+
+    data.firstName !== undefined,
+    data.firstName ?? null,
+
+    data.lastName !== undefined,
+    data.lastName ?? null,
+
+    data.phone !== undefined,
+    data.phone ?? null,
+
+    data.designation !== undefined,
+    data.designation ?? null,
+
+    data.organizationId !== undefined,
+    data.organizationId ?? null,
+
+    data.departmentId !== undefined,
+    data.departmentId ?? null,
+  ]);
+
+  return result.rows[0] ?? null;
 }
 
 /**
@@ -383,26 +445,12 @@ async function updateUser(
  *
  * @returns {Promise<object|null>}
  */
-async function updateUserStatus(
-    userId,
-    status,
-    transactionContext = null,
-) {
-    const executor =
-        getExecutor(
-            transactionContext,
-        );
+async function updateUserStatus(userId, status, transactionContext = null) {
+  const executor = getExecutor(transactionContext);
 
-    const result =
-        await executor.query(
-            UPDATE_USER_STATUS,
-            [
-                userId,
-                status,
-            ],
-        );
+  const result = await executor.query(UPDATE_USER_STATUS, [userId, status]);
 
-    return result.rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 /**
@@ -413,22 +461,12 @@ async function updateUserStatus(
  *
  * @returns {Promise<object|null>}
  */
-async function deleteUser(
-    userId,
-    transactionContext = null,
-) {
-    const executor =
-        getExecutor(
-            transactionContext,
-        );
+async function deleteUser(userId, transactionContext = null) {
+  const executor = getExecutor(transactionContext);
 
-    const result =
-        await executor.query(
-            DELETE_USER,
-            [userId],
-        );
+  const result = await executor.query(DELETE_USER, [userId]);
 
-    return result.rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 /**
@@ -440,26 +478,12 @@ async function deleteUser(
  *
  * @returns {Promise<Array<object>>}
  */
-async function findUsers(
-    limit,
-    offset,
-    transactionContext = null,
-) {
-    const executor =
-        getExecutor(
-            transactionContext,
-        );
+async function findUsers(limit, offset, transactionContext = null) {
+  const executor = getExecutor(transactionContext);
 
-    const result =
-        await executor.query(
-            FIND_USERS,
-            [
-                limit,
-                offset,
-            ],
-        );
+  const result = await executor.query(FIND_USERS, [limit, offset]);
 
-    return result.rows;
+  return result.rows;
 }
 
 /**
@@ -469,22 +493,62 @@ async function findUsers(
  *
  * @returns {Promise<number>}
  */
-async function countUsers(
+async function countUsers(transactionContext = null) {
+  const executor = getExecutor(transactionContext);
+
+  const result = await executor.query(COUNT_USERS);
+
+  return Number(result.rows[0]?.total ?? 0);
+}
+
+async function findOrganizationById(
+    organizationId,
     transactionContext = null,
 ) {
-    const executor =
-        getExecutor(
-            transactionContext,
-        );
-
     const result =
-        await executor.query(
-            COUNT_USERS,
+        await getExecutor(
+            transactionContext,
+        ).query(
+            `
+                SELECT
+                    id,
+                    code,
+                    name,
+                    status
+                FROM organizations
+                WHERE id = $1::UUID
+                LIMIT 1;
+            `,
+            [organizationId],
         );
 
-    return Number(
-        result.rows[0]?.total ?? 0,
-    );
+    return result.rows[0] ?? null;
+}
+
+
+async function findDepartmentById(
+    departmentId,
+    transactionContext = null,
+) {
+    const result =
+        await getExecutor(
+            transactionContext,
+        ).query(
+            `
+                SELECT
+                    id,
+                    organization_id,
+                    code,
+                    name,
+                    status
+                FROM departments
+                WHERE id = $1::UUID
+                LIMIT 1;
+            `,
+            [departmentId],
+        );
+
+    return result.rows[0] ?? null;
 }
 
 /**
@@ -494,17 +558,19 @@ async function countUsers(
  */
 
 const userRepository = Object.freeze({
-    findUserById,
-    findUserByUsername,
-    findUserByEmail,
+  findUserById,
+  findUserByUsername,
+  findUserByEmail,
 
-    createUser,
-    updateUser,
-    updateUserStatus,
-    deleteUser,
+  createUser,
+  updateUser,
+  updateUserStatus,
+  deleteUser,
 
-    findUsers,
-    countUsers,
+  findUsers,
+  countUsers,
+  findDepartmentById,
+  findOrganizationById
 });
 
 export default userRepository;

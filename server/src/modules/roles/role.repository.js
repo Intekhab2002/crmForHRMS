@@ -318,4 +318,5 @@ export default Object.freeze({
     findUserById,
     assignRoleToUser,
     removeRoleFromUser,
+    replaceUserRole,
 });

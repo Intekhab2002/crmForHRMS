@@ -185,15 +185,38 @@ async function deleteUser(
     next,
 ) {
     try {
-        const user =
-            await userService.deleteUser(
-                req.params.userId,
-            );
+const user =
+    await userService.deleteUser(
+        req.params.userId,
+        req.auth?.userId,
+    );
 
         return ApiResponse.deleted(
             res,
             user,
             "User deleted successfully.",
+        );
+    } catch (error) {
+        return next(error);
+    }
+}
+
+
+async function revokeUserSessions(
+    req,
+    res,
+    next,
+) {
+    try {
+        await userService.revokeUserSessions(
+            req.params.userId,
+            req.auth?.userId,
+        );
+
+        return ApiResponse.success(
+            res,
+            null,
+            "User sessions revoked successfully.",
         );
     } catch (error) {
         return next(error);
@@ -210,6 +233,7 @@ const userController = Object.freeze({
     updateUser,
     updateUserStatus,
     deleteUser,
+    revokeUserSessions
 });
 
 export default userController;
