@@ -10,12 +10,6 @@ function normalizeMobile(mobile) {
 async function getContactByMobile(organizationId, mobile, tx = null) {
   const normalizedMobile = normalizeMobile(mobile);
 
-  const contact = await contactRepository.findContactByMobile(
-    organizationId,
-    normalizedMobile,
-    tx,
-  );
-
   if (!normalizedMobile) {
     throw AppError.badRequest("Mobile phone is required.");
   }
@@ -23,6 +17,7 @@ async function getContactByMobile(organizationId, mobile, tx = null) {
   return contactRepository.findContactByMobile(
     organizationId,
     normalizedMobile,
+    tx,
   );
 }
 

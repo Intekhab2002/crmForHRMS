@@ -1,9 +1,29 @@
-function TicketFormContent({
+import {
+  useCallback,
+} from "react";
+
+import {
+  Box,
+  Grid,
+  Stack,
+  Button,
+  Typography,
+} from "@mui/material";
+
+import { Form } from "formik";
+
+import FieldRenderer from "./FieldRenderer";
+import { useContactLookup } from "../hooks/useContactLookup";
+
+export default function TicketFormContent({
   formik,
   fields,
   options,
   loadingOptions,
   organizationId,
+  submitting,
+  submitLabel,
+  onCancel,
 }) {
   const handleContactFound = useCallback(
     (contact) => {
@@ -34,32 +54,79 @@ function TicketFormContent({
     [formik],
   );
 
-  const handleContactNotFound = useCallback(() => {
-    // Normal state.
-    // Do not clear fields.
-    // Do not mark the form invalid.
-  }, []);
-
-  const handleContactError = useCallback((error) => {
-    console.error(
-      "[TicketForm] Contact lookup failed.",
-      error,
-    );
-  }, []);
-
   const {
+    status: contactLookupStatus,
     isLoading: contactLookupLoading,
   } = useContactLookup({
     organizationId,
     mobilePhone: formik.values.mobile_phone,
-    onFound: handleContactFound,
-    onNotFound: handleContactNotFound,
-    onError: handleContactError,
+    onContactFound: handleContactFound,
   });
 
   return (
     <Form noValidate>
-      {/* existing form rendering */}
+      <Grid container spacing={1}>
+        {fields.map((field) => (
+          <Grid
+            key={field.key}
+            size={field.form?.width ?? { xs: 6, md: 4 }}
+          >
+            <FieldRenderer
+              field={field}
+              formik={formik}
+              options={options[field.key] ?? []}
+              loading={
+                Boolean(loadingOptions[field.key]) ||
+                (
+                  field.key === "mobile_phone" &&
+                  contactLookupLoading
+                )
+              }
+            />
+
+            {field.key === "mobile_phone" &&
+              contactLookupStatus === "loading" ? (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+              >
+                Searching contact...
+              </Typography>
+            ) : null}
+          </Grid>
+        ))}
+      </Grid>
+
+      <Stack
+        direction="row"
+        justifyContent="flex-end"
+        spacing={2}
+        sx={{ mt: 2 }}
+      >
+        {onCancel ? (
+          <Button
+            type="button"
+            variant="outlined"
+            disabled={submitting}
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+        ) : null}
+
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={
+            submitting ||
+            formik.isSubmitting
+          }
+        >
+          {submitting
+            ? "Saving..."
+            : submitLabel}
+        </Button>
+      </Stack>
     </Form>
   );
 }

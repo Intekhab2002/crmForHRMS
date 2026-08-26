@@ -373,78 +373,62 @@ export default function TicketForm({
       onSubmit={onSubmit}
     >
       {(formik) => {
-        const mobilePhone = formik.values.mobile_phone;
-        useEffect(() => {
-          const mobile = String(mobilePhone ?? "").trim();
-
-          if (lookupTimerRef.current) {
-            clearTimeout(lookupTimerRef.current);
-          }
-
-          if (!mobile || !organizationId) {
-            return undefined;
-          }
-
-          if (mobile.length < 7) {
-            return undefined;
-          }
-
-          lookupTimerRef.current = setTimeout(() => {
-            lookupContact(mobile, formik);
-          }, 400);
-
-          return () => {
-            if (lookupTimerRef.current) {
-              clearTimeout(lookupTimerRef.current);
-            }
-          };
-        }, [mobilePhone, organizationId, lookupContact]);
         return (
-          <Form noValidate>
-            <Grid container spacing={1}>
-              {fields.map((field) => (
-                <Grid
-                  key={field.key}
-                  size={field.form?.width ?? { xs: 6, md: 4 }}
-                >
-                  <FieldRenderer
-                    field={field}
-                    formik={formik}
-                    options={options[field.key] ?? []}
-                    loading={Boolean(loadingOptions[field.key])}
-                  />
-                </Grid>
-              ))}
-            </Grid>
+          // <Form noValidate>
+          //   <Grid container spacing={1}>
+          //     {fields.map((field) => (
+          //       <Grid
+          //         key={field.key}
+          //         size={field.form?.width ?? { xs: 6, md: 4 }}
+          //       >
+          //         <FieldRenderer
+          //           field={field}
+          //           formik={formik}
+          //           options={options[field.key] ?? []}
+          //           loading={Boolean(loadingOptions[field.key])}
+          //         />
+          //       </Grid>
+          //     ))}
+          //   </Grid>
 
-            <Stack
-              direction="row"
-              justifyContent="flex-end"
-              spacing={2}
-              sx={{ mt: 2 }}
-            >
-              {onCancel ? (
-                <Button
-                  type="button"
-                  variant="outlined"
-                  disabled={submitting}
-                  onClick={onCancel}
-                >
-                  Cancel
-                </Button>
-              ) : null}
+          //   <Stack
+          //     direction="row"
+          //     justifyContent="flex-end"
+          //     spacing={2}
+          //     sx={{ mt: 2 }}
+          //   >
+          //     {onCancel ? (
+          //       <Button
+          //         type="button"
+          //         variant="outlined"
+          //         disabled={submitting}
+          //         onClick={onCancel}
+          //       >
+          //         Cancel
+          //       </Button>
+          //     ) : null}
 
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={submitting || formik.isSubmitting}
-              >
-                {submitting
-                  ? "Saving..."
-                  : (submitLabel ?? TICKET_FORM_CONFIG[mode].submitLabel)}
-              </Button>
-            </Stack>
-          </Form>
+          //     <Button
+          //       type="submit"
+          //       variant="contained"
+          //       disabled={submitting || formik.isSubmitting}
+          //     >
+          //       {submitting
+          //         ? "Saving..."
+          //         : (submitLabel ?? TICKET_FORM_CONFIG[mode].submitLabel)}
+          //     </Button>
+          //   </Stack>
+          // </Form>
+          <TicketFormContent
+            formik={formik}
+            fields={fields}
+            options={options}
+            loadingOptions={loadingOptions}
+            organizationId={organizationId}
+            submitting={submitting}
+            submitLabel={submitLabel ?? TICKET_FORM_CONFIG[mode].submitLabel}
+            onCancel={onCancel}
+          />
         );
       }}
     </Formik>
