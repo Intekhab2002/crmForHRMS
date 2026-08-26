@@ -6,7 +6,7 @@ export async function findContactByMobile(
   mobilePhone,
 ) {
   const response = await apiClient.get(
-    API_CONFIG.endpoints.contacts.byMobile(
+    API_CONFIG.endpoints.formConfiguration.contacts.byMobile(
       organizationId,
       mobilePhone,
     ),
