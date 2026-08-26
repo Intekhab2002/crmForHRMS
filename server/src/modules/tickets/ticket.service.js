@@ -9,6 +9,7 @@ import { TICKET_ERROR_CODES, TICKET_STATUS } from "./ticket.constants.js";
 import { TICKET_CONFIG } from "./ticket.config.js";
 import ticketNumberService from "./ticketNumber.service.js";
 import { randomUUID } from "node:crypto";
+import ticketLifecycleService from "./ticketLifecycle.service.js";
 
 function getContactValue(payload, key) {
   if (key === "name") {
@@ -183,13 +184,17 @@ async function createTicket(payload, authenticatedUserId) {
           message: configuredError.message,
         },
       ],
-      { code: TICKET_ERROR_CODES.INVALID_FIELD_VALUE },
+      {
+        code: TICKET_ERROR_CODES.INVALID_FIELD_VALUE,
+      },
     );
   }
 
   return executeTransaction(async (tx) => {
     const { ticket, contact } = splitPayload(payload);
+
     ticket.id ??= randomUUID();
+
     ticket.ticket_number = await ticketNumberService.generateTicketNumber(tx);
 
     ticket.created_by = authenticatedUserId;
@@ -230,6 +235,7 @@ async function createTicket(payload, authenticatedUserId) {
     let contactId = ticket.contact ?? null;
 
     const mobile = getContactValue(contact, "mobile_phone");
+
     const contactName = getContactValue(contact, "name");
 
     if (!contactId) {
@@ -246,7 +252,9 @@ async function createTicket(payload, authenticatedUserId) {
               message: "Name is required.",
             },
           ],
-          { code: TICKET_ERROR_CODES.CONTACT_NOT_FOUND },
+          {
+            code: TICKET_ERROR_CODES.CONTACT_NOT_FOUND,
+          },
         );
       }
 
@@ -268,6 +276,7 @@ async function createTicket(payload, authenticatedUserId) {
     ticket.contact = contactId;
 
     const createdAt = new Date();
+
     if (ticket.assigned_user_id) {
       ticket.assigned_at = createdAt;
     }
@@ -282,13 +291,21 @@ async function createTicket(payload, authenticatedUserId) {
 
     await ticketRepository.createTicket(ticket, tx);
 
-    return ticketRepository.findTicketById(ticket.id ?? ticket.ticket_id, tx);
+    const createdTicket = await ticketRepository.findTicketById(ticket.id, tx);
+
+    await ticketLifecycleService.recordTicketCreated(
+      {
+        ticket: createdTicket ?? ticket,
+        actorUserId: authenticatedUserId,
+      },
+      tx,
+    );
+
+    return createdTicket;
   });
 }
 
-async function updateTicket(ticketId, payload) {
-  const current = await getTicket(ticketId);
-
+async function updateTicket(ticketId, payload, authenticatedUserId) {
   const configuredError = ticketValidator.validateConfiguredOptions(payload);
 
   if (configuredError) {
@@ -300,20 +317,43 @@ async function updateTicket(ticketId, payload) {
           message: configuredError.message,
         },
       ],
-      { code: TICKET_ERROR_CODES.INVALID_FIELD_VALUE },
+      {
+        code: TICKET_ERROR_CODES.INVALID_FIELD_VALUE,
+      },
     );
   }
 
   return executeTransaction(async (tx) => {
+    const current = await ticketRepository.findTicketById(ticketId, tx);
+
+    if (!current) {
+      throw AppError.notFound("Ticket not found.", {
+        code: TICKET_ERROR_CODES.NOT_FOUND,
+      });
+    }
+
     const { ticket, contact } = splitPayload(payload);
+
+    /*
+     * Capture changes BEFORE the ticket/contact payload is
+     * transformed or deleted.
+     *
+     * The lifecycle service uses ticket.config.js as the
+     * single source of field metadata.
+     */
+    const changes = ticketLifecycleService.getTicketChanges(current, payload);
 
     const effective = {
       department: ticket.department ?? current.department_id,
+
       organization: ticket.organization ?? current.organization_id,
+
       requester_user_id: ticket.requester_user_id ?? current.requester_user_id,
+
       assigned_to: Object.prototype.hasOwnProperty.call(ticket, "assigned_to")
         ? ticket.assigned_to
         : current.assigned_user_id,
+
       contact: Object.prototype.hasOwnProperty.call(ticket, "contact")
         ? ticket.contact
         : current.contact_id,
@@ -326,9 +366,13 @@ async function updateTicket(ticketId, payload) {
         current.contact_id,
         {
           name: contact.name ?? contact.contact_name,
+
           mobile: contact.mobile_phone,
+
           email: contact.email_id,
+
           district: contact.district,
+
           departmentId: ticket.department ?? current.department_id ?? null,
         },
         tx,
@@ -342,23 +386,47 @@ async function updateTicket(ticketId, payload) {
     delete ticket.requester_user_id;
     delete ticket.created_by;
 
+    /*
+     * Preserve the existing ticket field semantics.
+     */
     if (Object.prototype.hasOwnProperty.call(payload, "department")) {
       ticket.department = payload.department;
     }
+
     if (Object.prototype.hasOwnProperty.call(payload, "organization")) {
       ticket.organization = payload.organization;
     }
+
     if (Object.prototype.hasOwnProperty.call(payload, "assigned_to")) {
       ticket.assigned_to = payload.assigned_to;
     }
+
     if (Object.prototype.hasOwnProperty.call(payload, "requester_user_id")) {
       ticket.requester_user_id = payload.requester_user_id;
     }
+
     if (Object.prototype.hasOwnProperty.call(payload, "contact")) {
       ticket.contact = payload.contact;
     }
 
     await ticketRepository.updateTicket(ticketId, ticket, tx);
+
+    await ticketLifecycleService.recordTicketChanges(
+      {
+        ticketId,
+        actorUserId: authenticatedUserId,
+        changes,
+      },
+      tx,
+    );
+
+    /*
+     * Wait for lifecycle recording to complete before committing.
+     *
+     * This is deliberately after the ticket mutation but inside
+     * the same transaction.
+     */
+    await changes;
 
     return ticketRepository.findTicketById(ticketId, tx);
   });
