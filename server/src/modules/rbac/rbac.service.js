@@ -32,10 +32,12 @@ import AppError from "../../helpers/AppError.js";
 
 import rbacRepository from "./rbac.repository.js";
 import rbacConstants from "./rbac.constants.js";
+import rbacAuthority from "./rbac.authority.js";
 
 const {
     RBAC_ERROR_CODES,
 } = rbacConstants;
+
 
 /**
  * ============================================================================
@@ -271,6 +273,24 @@ const rbacService = Object.freeze({
 
     hasRole,
     requireRole,
+
+    can: rbacAuthority.can,
+    canManageRoles:
+        rbacAuthority.canManageRoles,
+    requireRoleManagement:
+        rbacAuthority.requireRoleManagement,
+
+    requireCanCreateRole:
+        rbacAuthority.requireCanCreateRole,
+
+    requireCanModifyRole:
+        rbacAuthority.requireCanModifyRole,
+
+    requireCanAssignRole:
+        rbacAuthority.requireCanAssignRole,
+
+    requireCanManageUser:
+        rbacAuthority.requireCanManageUser,
 });
 
 export default rbacService;

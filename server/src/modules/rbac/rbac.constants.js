@@ -4,40 +4,29 @@
  * RBAC Constants
  * ============================================================================
  *
- * File:
- *     src/modules/rbac/rbac.constants.js
- *
  * Purpose:
- *     Centralizes role and permission identifiers used by the authorization
- *     subsystem.
+ *     Centralized authorization identifiers.
  *
- * Responsibilities:
- *     - System role codes.
- *     - Permission resource identifiers.
- *     - Permission action identifiers.
- *     - Authorization error codes.
- *     - Authorization success codes.
- *     - RBAC route identifiers.
+ * IMPORTANT:
+ *     Only developer and superadmin are fixed semantic role identities.
  *
- * This module contains identifiers only.
- * Authorization decisions belong to the RBAC service.
+ *     All other roles are dynamic application roles.
+ *
+ *     Role display names MUST NEVER be used for authorization.
  * ============================================================================
  */
 
 /**
  * ============================================================================
- * System Roles
+ * Fixed System Identities
  * ============================================================================
  */
 
 export const RBAC_ROLES = Object.freeze({
-  DEVELOPER: "developer",
-  SUPERADMIN: "superadmin",
-  ADMIN: "admin",
-  MANAGER: "manager",
-  AGENT: "agent",
-  CUSTOMER: "customer",
+    DEVELOPER: "developer",
+    SUPERADMIN: "superadmin",
 });
+
 
 /**
  * ============================================================================
@@ -46,16 +35,19 @@ export const RBAC_ROLES = Object.freeze({
  */
 
 export const RBAC_RESOURCES = Object.freeze({
-  USER: "user",
-  ROLE: "role",
-  PERMISSION: "permission",
-  TICKET: "ticket",
-  SLA: "sla",
-  DASHBOARD: "dashboard",
-  EMPLOYEE: "employee",
-  FORM_FIELD: "form_field",
-  FORM_DEFINITION: "form_definition",
+    USER: "user",
+    ROLE: "role",
+    PERMISSION: "permission",
+    ORGANIZATION: "organization",
+    DEPARTMENT: "department",
+    TICKET: "ticket",
+    SLA: "sla",
+    DASHBOARD: "dashboard",
+    EMPLOYEE: "employee",
+    FORM_FIELD: "form_field",
+    FORM_DEFINITION: "form_definition",
 });
+
 
 /**
  * ============================================================================
@@ -64,84 +56,88 @@ export const RBAC_RESOURCES = Object.freeze({
  */
 
 export const RBAC_ACTIONS = Object.freeze({
-  READ: "read",
-  CREATE: "create",
-  UPDATE: "update",
-  DELETE: "delete",
-  ASSIGN: "assign",
-  RESOLVE: "resolve",
-  CLOSE: "close",
+    READ: "read",
+    CREATE: "create",
+    UPDATE: "update",
+    DELETE: "delete",
+    ASSIGN: "assign",
+    RESOLVE: "resolve",
+    CLOSE: "close",
+    COMMENT: "comment",
+    ATTACHMENT: "attachment",
+    RESTORE: "restore",
+    ENABLE: "enable",
+    DISABLE: "disable",
 });
+
 
 /**
  * ============================================================================
  * Permission Codes
  * ============================================================================
- *
- * These correspond to the permission codes seeded into PostgreSQL.
  */
 
 export const RBAC_PERMISSIONS = Object.freeze({
-  USER_READ: "user:read",
-  USER_CREATE: "user:create",
-  USER_UPDATE: "user:update",
-  USER_DELETE: "user:delete",
+    USER_READ: "user:read",
+    USER_CREATE: "user:create",
+    USER_UPDATE: "user:update",
+    USER_DELETE: "user:delete",
 
-  ROLE_READ: "role:read",
-  ROLE_CREATE: "role:create",
-  ROLE_UPDATE: "role:update",
-  ROLE_DELETE: "role:delete",
+    ROLE_READ: "role:read",
+    ROLE_CREATE: "role:create",
+    ROLE_UPDATE: "role:update",
+    ROLE_DELETE: "role:delete",
 
-  PERMISSION_READ: "permission:read",
-  PERMISSION_CREATE: "permission:create",
-  PERMISSION_UPDATE: "permission:update",
-  PERMISSION_DELETE: "permission:delete",
+    PERMISSION_READ: "permission:read",
+    PERMISSION_CREATE: "permission:create",
+    PERMISSION_UPDATE: "permission:update",
+    PERMISSION_DELETE: "permission:delete",
 
-  ORGANIZATION_READ: "organization:read",
-  ORGANIZATION_CREATE: "organization:create",
-  ORGANIZATION_UPDATE: "organization:update",
-  ORGANIZATION_DELETE: "organization:delete",
+    ORGANIZATION_READ: "organization:read",
+    ORGANIZATION_CREATE: "organization:create",
+    ORGANIZATION_UPDATE: "organization:update",
+    ORGANIZATION_DELETE: "organization:delete",
 
-  DEPARTMENT_READ: "department:read",
-  DEPARTMENT_CREATE: "department:create",
-  DEPARTMENT_UPDATE: "department:update",
-  DEPARTMENT_DELETE: "department:delete",
+    DEPARTMENT_READ: "department:read",
+    DEPARTMENT_CREATE: "department:create",
+    DEPARTMENT_UPDATE: "department:update",
+    DEPARTMENT_DELETE: "department:delete",
 
-  TICKET_READ: "ticket:read",
-  TICKET_CREATE: "ticket:create",
-  TICKET_UPDATE: "ticket:update",
-  TICKET_ASSIGN: "ticket:assign",
-  TICKET_COMMENT: "ticket:comment",
-  TICKET_RESOLVE: "ticket:resolve",
-  TICKET_CLOSE: "ticket:close",
-  TICKET_ATTACHMENT: "ticket:attachment",
+    TICKET_READ: "ticket:read",
+    TICKET_CREATE: "ticket:create",
+    TICKET_UPDATE: "ticket:update",
+    TICKET_ASSIGN: "ticket:assign",
+    TICKET_COMMENT: "ticket:comment",
+    TICKET_RESOLVE: "ticket:resolve",
+    TICKET_CLOSE: "ticket:close",
+    TICKET_ATTACHMENT: "ticket:attachment",
 
+    SLA_READ: "sla:read",
+    SLA_CREATE: "sla:create",
+    SLA_UPDATE: "sla:update",
+    SLA_DELETE: "sla:delete",
 
-  SLA_READ: "sla:read",
-  SLA_CREATE: "sla:create",
-  SLA_UPDATE: "sla:update",
-  SLA_DELETE: "sla:delete",
+    EMPLOYEE_READ: "employee:read",
+    EMPLOYEE_CREATE: "employee:create",
+    EMPLOYEE_UPDATE: "employee:update",
+    EMPLOYEE_DELETE: "employee:delete",
 
-  EMPLOYEE_READ: "employee:read",
-  EMPLOYEE_CREATE: "employee:create",
-  EMPLOYEE_UPDATE: "employee:update",
-  EMPLOYEE_DELETE: "employee:delete",
+    DASHBOARD_READ: "dashboard:read",
 
-  DASHBOARD_READ: "dashboard:read",
+    FORM_FIELD_READ: "form_field:read",
+    FORM_FIELD_CREATE: "form_field:create",
+    FORM_FIELD_UPDATE: "form_field:update",
+    FORM_FIELD_DELETE: "form_field:delete",
+    FORM_FIELD_RESTORE: "form_field:restore",
+    FORM_FIELD_ENABLE: "form_field:enable",
+    FORM_FIELD_DISABLE: "form_field:disable",
 
-  FORM_FIELD_READ: "form_field:read",
-  FORM_FIELD_CREATE: "form_field:create",
-  FORM_FIELD_UPDATE: "form_field:update",
-  FORM_FIELD_DELETE: "form_field:delete",
-  FORM_FIELD_RESTORE: "form_field:restore",
-  FORM_FIELD_ENABLE: "form_field:enable",
-  FORM_FIELD_DISABLE: "form_field:disable",
-
-  FORM_DEFINITION_READ: "form_definition:read",
-  FORM_DEFINITION_CREATE: "form_definition:create",
-  FORM_DEFINITION_UPDATE: "form_definition:update",
-  FORM_DEFINITION_DELETE: "form_definition:delete",
+    FORM_DEFINITION_READ: "form_definition:read",
+    FORM_DEFINITION_CREATE: "form_definition:create",
+    FORM_DEFINITION_UPDATE: "form_definition:update",
+    FORM_DEFINITION_DELETE: "form_definition:delete",
 });
+
 
 /**
  * ============================================================================
@@ -150,11 +146,21 @@ export const RBAC_PERMISSIONS = Object.freeze({
  */
 
 export const RBAC_ERROR_CODES = Object.freeze({
-  PERMISSION_REQUIRED: "RBAC_PERMISSION_REQUIRED",
-  ROLE_REQUIRED: "RBAC_ROLE_REQUIRED",
-  ACCESS_DENIED: "RBAC_ACCESS_DENIED",
-  USER_NOT_FOUND: "RBAC_USER_NOT_FOUND",
+    PERMISSION_REQUIRED: "RBAC_PERMISSION_REQUIRED",
+    ROLE_REQUIRED: "RBAC_ROLE_REQUIRED",
+    ACCESS_DENIED: "RBAC_ACCESS_DENIED",
+    USER_NOT_FOUND: "RBAC_USER_NOT_FOUND",
+
+    DEVELOPER_PROTECTED: "RBAC_DEVELOPER_PROTECTED",
+    SUPERADMIN_PROTECTED: "RBAC_SUPERADMIN_PROTECTED",
+    SYSTEM_ROLE_PROTECTED: "RBAC_SYSTEM_ROLE_PROTECTED",
+
+    AUTHORITY_VIOLATION: "RBAC_AUTHORITY_VIOLATION",
+    SELF_ROLE_MODIFICATION: "RBAC_SELF_ROLE_MODIFICATION",
+    SELF_ROLE_ASSIGNMENT: "RBAC_SELF_ROLE_ASSIGNMENT",
+    SYSTEM_ROLE_ASSIGNMENT: "RBAC_SYSTEM_ROLE_ASSIGNMENT",
 });
+
 
 /**
  * ============================================================================
@@ -163,22 +169,18 @@ export const RBAC_ERROR_CODES = Object.freeze({
  */
 
 export const RBAC_SUCCESS_CODES = Object.freeze({
-  AUTHORIZATION_GRANTED: "RBAC_AUTHORIZATION_GRANTED",
+    AUTHORIZATION_GRANTED: "RBAC_AUTHORIZATION_GRANTED",
 });
 
-/**
- * ============================================================================
- * Immutable RBAC Constants
- * ============================================================================
- */
 
 const rbacConstants = Object.freeze({
-  RBAC_ROLES,
-  RBAC_RESOURCES,
-  RBAC_ACTIONS,
-  RBAC_PERMISSIONS,
-  RBAC_ERROR_CODES,
-  RBAC_SUCCESS_CODES,
+    RBAC_ROLES,
+    RBAC_RESOURCES,
+    RBAC_ACTIONS,
+    RBAC_PERMISSIONS,
+    RBAC_ERROR_CODES,
+    RBAC_SUCCESS_CODES,
 });
+
 
 export default rbacConstants;
