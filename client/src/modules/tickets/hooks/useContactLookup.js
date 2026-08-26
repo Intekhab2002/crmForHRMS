@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
-import { findContactByMobile } from "../services/contact.service";
+import { findContactByMobile } from "../../contacts/services/contact.service";
+
+const MIN_MOBILE_LENGTH = 7;
+const LOOKUP_DEBOUNCE_MS = 400;
 
 export function useContactLookup({
   organizationId,
   mobilePhone,
-  onFound,
-  onNotFound,
-  onError,
+  onContactFound,
 }) {
   const [status, setStatus] = useState("idle");
 
@@ -18,12 +24,10 @@ export function useContactLookup({
   ).trim();
 
   const lookup = useCallback(async () => {
-    if (!organizationId || !normalizedMobile) {
-      setStatus("idle");
-      return;
-    }
-
-    if (normalizedMobile.length < 7) {
+    if (
+      !organizationId ||
+      normalizedMobile.length < MIN_MOBILE_LENGTH
+    ) {
       setStatus("idle");
       return;
     }
@@ -46,40 +50,35 @@ export function useContactLookup({
 
       if (!contact) {
         setStatus("not_found");
-        onNotFound?.();
-
         return;
       }
 
       setStatus("found");
-      onFound?.(contact);
+
+      onContactFound?.(contact);
     } catch (error) {
       if (requestId !== requestIdRef.current) {
         return;
       }
 
-      if (error.response?.status === 404) {
-        setStatus("not_found");
-        onNotFound?.();
-
-        return;
-      }
+      console.error(
+        "[useContactLookup] Contact lookup failed.",
+        error,
+      );
 
       setStatus("error");
-      onError?.(error);
     }
   }, [
     organizationId,
     normalizedMobile,
-    onFound,
-    onNotFound,
-    onError,
+    onContactFound,
   ]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      lookup();
-    }, 400);
+    const timer = setTimeout(
+      lookup,
+      LOOKUP_DEBOUNCE_MS,
+    );
 
     return () => {
       clearTimeout(timer);
@@ -89,5 +88,7 @@ export function useContactLookup({
   return {
     status,
     isLoading: status === "loading",
+    contactFound: status === "found",
+    contactNotFound: status === "not_found",
   };
 }
