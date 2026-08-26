@@ -211,6 +211,7 @@ export default function TicketLifecyclePage() {
 
     try {
       const result = await ticketService.listComments(ticketId);
+      console.log("Result Comment", result)
 
       const normalizedComments = Array.isArray(result) ? result : [];
 

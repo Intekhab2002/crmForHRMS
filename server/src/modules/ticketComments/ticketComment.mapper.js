@@ -14,6 +14,8 @@ export function mapTicketComment(comment) {
             id: comment.user_id,
             username: comment.username ?? "",
             email: comment.email ?? "",
+            first_name:comment.first_name,
+            last_name:comment.last_name,
         },
 
         createdAt: comment.created_at,

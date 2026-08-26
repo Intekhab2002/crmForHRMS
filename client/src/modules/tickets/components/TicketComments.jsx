@@ -9,7 +9,13 @@ import {
 import CommentOutlinedIcon from "@mui/icons-material/CommentOutlined";
 
 function getAuthorName(comment) {
-  return comment.username || comment.email || "Unknown user";
+  // console.log("Comment")
+  return (
+    comment.author?.first_name ||
+    comment.author?.username ||
+    comment.author?.email ||
+    "Unknown user"
+  );
 }
 
 function formatDate(value) {
@@ -27,10 +33,8 @@ function formatDate(value) {
   }).format(date);
 }
 
-export default function TicketComments({
-  comments = [],
-  loading = false,
-}) {
+export default function TicketComments({ comments = [], loading = false }) {
+  console.log("TicketComments",comments)
   return (
     <Paper
       variant="outlined"
@@ -42,44 +46,26 @@ export default function TicketComments({
       }}
     >
       <Stack spacing={2}>
-        <Stack
-          direction="row"
-          spacing={1}
-          alignItems="center"
-        >
+        <Stack direction="row" spacing={1} alignItems="center">
           <CommentOutlinedIcon color="action" />
 
-          <Typography
-            variant="h6"
-            fontWeight={800}
-          >
+          <Typography variant="h6" fontWeight={800}>
             Comments
           </Typography>
 
           {!loading ? (
-            <Typography color="text.secondary">
-              ({comments.length})
-            </Typography>
+            <Typography color="text.secondary">({comments.length})</Typography>
           ) : null}
         </Stack>
 
         {loading ? (
-          <Stack
-            alignItems="center"
-            justifyContent="center"
-            sx={{ py: 4 }}
-          >
+          <Stack alignItems="center" justifyContent="center" sx={{ py: 4 }}>
             <CircularProgress size={28} />
           </Stack>
         ) : comments.length === 0 ? (
-          <Typography color="text.secondary">
-            No comments yet.
-          </Typography>
+          <Typography color="text.secondary">No comments yet.</Typography>
         ) : (
-          <Stack
-            divider={<Divider flexItem />}
-            spacing={0}
-          >
+          <Stack divider={<Divider flexItem />} spacing={0}>
             {comments.map((comment) => {
               const author = getAuthorName(comment);
 
@@ -96,9 +82,7 @@ export default function TicketComments({
                       height: 38,
                     }}
                   >
-                    {author
-                      .charAt(0)
-                      .toUpperCase()}
+                    {author.charAt(0).toUpperCase()}
                   </Avatar>
 
                   <Stack
@@ -122,27 +106,16 @@ export default function TicketComments({
                         sm: "baseline",
                       }}
                     >
-                      <Typography fontWeight={700}>
-                        {author}
-                      </Typography>
+                      <Typography fontWeight={700}>{author}</Typography>
 
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                      >
-                        {formatDate(
-                          comment.created_at,
-                        )}
+                      <Typography variant="caption" color="text.secondary">
+                        {formatDate(comment?.createdAt)}
                       </Typography>
                     </Stack>
 
-                    {comment.email &&
-                    comment.username ? (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                      >
-                        {comment.email}
+                    {comment.author?.email ? (
+                      <Typography variant="caption" color="text.secondary">
+                        {comment.author.email}
                       </Typography>
                     ) : null}
 

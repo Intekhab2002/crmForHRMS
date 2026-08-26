@@ -1,38 +1,33 @@
-function mapActor({
-  id,
-  username,
-  email,
-  name,
-} = {}) {
+function mapActor({ id, username, email, name, first_name, last_name } = {}) {
+  const firstName = first_name ?? "";
+
+  const lastName = last_name ?? "";
+
+  const fullName = `${firstName} ${lastName}`.trim();
+
   return {
     id: id ?? null,
-    name:
-      name ??
-      username ??
-      email ??
-      "",
+
+    username: username ?? "",
+
     email: email ?? "",
+
+    firstName,
+
+    lastName,
+
+    name: fullName || name || username || email || "",
   };
 }
-
-function formatLifecycleFieldName(
-  fieldName,
-) {
+function formatLifecycleFieldName(fieldName) {
   if (!fieldName) {
     return "Field";
   }
 
   return fieldName
     .replaceAll("_", " ")
-    .replace(
-      /([A-Z])/g,
-      " $1",
-    )
-    .replace(
-      /^./,
-      (character) =>
-        character.toUpperCase(),
-    );
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (character) => character.toUpperCase());
 }
 
 function mapLifecycleEvent(event) {
@@ -41,25 +36,16 @@ function mapLifecycleEvent(event) {
   }
 
   const metadata =
-    event.metadata &&
-    typeof event.metadata === "object"
-      ? event.metadata
-      : {};
+    event.metadata && typeof event.metadata === "object" ? event.metadata : {};
 
-  const fieldName =
-    event.field_name ?? null;
+  const fieldName = event.field_name ?? null;
 
   const change = fieldName
     ? {
         field: fieldName,
-        label:
-          formatLifecycleFieldName(
-            fieldName,
-          ),
-        from:
-          event.old_value ?? null,
-        to:
-          event.new_value ?? null,
+        label: formatLifecycleFieldName(fieldName),
+        from: event.old_value ?? null,
+        to: event.new_value ?? null,
       }
     : null;
 
@@ -67,14 +53,16 @@ function mapLifecycleEvent(event) {
     id: event.id,
     ticketId: event.ticket_id,
 
-    actorUserId:
-      event.actor_user_id,
+    actorUserId: event.actor_user_id,
 
     actor: mapActor({
       id: event.actor_user_id,
       username: event.username,
       email: event.email,
       name: event.actor_name,
+      name: event.actor_name,
+      first_name: event.first_name,
+      last_name: event.last_name,
     }),
 
     type: event.event_type,
@@ -82,54 +70,32 @@ function mapLifecycleEvent(event) {
 
     fieldName,
 
-    oldValue:
-      event.old_value ?? null,
+    oldValue: event.old_value ?? null,
 
-    newValue:
-      event.new_value ?? null,
+    newValue: event.new_value ?? null,
 
-    changes: change
-      ? [change]
-      : [],
+    changes: change ? [change] : [],
 
-    comment:
-      metadata.comment ?? null,
+    comment: metadata.comment ?? null,
 
-    files: Array.isArray(
-      metadata.files,
-    )
-      ? metadata.files
-      : [],
+    files: Array.isArray(metadata.files) ? metadata.files : [],
 
     metadata,
 
-    createdAt:
-      event.created_at,
+    createdAt: event.created_at,
 
-    summary:
-      event.field_name
-        ? `${formatLifecycleFieldName(
-            event.field_name,
-          )} was updated.`
-        : event.event_action
-          ? event.event_action
-              .replaceAll(
-                "_",
-                " ",
-              )
-              .toLowerCase()
-              .replace(
-                /^./,
-                (character) =>
-                  character.toUpperCase(),
-              )
-          : "Ticket activity.",
+    summary: event.field_name
+      ? `${formatLifecycleFieldName(event.field_name)} was updated.`
+      : event.event_action
+        ? event.event_action
+            .replaceAll("_", " ")
+            .toLowerCase()
+            .replace(/^./, (character) => character.toUpperCase())
+        : "Ticket activity.",
   };
 }
 
-export function mapTicketFromApi(
-  ticket,
-) {
+export function mapTicketFromApi(ticket) {
   if (!ticket) {
     return null;
   }
@@ -140,199 +106,145 @@ export function mapTicketFromApi(
      */
     id: ticket.id ?? null,
 
-    ticketNumber:
-      ticket.ticket_number ?? "",
+    ticketNumber: ticket.ticket_number ?? "",
 
-    reference:
-      ticket.ticket_number ?? "",
+    reference: ticket.ticket_number ?? "",
 
     /*
      * Core ticket fields
      */
-    subject:
-      ticket.subject ?? "",
+    subject: ticket.subject ?? "",
 
-    description:
-      ticket.description ?? "",
+    description: ticket.description ?? "",
 
-    priority:
-      ticket.priority ?? "",
+    priority: ticket.priority ?? "",
 
-    status:
-      ticket.status ?? "",
+    status: ticket.status ?? "",
 
     /*
      * Requester
      */
-    requester_user_id:
-      ticket.requester_user_id ?? "",
+    requester_user_id: ticket.requester_user_id ?? "",
 
-    requesterName:
-      ticket.requester_name ?? "",
+    requesterName: ticket.requester_name ?? "",
 
     /*
      * Organization
      */
-    organization:
-      ticket.organization_id ?? "",
+    organization: ticket.organization_id ?? "",
 
-    organizationName:
-      ticket.organization_name ?? "",
+    organizationName: ticket.organization_name ?? "",
 
     /*
      * Ticket department
      */
-    department:
-      ticket.department_id ?? "",
+    department: ticket.department_id ?? "",
 
-    departmentName:
-      ticket.department_name ?? "",
+    departmentName: ticket.department_name ?? "",
 
     /*
      * Assignment
      */
-    assigned_to:
-      ticket.assigned_user_id ?? "",
+    assigned_to: ticket.assigned_user_id ?? "",
 
-    assignedUserName:
-      ticket.assigned_user_name ?? "",
+    assignedUserName: ticket.assigned_user_name ?? "",
 
     /*
      * Created by
      */
-    created_by:
-      ticket.created_by_user_id ?? "",
+    created_by: ticket.created_by_user_id ?? "",
 
-    createdByName:
-      ticket.created_by_name ?? "",
+    createdByName: ticket.created_by_name ?? "",
 
     /*
      * Contact
      */
-    contact:
-      ticket.contact_id ?? "",
+    contact: ticket.contact_id ?? "",
 
-    name:
-      ticket.contact_name ?? "",
+    name: ticket.contact_name ?? "",
 
-    contact_name:
-      ticket.contact_name ?? "",
+    contact_name: ticket.contact_name ?? "",
 
-    mobile_phone:
-      ticket.mobile_phone ?? "",
+    mobile_phone: ticket.mobile_phone ?? "",
 
-    mobilePhone:
-      ticket.mobile_phone ?? "",
+    mobilePhone: ticket.mobile_phone ?? "",
 
-    email_id:
-      ticket.contact_email ?? "",
+    email_id: ticket.contact_email ?? "",
 
-    district:
-      ticket.contact_district ?? "",
+    district: ticket.contact_district ?? "",
 
     /*
      * Caller department
      */
-    caller_department:
-      ticket.contact_department_id ?? "",
+    caller_department: ticket.contact_department_id ?? "",
 
-    callerDepartmentName:
-      ticket.caller_department_name ??
-      "",
+    callerDepartmentName: ticket.caller_department_name ?? "",
 
     /*
      * Ticket business fields
      */
-    service_type:
-      ticket.service_type ?? "",
+    service_type: ticket.service_type ?? "",
 
-    category:
-      ticket.category ?? "",
+    category: ticket.category ?? "",
 
-    problem_statement:
-      ticket.problem_statement ?? "",
+    problem_statement: ticket.problem_statement ?? "",
 
     employee_current_office_name_id:
-      ticket.employee_current_office_name_id ??
-      "",
+      ticket.employee_current_office_name_id ?? "",
 
-    employee_id:
-      ticket.employee_id ?? "",
+    employee_id: ticket.employee_id ?? "",
 
-    current_bill_status:
-      ticket.current_bill_status ?? "",
+    current_bill_status: ticket.current_bill_status ?? "",
 
-    bill_reference_no:
-      ticket.bill_reference_no ?? "",
+    bill_reference_no: ticket.bill_reference_no ?? "",
 
-    severity:
-      ticket.severity ?? "",
+    severity: ticket.severity ?? "",
 
-    expected_resolution_date:
-      ticket.expected_resolution_date ??
-      "",
+    expected_resolution_date: ticket.expected_resolution_date ?? "",
 
-    duplicate_ticket:
-      ticket.duplicate_ticket ?? "",
+    duplicate_ticket: ticket.duplicate_ticket ?? "",
 
-    issue_category:
-      ticket.issue_category ?? "",
+    issue_category: ticket.issue_category ?? "",
 
-    letter_no:
-      ticket.letter_no ?? "",
+    letter_no: ticket.letter_no ?? "",
 
-    dependency_category:
-      ticket.dependency_category ?? "",
+    dependency_category: ticket.dependency_category ?? "",
 
-    initial_diagnosis:
-      ticket.initial_diagnosis ?? "",
+    initial_diagnosis: ticket.initial_diagnosis ?? "",
 
-    solution:
-      ticket.solution ?? "",
+    solution: ticket.solution ?? "",
 
-    resolution:
-      ticket.resolution ?? "",
+    resolution: ticket.resolution ?? "",
 
     /*
      * Lifecycle timestamps
      */
-    assignedAt:
-      ticket.assigned_at ?? null,
+    assignedAt: ticket.assigned_at ?? null,
 
-    resolvedAt:
-      ticket.resolved_at ?? null,
+    resolvedAt: ticket.resolved_at ?? null,
 
-    closedAt:
-      ticket.closed_at ?? null,
+    closedAt: ticket.closed_at ?? null,
 
-    createdAt:
-      ticket.created_at ?? null,
+    createdAt: ticket.created_at ?? null,
 
-    updatedAt:
-      ticket.updated_at ?? null,
+    updatedAt: ticket.updated_at ?? null,
 
     /*
      * Normalized actors
      */
     createdBy: mapActor({
-      id:
-        ticket.created_by_user_id,
-      name:
-        ticket.created_by_name,
+      id: ticket.created_by_user_id,
+      name: ticket.created_by_name,
     }),
 
     assignee: mapActor({
-      id:
-        ticket.assigned_user_id,
-      name:
-        ticket.assigned_user_name,
+      id: ticket.assigned_user_id,
+      name: ticket.assigned_user_name,
     }),
 
     requester: mapActor({
-      id:
-        ticket.requester_user_id,
-      name:
-        ticket.requester_name,
+      id: ticket.requester_user_id,
+      name: ticket.requester_name,
     }),
 
     /*
@@ -341,97 +253,70 @@ export function mapTicketFromApi(
      * These are populated by the page after
      * their respective API calls.
      */
-    comments: Array.isArray(
-      ticket.comments,
-    )
-      ? ticket.comments
-      : [],
+    comments: Array.isArray(ticket.comments) ? ticket.comments : [],
 
-    attachments: Array.isArray(
-      ticket.attachments,
-    )
-      ? ticket.attachments
-      : [],
+    attachments: Array.isArray(ticket.attachments) ? ticket.attachments : [],
 
-    lifecycle: Array.isArray(
-      ticket.lifecycle,
-    )
-      ? ticket.lifecycle
-      : [],
+    lifecycle: Array.isArray(ticket.lifecycle) ? ticket.lifecycle : [],
   };
 }
 
-export function mapTicketsFromApi(
-  tickets,
-) {
+export function mapTicketsFromApi(tickets) {
   if (!Array.isArray(tickets)) {
     return [];
   }
 
-  return tickets
-    .map(mapTicketFromApi)
-    .filter(Boolean);
+  return tickets.map(mapTicketFromApi).filter(Boolean);
 }
 
-export function mapLifecycleFromApi(
-  events,
-) {
+export function mapLifecycleFromApi(events) {
   if (!Array.isArray(events)) {
     return [];
   }
 
-  return events
-    .map(mapLifecycleEvent)
-    .filter(Boolean);
+  return events.map(mapLifecycleEvent).filter(Boolean);
 }
 
-function mapCommentFromApi(
-  comment,
-) {
+function mapCommentFromApi(comment) {
   if (!comment) {
     return null;
   }
 
+  console.log("Mapping Comments from Api", comment)
+
   return {
     id: comment.id ?? null,
 
-    ticketId:
-      comment.ticketId ?? null,
+    ticketId: comment.ticketId ?? null,
 
-    userId:
-      comment.userId ?? null,
+    userId: comment.userId ?? null,
 
-    comment:
-      comment.comment ?? "",
+    comment: comment.comment ?? "",
 
     author: mapActor({
-      id:
-        comment.author?.id ??
-        comment.userId,
+      id: comment.author?.id ?? comment.userId,
 
-      username:
-        comment.author?.username,
+      username: comment.author?.username,
 
-      email:
-        comment.author?.email,
+      email: comment.author?.email,
+
+      firstName: comment.author?.first_name,
+
+      lastName: comment.author?.last_name,
+
+      name: comment.author?.first_name + comment.author?.last_name,
     }),
 
-    createdAt:
-      comment.createdAt ?? null,
+    createdAt: comment.createdAt ?? null,
 
-    updatedAt:
-      comment.updatedAt ?? null,
+    updatedAt: comment.updatedAt ?? null,
   };
 }
 
-export function mapCommentsFromApi(
-  comments,
-) {
+export function mapCommentsFromApi(comments) {
   if (!Array.isArray(comments)) {
     return [];
   }
 
-  return comments
-    .map(mapCommentFromApi)
-    .filter(Boolean);
+  return comments.map(mapCommentFromApi).filter(Boolean);
 }

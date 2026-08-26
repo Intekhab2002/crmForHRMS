@@ -11,7 +11,9 @@ const LIST_COMMENTS = `
         tc.created_at,
         tc.updated_at,
         u.username,
-        u.email
+        u.email,
+        u.first_name,
+        u.last_name
     FROM ticket_comments tc
     INNER JOIN users u
         ON u.id = tc.user_id
