@@ -341,8 +341,7 @@ function ActivityDetailDialog({ open, onClose, activity, fields, fallback }) {
                     <Stack
                       direction={{
                         xs: "column",
-                        sm: "row",
-                      }}
+                                            }}
                       spacing={1.5}
                       alignItems="stretch"
                     >
@@ -582,19 +581,19 @@ export default function TicketLifecycleTimeline({
           minWidth: 0,
         }}
       >
-        <Box
+        {/* <Box
           sx={{
             position: "absolute",
             left: {
-              xs: 20,
-              sm: 24,
+              xs: 30,
+              sm: 30,
             },
             top: 28,
             bottom: 28,
             width: 2,
             bgcolor: "divider",
           }}
-        />
+        /> */}
 
         <Stack spacing={0}>
           {visibleEvents.map((event, index) => {
@@ -724,16 +723,6 @@ export default function TicketLifecycleTimeline({
                             }
                             color={eventType.color ?? "default"}
                           />
-
-                          <Typography
-                            variant="subtitle2"
-                            fontWeight={800}
-                            sx={{
-                              overflowWrap: "anywhere",
-                            }}
-                          >
-                            {event.summary || "Ticket activity"}
-                          </Typography>
                         </Stack>
 
                         <Typography
@@ -782,18 +771,6 @@ export default function TicketLifecycleTimeline({
                           {actor}
                         </Typography>
 
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{
-                            display: {
-                              xs: "none",
-                              sm: "block",
-                            },
-                          }}
-                        >
-                          changed this ticket
-                        </Typography>
                       </Stack>
 
                       {/* Changes */}

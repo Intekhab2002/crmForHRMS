@@ -20,20 +20,25 @@ function getAuthorName(comment) {
     "Unknown user"
   );
 }
-function getCommentInitials(comment) {
-  const name = getAuthorName(comment);
+function getCommentInitials(name) {
+  const normalizedName =
+    typeof name === "string"
+      ? name.trim()
+      : "";
 
-  const parts = name
+  if (!normalizedName) {
+    return "?";
+  }
+
+  const parts = normalizedName
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2);
 
-  if (!parts.length) {
-    return "?";
-  }
-
   return parts
-    .map((part) => part.charAt(0).toUpperCase())
+    .map((part) =>
+      part.charAt(0).toUpperCase(),
+    )
     .join("");
 }
 
@@ -151,17 +156,6 @@ export default function TicketComments({ comments = [], loading = false }) {
                         </Typography>
                       ) : null}
 
-                      {comment.author?.email ? (
-                        <Typography
-                          variant="caption"
-                          color="text.disabled"
-                          sx={{
-                            overflowWrap: "anywhere",
-                          }}
-                        >
-                          • {comment.author.email}
-                        </Typography>
-                      ) : null}
                     </Stack>
                   </Stack>
                 </Stack>
