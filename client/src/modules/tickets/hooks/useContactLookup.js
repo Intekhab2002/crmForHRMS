@@ -1,9 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { findContactByMobile } from "../../contacts/services/contact.service";
 
@@ -16,6 +11,7 @@ export function useContactLookup({
   onContactFound,
   onContactNotFound,
   onLookupError,
+  enabled = true,
 }) {
   const [status, setStatus] = useState("idle");
 
@@ -42,15 +38,12 @@ export function useContactLookup({
     onLookupErrorRef.current = onLookupError;
   }, [onLookupError]);
 
-  const normalizedOrganizationId =
-    String(organizationId ?? "").trim();
+  const normalizedOrganizationId = String(organizationId ?? "").trim();
 
-  const normalizedMobile =
-    String(mobilePhone ?? "").trim();
+  const normalizedMobile = String(mobilePhone ?? "").trim();
 
   const lookupKey =
-    normalizedOrganizationId &&
-    normalizedMobile.length >= MIN_MOBILE_LENGTH
+    normalizedOrganizationId && normalizedMobile.length >= MIN_MOBILE_LENGTH
       ? `${normalizedOrganizationId}:${normalizedMobile}`
       : "";
 
@@ -60,10 +53,7 @@ export function useContactLookup({
       return;
     }
 
-    if (
-      normalizedMobile.length <
-      MIN_MOBILE_LENGTH
-    ) {
+    if (normalizedMobile.length < MIN_MOBILE_LENGTH) {
       setStatus("idle");
       return;
     }
@@ -72,29 +62,21 @@ export function useContactLookup({
      * Prevent the same contact from being looked up repeatedly
      * after the lookup has already completed.
      */
-    if (
-      lookupKey &&
-      lastLookupKeyRef.current === lookupKey
-    ) {
+    if (lookupKey && lastLookupKeyRef.current === lookupKey) {
       return;
     }
 
-    const requestId =
-      ++requestIdRef.current;
+    const requestId = ++requestIdRef.current;
 
     setStatus("loading");
 
     try {
-      const response =
-        await findContactByMobile(
-          normalizedOrganizationId,
-          normalizedMobile,
-        );
+      const response = await findContactByMobile(
+        normalizedOrganizationId,
+        normalizedMobile,
+      );
 
-      if (
-        requestId !==
-        requestIdRef.current
-      ) {
+      if (requestId !== requestIdRef.current) {
         return;
       }
 
@@ -103,11 +85,9 @@ export function useContactLookup({
        * before invoking the callback. The callback may update Formik
        * and cause the parent component to render again.
        */
-      lastLookupKeyRef.current =
-        lookupKey;
+      lastLookupKeyRef.current = lookupKey;
 
-      const contact =
-        response?.data ?? null;
+      const contact = response?.data ?? null;
 
       if (!contact) {
         setStatus("not_found");
@@ -119,14 +99,9 @@ export function useContactLookup({
 
       setStatus("found");
 
-      onContactFoundRef.current?.(
-        contact,
-      );
+      onContactFoundRef.current?.(contact);
     } catch (error) {
-      if (
-        requestId !==
-        requestIdRef.current
-      ) {
+      if (requestId !== requestIdRef.current) {
         return;
       }
 
@@ -134,12 +109,8 @@ export function useContactLookup({
        * 404 means that the contact does not exist.
        * It is a valid lookup result, not a lookup failure.
        */
-      if (
-        error?.response?.status ===
-        404
-      ) {
-        lastLookupKeyRef.current =
-          lookupKey;
+      if (error?.response?.status === 404) {
+        lastLookupKeyRef.current = lookupKey;
 
         setStatus("not_found");
 
@@ -150,15 +121,9 @@ export function useContactLookup({
 
       setStatus("error");
 
-      onLookupErrorRef.current?.(
-        error,
-      );
+      onLookupErrorRef.current?.(error);
     }
-  }, [
-    normalizedOrganizationId,
-    normalizedMobile,
-    lookupKey,
-  ]);
+  }, [normalizedOrganizationId, normalizedMobile, lookupKey]);
 
   useEffect(() => {
     /*
@@ -167,37 +132,28 @@ export function useContactLookup({
      * When the user edits the mobile number after a previous lookup,
      * the new lookup key differs and the API is allowed to run again.
      */
-    if (
-      lookupKey &&
-      lastLookupKeyRef.current !==
-        lookupKey
-    ) {
+
+    if (!enabled) {
+      setStatus("idle");
+      return undefined;
+    }
+
+    if (lookupKey && lastLookupKeyRef.current !== lookupKey) {
       setStatus("idle");
     }
 
-    const timer =
-      window.setTimeout(
-        lookup,
-        LOOKUP_DEBOUNCE_MS,
-      );
+    const timer = window.setTimeout(lookup, LOOKUP_DEBOUNCE_MS);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [
-    lookup,
-    lookupKey,
-  ]);
+  }, [lookup, lookupKey,enabled]);
 
   return {
     status,
-    isLoading:
-      status === "loading",
-    contactFound:
-      status === "found",
-    contactNotFound:
-      status === "not_found",
-    hasError:
-      status === "error",
+    isLoading: status === "loading",
+    contactFound: status === "found",
+    contactNotFound: status === "not_found",
+    hasError: status === "error",
   };
 }

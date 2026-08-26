@@ -17,6 +17,7 @@ export default function TicketFormContent({
   submitting,
   submitLabel,
   onCancel,
+  mode
 }) {
   const notification = useNotification();
   const handleContactFound = useCallback(
@@ -49,6 +50,7 @@ export default function TicketFormContent({
     useContactLookup({
       organizationId,
       mobilePhone: formik.values.mobile_phone,
+      enabled: mode === "create",
       onContactFound: handleContactFound,
       onContactNotFound: handleContactNotFound,
       onLookupError: handleLookupError,

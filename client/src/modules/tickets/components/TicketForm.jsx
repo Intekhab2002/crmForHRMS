@@ -79,7 +79,6 @@ export function buildValidationSchema(fields) {
   return Yup.object(shape);
 }
 
-
 export default function TicketForm({
   mode = "create",
   initialValues,
@@ -99,13 +98,10 @@ export default function TicketForm({
     user?.organization?.id ??
     "";
 
-    console.log(
-  "[TicketForm] Contact lookup context",
-  {
+  console.log("[TicketForm] Contact lookup context", {
     user,
     organizationId,
-  },
-);
+  });
   useEffect(() => {
     let active = true;
 
@@ -182,6 +178,7 @@ export default function TicketForm({
       {(formik) => {
         return (
           <TicketFormContent
+            mode={mode}
             formik={formik}
             fields={fields}
             options={options}
