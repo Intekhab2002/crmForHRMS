@@ -9,11 +9,15 @@ import {
 import CommentOutlinedIcon from "@mui/icons-material/CommentOutlined";
 
 function getAuthorName(comment) {
-  // console.log("Comment")
+  const author = comment?.author ?? {};
+
   return (
-    comment.author?.first_name ||
-    comment.author?.username ||
-    comment.author?.email ||
+    author.name ||
+    [author.firstName, author.lastName]
+      .filter(Boolean)
+      .join(" ") ||
+    author.username ||
+    author.email ||
     "Unknown user"
   );
 }
@@ -34,7 +38,7 @@ function formatDate(value) {
 }
 
 export default function TicketComments({ comments = [], loading = false }) {
-  console.log("TicketComments",comments)
+  console.log("TicketComments", comments);
   return (
     <Paper
       variant="outlined"
@@ -73,61 +77,77 @@ export default function TicketComments({ comments = [], loading = false }) {
                 <Stack
                   key={comment.id}
                   direction="row"
-                  spacing={1.5}
-                  sx={{ py: 2 }}
+                  spacing={{ xs: 1.25, sm: 1.5 }}
+                  alignItems="flex-start"
+                  sx={{
+                    py: 2,
+                    minWidth: 0,
+                  }}
                 >
                   <Avatar
                     sx={{
-                      width: 38,
-                      height: 38,
+                      width: { xs: 36, sm: 40 },
+                      height: { xs: 36, sm: 40 },
+                      flexShrink: 0,
                     }}
                   >
-                    {author.charAt(0).toUpperCase()}
+                    {getInitials(author)}
                   </Avatar>
 
                   <Stack
-                    spacing={0.5}
+                    spacing={0.75}
                     sx={{
                       minWidth: 0,
                       flex: 1,
                     }}
                   >
-                    <Stack
-                      direction={{
-                        xs: "column",
-                        sm: "row",
-                      }}
-                      spacing={{
-                        xs: 0,
-                        sm: 1,
-                      }}
-                      alignItems={{
-                        xs: "flex-start",
-                        sm: "baseline",
-                      }}
-                    >
-                      <Typography fontWeight={700}>{author}</Typography>
-
-                      <Typography variant="caption" color="text.secondary">
-                        {formatDate(comment?.createdAt)}
-                      </Typography>
-                    </Stack>
-
-                    {comment.author?.email ? (
-                      <Typography variant="caption" color="text.secondary">
-                        {comment.author.email}
-                      </Typography>
-                    ) : null}
-
+                    {/* PRIMARY CONTENT */}
                     <Typography
+                      variant="body1"
                       sx={{
                         whiteSpace: "pre-wrap",
+                        overflowWrap: "anywhere",
                         wordBreak: "break-word",
-                        mt: 0.5,
+                        lineHeight: 1.65,
                       }}
                     >
-                      {comment.comment}
+                      {comment.comment || ""}
                     </Typography>
+
+                    {/* METADATA */}
+                    <Stack
+                      direction="row"
+                      spacing={0.75}
+                      alignItems="center"
+                      flexWrap="wrap"
+                      sx={{ minWidth: 0 }}
+                    >
+                      <Typography
+                        variant="caption"
+                        fontWeight={700}
+                        color="text.secondary"
+                      >
+                        {author}
+                      </Typography>
+
+                      {comment.createdAt ? (
+                        <Typography variant="caption" color="text.disabled">
+                          • {formatDate(comment.createdAt)}
+                        </Typography>
+                      ) : null}
+
+                      {comment.author?.email ? (
+                        <Typography
+                          variant="caption"
+                          color="text.disabled"
+                          sx={{
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          • {comment.author.email}
+                        </Typography>
+                      ) : null}
+                    </Stack>
                   </Stack>
                 </Stack>
               );

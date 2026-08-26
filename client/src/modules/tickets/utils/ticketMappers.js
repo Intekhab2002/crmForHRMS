@@ -282,34 +282,36 @@ function mapCommentFromApi(comment) {
     return null;
   }
 
-  console.log("Mapping Comments from Api", comment)
+  const firstName = comment.author?.first_name ?? comment.first_name ?? "";
+
+  const lastName = comment.author?.last_name ?? comment.last_name ?? "";
+
+  const username = comment.author?.username ?? comment.username ?? "";
+
+  const email = comment.author?.email ?? comment.email ?? "";
 
   return {
     id: comment.id ?? null,
 
-    ticketId: comment.ticketId ?? null,
+    ticketId: comment.ticket_id ?? comment.ticketId ?? null,
 
-    userId: comment.userId ?? null,
+    userId: comment.user_id ?? comment.userId ?? null,
 
     comment: comment.comment ?? "",
 
     author: mapActor({
-      id: comment.author?.id ?? comment.userId,
+      id: comment.author?.id ?? comment.user_id ?? comment.userId,
 
-      username: comment.author?.username,
+      username,
+      email,
 
-      email: comment.author?.email,
-
-      firstName: comment.author?.first_name,
-
-      lastName: comment.author?.last_name,
-
-      name: comment.author?.first_name + comment.author?.last_name,
+      first_name: firstName,
+      last_name: lastName,
     }),
 
-    createdAt: comment.createdAt ?? null,
+    createdAt: comment.created_at ?? comment.createdAt ?? null,
 
-    updatedAt: comment.updatedAt ?? null,
+    updatedAt: comment.updated_at ?? comment.updatedAt ?? null,
   };
 }
 
