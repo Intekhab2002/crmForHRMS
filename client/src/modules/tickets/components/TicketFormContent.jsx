@@ -26,6 +26,8 @@ export default function TicketFormContent({
       formik.setFieldValue("email_id", contact.email ?? "", false);
 
       formik.setFieldValue("district", contact.district ?? "", false);
+      formik.setFieldValue("department", contact.department_id ?? "", false);
+
       notification.success("Contact found. Details have been populated.");
     },
     [formik.setFieldValue, notification.success],
