@@ -10,16 +10,31 @@ import CommentOutlinedIcon from "@mui/icons-material/CommentOutlined";
 
 function getAuthorName(comment) {
   const author = comment?.author ?? {};
+  console.log("GetAuthorName Function",author)
 
   return (
-    author.name ||
-    [author.firstName, author.lastName]
+    author?.name ||
+    [author?.firstName, author?.lastName]
       .filter(Boolean)
       .join(" ") ||
-    author.username ||
-    author.email ||
     "Unknown user"
   );
+}
+function getCommentInitials(comment) {
+  const name = getAuthorName(comment);
+
+  const parts = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (!parts.length) {
+    return "?";
+  }
+
+  return parts
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
 }
 
 function formatDate(value) {
@@ -91,7 +106,7 @@ export default function TicketComments({ comments = [], loading = false }) {
                       flexShrink: 0,
                     }}
                   >
-                    {getInitials(author)}
+                    {getCommentInitials(author)}
                   </Avatar>
 
                   <Stack
