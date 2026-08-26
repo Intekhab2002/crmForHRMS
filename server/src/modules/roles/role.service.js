@@ -10,7 +10,6 @@ import { ROLE_ERROR_CODES } from "./role.constant.js";
 import rbacRepository from "../rbac/rbac.repository.js";
 import rbacAuthority from "../rbac/rbac.authority.js";
 
-
 async function requireRole(roleId, transactionContext = null) {
   const role = await roleRepository.findRoleById(roleId, transactionContext);
   if (!role) {
@@ -59,10 +58,20 @@ async function getRoles(options = {}) {
   };
 }
 
-async function getRoleById(roleId) {
+async function getRoleById(roleId, actorUserId) {
   const role = await requireRole(roleId);
+
+  await rbacAuthority.requireRoleManagement(actorUserId);
+
+  if (role.code === "developer") {
+    throw AppError.notFound("Role not found.", {
+      code: ROLE_ERROR_CODES.ROLE_NOT_FOUND,
+    });
+  }
+
   const [permissions, userCount] = await Promise.all([
     roleRepository.findRolePermissions(roleId),
+
     roleRepository.countRoleUsers(roleId),
   ]);
 
@@ -178,19 +187,48 @@ async function updateRole(roleId, data, actorUserId) {
   }
 }
 
-async function deactivateRole(roleId) {
+async function deactivateRole(roleId, actorUserId) {
   const role = await requireRole(roleId);
-  assertRoleMutable(role);
 
-  const assignedUsers = await roleRepository.countRoleUsers(roleId);
-  if (assignedUsers > 0) {
-    throw AppError.conflict(
-      "A role assigned to users cannot be deactivated until its assignments are removed.",
-      { code: ROLE_ERROR_CODES.ROLE_HAS_USERS },
+  await rbacAuthority.requireCanModifyRole(actorUserId, role);
+
+  await rbacAuthority.assertNotManagingOwnSuperAdminRole(actorUserId, role);
+
+  if (role.code === "developer") {
+    throw AppError.forbidden("The Developer role cannot be deactivated.", {
+      code: ROLE_ERROR_CODES.ROLE_DEVELOPER_PROTECTED,
+    });
+  }
+
+  if (role.code === "superadmin") {
+    throw AppError.forbidden(
+      "The Super Admin role cannot be deactivated through normal role management.",
+      {
+        code: ROLE_ERROR_CODES.ROLE_SUPERADMIN_PROTECTED,
+      },
     );
   }
 
-  return roleRepository.deactivateRole(roleId);
+  const assignedUsers = await roleRepository.countRoleUsers(roleId);
+
+  if (assignedUsers > 0) {
+    throw AppError.conflict(
+      "A role assigned to users cannot be deactivated until its assignments are removed.",
+      {
+        code: ROLE_ERROR_CODES.ROLE_HAS_USERS,
+      },
+    );
+  }
+
+  const result = await roleRepository.deactivateRole(roleId);
+
+  if (!result) {
+    throw AppError.notFound("Role not found.", {
+      code: ROLE_ERROR_CODES.ROLE_NOT_FOUND,
+    });
+  }
+
+  return result;
 }
 
 async function getRolePermissions(roleId) {
@@ -334,6 +372,76 @@ async function removeRoleFromUser(roleId, userId, actorUserId) {
   return assignment;
 }
 
+async function deleteRole(roleId, actorUserId) {
+  return executeTransaction(async (transactionContext) => {
+    const role = await requireRole(roleId, transactionContext);
+
+    await rbacAuthority.requireCanModifyRole(
+      actorUserId,
+      role,
+      transactionContext,
+    );
+
+    await rbacAuthority.assertNotManagingOwnSuperAdminRole(
+      actorUserId,
+      role,
+      transactionContext,
+    );
+
+    if (role.code === "developer") {
+      throw AppError.forbidden("The Developer role cannot be deleted.", {
+        code: ROLE_ERROR_CODES.ROLE_DEVELOPER_PROTECTED,
+      });
+    }
+
+    if (role.code === "superadmin") {
+      throw AppError.forbidden(
+        "The Super Admin role cannot be deleted through normal role management.",
+        {
+          code: ROLE_ERROR_CODES.ROLE_SUPERADMIN_PROTECTED,
+        },
+      );
+    }
+
+    const userCount = await roleRepository.countRoleUsers(
+      roleId,
+      transactionContext,
+    );
+
+    if (userCount > 0) {
+      throw AppError.conflict(
+        "This role cannot be deleted while users are assigned to it. Reassign the users first.",
+        {
+          code: ROLE_ERROR_CODES.ROLE_HAS_USERS,
+        },
+      );
+    }
+
+    const deletedRole = await roleRepository.deleteRole(
+      roleId,
+      transactionContext,
+    );
+
+    if (!deletedRole) {
+      throw AppError.notFound("Role not found.", {
+        code: ROLE_ERROR_CODES.ROLE_NOT_FOUND,
+      });
+    }
+
+    return deletedRole;
+  });
+}
+
+async function getRolePermissionMatrix(roleId, actorUserId) {
+  const role = await requireRole(roleId);
+
+  await rbacAuthority.requireCanModifyRole(actorUserId, role);
+
+  await rbacAuthority.assertNotManagingOwnSuperAdminRole(actorUserId, role);
+
+  return roleRepository.findRolePermissionMatrix(roleId);
+}
+
 export default Object.freeze({
   getRoles,
   getRoleById,
@@ -345,4 +453,5 @@ export default Object.freeze({
   getRoleUsers,
   assignRoleToUser,
   removeRoleFromUser,
+  getRolePermissionMatrix,
 });

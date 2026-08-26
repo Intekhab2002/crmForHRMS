@@ -166,7 +166,6 @@ const REMOVE_ROLE_FROM_USER = `
     RETURNING user_id, role_id;
 `;
 
-
 const COUNT_ROLE_USERS_FOR_UPDATE = `
     SELECT COUNT(*)::INTEGER AS total
     FROM user_roles
@@ -181,142 +180,339 @@ const FIND_USER = `
     LIMIT 1;
 `;
 
+const FIND_DEFAULT_PERMISSION_IDS = `
+    SELECT
+        permission_id AS id
+    FROM default_role_permissions
+    ORDER BY permission_id;
+`;
+
+const DELETE_ROLE = `
+    DELETE FROM roles
+    WHERE id = $1::UUID
+      AND code NOT IN (
+          'developer',
+          'superadmin'
+      )
+    RETURNING ${ROLE_FIELDS};
+`;
+
+const FIND_ROLE_PERMISSION_MATRIX = `
+    SELECT
+        p.id,
+        p.code,
+        p.name,
+        p.description,
+        p.resource,
+        p.action,
+        p.is_system,
+        p.is_active,
+
+        EXISTS (
+            SELECT 1
+            FROM role_permissions rp
+            WHERE rp.role_id = $1::UUID
+              AND rp.permission_id = p.id
+        ) AS assigned
+
+    FROM permissions p
+
+    WHERE p.is_active = TRUE
+
+    ORDER BY
+        p.resource ASC,
+        p.action ASC,
+        p.code ASC;
+`;
+
 function getExecutor(transactionContext = null) {
-    return getQueryExecutor(transactionContext);
+  return getQueryExecutor(transactionContext);
 }
 
 async function findRoleById(roleId, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(FIND_ROLE_BY_ID, [roleId]);
-    return result.rows[0] ?? null;
+  const result = await getExecutor(transactionContext).query(FIND_ROLE_BY_ID, [
+    roleId,
+  ]);
+  return result.rows[0] ?? null;
 }
 
 async function findRoleByCode(code, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(FIND_ROLE_BY_CODE, [code]);
-    return result.rows[0] ?? null;
+  const result = await getExecutor(transactionContext).query(
+    FIND_ROLE_BY_CODE,
+    [code],
+  );
+  return result.rows[0] ?? null;
 }
 
 async function findRoleByName(name, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(FIND_ROLE_BY_NAME, [name]);
-    return result.rows[0] ?? null;
+  const result = await getExecutor(transactionContext).query(
+    FIND_ROLE_BY_NAME,
+    [name],
+  );
+  return result.rows[0] ?? null;
 }
 
-async function findRoles({ search = null, isActive = null, isSystem = null, limit, offset }, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(
-        FIND_ROLES,
-        [search || null, isActive ?? null, isSystem ?? null, limit, offset],
-    );
-    return result.rows;
+async function findRoles(
+  { search = null, isActive = null, isSystem = null, limit, offset },
+  transactionContext = null,
+) {
+  const result = await getExecutor(transactionContext).query(FIND_ROLES, [
+    search || null,
+    isActive ?? null,
+    isSystem ?? null,
+    limit,
+    offset,
+  ]);
+  return result.rows;
 }
 
-async function countRoles({ search = null, isActive = null, isSystem = null }, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(
-        COUNT_ROLES,
-        [search || null, isActive ?? null, isSystem ?? null],
-    );
-    return Number(result.rows[0]?.total ?? 0);
+async function countRoles(
+  { search = null, isActive = null, isSystem = null },
+  transactionContext = null,
+) {
+  const result = await getExecutor(transactionContext).query(COUNT_ROLES, [
+    search || null,
+    isActive ?? null,
+    isSystem ?? null,
+  ]);
+  return Number(result.rows[0]?.total ?? 0);
 }
 
-async function createRole({ code, name, description = null }, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(
-        CREATE_ROLE,
-        [randomUUID(), code, name, description ?? null],
+async function createRole({ code, name, description = null }, actorUserId) {
+  const normalizedCode = normalizeCode(code);
+
+  const normalizedName = normalizeName(name);
+
+  await rbacAuthority.requireCanCreateRole(actorUserId, normalizedCode);
+
+  const [existingCode, existingName] = await Promise.all([
+    roleRepository.findRoleByCode(normalizedCode),
+    roleRepository.findRoleByName(normalizedName),
+  ]);
+
+  if (existingCode || existingName) {
+    throw AppError.conflict(
+      "A role with the same code or name already exists.",
+      {
+        code: ROLE_ERROR_CODES.ROLE_ALREADY_EXISTS,
+      },
     );
-    return result.rows[0];
+  }
+
+  return executeTransaction(async (transactionContext) => {
+    let role;
+
+    try {
+      role = await roleRepository.createRole(
+        {
+          code: normalizedCode,
+
+          name: normalizedName,
+
+          description: description ?? null,
+        },
+        transactionContext,
+      );
+    } catch (error) {
+      if (error?.code === "23505") {
+        throw AppError.conflict(
+          "A role with the same code or name already exists.",
+          {
+            code: ROLE_ERROR_CODES.ROLE_ALREADY_EXISTS,
+            cause: error,
+          },
+        );
+      }
+
+      throw error;
+    }
+
+    const defaultPermissionIds =
+      await roleRepository.findDefaultPermissionIds(transactionContext);
+
+    if (defaultPermissionIds.length > 0) {
+      await roleRepository.replaceRolePermissions(
+        role.id,
+        defaultPermissionIds,
+        transactionContext,
+      );
+    }
+
+    return {
+      ...role,
+
+      permissions: await roleRepository.findRolePermissions(
+        role.id,
+        transactionContext,
+      ),
+    };
+  });
 }
 
-async function updateRole(roleId, { name = null, descriptionProvided = false, description = null, isActive = null }, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(
-        UPDATE_ROLE,
-        [roleId, name, descriptionProvided, description ?? null, isActive],
-    );
-    return result.rows[0] ?? null;
+async function updateRole(
+  roleId,
+  {
+    name = null,
+    descriptionProvided = false,
+    description = null,
+    isActive = null,
+  },
+  transactionContext = null,
+) {
+  const result = await getExecutor(transactionContext).query(UPDATE_ROLE, [
+    roleId,
+    name,
+    descriptionProvided,
+    description ?? null,
+    isActive,
+  ]);
+  return result.rows[0] ?? null;
 }
 
 async function deactivateRole(roleId, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(DEACTIVATE_ROLE, [roleId]);
-    return result.rows[0] ?? null;
+  const result = await getExecutor(transactionContext).query(DEACTIVATE_ROLE, [
+    roleId,
+  ]);
+  return result.rows[0] ?? null;
 }
 
 async function findRolePermissions(roleId, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(FIND_ROLE_PERMISSIONS, [roleId]);
-    return result.rows;
+  const result = await getExecutor(transactionContext).query(
+    FIND_ROLE_PERMISSIONS,
+    [roleId],
+  );
+  return result.rows;
 }
 
 async function findRoleUsers(roleId, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(FIND_ROLE_USERS, [roleId]);
-    return result.rows;
+  const result = await getExecutor(transactionContext).query(FIND_ROLE_USERS, [
+    roleId,
+  ]);
+  return result.rows;
 }
 
 async function countRoleUsers(roleId, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(COUNT_ROLE_USERS, [roleId]);
-    return Number(result.rows[0]?.total ?? 0);
+  const result = await getExecutor(transactionContext).query(COUNT_ROLE_USERS, [
+    roleId,
+  ]);
+  return Number(result.rows[0]?.total ?? 0);
 }
 
 async function countRoleUsersForUpdate(roleId, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(
-        `SELECT COUNT(*)::INTEGER AS total FROM user_roles WHERE role_id = $1::UUID;`,
-        [roleId],
-    );
-    return Number(result.rows[0]?.total ?? 0);
+  const result = await getExecutor(transactionContext).query(
+    `SELECT COUNT(*)::INTEGER AS total FROM user_roles WHERE role_id = $1::UUID;`,
+    [roleId],
+  );
+  return Number(result.rows[0]?.total ?? 0);
 }
 
-async function findActivePermissionIds(permissionIds, transactionContext = null) {
-    if (permissionIds.length === 0) return [];
-    const result = await getExecutor(transactionContext).query(FIND_PERMISSION_IDS, [permissionIds]);
-    return result.rows.map((row) => row.id);
+async function findActivePermissionIds(
+  permissionIds,
+  transactionContext = null,
+) {
+  if (permissionIds.length === 0) return [];
+  const result = await getExecutor(transactionContext).query(
+    FIND_PERMISSION_IDS,
+    [permissionIds],
+  );
+  return result.rows.map((row) => row.id);
 }
 
-async function replaceRolePermissions(roleId, permissionIds, transactionContext) {
-    const executor = getExecutor(transactionContext);
-    await executor.query(DELETE_ROLE_PERMISSIONS, [roleId]);
-    for (const permissionId of permissionIds) {
-        await executor.query(INSERT_ROLE_PERMISSION, [roleId, permissionId]);
-    }
+async function replaceRolePermissions(
+  roleId,
+  permissionIds,
+  transactionContext,
+) {
+  const executor = getExecutor(transactionContext);
+  await executor.query(DELETE_ROLE_PERMISSIONS, [roleId]);
+  for (const permissionId of permissionIds) {
+    await executor.query(INSERT_ROLE_PERMISSION, [roleId, permissionId]);
+  }
 }
 
 async function findUserById(userId, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(FIND_USER, [userId]);
-    return result.rows[0] ?? null;
+  const result = await getExecutor(transactionContext).query(FIND_USER, [
+    userId,
+  ]);
+  return result.rows[0] ?? null;
 }
 
 async function assignRoleToUser(userId, roleId, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(ASSIGN_ROLE_TO_USER, [userId, roleId]);
-    return result.rows[0] ?? null;
+  const result = await getExecutor(transactionContext).query(
+    ASSIGN_ROLE_TO_USER,
+    [userId, roleId],
+  );
+  return result.rows[0] ?? null;
 }
 
 async function removeRoleFromUser(userId, roleId, transactionContext = null) {
-    const result = await getExecutor(transactionContext).query(REMOVE_ROLE_FROM_USER, [userId, roleId]);
-    return result.rows[0] ?? null;
+  const result = await getExecutor(transactionContext).query(
+    REMOVE_ROLE_FROM_USER,
+    [userId, roleId],
+  );
+  return result.rows[0] ?? null;
 }
 
 async function replaceUserRole(userId, roleId, transactionContext = null) {
-    const executor = getExecutor(transactionContext);
+  const executor = getExecutor(transactionContext);
 
-    await executor.query(
-        `DELETE FROM user_roles WHERE user_id = $1::UUID;`,
-        [userId],
-    );
+  await executor.query(`DELETE FROM user_roles WHERE user_id = $1::UUID;`, [
+    userId,
+  ]);
 
-    return assignRoleToUser(userId, roleId, transactionContext);
+  return assignRoleToUser(userId, roleId, transactionContext);
+}
+
+async function findDefaultPermissionIds(transactionContext = null) {
+  const result = await getExecutor(transactionContext).query(
+    FIND_DEFAULT_PERMISSION_IDS,
+  );
+
+  return result.rows.map((row) => row.id);
+}
+async function deleteRole(roleId, transactionContext = null) {
+  const result = await getExecutor(transactionContext).query(DELETE_ROLE, [
+    roleId,
+  ]);
+
+  return result.rows[0] ?? null;
+}
+
+async function findRolePermissionMatrix(
+    roleId,
+    transactionContext = null,
+) {
+    const result =
+        await getExecutor(
+            transactionContext,
+        ).query(
+            FIND_ROLE_PERMISSION_MATRIX,
+            [roleId],
+        );
+
+    return result.rows;
 }
 
 export default Object.freeze({
-    findRoleById,
-    findRoleByCode,
-    findRoleByName,
-    findRoles,
-    countRoles,
-    createRole,
-    updateRole,
-    deactivateRole,
-    findRolePermissions,
-    findRoleUsers,
-    countRoleUsers,
-    countRoleUsersForUpdate,
-    findActivePermissionIds,
-    replaceRolePermissions,
-    findUserById,
-    assignRoleToUser,
-    removeRoleFromUser,
-    replaceUserRole,
+  findRoleById,
+  findRoleByCode,
+  findRoleByName,
+  findRoles,
+  countRoles,
+  createRole,
+  updateRole,
+  deactivateRole,
+  findRolePermissions,
+  findRoleUsers,
+  countRoleUsers,
+  countRoleUsersForUpdate,
+  findActivePermissionIds,
+  replaceRolePermissions,
+  findUserById,
+  assignRoleToUser,
+  removeRoleFromUser,
+  replaceUserRole,
+  findDefaultPermissionIds,
+  findRolePermissionMatrix,
+  deleteRole,
 });

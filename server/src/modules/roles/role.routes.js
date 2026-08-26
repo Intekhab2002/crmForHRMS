@@ -63,9 +63,27 @@ router.patch(
 router.delete(
     "/:roleId",
     authenticate,
-    requirePermission(RBAC_PERMISSIONS.ROLE_DELETE),
-    validate(roleValidator.roleIdParamSchema, "params"),
-    roleController.deactivateRole,
+    requirePermission(
+        RBAC_PERMISSIONS.ROLE_DELETE,
+    ),
+    validate(
+        roleValidator.roleIdParamSchema,
+        "params",
+    ),
+    roleController.deleteRole,
+);
+
+router.get(
+    "/:roleId/permissions/matrix",
+    authenticate,
+    requirePermission(
+        RBAC_PERMISSIONS.ROLE_READ,
+    ),
+    validate(
+        roleValidator.roleIdParamSchema,
+        "params",
+    ),
+    roleController.getRolePermissionMatrix,
 );
 
 router.get(
