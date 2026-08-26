@@ -1,17 +1,12 @@
 import { useCallback } from "react";
 
-import {
-  Alert,
-  Button,
-  Grid,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Button, Grid, Stack, Typography } from "@mui/material";
 
 import { Form } from "formik";
 
 import { useContactLookup } from "../hooks/useContactLookup";
 import FieldRenderer from "./FieldRenderer";
+import { useNotification } from "../../../components/feedback/useNotification";
 
 export default function TicketFormContent({
   formik,
@@ -23,120 +18,60 @@ export default function TicketFormContent({
   submitLabel,
   onCancel,
 }) {
+  const notification = useNotification();
   const handleContactFound = useCallback(
     (contact) => {
-      formik.setFieldValue(
-        "name",
-        contact.name ?? "",
-        false,
-      );
+      formik.setFieldValue("name", contact.name ?? "", false);
 
-      formik.setFieldValue(
-        "email_id",
-        contact.email ?? "",
-        false,
-      );
+      formik.setFieldValue("email_id", contact.email ?? "", false);
 
-      formik.setFieldValue(
-        "district",
-        contact.district ?? "",
-        false,
-      );
-
-      formik.setFieldValue(
-        "department",
-        contact.department_id ?? "",
-        false,
-      );
+      formik.setFieldValue("district", contact.district ?? "", false);
+      notification.success("Contact found. Details have been populated.");
     },
-    [formik],
+    [formik.setFieldValue, notification.success],
   );
 
   const handleContactNotFound = useCallback(() => {
-    // This is intentionally only UI state.
-    // Contact will be created/updated on submit.
-  }, []);
+    notification.info(
+      "No contact found. You can continue entering the contact details.",
+    );
+  }, [notification.info]);
 
-  const handleLookupError = useCallback(
-    (error) => {
-      console.error(
-        "[TicketForm] Contact lookup failed.",
-        error,
-      );
-    },
-    [],
-  );
+  const handleLookupError = useCallback(() => {
+    notification.error(
+      "Unable to look up the contact. You can continue entering the contact details.",
+    );
+  }, [notification.error]);
 
-  const {
-    status: contactLookupStatus,
-    isLoading: contactLookupLoading,
-  } = useContactLookup({
-    organizationId,
-    mobilePhone: formik.values.mobile_phone,
-    onContactFound: handleContactFound,
-    onContactNotFound: handleContactNotFound,
-    onLookupError: handleLookupError,
-  });
+  const { status: contactLookupStatus, isLoading: contactLookupLoading } =
+    useContactLookup({
+      organizationId,
+      mobilePhone: formik.values.mobile_phone,
+      onContactFound: handleContactFound,
+      onContactNotFound: handleContactNotFound,
+      onLookupError: handleLookupError,
+    });
 
   return (
     <Form noValidate>
       <Grid container spacing={1}>
         {fields.map((field) => (
-          <Grid
-            key={field.key}
-            size={field.form?.width ?? { xs: 6, md: 4 }}
-          >
+          <Grid key={field.key} size={field.form?.width ?? { xs: 6, md: 4 }}>
             <FieldRenderer
               field={field}
               formik={formik}
               options={options[field.key] ?? []}
               loading={
                 Boolean(loadingOptions[field.key]) ||
-                (
-                  field.key === "mobile_phone" &&
-                  contactLookupLoading
-                )
+                (field.key === "mobile_phone" && contactLookupLoading)
               }
             />
 
             {field.key === "mobile_phone" &&
-              contactLookupStatus === "loading" ? (
-              <Typography
-                variant="caption"
-                color="text.secondary"
-              >
+            contactLookupStatus === "loading" ? (
+              <Typography variant="caption" color="text.secondary">
                 Searching contact...
               </Typography>
-            ) : null}
-
-            {field.key === "mobile_phone" &&
-              contactLookupStatus === "found" ? (
-              <Alert
-                severity="success"
-                sx={{ mt: 0.5 }}
-              >
-                Contact found. Details have been populated.
-              </Alert>
-            ) : null}
-
-            {field.key === "mobile_phone" &&
-              contactLookupStatus === "not_found" ? (
-              <Alert
-                severity="info"
-                sx={{ mt: 0.5 }}
-              >
-                No contact found. A new contact will be created when you submit the ticket.
-              </Alert>
-            ) : null}
-
-            {field.key === "mobile_phone" &&
-              contactLookupStatus === "error" ? (
-              <Alert
-                severity="warning"
-                sx={{ mt: 0.5 }}
-              >
-                Contact lookup failed. You can continue entering the contact details.
-              </Alert>
             ) : null}
           </Grid>
         ))}
@@ -162,14 +97,9 @@ export default function TicketFormContent({
         <Button
           type="submit"
           variant="contained"
-          disabled={
-            submitting ||
-            formik.isSubmitting
-          }
+          disabled={submitting || formik.isSubmitting}
         >
-          {submitting
-            ? "Saving..."
-            : submitLabel}
+          {submitting ? "Saving..." : submitLabel}
         </Button>
       </Stack>
     </Form>
