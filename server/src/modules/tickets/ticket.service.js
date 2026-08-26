@@ -257,7 +257,7 @@ async function createTicket(payload, authenticatedUserId) {
           mobile,
           email: getContactValue(contact, "email_id"),
           district: getContactValue(contact, "district"),
-          departmentId: getContactValue(contact, ticket.department ?? null),
+          departmentId: ticket.department ?? null,
         },
         tx,
       );
@@ -329,7 +329,7 @@ async function updateTicket(ticketId, payload) {
           mobile: contact.mobile_phone,
           email: contact.email_id,
           district: contact.district,
-          departmentId: getContactValue(contact, ticket.department ?? null),
+          departmentId: ticket.department ?? current.department_id ?? null,
         },
         tx,
       );

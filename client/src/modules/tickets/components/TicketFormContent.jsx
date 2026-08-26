@@ -1,12 +1,10 @@
-import {
-  useCallback,
-} from "react";
+import { useCallback } from "react";
 
 import {
-  Box,
+  Alert,
+  Button,
   Grid,
   Stack,
-  Button,
   Typography,
 } from "@mui/material";
 
@@ -54,6 +52,21 @@ export default function TicketFormContent({
     [formik],
   );
 
+  const handleContactNotFound = useCallback(() => {
+    // This is intentionally only UI state.
+    // Contact will be created/updated on submit.
+  }, []);
+
+  const handleLookupError = useCallback(
+    (error) => {
+      console.error(
+        "[TicketForm] Contact lookup failed.",
+        error,
+      );
+    },
+    [],
+  );
+
   const {
     status: contactLookupStatus,
     isLoading: contactLookupLoading,
@@ -61,6 +74,8 @@ export default function TicketFormContent({
     organizationId,
     mobilePhone: formik.values.mobile_phone,
     onContactFound: handleContactFound,
+    onContactNotFound: handleContactNotFound,
+    onLookupError: handleLookupError,
   });
 
   return (
@@ -92,6 +107,36 @@ export default function TicketFormContent({
               >
                 Searching contact...
               </Typography>
+            ) : null}
+
+            {field.key === "mobile_phone" &&
+              contactLookupStatus === "found" ? (
+              <Alert
+                severity="success"
+                sx={{ mt: 0.5 }}
+              >
+                Contact found. Details have been populated.
+              </Alert>
+            ) : null}
+
+            {field.key === "mobile_phone" &&
+              contactLookupStatus === "not_found" ? (
+              <Alert
+                severity="info"
+                sx={{ mt: 0.5 }}
+              >
+                No contact found. A new contact will be created when you submit the ticket.
+              </Alert>
+            ) : null}
+
+            {field.key === "mobile_phone" &&
+              contactLookupStatus === "error" ? (
+              <Alert
+                severity="warning"
+                sx={{ mt: 0.5 }}
+              >
+                Contact lookup failed. You can continue entering the contact details.
+              </Alert>
             ) : null}
           </Grid>
         ))}

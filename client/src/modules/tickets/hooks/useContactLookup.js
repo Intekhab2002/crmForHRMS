@@ -14,6 +14,8 @@ export function useContactLookup({
   organizationId,
   mobilePhone,
   onContactFound,
+  onContactNotFound,
+  onLookupError,
 }) {
   const [status, setStatus] = useState("idle");
 
@@ -50,6 +52,7 @@ export function useContactLookup({
 
       if (!contact) {
         setStatus("not_found");
+        onContactNotFound?.();
         return;
       }
 
@@ -61,17 +64,16 @@ export function useContactLookup({
         return;
       }
 
-      console.error(
-        "[useContactLookup] Contact lookup failed.",
-        error,
-      );
-
       setStatus("error");
+
+      onLookupError?.(error);
     }
   }, [
     organizationId,
     normalizedMobile,
     onContactFound,
+    onContactNotFound,
+    onLookupError,
   ]);
 
   useEffect(() => {
@@ -90,5 +92,6 @@ export function useContactLookup({
     isLoading: status === "loading",
     contactFound: status === "found",
     contactNotFound: status === "not_found",
+    hasError: status === "error",
   };
 }
