@@ -116,6 +116,7 @@ export const RBAC_PERMISSIONS = Object.freeze({
   TICKET_CLOSE: "ticket:close",
   TICKET_ATTACHMENT: "ticket:attachment",
 
+
   SLA_READ: "sla:read",
   SLA_CREATE: "sla:create",
   SLA_UPDATE: "sla:update",

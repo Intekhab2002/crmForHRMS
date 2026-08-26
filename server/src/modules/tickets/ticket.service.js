@@ -135,18 +135,6 @@ async function validateReferences(data, tx) {
       });
     }
   }
-
-  if (!callerDepartment) {
-    throw AppError.notFound("Caller department not found.", {
-      code: TICKET_ERROR_CODES.DEPARTMENT_NOT_FOUND,
-    });
-  }
-
-  if (callerDepartment.status !== "active") {
-    throw AppError.conflict("Caller department is inactive.", {
-      code: TICKET_ERROR_CODES.DEPARTMENT_INACTIVE,
-    });
-  }
 }
 
 async function getTicket(ticketId) {
@@ -341,7 +329,7 @@ async function updateTicket(ticketId, payload) {
           mobile: contact.mobile_phone,
           email: contact.email_id,
           district: contact.district,
-          departmentId: ticket.department ?? current.department_id,
+          departmentId: getContactValue(contact, "ticket.department ?? null"),
         },
         tx,
       );

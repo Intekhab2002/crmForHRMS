@@ -79,11 +79,17 @@ const UPDATE_CONTACT = `
     RETURNING ${CONTACT_RETURNING_FIELDS};
 `;
 
+function normalizeMobile(mobilePhone) {
+  return String(mobilePhone ?? "").trim();
+}
+
+
 async function findContactByMobile(organizationId, mobile, tx = null) {
     const executor = getQueryExecutor(tx);
+     const normalizedMobile = normalizeMobile(mobile);
     const result = await executor.query(
         FIND_CONTACT_BY_MOBILE,
-        [organizationId, mobile],
+        [organizationId, normalizedMobile],
     );
     return result.rows[0] ?? null;
 }
@@ -127,9 +133,31 @@ async function updateContact(id, data, tx = null) {
     return result.rows[0] ?? null;
 }
 
+async function findOrCreateContact(data, tx = null) {
+  const existing = await findContactByMobile(
+    data.organizationId,
+    data.mobilePhone,
+    tx,
+  );
+
+  if (existing) {
+    return updateContact(
+      existing.id,
+      data,
+      tx,
+    );
+  }
+
+  return createContact(
+    data,
+    tx,
+  );
+}
+
 export default Object.freeze({
     findContactByMobile,
     findContactById,
     createContact,
     updateContact,
+    findOrCreateContact
 });

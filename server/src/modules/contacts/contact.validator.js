@@ -21,4 +21,13 @@ const contactValidator = Object.freeze({
     mobileParamSchema,
 });
 
+const mobileLookupParamSchema = z.object({
+  organizationId: z.uuid(),
+  mobilePhone: z
+    .string()
+    .trim()
+    .min(1)
+    .max(30),
+});
+
 export default contactValidator;

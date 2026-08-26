@@ -40,8 +40,7 @@ router.get(
     authenticate,
     requirePermission(TICKET_CREATE),
     validateParams(
-        contactValidator.organizationIdParamSchema
-            .and(contactValidator.mobileParamSchema),
+        contactValidator.mobileLookupParamSchema
     ),
     contactController.getContactByMobile,
 );
