@@ -57,7 +57,9 @@ function assignRequestId(req, res, next) {
 /**
  * Morgan token: Request ID
  */
-morgan.token("request-id", (req) => req.auth.userId);
+morgan.token("request-id", (req) => {
+  return req.requestId ?? "unknown";
+});
 
 /**
  * Morgan token: Remote IP
@@ -68,7 +70,7 @@ morgan.token("remote-ip", (req) => req.ip);
  * Morgan token: Authenticated User
  */
 morgan.token("user", (req) => {
-  return req.user?.id ?? "anonymous";
+  return req.auth?.userId ?? "anonymous";
 });
 
 /**

@@ -5,7 +5,7 @@
 
 import { getQueryExecutor } from "../../database/queryExecutor.js";
 
-const ROLE_FIELDS = `
+const ROLE_SELECT_FIELDS = `
     r.id,
     r.code,
     r.name,
@@ -16,29 +16,40 @@ const ROLE_FIELDS = `
     r.updated_at
 `;
 
+const ROLE_RETURNING_FIELDS = `
+    id,
+    code,
+    name,
+    description,
+    is_system,
+    is_active,
+    created_at,
+    updated_at
+`;
+
 const FIND_ROLE_BY_ID = `
-    SELECT ${ROLE_FIELDS}
+    SELECT ${ROLE_SELECT_FIELDS}
     FROM roles r
     WHERE r.id = $1::UUID
     LIMIT 1;
 `;
 
 const FIND_ROLE_BY_CODE = `
-    SELECT ${ROLE_FIELDS}
+    SELECT ${ROLE_SELECT_FIELDS}
     FROM roles r
     WHERE LOWER(r.code) = LOWER($1)
     LIMIT 1;
 `;
 
 const FIND_ROLE_BY_NAME = `
-    SELECT ${ROLE_FIELDS}
+    SELECT ${ROLE_SELECT_FIELDS}
     FROM roles r
     WHERE LOWER(r.name) = LOWER($1)
     LIMIT 1;
 `;
 
 const FIND_ROLES = `
-    SELECT ${ROLE_FIELDS}
+    SELECT ${ROLE_SELECT_FIELDS}
     FROM roles r
     WHERE r.code <> 'developer'
       AND ($1::TEXT IS NULL OR r.code ILIKE '%' || $1 || '%' OR r.name ILIKE '%' || $1 || '%')
@@ -68,7 +79,7 @@ const CREATE_ROLE = `
         is_active
     )
     VALUES ($1::UUID, $2, $3, $4, FALSE, TRUE)
-    RETURNING ${ROLE_FIELDS};
+    RETURNING ${ROLE_RETURNING_FIELDS};
 `;
 
 const UPDATE_ROLE = `
@@ -81,14 +92,14 @@ const UPDATE_ROLE = `
         END,
         is_active = COALESCE($5, is_active)
     WHERE id = $1::UUID
-    RETURNING ${ROLE_FIELDS};
+    RETURNING ${ROLE_RETURNING_FIELDS};
 `;
 
 const DEACTIVATE_ROLE = `
     UPDATE roles
     SET is_active = FALSE
     WHERE id = $1::UUID
-    RETURNING ${ROLE_FIELDS};
+    RETURNING ${ROLE_RETURNING_FIELDS};
 `;
 
 const FIND_ROLE_PERMISSIONS = `
@@ -200,7 +211,7 @@ const DELETE_ROLE = `
           'developer',
           'superadmin'
       )
-    RETURNING ${ROLE_FIELDS};
+    RETURNING ${ROLE_RETURNING_FIELDS};
 `;
 
 const FIND_ROLE_PERMISSION_MATRIX = `
