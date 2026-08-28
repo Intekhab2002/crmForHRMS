@@ -346,15 +346,11 @@ async function createUser(
         transactionContext,
       );
 
+      const createdRoles = await getUserRoles(user.id, transactionContext);
+
       return {
         ...createdUser,
-        role: targetRole
-          ? {
-              id: targetRole.id,
-              code: targetRole.code,
-              name: targetRole.name,
-            }
-          : null,
+        roles: createdRoles,
       };
     },
     { isolationLevel: "SERIALIZABLE" },
@@ -583,7 +579,7 @@ async function updateUser(
           transactionContext,
         );
 
-        role = targetRole;
+        roles = await getUserRoles(userId, transactionContext);
       }
 
       const refreshedUser = await userRepository.findUserById(

@@ -605,7 +605,66 @@ async function requirePermissionManagement(
         },
     );
 }
+async function requireCanRemoveRole(
+    actorUserId,
+    targetRole,
+    transactionContext = null,
+) {
+    const context =
+        await getActorContext(
+            actorUserId,
+            transactionContext,
+        );
 
+    const actorIsDeveloper =
+        isDeveloper(context.roles);
+
+    const actorIsSuperAdmin =
+        isSuperAdmin(context.roles);
+
+    if (
+        targetRole.code ===
+        RBAC_ROLES.DEVELOPER
+    ) {
+        throw AppError.forbidden(
+            "The Developer role cannot be removed through user administration.",
+            {
+                code:
+                    RBAC_ERROR_CODES.DEVELOPER_PROTECTED,
+            },
+        );
+    }
+
+    if (
+        targetRole.code ===
+        RBAC_ROLES.SUPERADMIN
+    ) {
+        if (!actorIsDeveloper) {
+            throw AppError.forbidden(
+                "Only the Developer can remove the Super Admin role.",
+                {
+                    code:
+                        RBAC_ERROR_CODES.SUPERADMIN_PROTECTED,
+                },
+            );
+        }
+
+        return;
+    }
+
+    if (
+        actorIsDeveloper ||
+        actorIsSuperAdmin
+    ) {
+        return;
+    }
+
+    await requirePermission(
+        actorUserId,
+        RBAC_PERMISSIONS.USER_UPDATE,
+        transactionContext,
+    );
+}
 
 /**
  * ============================================================================
@@ -630,6 +689,7 @@ const rbacAuthority = Object.freeze({
     requireCanAssignRole,
     requireCanManageUser,
     requirePermissionManagement,
+    requireCanRemoveRole
 });
 
 

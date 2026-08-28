@@ -9,6 +9,7 @@ import permissionRepository from "./permission.repository.js";
 import {
     PERMISSION_ERROR_CODES,
 } from "./permission.constant.js";
+import rbacAuthority from "../rbac/rbac.authority.js";
 
 function assertPermissionId(permissionId) {
     if (
@@ -99,7 +100,11 @@ async function getPermissionById(permissionId) {
     return permission;
 }
 
-async function createPermission(data) {
+async function createPermission(data,actorUserId) {
+
+        await rbacAuthority.requirePermissionManagement(
+        actorUserId,
+    );
     const existing =
         await permissionRepository.findPermissionByCode(
             data.code,
@@ -129,7 +134,11 @@ async function createPermission(data) {
 async function updatePermission(
     permissionId,
     data,
+    actorUserId,
 ) {
+     await rbacAuthority.requirePermissionManagement(
+        actorUserId,
+    );
     assertPermissionId(permissionId);
 
     const existing =
@@ -161,7 +170,10 @@ async function updatePermission(
     }
 }
 
-async function deactivatePermission(permissionId) {
+async function deactivatePermission(permissionId,actorUserId,) {
+    await rbacAuthority.requirePermissionManagement(
+        actorUserId,
+    );
     assertPermissionId(permissionId);
 
     const existing =

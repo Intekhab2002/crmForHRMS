@@ -272,54 +272,29 @@ async function replaceRolePermissions(roleId, permissionIds, actorUserId) {
 
   await rbacAuthority.assertNotManagingOwnSuperAdminRole(actorUserId, role);
 
-  const activePermissionIds =
-    await roleRepository.findActivePermissionIds(permissionIds);
-
-  if (activePermissionIds.length !== permissionIds.length) {
-    throw AppError.badRequest(
-      "One or more permission IDs are invalid or inactive.",
-      {
-        code: "ROLE_INVALID_PERMISSION_IDS",
-      },
+  return executeTransaction(async (transactionContext) => {
+    const activePermissionIds = await roleRepository.findActivePermissionIds(
+      permissionIds,
+      transactionContext,
     );
-  }
 
-return executeTransaction(
-    async (transactionContext) => {
-        const activePermissionIds =
-            await roleRepository
-                .findActivePermissionIds(
-                    permissionIds,
-                    transactionContext,
-                );
+    if (activePermissionIds.length !== permissionIds.length) {
+      throw AppError.badRequest(
+        "One or more permission IDs are invalid or inactive.",
+        {
+          code: ROLE_ERROR_CODES.ROLE_PERMISSION_INVALID,
+        },
+      );
+    }
 
-        if (
-            activePermissionIds.length !==
-            permissionIds.length
-        ) {
-            throw AppError.badRequest(
-                "One or more permission IDs are invalid or inactive.",
-                {
-                    code:
-                        ROLE_ERROR_CODES.ROLE_PERMISSION_INVALID,
-                },
-            );
-        }
+    await roleRepository.replaceRolePermissions(
+      roleId,
+      activePermissionIds,
+      transactionContext,
+    );
 
-        await roleRepository
-            .replaceRolePermissions(
-                roleId,
-                activePermissionIds,
-                transactionContext,
-            );
-
-        return roleRepository
-            .findRolePermissions(
-                roleId,
-                transactionContext,
-            );
-    },
-);
+    return roleRepository.findRolePermissions(roleId, transactionContext);
+  });
 }
 
 async function assignRoleToUser(roleId, userId, actorUserId) {
@@ -404,28 +379,45 @@ async function getRoleUsers(roleId) {
 }
 
 async function removeRoleFromUser(roleId, userId, actorUserId) {
-  const role = await requireRole(roleId);
+  return executeTransaction(
+    async (transactionContext) => {
+      const role = await requireRole(roleId, transactionContext);
 
-  await rbacAuthority.requireCanAssignRole(actorUserId, role);
+      await rbacAuthority.requireCanRemoveRole(
+        actorUserId,
+        role,
+        transactionContext,
+      );
 
-  if (role.code === ROLE_SYSTEM_CODES.DEVELOPER) {
-    throw AppError.forbidden(
-      "The Developer role cannot be removed through role administration.",
-      {
-        code: ROLE_ERROR_CODES.ROLE_DEVELOPER_PROTECTED,
-      },
-    );
-  }
+      const user = await roleRepository.findUserById(
+        userId,
+        transactionContext,
+      );
 
-  const assignment = await roleRepository.removeRoleFromUser(userId, roleId);
+      if (!user) {
+        throw AppError.notFound("User not found.", {
+          code: USER_ERROR_CODES.USER_NOT_FOUND,
+        });
+      }
 
-  if (!assignment) {
-    throw AppError.notFound("Role assignment not found.", {
-      code: RBAC_ERROR_CODES.ACCESS_DENIED,
-    });
-  }
+      const assignment = await roleRepository.removeRoleFromUser(
+        userId,
+        roleId,
+        transactionContext,
+      );
 
-  return assignment;
+      if (!assignment) {
+        throw AppError.notFound("Role assignment not found.", {
+          code: RBAC_ERROR_CODES.ACCESS_DENIED,
+        });
+      }
+
+      return assignment;
+    },
+    {
+      isolationLevel: "SERIALIZABLE",
+    },
+  );
 }
 
 async function deleteRole(roleId, actorUserId) {

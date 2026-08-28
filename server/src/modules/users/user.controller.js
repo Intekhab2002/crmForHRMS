@@ -32,8 +32,7 @@ async function getUsers(req, res, next) {
         search,
         status,
         roleCode,
-      },
-      req.auth.userId,
+      }
     );
     return ApiResponse.paginated(
       res,
@@ -57,7 +56,6 @@ async function getUserById(req, res, next) {
   try {
     const user = await userService.getUserById(
       req.validatedParams.userId,
-      req.auth?.userId,
     );
 
     return ApiResponse.success(res, user, "User retrieved successfully.");

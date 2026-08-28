@@ -333,48 +333,33 @@ async function countRoleUsers(roleId, transactionContext = null) {
   return Number(result.rows[0]?.total ?? 0);
 }
 
-async function countRoleUsersForUpdate(
-    roleId,
-    transactionContext = null,
-) {
-    if (!transactionContext) {
-        throw new TypeError(
-            "A transaction context is required when locking role assignments.",
-        );
-    }
-
-    const result = await getExecutor(
-        transactionContext,
-    ).query(
-        FIND_ROLE_USER_ASSIGNMENTS_FOR_UPDATE,
-        [roleId],
+async function countRoleUsersForUpdate(roleId, transactionContext = null) {
+  if (!transactionContext) {
+    throw new TypeError(
+      "A transaction context is required when locking role assignments.",
     );
+  }
 
-    return result.rowCount;
+  const result = await getExecutor(transactionContext).query(
+    FIND_ROLE_USER_ASSIGNMENTS_FOR_UPDATE,
+    [roleId],
+  );
+
+  return result.rowCount;
 }
 
 async function createRole(
-    {
-        id,
-        code,
-        name,
-        description = null,
-    },
-    transactionContext = null,
+  { id, code, name, description = null },
+  transactionContext = null,
 ) {
-    const result = await getExecutor(
-        transactionContext,
-    ).query(
-        CREATE_ROLE,
-        [
-            id,
-            code,
-            name,
-            description,
-        ],
-    );
+  const result = await getExecutor(transactionContext).query(CREATE_ROLE, [
+    id,
+    code,
+    name,
+    description,
+  ]);
 
-    return result.rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 async function findActivePermissionIds(
@@ -390,29 +375,19 @@ async function findActivePermissionIds(
 }
 
 async function replaceRolePermissions(
-    roleId,
-    permissionIds,
-    transactionContext,
+  roleId,
+  permissionIds,
+  transactionContext,
 ) {
-    const executor =
-        getExecutor(transactionContext);
+  const executor = getExecutor(transactionContext);
 
-    await executor.query(
-        DELETE_ROLE_PERMISSIONS,
-        [roleId],
-    );
+  await executor.query(DELETE_ROLE_PERMISSIONS, [roleId]);
 
-    if (permissionIds.length === 0) {
-        return;
-    }
+  if (permissionIds.length === 0) {
+    return;
+  }
 
-    await executor.query(
-        INSERT_ROLE_PERMISSIONS,
-        [
-            roleId,
-            permissionIds,
-        ],
-    );
+  await executor.query(INSERT_ROLE_PERMISSIONS, [roleId, permissionIds]);
 }
 
 async function findUserById(userId, transactionContext = null) {
@@ -431,6 +406,11 @@ async function assignRoleToUser(userId, roleId, transactionContext = null) {
 }
 
 async function removeRoleFromUser(userId, roleId, transactionContext = null) {
+  if (!transactionContext) {
+    throw new TypeError(
+      "A transaction context is required when replacing a user role.",
+    );
+  }
   const result = await getExecutor(transactionContext).query(
     REMOVE_ROLE_FROM_USER,
     [userId, roleId],
@@ -493,5 +473,5 @@ export default Object.freeze({
   findDefaultPermissionIds,
   findRolePermissionMatrix,
   deleteRole,
-  createRole
+  createRole,
 });
