@@ -211,7 +211,7 @@ export default function TicketLifecyclePage() {
 
     try {
       const result = await ticketService.listComments(ticketId);
-      console.log("Result Comment", result)
+      console.log("Result Comment", result);
 
       const normalizedComments = Array.isArray(result) ? result : [];
 
@@ -499,21 +499,21 @@ export default function TicketLifecyclePage() {
             }}
           >
             <Stack direction="row" spacing={1} alignItems="center">
-              <Select
-                fullWidth
-                size="small"
-                value={pendingStatus}
-                onChange={handleStatusChange}
-                disabled={saving}
-              >
-                {TICKET_STATUS_OPTIONS.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-
               <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
+                <Select
+                  fullWidth
+                  size="small"
+                  value={pendingStatus}
+                  onChange={handleStatusChange}
+                  disabled={saving}
+                >
+                  {TICKET_STATUS_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+
                 <Button
                   variant="contained"
                   onClick={handleStatusUpdate}

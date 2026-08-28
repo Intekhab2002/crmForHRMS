@@ -7,16 +7,9 @@ import logger from "../config/logger.js";
 import ApiResponse from "../helpers/ApiResponse.js";
 import AppError from "../helpers/AppError.js";
 
-import {
-  ERROR_MESSAGES,
-} from "../constants/message.constants.js";
+import { ERROR_MESSAGES } from "../constants/message.constants.js";
 
-
-const {
-  JsonWebTokenError,
-  NotBeforeError,
-  TokenExpiredError,
-} = jwt;
+const { JsonWebTokenError, NotBeforeError, TokenExpiredError } = jwt;
 
 /**
  * ============================================================================
@@ -25,19 +18,19 @@ const {
  */
 
 const POSTGRES_ERROR_MAP = Object.freeze({
-  "23505": {
+  23505: {
     statusCode: 409,
     message: ERROR_MESSAGES.CONFLICT ?? "Resource already exists.",
     code: "DATABASE_UNIQUE_VIOLATION",
   },
 
-  "23503": {
+  23503: {
     statusCode: 409,
     message: "Operation violates database relationship constraints.",
     code: "DATABASE_FOREIGN_KEY_VIOLATION",
   },
 
-  "23502": {
+  23502: {
     statusCode: 400,
     message: "Required database field is missing.",
     code: "DATABASE_NOT_NULL_VIOLATION",
@@ -47,6 +40,11 @@ const POSTGRES_ERROR_MAP = Object.freeze({
     statusCode: 400,
     message: "Invalid database input.",
     code: "DATABASE_INVALID_INPUT",
+  },
+  42501: {
+    statusCode: 401,
+    message: "Cannot edit protected data.",
+    code: "RESTRICTED ACTION",
   },
 });
 
@@ -92,10 +90,7 @@ function normalizeError(error) {
     );
   }
 
-  if (
-    error instanceof JsonWebTokenError ||
-    error instanceof NotBeforeError
-  ) {
+  if (error instanceof JsonWebTokenError || error instanceof NotBeforeError) {
     return AppError.unauthorized(
       ERROR_MESSAGES.INVALID_TOKEN ?? "Invalid authentication token.",
     );
@@ -125,8 +120,7 @@ function normalizeError(error) {
    */
 
   return AppError.internal(
-    ERROR_MESSAGES.INTERNAL_SERVER_ERROR ??
-      "An unexpected error occurred.",
+    ERROR_MESSAGES.INTERNAL_SERVER_ERROR ?? "An unexpected error occurred.",
     {
       cause: error,
     },
@@ -156,41 +150,33 @@ function normalizeError(error) {
  * @param {import("express").Response} res
  * @param {import("express").NextFunction} next
  */
-export default function errorMiddleware(
-  error,
-  req,
-  res,
-  next,
-) {
+export default function errorMiddleware(error, req, res, next) {
   /**
    * Prevent duplicate responses.
    */
   if (res.headersSent) {
     return next(error);
   }
-console.error("\n================ ERROR MIDDLEWARE ================");
-console.error("REQUEST ID:", req?.requestId);
-console.error("METHOD:", req?.method);
-console.error("URL:", req?.originalUrl ?? req?.url);
-console.error("AUTH:", req?.auth);
-console.error("USER:", req?.user);
-console.error("ERROR TYPE:", error?.constructor?.name);
-console.error("ERROR MESSAGE:", error?.message);
-console.error("ERROR CODE:", error?.code);
-console.error("ERROR STATUS:", error?.status);
-console.error("ERROR STATUS CODE:", error?.statusCode);
-console.error("ERROR NAME:", error?.name);
-console.error("ERROR STACK:");
-console.error(error?.stack);
-console.error("ERROR CAUSE:", error?.cause);
-console.error("FULL ERROR OBJECT:", error);
-console.error("==================================================\n");
+  console.error("\n================ ERROR MIDDLEWARE ================");
+  console.error("REQUEST ID:", req?.requestId);
+  console.error("METHOD:", req?.method);
+  console.error("URL:", req?.originalUrl ?? req?.url);
+  console.error("AUTH:", req?.auth);
+  console.error("USER:", req?.user);
+  console.error("ERROR TYPE:", error?.constructor?.name);
+  console.error("ERROR MESSAGE:", error?.message);
+  console.error("ERROR CODE:", error?.code);
+  console.error("ERROR STATUS:", error?.status);
+  console.error("ERROR STATUS CODE:", error?.statusCode);
+  console.error("ERROR NAME:", error?.name);
+  console.error("ERROR STACK:");
+  console.error(error?.stack);
+  console.error("ERROR CAUSE:", error?.cause);
+  console.error("FULL ERROR OBJECT:", error);
+  console.error("==================================================\n");
   const appError = normalizeError(error);
 
-  const requestId =
-    req.requestId ??
-    res.locals.requestId ??
-    null;
+  const requestId = req.requestId ?? res.locals.requestId ?? null;
 
   /**
    * --------------------------------------------------------------------------
@@ -217,26 +203,23 @@ console.error("==================================================\n");
    */
 
   const meta = {
-  requestId,
-};
+    requestId,
+  };
 
-if (
-  appConfig.app.environment === "development"
-) {
-  meta.stack = appError.stack;
+  if (appConfig.app.environment === "development") {
+    meta.stack = appError.stack;
 
-  if (appError.cause) {
-    meta.cause = appError.cause;
+    if (appError.cause) {
+      meta.cause = appError.cause;
+    }
   }
-}
 
-return ApiResponse.error(
-  res,
-  appError.statusCode,
-  appError.message,
-  appError.errors,
-  appError.code,
-  meta,
-);
-
+  return ApiResponse.error(
+    res,
+    appError.statusCode,
+    appError.message,
+    appError.errors,
+    appError.code,
+    meta,
+  );
 }

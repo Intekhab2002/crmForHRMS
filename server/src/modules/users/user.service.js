@@ -16,7 +16,7 @@ import authRepository from "../auth/auth.repository.js";
 import { USER_STATUS, USER_ERROR_CODES } from "./user.constants.js";
 import rbacAuthority from "../rbac/rbac.authority.js";
 import rbacRepository from "../rbac/rbac.repository.js";
-import { RBAC_ERROR_CODES } from "../rbac/rbac.constants.js";
+import { RBAC_ERROR_CODES, RBAC_PERMISSIONS } from "../rbac/rbac.constants.js";
 
 /**
  * ============================================================================
@@ -74,13 +74,20 @@ async function requireUser(userId) {
  * @returns {Promise<void>}
  */
 async function assertUserIsMutable(
-  userId,
+  targetUser,
   actorUserId,
   transactionContext = null,
 ) {
+  const targetRoles = await rbacRepository.findUserRoles(
+    targetUser.id,
+    transactionContext,
+  );
+
   await rbacAuthority.requireCanManageUser(
     actorUserId,
-    userId,
+    targetUser,
+    targetRoles,
+    RBAC_PERMISSIONS.USER_UPDATE,
     transactionContext,
   );
 }
@@ -211,6 +218,12 @@ async function createUser(
   const normalizedOrganizationId = organizationId || null;
 
   const normalizedDepartmentId = departmentId || null;
+
+  const normalizedUsername = username?.trim() || null;
+
+  const normalizedEmail = email?.trim() || null;
+
+  const normalizedRoleCode = roleCode?.trim() || null;
 
   const [existingUsername, existingEmail] = await Promise.all([
     userRepository.findUserByUsername(normalizedUsername),
@@ -391,9 +404,15 @@ async function updateUser(
   },
   actorUserId,
 ) {
-  await requireUser(userId);
+  const targetUser = await requireUser(userId);
 
-  await assertUserIsMutable(userId, actorUserId);
+  if (!targetUser) {
+    throw AppError.notFound("User not found.", {
+      code: USER_ERROR_CODES.USER_NOT_FOUND,
+    });
+  }
+
+  await assertUserIsMutable(targetUser, actorUserId);
 
   const normalizedUsername =
     username !== undefined ? normalizeUsername(username) : undefined;

@@ -502,4 +502,5 @@ export default Object.freeze({
   assignRoleToUser,
   removeRoleFromUser,
   getRolePermissionMatrix,
+  deleteRole,
 });

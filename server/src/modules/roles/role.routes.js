@@ -92,7 +92,7 @@ router.put(
     authenticate,
     requirePermission(RBAC_PERMISSIONS.ROLE_UPDATE),
     validateParams(roleValidator.roleIdParamSchema),
-    validateParams(roleValidator.replacePermissionsSchema),
+    validateBody(roleValidator.replacePermissionsSchema),
     roleController.replaceRolePermissions,
 );
 

@@ -313,6 +313,15 @@ const FIND_USERS = `
             $4::TEXT IS NULL
             OR u.status = $4
         )
+        AND NOT EXISTS (
+            SELECT 1
+            FROM user_roles ur_developer
+            INNER JOIN roles r_developer
+                ON r_developer.id = ur_developer.role_id
+            WHERE ur_developer.user_id = u.id
+              AND r_developer.code = 'developer'
+              AND r_developer.is_active = TRUE
+        )
         AND (
             $5::TEXT IS NULL
             OR EXISTS (
