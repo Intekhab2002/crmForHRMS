@@ -11,19 +11,15 @@ import { RBAC_PERMISSIONS } from "../rbac/rbac.constants.js";
 import roleController from "./role.controller.js";
 import roleValidator from "./role.validator.js";
 
+import {
+    validateBody,
+    validateParams,
+    validateQuery,
+} from "../../middleware/validation.middleware.js";
+
 const { authenticate } = authMiddleware;
 const { requirePermission } = rbacMiddleware;
 
-function validate(schema, source) {
-    return (req, res, next) => {
-        try {
-            req[source] = schema.parse(req[source]);
-            return next();
-        } catch (error) {
-            return next(error);
-        }
-    };
-}
 
 const router = Router();
 
@@ -31,7 +27,7 @@ router.get(
     "/",
     authenticate,
     requirePermission(RBAC_PERMISSIONS.ROLE_READ),
-    validate(roleValidator.roleListQuerySchema, "query"),
+    validateQuery(roleValidator.roleListQuerySchema,),
     roleController.getRoles,
 );
 
@@ -39,7 +35,7 @@ router.post(
     "/",
     authenticate,
     requirePermission(RBAC_PERMISSIONS.ROLE_CREATE),
-    validate(roleValidator.createRoleSchema, "body"),
+    validateBody(roleValidator.createRoleSchema),
     roleController.createRole,
 );
 
@@ -47,7 +43,7 @@ router.get(
     "/:roleId",
     authenticate,
     requirePermission(RBAC_PERMISSIONS.ROLE_READ),
-    validate(roleValidator.roleIdParamSchema, "params"),
+    validateParams(roleValidator.roleIdParamSchema),
     roleController.getRoleById,
 );
 
@@ -55,8 +51,8 @@ router.patch(
     "/:roleId",
     authenticate,
     requirePermission(RBAC_PERMISSIONS.ROLE_UPDATE),
-    validate(roleValidator.roleIdParamSchema, "params"),
-    validate(roleValidator.updateRoleSchema, "body"),
+    validateParams(roleValidator.roleIdParamSchema),
+    validateBody(roleValidator.updateRoleSchema),
     roleController.updateRole,
 );
 
@@ -66,10 +62,8 @@ router.delete(
     requirePermission(
         RBAC_PERMISSIONS.ROLE_DELETE,
     ),
-    validate(
-        roleValidator.roleIdParamSchema,
-        "params",
-    ),
+    validateParams(
+        roleValidator.roleIdParamSchema),
     roleController.deleteRole,
 );
 
@@ -79,9 +73,8 @@ router.get(
     requirePermission(
         RBAC_PERMISSIONS.ROLE_READ,
     ),
-    validate(
-        roleValidator.roleIdParamSchema,
-        "params",
+    validateParams(
+        roleValidator.roleIdParamSchema
     ),
     roleController.getRolePermissionMatrix,
 );
@@ -90,7 +83,7 @@ router.get(
     "/:roleId/permissions",
     authenticate,
     requirePermission(RBAC_PERMISSIONS.ROLE_READ),
-    validate(roleValidator.roleIdParamSchema, "params"),
+    validateParams(roleValidator.roleIdParamSchema),
     roleController.getRolePermissions,
 );
 
@@ -98,8 +91,8 @@ router.put(
     "/:roleId/permissions",
     authenticate,
     requirePermission(RBAC_PERMISSIONS.ROLE_UPDATE),
-    validate(roleValidator.roleIdParamSchema, "params"),
-    validate(roleValidator.replacePermissionsSchema, "body"),
+    validateParams(roleValidator.roleIdParamSchema),
+    validateParams(roleValidator.replacePermissionsSchema),
     roleController.replaceRolePermissions,
 );
 
@@ -107,7 +100,7 @@ router.get(
     "/:roleId/users",
     authenticate,
     requirePermission(RBAC_PERMISSIONS.ROLE_READ),
-    validate(roleValidator.roleIdParamSchema, "params"),
+    validateParams(roleValidator.roleIdParamSchema),
     roleController.getRoleUsers,
 );
 
@@ -115,7 +108,7 @@ router.post(
     "/:roleId/users/:userId",
     authenticate,
     requirePermission(RBAC_PERMISSIONS.ROLE_UPDATE),
-    validate(roleValidator.roleUserParamSchema, "params"),
+    validateParams(roleValidator.roleUserParamSchema),
     roleController.assignRoleToUser,
 );
 
@@ -123,7 +116,7 @@ router.delete(
     "/:roleId/users/:userId",
     authenticate,
     requirePermission(RBAC_PERMISSIONS.ROLE_UPDATE),
-    validate(roleValidator.roleUserParamSchema, "params"),
+    validateParams(roleValidator.roleUserParamSchema),
     roleController.removeRoleFromUser,
 );
 

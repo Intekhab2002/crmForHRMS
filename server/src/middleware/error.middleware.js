@@ -168,7 +168,23 @@ export default function errorMiddleware(
   if (res.headersSent) {
     return next(error);
   }
-
+console.error("\n================ ERROR MIDDLEWARE ================");
+console.error("REQUEST ID:", req?.requestId);
+console.error("METHOD:", req?.method);
+console.error("URL:", req?.originalUrl ?? req?.url);
+console.error("AUTH:", req?.auth);
+console.error("USER:", req?.user);
+console.error("ERROR TYPE:", error?.constructor?.name);
+console.error("ERROR MESSAGE:", error?.message);
+console.error("ERROR CODE:", error?.code);
+console.error("ERROR STATUS:", error?.status);
+console.error("ERROR STATUS CODE:", error?.statusCode);
+console.error("ERROR NAME:", error?.name);
+console.error("ERROR STACK:");
+console.error(error?.stack);
+console.error("ERROR CAUSE:", error?.cause);
+console.error("FULL ERROR OBJECT:", error);
+console.error("==================================================\n");
   const appError = normalizeError(error);
 
   const requestId =

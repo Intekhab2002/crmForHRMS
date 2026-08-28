@@ -1,4 +1,3 @@
-import { ROUTES_CONFIG } from "../router/routes.config";
 
 function resolvePath(parentPath, route) {
   if (route.index) return parentPath || "/";

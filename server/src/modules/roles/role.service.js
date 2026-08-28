@@ -5,10 +5,11 @@
 import AppError from "../../helpers/AppError.js";
 import { executeTransaction } from "../../database/transaction.js";
 import roleRepository from "./role.repository.js";
-import { ROLE_ERROR_CODES } from "./role.constant.js";
-
-import rbacRepository from "../rbac/rbac.repository.js";
+import { ROLE_ERROR_CODES, ROLE_SYSTEM_CODES } from "./role.constant.js";
 import rbacAuthority from "../rbac/rbac.authority.js";
+import { randomUUID } from "node:crypto";
+import { USER_ERROR_CODES } from "../users/user.constants.js";
+import { RBAC_ERROR_CODES } from "../rbac/rbac.constants.js";
 
 async function requireRole(roleId, transactionContext = null) {
   const role = await roleRepository.findRoleById(roleId, transactionContext);
@@ -63,7 +64,7 @@ async function getRoleById(roleId, actorUserId) {
 
   await rbacAuthority.requireRoleManagement(actorUserId);
 
-  if (role.code === "developer") {
+  if (role.code === ROLE_SYSTEM_CODES.DEVELOPER) {
     throw AppError.notFound("Role not found.", {
       code: ROLE_ERROR_CODES.ROLE_NOT_FOUND,
     });
@@ -71,7 +72,6 @@ async function getRoleById(roleId, actorUserId) {
 
   const [permissions, userCount] = await Promise.all([
     roleRepository.findRolePermissions(roleId),
-
     roleRepository.countRoleUsers(roleId),
   ]);
 
@@ -103,25 +103,54 @@ async function createRole({ code, name, description = null }, actorUserId) {
     );
   }
 
-  try {
-    return await roleRepository.createRole({
-      code: normalizedCode,
-      name: normalizedName,
-      description: description ?? null,
-    });
-  } catch (error) {
-    if (error?.code === "23505") {
-      throw AppError.conflict(
-        "A role with the same code or name already exists.",
+  return executeTransaction(async (transactionContext) => {
+    let role;
+
+    try {
+      role = await roleRepository.createRole(
         {
-          code: ROLE_ERROR_CODES.ROLE_ALREADY_EXISTS,
-          cause: error,
+          id: randomUUID(),
+          code: normalizedCode,
+          name: normalizedName,
+          description: description ?? null,
         },
+        transactionContext,
+      );
+    } catch (error) {
+      if (error?.code === "23505") {
+        throw AppError.conflict(
+          "A role with the same code or name already exists.",
+          {
+            code: ROLE_ERROR_CODES.ROLE_ALREADY_EXISTS,
+            cause: error,
+          },
+        );
+      }
+
+      throw error;
+    }
+
+    const defaultPermissionIds =
+      await roleRepository.findDefaultPermissionIds(transactionContext);
+
+    if (defaultPermissionIds.length > 0) {
+      await roleRepository.replaceRolePermissions(
+        role.id,
+        defaultPermissionIds,
+        transactionContext,
       );
     }
 
-    throw error;
-  }
+    const permissions = await roleRepository.findRolePermissions(
+      role.id,
+      transactionContext,
+    );
+
+    return {
+      ...role,
+      permissions,
+    };
+  });
 }
 
 async function updateRole(roleId, data, actorUserId) {
@@ -194,13 +223,13 @@ async function deactivateRole(roleId, actorUserId) {
 
   await rbacAuthority.assertNotManagingOwnSuperAdminRole(actorUserId, role);
 
-  if (role.code === "developer") {
+  if (role.code === ROLE_SYSTEM_CODES.DEVELOPER) {
     throw AppError.forbidden("The Developer role cannot be deactivated.", {
       code: ROLE_ERROR_CODES.ROLE_DEVELOPER_PROTECTED,
     });
   }
 
-  if (role.code === "superadmin") {
+  if (role.code === ROLE_SYSTEM_CODES.SUPERADMIN) {
     throw AppError.forbidden(
       "The Super Admin role cannot be deactivated through normal role management.",
       {
@@ -255,15 +284,42 @@ async function replaceRolePermissions(roleId, permissionIds, actorUserId) {
     );
   }
 
-  return executeTransaction(async (transactionContext) => {
-    await roleRepository.replaceRolePermissions(
-      roleId,
-      activePermissionIds,
-      transactionContext,
-    );
+return executeTransaction(
+    async (transactionContext) => {
+        const activePermissionIds =
+            await roleRepository
+                .findActivePermissionIds(
+                    permissionIds,
+                    transactionContext,
+                );
 
-    return roleRepository.findRolePermissions(roleId, transactionContext);
-  });
+        if (
+            activePermissionIds.length !==
+            permissionIds.length
+        ) {
+            throw AppError.badRequest(
+                "One or more permission IDs are invalid or inactive.",
+                {
+                    code:
+                        ROLE_ERROR_CODES.ROLE_PERMISSION_INVALID,
+                },
+            );
+        }
+
+        await roleRepository
+            .replaceRolePermissions(
+                roleId,
+                activePermissionIds,
+                transactionContext,
+            );
+
+        return roleRepository
+            .findRolePermissions(
+                roleId,
+                transactionContext,
+            );
+    },
+);
 }
 
 async function assignRoleToUser(roleId, userId, actorUserId) {
@@ -293,14 +349,14 @@ async function assignRoleToUser(roleId, userId, actorUserId) {
 
       if (!user) {
         throw AppError.notFound("User not found.", {
-          code: "USER_NOT_FOUND",
+          code: USER_ERROR_CODES.USER_NOT_FOUND,
         });
       }
 
       /**
        * Super Admin is singleton-protected.
        */
-      if (role.code === "superadmin") {
+      if (role.code === ROLE_SYSTEM_CODES.SUPERADMIN) {
         const existingCount = await roleRepository.countRoleUsersForUpdate(
           role.id,
           transactionContext,
@@ -352,7 +408,7 @@ async function removeRoleFromUser(roleId, userId, actorUserId) {
 
   await rbacAuthority.requireCanAssignRole(actorUserId, role);
 
-  if (role.code === "developer") {
+  if (role.code === ROLE_SYSTEM_CODES.DEVELOPER) {
     throw AppError.forbidden(
       "The Developer role cannot be removed through role administration.",
       {
@@ -365,7 +421,7 @@ async function removeRoleFromUser(roleId, userId, actorUserId) {
 
   if (!assignment) {
     throw AppError.notFound("Role assignment not found.", {
-      code: "ROLE_ASSIGNMENT_NOT_FOUND",
+      code: RBAC_ERROR_CODES.ACCESS_DENIED,
     });
   }
 
@@ -388,13 +444,13 @@ async function deleteRole(roleId, actorUserId) {
       transactionContext,
     );
 
-    if (role.code === "developer") {
+    if (role.code === ROLE_SYSTEM_CODES.DEVELOPER) {
       throw AppError.forbidden("The Developer role cannot be deleted.", {
         code: ROLE_ERROR_CODES.ROLE_DEVELOPER_PROTECTED,
       });
     }
 
-    if (role.code === "superadmin") {
+    if (role.code === ROLE_SYSTEM_CODES.SUPERADMIN) {
       throw AppError.forbidden(
         "The Super Admin role cannot be deleted through normal role management.",
         {

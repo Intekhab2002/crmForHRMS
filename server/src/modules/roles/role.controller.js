@@ -8,7 +8,7 @@ import { ROLE_SUCCESS_CODES } from "./role.constant.js";
 
 async function getRoles(req, res, next) {
   try {
-    const result = await roleService.getRoles(req.query, req.auth?.userId);
+    const result = await roleService.getRoles(req.validatedQuery,);
 
     return ApiResponse.paginated(
       res,
@@ -24,7 +24,7 @@ async function getRoles(req, res, next) {
 async function getRoleById(req, res, next) {
   try {
     const role = await roleService.getRoleById(
-      req.params.roleId,
+      req.validatedParams.roleId,
       req.auth?.userId,
     );
     return ApiResponse.success(res, role, "Role retrieved successfully.");
@@ -35,7 +35,7 @@ async function getRoleById(req, res, next) {
 
 async function createRole(req, res, next) {
   try {
-    const role = await roleService.createRole(req.body, req.auth?.userId);
+    const role = await roleService.createRole(req.validatedBody, req.auth?.userId);
     return ApiResponse.created(res, role, "Role created successfully.", {
       code: ROLE_SUCCESS_CODES.ROLE_CREATED,
     });
@@ -47,8 +47,8 @@ async function createRole(req, res, next) {
 async function updateRole(req, res, next) {
   try {
     const role = await roleService.updateRole(
-      req.params.roleId,
-      req.body,
+      req.validatedParams.roleId,
+      req.validatedBody,
       req.auth?.userId,
     );
 
@@ -63,7 +63,7 @@ async function updateRole(req, res, next) {
 async function deactivateRole(req, res, next) {
   try {
     const role = await roleService.deactivateRole(
-      req.params.roleId,
+      req.validatedParams.roleId,
       req.auth?.userId,
     );
 
@@ -77,7 +77,7 @@ async function deactivateRole(req, res, next) {
 
 async function getRolePermissions(req, res, next) {
   try {
-    const permissions = await roleService.getRolePermissions(req.params.roleId);
+    const permissions = await roleService.getRolePermissions(req.validatedParams.roleId);
     return ApiResponse.success(
       res,
       permissions,
@@ -91,8 +91,8 @@ async function getRolePermissions(req, res, next) {
 async function replaceRolePermissions(req, res, next) {
   try {
     const permissions = await roleService.replaceRolePermissions(
-      req.params.roleId,
-      req.body.permissionIds,
+      req.validatedParams.roleId,
+      req.validatedBody.permissionIds,
       req.auth?.userId,
     );
 
@@ -111,7 +111,7 @@ async function replaceRolePermissions(req, res, next) {
 
 async function getRoleUsers(req, res, next) {
   try {
-    const users = await roleService.getRoleUsers(req.params.roleId);
+    const users = await roleService.getRoleUsers(req.validatedParams.roleId);
     return ApiResponse.success(
       res,
       users,
@@ -125,8 +125,8 @@ async function getRoleUsers(req, res, next) {
 async function assignRoleToUser(req, res, next) {
   try {
     const assignment = await roleService.assignRoleToUser(
-      req.params.roleId,
-      req.params.userId,
+      req.validatedParams.roleId,
+      req.validatedParams.userId,
       req.auth?.userId,
     );
     return ApiResponse.created(
@@ -143,8 +143,8 @@ async function assignRoleToUser(req, res, next) {
 async function removeRoleFromUser(req, res, next) {
   try {
     const assignment = await roleService.removeRoleFromUser(
-      req.params.roleId,
-      req.params.userId,
+      req.validatedParams.roleId,
+      req.validatedParams.userId,
       req.auth?.userId,
     );
     return ApiResponse.deleted(
@@ -161,7 +161,7 @@ async function removeRoleFromUser(req, res, next) {
 async function deleteRole(req, res, next) {
   try {
     const role = await roleService.deleteRole(
-      req.params.roleId,
+      req.validatedParams.roleId,
       req.auth?.userId,
     );
 
@@ -176,7 +176,7 @@ async function deleteRole(req, res, next) {
 async function getRolePermissionMatrix(req, res, next) {
   try {
     const matrix = await roleService.getRolePermissionMatrix(
-      req.params.roleId,
+      req.validatedParams.roleId,
       req.auth?.userId,
     );
 

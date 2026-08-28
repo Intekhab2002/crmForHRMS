@@ -10,7 +10,6 @@ import { ApiResponse } from "../../helpers/ApiResponse.js";
 import userService from "./user.service.js";
 import { USER_SUCCESS_CODES } from "./user.constants.js";
 import sessionService from "../auth/auth.session.js";
-import authRepository from "../auth/auth.repository.js";
 
 /**
  * Get users.
@@ -24,22 +23,18 @@ import authRepository from "../auth/auth.repository.js";
  */
 async function getUsers(req, res, next) {
   try {
-    const {
-    page,
-    limit,
-    search,
-    status,
-    roleCode,
-} = req.validatedQuery ?? req.query;
+    const { page, limit, search, status, roleCode } = req.validatedQuery;
 
-const result =
-    await userService.getUsers({
+    const result = await userService.getUsers(
+      {
         page,
         limit,
         search,
         status,
         roleCode,
-    });
+      },
+      req.auth.userId,
+    );
     return ApiResponse.paginated(
       res,
       result.data,
@@ -61,7 +56,7 @@ const result =
 async function getUserById(req, res, next) {
   try {
     const user = await userService.getUserById(
-      req.params.userId,
+      req.validatedParams.userId,
       req.auth?.userId,
     );
 
@@ -80,7 +75,10 @@ async function getUserById(req, res, next) {
  */
 async function createUser(req, res, next) {
   try {
-    const user = await userService.createUser(req.body, req.auth?.userId);
+    const user = await userService.createUser(
+      req.validatedBody,
+      req.auth?.userId,
+    );
 
     return ApiResponse.created(res, user, "User created successfully.");
   } catch (error) {
@@ -98,8 +96,8 @@ async function createUser(req, res, next) {
 async function updateUser(req, res, next) {
   try {
     const user = await userService.updateUser(
-      req.params.userId,
-      req.body,
+      req.validatedParams.userId,
+      req.validatedBody,
       req.auth?.userId,
     );
 
@@ -119,8 +117,8 @@ async function updateUser(req, res, next) {
 async function updateUserStatus(req, res, next) {
   try {
     const user = await userService.updateUserStatus(
-      req.params.userId,
-      req.body.status,
+      req.validatedParams.userId,
+      req.validatedBody.status,
       req.auth?.userId,
     );
 
@@ -142,7 +140,7 @@ async function updateUserStatus(req, res, next) {
 async function deleteUser(req, res, next) {
   try {
     const user = await userService.deleteUser(
-      req.params.userId,
+      req.validatedParams.userId,
       req.auth?.userId,
     );
 
@@ -155,7 +153,7 @@ async function deleteUser(req, res, next) {
 async function revokeUserSessions(req, res, next) {
   try {
     await sessionService.revokeUserSessions(
-      req.params.userId,
+      req.validatedParams.userId,
       req.auth?.userId,
     );
 

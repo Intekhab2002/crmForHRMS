@@ -6,9 +6,11 @@ import { RBAC_PERMISSIONS } from "../rbac/rbac.constants.js";
 
 import departmentController from "./department.controller.js";
 import departmentValidator from "./department.validator.js";
+import {validateBody,validateParams,validateQuery} from "../../middleware/validation.middleware.js"
 
 const { authenticate } = authMiddleware;
 const { requirePermission } = rbacMiddleware;
+
 
 const {
     DEPARTMENT_READ,
@@ -19,38 +21,6 @@ const {
 
 const router = Router();
 
-function validateBody(schema) {
-    return (req, res, next) => {
-        try {
-            req.body = schema.parse(req.body);
-            return next();
-        } catch (error) {
-            return next(error);
-        }
-    };
-}
-
-function validateParams(schema) {
-    return (req, res, next) => {
-        try {
-            req.params = schema.parse(req.params);
-            return next();
-        } catch (error) {
-            return next(error);
-        }
-    };
-}
-
-function validateQuery(schema) {
-    return (req, res, next) => {
-        try {
-            req.validatedQuery = schema.parse(req.query);
-            return next();
-        } catch (error) {
-            return next(error);
-        }
-    };
-}
 
 router.get(
     "/",

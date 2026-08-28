@@ -170,23 +170,9 @@ async function canManageRoles(
         transactionContext,
     );
 
-    if (isDeveloper(context.roles)) {
-        return true;
-    }
-
-    if (isSuperAdmin(context.roles)) {
-        return true;
-    }
-
-    return context.permissions.some(
-        (permission) =>
-            permission.code ===
-                RBAC_PERMISSIONS.ROLE_CREATE &&
-            context.permissions.some(
-                (candidate) =>
-                    candidate.code ===
-                    RBAC_PERMISSIONS.ROLE_UPDATE,
-            ),
+    return (
+        isDeveloper(context.roles) ||
+        isSuperAdmin(context.roles)
     );
 }
 
@@ -227,26 +213,24 @@ function assertProtectedRoleMutation(
     const actorIsSuperAdmin =
         isSuperAdmin(actorContext.roles);
 
+    const targetRoleCode =
+        targetRole?.code;
+
     if (
-        targetRole.code ===
+        targetRoleCode ===
         RBAC_ROLES.DEVELOPER
     ) {
-        if (!actorIsDeveloper) {
-            throw AppError.forbidden(
-                "The Developer role is protected and can only be managed by the Developer.",
-                {
-                    code:
-                        RBAC_ERROR_CODES.DEVELOPER_PROTECTED,
-                },
-            );
-        }
-
-        return;
+        throw AppError.forbidden(
+            "The Developer role is protected and cannot be modified.",
+            {
+                code:
+                    RBAC_ERROR_CODES.DEVELOPER_PROTECTED,
+            },
+        );
     }
 
-
     if (
-        targetRole.code ===
+        targetRoleCode ===
         RBAC_ROLES.SUPERADMIN
     ) {
         if (!actorIsDeveloper) {
@@ -262,14 +246,6 @@ function assertProtectedRoleMutation(
         return;
     }
 
-
-    /**
-     * Normal/custom role.
-     *
-     * Developer and Super Admin can manage it.
-     *
-     * Other roles must possess the explicit role-management permissions.
-     */
     if (
         !actorIsDeveloper &&
         !actorIsSuperAdmin
@@ -604,6 +580,32 @@ async function requireCanManageUser(
     );
 }
 
+async function requirePermissionManagement(
+    actorUserId,
+    transactionContext = null,
+) {
+    const context =
+        await getActorContext(
+            actorUserId,
+            transactionContext,
+        );
+
+    if (
+        isDeveloper(context.roles) ||
+        isSuperAdmin(context.roles)
+    ) {
+        return;
+    }
+
+    throw AppError.forbidden(
+        "You do not have authority to manage permissions.",
+        {
+            code:
+                RBAC_ERROR_CODES.AUTHORITY_VIOLATION,
+        },
+    );
+}
+
 
 /**
  * ============================================================================
@@ -627,6 +629,7 @@ const rbacAuthority = Object.freeze({
 
     requireCanAssignRole,
     requireCanManageUser,
+    requirePermissionManagement,
 });
 
 

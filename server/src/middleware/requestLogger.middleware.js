@@ -50,14 +50,14 @@ function assignRequestId(req, res, next) {
 
   req.requestId = requestId;
   res.locals.requestId = requestId;
-
+  
   next();
 }
 
 /**
  * Morgan token: Request ID
  */
-morgan.token("request-id", (req) => req.requestId);
+morgan.token("request-id", (req) => req.auth.userId);
 
 /**
  * Morgan token: Remote IP

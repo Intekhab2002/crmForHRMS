@@ -1,3 +1,6 @@
+import {
+    RBAC_ROLES,
+} from "../rbac/rbac.constants.js";
 /**
  * CRM for HRMS - Role Management Constants
  */
@@ -78,10 +81,9 @@ export const ROLE_STATUS = Object.freeze({
  *
  * Do NOT add admin/manager/agent/customer here.
  */
-export const ROLE_SYSTEM_CODES = Object.freeze({
-    DEVELOPER: "developer",
-    SUPERADMIN: "superadmin",
-});
+
+
+export const ROLE_SYSTEM_CODES = RBAC_ROLES;
 
 
 export default Object.freeze({

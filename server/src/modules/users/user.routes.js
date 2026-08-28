@@ -27,6 +27,11 @@ import {
 
 import userController from "./user.controller.js";
 import userValidator from "./user.validator.js";
+import {
+    validateBody,
+    validateParams,
+    validateQuery,
+} from "../../middleware/validation.middleware.js";
 
 const {
     authenticate,
@@ -46,94 +51,6 @@ const {
 const router =
     Router();
 
-/**
- * ============================================================================
- * Validation Middleware
- * ============================================================================
- */
-
-/**
- * Validate request body.
- *
- * @param {import("zod").ZodSchema} schema
- *
- * @returns {import("express").RequestHandler}
- */
-function validateBody(
-    schema,
-) {
-    return (
-        req,
-        res,
-        next,
-    ) => {
-        try {
-            req.body =
-                schema.parse(
-                    req.body,
-                );
-
-            return next();
-        } catch (error) {
-            return next(error);
-        }
-    };
-}
-
-/**
- * Validate route parameters.
- *
- * @param {import("zod").ZodSchema} schema
- *
- * @returns {import("express").RequestHandler}
- */
-function validateParams(
-    schema,
-) {
-    return (
-        req,
-        res,
-        next,
-    ) => {
-        try {
-            req.params =
-                schema.parse(
-                    req.params,
-                );
-
-            return next();
-        } catch (error) {
-            return next(error);
-        }
-    };
-}
-
-/**
- * Validate query parameters.
- *
- * @param {import("zod").ZodSchema} schema
- *
- * @returns {import("express").RequestHandler}
- */
-
-function validateQuery(schema) {
-    return (
-        req,
-        res,
-        next,
-    ) => {
-        try {
-            req.validatedQuery =
-                schema.parse(
-                    req.query,
-                );
-
-            return next();
-        } catch (error) {
-            return next(error);
-        }
-    };
-}
 
 /**
  * ============================================================================

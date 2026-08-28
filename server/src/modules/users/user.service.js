@@ -11,10 +11,12 @@ import userRepository from "./user.repository.js";
 import passwordService from "../auth/auth.password.js";
 import { executeTransaction } from "../../database/transaction.js";
 import roleRepository from "../roles/role.repository.js";
-import roleService from "../roles/role.service.js";
 import { ROLE_SYSTEM_CODES, ROLE_ERROR_CODES } from "../roles/role.constant.js";
-
+import authRepository from "../auth/auth.repository.js";
 import { USER_STATUS, USER_ERROR_CODES } from "./user.constants.js";
+import rbacAuthority from "../rbac/rbac.authority.js";
+import rbacRepository from "../rbac/rbac.repository.js";
+import { RBAC_ERROR_CODES } from "../rbac/rbac.constants.js";
 
 /**
  * ============================================================================
@@ -76,7 +78,7 @@ async function assertUserIsMutable(
   actorUserId,
   transactionContext = null,
 ) {
-  await roleService.assertCanManageUser(
+  await rbacAuthority.requireCanManageUser(
     actorUserId,
     userId,
     transactionContext,
@@ -122,35 +124,26 @@ async function getUsers({
   const normalizedPage = Math.max(Number(page) || 1, 1);
 
   const normalizedLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
-  const normalizedSearch =
-  String(search || "").trim();
+  const normalizedSearch = String(search || "").trim();
 
-const normalizedStatus =
-  status?.trim() || null;
+  const normalizedStatus = status?.trim() || null;
 
-const normalizedRoleCode =
-  roleCode?.trim().toLowerCase() || null;
+  const normalizedRoleCode = roleCode?.trim().toLowerCase() || null;
   const offset = (normalizedPage - 1) * normalizedLimit;
 
   const [users, total] = await Promise.all([
-  userRepository.findUsers(
-    normalizedLimit,
-    offset,
-    {
+    userRepository.findUsers(normalizedLimit, offset, {
       search: normalizedSearch,
       status: normalizedStatus,
       roleCode: normalizedRoleCode,
-    },
-  ),
+    }),
 
-  userRepository.countUsers({
-    search: normalizedSearch,
-    status: normalizedStatus,
-    roleCode: normalizedRoleCode,
-  }),
-]);
-
-
+    userRepository.countUsers({
+      search: normalizedSearch,
+      status: normalizedStatus,
+      roleCode: normalizedRoleCode,
+    }),
+  ]);
 
   const totalPages = Math.ceil(total / normalizedLimit);
 
@@ -165,6 +158,10 @@ const normalizedRoleCode =
       hasPreviousPage: normalizedPage > 1,
     },
   };
+}
+
+async function getUserRoles(userId, transactionContext = null) {
+  return rbacRepository.findUserRoles(userId, transactionContext);
 }
 
 /**
@@ -247,11 +244,11 @@ async function createUser(
 
         if (!targetRole) {
           throw AppError.badRequest("The requested role does not exist.", {
-            code: "ROLE_NOT_FOUND",
+            code: ROLE_ERROR_CODES.ROLE_NOT_FOUND,
           });
         }
 
-        await roleService.assertCanAssignRole(
+        await rbacAuthority.requireCanAssignRole(
           actorUserId,
           targetRole,
           transactionContext,
@@ -275,7 +272,7 @@ async function createUser(
           if (!developerRole) {
             throw AppError.conflict(
               "The protected developer role is missing. Superadmin provisioning has been refused.",
-              { code: "DEVELOPER_ROLE_MISSING" },
+              { code: RBAC_ERROR_CODES.DEVELOPER_PROTECTED },
             );
           }
 
@@ -285,7 +282,7 @@ async function createUser(
               transactionContext,
             );
 
-          const actorRoles = await roleService.getActorRoles(
+          const actorRoles = await getUserRoles(
             actorUserId,
             transactionContext,
           );
@@ -297,7 +294,7 @@ async function createUser(
           if (!actorIsDeveloper || developerAssignments !== 1) {
             throw AppError.forbidden(
               "Superadmin provisioning requires exactly one valid developer account.",
-              { code: "DEVELOPER_INTEGRITY_CHECK_FAILED" },
+              { code: RBAC_ERROR_CODES.PERMISSION_REQUIRED },
             );
           }
 
@@ -449,16 +446,13 @@ async function updateUser(
 
   return executeTransaction(
     async (transactionContext) => {
-      const currentRoles = await roleService.getActorRoles(
-        userId,
-        transactionContext,
-      );
+      const currentRoles = await getUserRoles(userId, transactionContext);
 
       const isDeveloper = currentRoles.some(
         ({ code }) => code === ROLE_SYSTEM_CODES.DEVELOPER,
       );
 
-      if (isDeveloper && normalizedRoleCode) {
+      if (isDeveloper && normalizedRoleCode !== null) {
         throw AppError.forbidden(
           "The developer role is protected and cannot be changed.",
           { code: ROLE_ERROR_CODES.ROLE_DEVELOPER_PROTECTED },
@@ -514,7 +508,7 @@ async function updateUser(
         });
       }
 
-      let role = currentRoles[0] ?? null;
+      let roles = currentRoles;
 
       if (normalizedRoleCode) {
         const targetRole = await roleRepository.findRoleByCode(
@@ -524,12 +518,12 @@ async function updateUser(
 
         if (!targetRole) {
           throw AppError.badRequest("The requested role does not exist.", {
-            code: "ROLE_NOT_FOUND",
+            code: ROLE_ERROR_CODES.ROLE_NOT_FOUND,
           });
         }
 
         if (targetRole.code === ROLE_SYSTEM_CODES.SUPERADMIN) {
-          const actorRoles = await roleService.getActorRoles(
+          const actorRoles = await getUserRoles(
             actorUserId,
             transactionContext,
           );
@@ -570,7 +564,7 @@ async function updateUser(
           }
         }
 
-        await roleService.assertCanAssignRole(
+        await rbacAuthority.requireCanAssignRole(
           actorUserId,
           targetRole,
           transactionContext,
@@ -599,7 +593,7 @@ async function updateUser(
 
       return {
         ...refreshedUser,
-        role,
+        roles,
       };
     },
     { isolationLevel: "SERIALIZABLE" },
@@ -808,63 +802,36 @@ async function assertTargetUserMutable(
     );
   }
 
-  const actorRoles = await roleService.getActorRoles(
-    actorUserId,
-    transactionContext,
-  );
+  const [targetUser, targetRoles] = await Promise.all([
+    userRepository.findUserById(targetUserId, transactionContext),
+    getUserRoles(targetUserId, transactionContext),
+  ]);
 
-  const targetRoles = await roleService.getActorRoles(
-    targetUserId,
-    transactionContext,
-  );
-
-  const actorCodes = new Set(actorRoles.map(({ code }) => code));
-
-  const targetCodes = new Set(targetRoles.map(({ code }) => code));
-
-  const actorIsDeveloper = actorCodes.has(ROLE_SYSTEM_CODES.DEVELOPER);
-
-  const actorIsSuperAdmin = actorCodes.has(ROLE_SYSTEM_CODES.SUPERADMIN);
-
-  const targetIsDeveloper = targetCodes.has(ROLE_SYSTEM_CODES.DEVELOPER);
-
-  const targetIsSuperAdmin = targetCodes.has(ROLE_SYSTEM_CODES.SUPERADMIN);
-
-  /*
-   * Developer account is immutable.
-   */
-  if (targetIsDeveloper) {
-    throw AppError.forbidden("The Developer account is protected.", {
-      code: USER_ERROR_CODES.SYSTEM_USER_PROTECTED,
+  if (!targetUser) {
+    throw AppError.notFound("User not found.", {
+      code: USER_ERROR_CODES.USER_NOT_FOUND,
     });
   }
 
-  /*
-   * Super Admin may only be administrated by Developer.
-   */
-  if (targetIsSuperAdmin && !actorIsDeveloper) {
-    throw AppError.forbidden(
-      "Only the Developer can manage the Super Admin account.",
-      {
-        code: USER_ERROR_CODES.SYSTEM_USER_PROTECTED,
-      },
-    );
+  const permissionByOperation = Object.freeze({
+    status: "user:update",
+    delete: "user:delete",
+    update: "user:update",
+  });
+
+  const permissionCode = permissionByOperation[operation];
+
+  if (!permissionCode) {
+    throw new TypeError(`Unsupported user management operation: ${operation}`);
   }
 
-  /*
-   * Developer and Super Admin cannot manipulate themselves.
-   */
-  if (actorIsDeveloper && targetIsDeveloper) {
-    throw AppError.forbidden("The Developer account is protected.");
-  }
-
-  if (actorIsSuperAdmin && targetIsSuperAdmin) {
-    throw AppError.forbidden(
-      "The Super Admin account cannot be modified by itself.",
-    );
-  }
-
-  return true;
+  await rbacAuthority.requireCanManageUser(
+    actorUserId,
+    targetUser,
+    targetRoles,
+    permissionCode,
+    transactionContext,
+  );
 }
 
 /**

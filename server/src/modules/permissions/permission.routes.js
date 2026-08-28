@@ -14,6 +14,12 @@ import {
 import permissionController from "./permission.controller.js";
 import permissionValidator from "./permission.validator.js";
 
+import {
+    validateBody,
+    validateParams,
+    validateQuery,
+} from "../../middleware/validation.middleware.js";
+
 const { authenticate } = authMiddleware;
 const { requirePermission } = rbacMiddleware;
 
@@ -26,44 +32,6 @@ const {
 
 const router = Router();
 
-function validateBody(schema) {
-    return (request, response, next) => {
-        try {
-            request.body = schema.parse(
-                request.body,
-            );
-            return next();
-        } catch (error) {
-            return next(error);
-        }
-    };
-}
-
-function validateParams(schema) {
-    return (request, response, next) => {
-        try {
-            request.params = schema.parse(
-                request.params,
-            );
-            return next();
-        } catch (error) {
-            return next(error);
-        }
-    };
-}
-
-function validateQuery(schema) {
-    return (request, response, next) => {
-        try {
-            request.validatedQuery = schema.parse(
-                request.query,
-            );
-            return next();
-        } catch (error) {
-            return next(error);
-        }
-    };
-}
 
 router.get(
     "/",

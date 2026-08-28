@@ -10,6 +10,11 @@ import ticketCommentController
 import ticketCommentValidator
     from "./ticketComment.validator.js";
 
+    import {
+    validateBody,
+    validateParams,
+} from "../../middleware/validation.middleware.js";
+
 const router = Router();
 
 const { authenticate } = authMiddleware;
@@ -20,27 +25,6 @@ const {
     TICKET_COMMENT,
 } = RBAC_PERMISSIONS;
 
-function validateParams(schema) {
-    return (req, res, next) => {
-        try {
-            req.params = schema.parse(req.params);
-            return next();
-        } catch (error) {
-            return next(error);
-        }
-    };
-}
-
-function validateBody(schema) {
-    return (req, res, next) => {
-        try {
-            req.body = schema.parse(req.body);
-            return next();
-        } catch (error) {
-            return next(error);
-        }
-    };
-}
 
 router.get(
     "/:ticketId/comments",
