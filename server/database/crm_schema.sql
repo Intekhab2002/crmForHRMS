@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict fOGZJZusBxgvPlgAH9vfu3p5FMslapyek0am2MNvTRyNeZwRhD9ku3u8xcZhyBI
+\restrict 1OsyN7S6mESBfICGy16i2xAfHpgVkyiSL3YvLwMCFItZlGp4i96jAL4b7mEh2FG
 
 -- Dumped from database version 18.3
 -- Dumped by pg_dump version 18.3
@@ -18,6 +18,32 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: prevent_immutable_role_downgrade(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.prevent_immutable_role_downgrade() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+
+    IF OLD.is_immutable = TRUE
+       AND NEW.is_immutable IS DISTINCT FROM TRUE
+    THEN
+
+        RAISE EXCEPTION
+            'An immutable role cannot be made mutable.'
+            USING ERRCODE = '42501';
+
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.prevent_immutable_role_downgrade() OWNER TO postgres;
 
 --
 -- Name: protect_singleton_system_assignments(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -65,6 +91,378 @@ $$;
 
 
 ALTER FUNCTION public.protect_singleton_system_assignments() OWNER TO postgres;
+
+--
+-- Name: protect_system_identity_user(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.protect_system_identity_user() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    has_protected_role BOOLEAN;
+BEGIN
+
+    /**
+     * ========================================================================
+     * DELETE
+     * ========================================================================
+     */
+
+    IF TG_OP = 'DELETE' THEN
+
+        SELECT EXISTS (
+            SELECT 1
+            FROM user_roles ur
+            INNER JOIN roles r
+                ON r.id = ur.role_id
+            WHERE ur.user_id = OLD.id
+              AND r.code = 'developer'
+        )
+        INTO has_protected_role;
+
+        IF has_protected_role THEN
+            RAISE EXCEPTION
+                'Protected developer identity cannot be deleted.'
+                USING ERRCODE = '42501';
+        END IF;
+
+        RETURN OLD;
+    END IF;
+
+
+    /**
+     * ========================================================================
+     * UPDATE
+     * ========================================================================
+     */
+
+    IF TG_OP = 'UPDATE' THEN
+
+        SELECT EXISTS (
+            SELECT 1
+            FROM user_roles ur
+            INNER JOIN roles r
+                ON r.id = ur.role_id
+            WHERE ur.user_id = OLD.id
+              AND r.code = 'developer'
+        )
+        INTO has_protected_role;
+
+        IF has_protected_role THEN
+
+            /**
+             * Developer identity credentials cannot be changed.
+             */
+            IF OLD.username IS DISTINCT FROM NEW.username
+               OR OLD.email IS DISTINCT FROM NEW.email
+               OR OLD.password_hash IS DISTINCT FROM NEW.password_hash
+            THEN
+                RAISE EXCEPTION
+                    'Protected developer identity credentials cannot be modified.'
+                    USING ERRCODE = '42501';
+            END IF;
+
+
+            /**
+             * Developer cannot be deactivated, locked, or suspended through
+             * ordinary user mutation.
+             */
+            IF OLD.status IS DISTINCT FROM NEW.status
+               AND NEW.status <> 'active'
+            THEN
+                RAISE EXCEPTION
+                    'Protected developer identity cannot be deactivated or locked.'
+                    USING ERRCODE = '42501';
+            END IF;
+
+
+            /**
+             * Developer cannot receive a deactivation timestamp.
+             */
+            IF NEW.deactivated_at IS NOT NULL THEN
+                RAISE EXCEPTION
+                    'Protected developer identity cannot be deactivated.'
+                    USING ERRCODE = '42501';
+            END IF;
+
+        END IF;
+
+        RETURN NEW;
+    END IF;
+
+
+    RETURN NEW;
+
+END;
+$$;
+
+
+ALTER FUNCTION public.protect_system_identity_user() OWNER TO postgres;
+
+--
+-- Name: protect_system_role_assignment(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.protect_system_role_assignment() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    target_role_code VARCHAR(50);
+    existing_count INTEGER;
+BEGIN
+
+    IF TG_OP = 'INSERT' THEN
+
+        SELECT code
+        INTO target_role_code
+        FROM roles
+        WHERE id = NEW.role_id;
+
+        IF target_role_code IN ('developer', 'superadmin') THEN
+
+            SELECT COUNT(*)
+            INTO existing_count
+            FROM user_roles ur
+            WHERE ur.role_id = NEW.role_id
+              AND ur.user_id <> NEW.user_id;
+
+            IF existing_count > 0 THEN
+
+                IF target_role_code = 'developer' THEN
+
+                    RAISE EXCEPTION
+                        'Only one Developer account is permitted.'
+                        USING ERRCODE = '23505';
+
+                ELSE
+
+                    RAISE EXCEPTION
+                        'Only one Super Admin account is permitted.'
+                        USING ERRCODE = '23505';
+
+                END IF;
+
+            END IF;
+
+        END IF;
+
+        RETURN NEW;
+
+    END IF;
+
+
+    IF TG_OP = 'UPDATE' THEN
+
+        SELECT code
+        INTO target_role_code
+        FROM roles
+        WHERE id = NEW.role_id;
+
+        IF target_role_code IN ('developer', 'superadmin') THEN
+
+            SELECT COUNT(*)
+            INTO existing_count
+            FROM user_roles ur
+            WHERE ur.role_id = NEW.role_id
+              AND ur.user_id <> NEW.user_id;
+
+            IF existing_count > 0 THEN
+
+                IF target_role_code = 'developer' THEN
+
+                    RAISE EXCEPTION
+                        'Only one Developer account is permitted.'
+                        USING ERRCODE = '23505';
+
+                ELSE
+
+                    RAISE EXCEPTION
+                        'Only one Super Admin account is permitted.'
+                        USING ERRCODE = '23505';
+
+                END IF;
+
+            END IF;
+
+        END IF;
+
+        RETURN NEW;
+
+    END IF;
+
+
+    /**
+     * DELETE is intentionally allowed.
+     *
+     * The server RBAC layer determines whether the actor is authorized.
+     * This permits Developer-controlled Super Admin succession.
+     */
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+
+
+    RETURN NEW;
+
+END;
+$$;
+
+
+ALTER FUNCTION public.protect_system_role_assignment() OWNER TO postgres;
+
+--
+-- Name: protect_system_role_identity(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.protect_system_role_identity() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+
+    /**
+     * ========================================================================
+     * INSERT
+     * ========================================================================
+     */
+
+    IF TG_OP = 'INSERT' THEN
+
+        IF NEW.code IN ('developer', 'superadmin') THEN
+
+            RAISE EXCEPTION
+                'Protected system role "%" cannot be created directly.',
+                NEW.code
+                USING ERRCODE = '42501';
+
+        END IF;
+
+        RETURN NEW;
+    END IF;
+
+
+    /**
+     * ========================================================================
+     * UPDATE
+     * ========================================================================
+     */
+
+    IF TG_OP = 'UPDATE' THEN
+
+        /**
+         * Existing protected identity.
+         */
+        IF OLD.code IN ('developer', 'superadmin') THEN
+
+            /**
+             * Code is immutable.
+             */
+            IF NEW.code IS DISTINCT FROM OLD.code THEN
+
+                RAISE EXCEPTION
+                    'Protected system role code cannot be changed.'
+                    USING ERRCODE = '42501';
+
+            END IF;
+
+
+            /**
+             * Display name is also protected for the two fixed identities.
+             */
+            IF NEW.name IS DISTINCT FROM OLD.name THEN
+
+                RAISE EXCEPTION
+                    'Protected system role name cannot be changed.'
+                    USING ERRCODE = '42501';
+
+            END IF;
+
+
+            /**
+             * Must remain a system role.
+             */
+            IF NEW.is_system IS DISTINCT FROM TRUE THEN
+
+                RAISE EXCEPTION
+                    'Protected system role must remain a system role.'
+                    USING ERRCODE = '42501';
+
+            END IF;
+
+
+            /**
+             * Must remain immutable.
+             */
+            IF NEW.is_immutable IS DISTINCT FROM TRUE THEN
+
+                RAISE EXCEPTION
+                    'Protected system role must remain immutable.'
+                    USING ERRCODE = '42501';
+
+            END IF;
+
+
+            /**
+             * Cannot be deactivated.
+             */
+            IF NEW.is_active IS DISTINCT FROM TRUE THEN
+
+                RAISE EXCEPTION
+                    'Protected system role cannot be deactivated.'
+                    USING ERRCODE = '42501';
+
+            END IF;
+
+        END IF;
+
+
+        /**
+         * Prevent an ordinary role from becoming a protected identity.
+         */
+        IF OLD.code NOT IN ('developer', 'superadmin')
+           AND NEW.code IN ('developer', 'superadmin')
+        THEN
+
+            RAISE EXCEPTION
+                'An existing role cannot be converted into a protected system role.'
+                USING ERRCODE = '42501';
+
+        END IF;
+
+
+        RETURN NEW;
+    END IF;
+
+
+    /**
+     * ========================================================================
+     * DELETE
+     * ========================================================================
+     */
+
+    IF TG_OP = 'DELETE' THEN
+
+        IF OLD.code IN ('developer', 'superadmin') THEN
+
+            RAISE EXCEPTION
+                'Protected system role "%" cannot be deleted.',
+                OLD.code
+                USING ERRCODE = '42501';
+
+        END IF;
+
+        RETURN OLD;
+    END IF;
+
+
+    RETURN NEW;
+
+END;
+$$;
+
+
+ALTER FUNCTION public.protect_system_role_identity() OWNER TO postgres;
 
 --
 -- Name: protect_system_roles(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -313,12 +711,41 @@ CREATE TABLE public.contacts (
     mobile_phone character varying(30) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    email character varying(320),
+    department_id uuid,
+    district character varying(100),
     CONSTRAINT contacts_mobile_not_blank CHECK ((length(btrim((mobile_phone)::text)) > 0)),
     CONSTRAINT contacts_name_not_blank CHECK ((length(btrim((name)::text)) > 0))
 );
 
 
 ALTER TABLE public.contacts OWNER TO postgres;
+
+--
+-- Name: default_role_permissions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.default_role_permissions (
+    permission_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE public.default_role_permissions OWNER TO postgres;
+
+--
+-- Name: TABLE default_role_permissions; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.default_role_permissions IS 'Default permissions automatically assigned when a custom role is created.';
+
+
+--
+-- Name: COLUMN default_role_permissions.permission_id; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.default_role_permissions.permission_id IS 'Permission granted by default to newly created custom roles.';
+
 
 --
 -- Name: departments; Type: TABLE; Schema: public; Owner: postgres
@@ -334,6 +761,17 @@ CREATE TABLE public.departments (
     status character varying(20) DEFAULT 'active'::character varying NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    short_name character varying(100),
+    department_type character varying(100),
+    contact_email character varying(320),
+    contact_phone character varying(30),
+    website character varying(255),
+    address_line1 character varying(255),
+    address_line2 character varying(255),
+    city character varying(100),
+    district character varying(100),
+    state character varying(100) DEFAULT 'Bihar'::character varying,
+    postal_code character varying(20),
     CONSTRAINT departments_parent_not_self_check CHECK (((parent_department_id IS NULL) OR (parent_department_id <> id))),
     CONSTRAINT departments_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
 );
@@ -418,6 +856,7 @@ CREATE TABLE public.roles (
     is_active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    is_immutable boolean DEFAULT false NOT NULL,
     CONSTRAINT roles_code_format_check CHECK (((code)::text ~ '^[a-z][a-z0-9_]*$'::text))
 );
 
@@ -510,6 +949,22 @@ CREATE TABLE public.ticket_lifecycle_events (
 ALTER TABLE public.ticket_lifecycle_events OWNER TO postgres;
 
 --
+-- Name: ticket_number_counters; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.ticket_number_counters (
+    year integer NOT NULL,
+    next_number bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT ticket_number_counters_next_number_check CHECK ((next_number >= 1)),
+    CONSTRAINT ticket_number_counters_year_check CHECK ((year >= 2000))
+);
+
+
+ALTER TABLE public.ticket_number_counters OWNER TO postgres;
+
+--
 -- Name: ticket_number_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -532,14 +987,12 @@ CREATE TABLE public.tickets (
     ticket_number character varying(32) CONSTRAINT tickets_ticket_number_not_null1 NOT NULL,
     subject character varying(255) CONSTRAINT tickets_subject_not_null1 NOT NULL,
     description text CONSTRAINT tickets_description_not_null1 NOT NULL,
-    issue_type character varying(100) CONSTRAINT tickets_issue_type_not_null1 NOT NULL,
     priority character varying(20) DEFAULT 'MEDIUM'::character varying CONSTRAINT tickets_priority_not_null1 NOT NULL,
     status character varying(20) DEFAULT 'OPEN'::character varying CONSTRAINT tickets_status_not_null1 NOT NULL,
     requester_user_id uuid NOT NULL,
     created_by_user_id uuid NOT NULL,
     organization_id uuid NOT NULL,
     department_id uuid NOT NULL,
-    assigned_employee_id uuid,
     resolution_note text,
     assigned_at timestamp with time zone,
     resolved_at timestamp with time zone,
@@ -548,6 +1001,22 @@ CREATE TABLE public.tickets (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP CONSTRAINT tickets_updated_at_not_null1 NOT NULL,
     contact_id uuid,
     assigned_user_id uuid,
+    service_type character varying(100),
+    category character varying(100),
+    problem_statement text,
+    employee_current_office_name_id character varying(100),
+    employee_id character varying(100),
+    current_bill_status character varying(100),
+    bill_reference_no character varying(100),
+    severity character varying(50),
+    expected_resolution_date date,
+    duplicate_ticket character varying(255),
+    issue_category character varying(100),
+    letter_no character varying(100),
+    dependency_category character varying(100),
+    initial_diagnosis text,
+    solution text,
+    resolution text,
     CONSTRAINT tickets_assigned_at_check CHECK (((assigned_at IS NULL) OR (assigned_user_id IS NOT NULL))),
     CONSTRAINT tickets_closed_at_check CHECK (((closed_at IS NULL) OR ((status)::text = 'CLOSED'::text))),
     CONSTRAINT tickets_created_at_not_null CHECK ((created_at IS NOT NULL)),
@@ -556,14 +1025,12 @@ CREATE TABLE public.tickets (
     CONSTRAINT tickets_description_not_blank CHECK ((length(btrim(description)) > 0)),
     CONSTRAINT tickets_description_not_null CHECK ((description IS NOT NULL)),
     CONSTRAINT tickets_id_not_null CHECK ((id IS NOT NULL)),
-    CONSTRAINT tickets_issue_type_not_blank CHECK ((length(btrim((issue_type)::text)) > 0)),
-    CONSTRAINT tickets_issue_type_not_null CHECK ((issue_type IS NOT NULL)),
     CONSTRAINT tickets_organization_not_null CHECK ((organization_id IS NOT NULL)),
     CONSTRAINT tickets_priority_check CHECK (((priority)::text = ANY ((ARRAY['LOW'::character varying, 'MEDIUM'::character varying, 'HIGH'::character varying, 'CRITICAL'::character varying])::text[]))),
     CONSTRAINT tickets_priority_not_null CHECK ((priority IS NOT NULL)),
     CONSTRAINT tickets_requester_not_null CHECK ((requester_user_id IS NOT NULL)),
     CONSTRAINT tickets_resolved_at_check CHECK (((resolved_at IS NULL) OR ((status)::text = ANY ((ARRAY['RESOLVED'::character varying, 'CLOSED'::character varying])::text[])))),
-    CONSTRAINT tickets_status_check CHECK (((status)::text = ANY ((ARRAY['OPEN'::character varying, 'ASSIGNED'::character varying, 'IN_PROGRESS'::character varying, 'PENDING'::character varying, 'RESOLVED'::character varying, 'CLOSED'::character varying, 'REOPENED'::character varying])::text[]))),
+    CONSTRAINT tickets_status_check CHECK (((status)::text = ANY ((ARRAY['OPEN'::character varying, 'IN_PROGRESS'::character varying, 'WAIT_FOR_RESPONSE'::character varying, 'CLOSED'::character varying])::text[]))),
     CONSTRAINT tickets_status_not_null CHECK ((status IS NOT NULL)),
     CONSTRAINT tickets_subject_not_blank CHECK ((length(btrim((subject)::text)) > 0)),
     CONSTRAINT tickets_subject_not_null CHECK ((subject IS NOT NULL)),
@@ -625,6 +1092,14 @@ CREATE TABLE public.users (
     deactivated_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    first_name character varying(100),
+    last_name character varying(100),
+    mobile_phone character varying(30),
+    employee_code character varying(100),
+    designation character varying(150),
+    organization_id uuid,
+    phone character varying(30),
+    department_id uuid,
     CONSTRAINT users_failed_login_attempts_check CHECK ((failed_login_attempts >= 0)),
     CONSTRAINT users_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'active'::character varying, 'inactive'::character varying, 'suspended'::character varying, 'locked'::character varying])::text[])))
 );
@@ -633,11 +1108,61 @@ CREATE TABLE public.users (
 ALTER TABLE public.users OWNER TO postgres;
 
 --
+-- Name: COLUMN users.first_name; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.first_name IS 'User profile first name.';
+
+
+--
+-- Name: COLUMN users.last_name; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.last_name IS 'User profile last name.';
+
+
+--
+-- Name: COLUMN users.designation; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.designation IS 'Business/job designation.';
+
+
+--
+-- Name: COLUMN users.organization_id; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.organization_id IS 'Optional organization assignment.';
+
+
+--
+-- Name: COLUMN users.phone; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.phone IS 'Primary user contact phone number.';
+
+
+--
+-- Name: COLUMN users.department_id; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.department_id IS 'Optional department assignment.';
+
+
+--
 -- Name: contacts contacts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.contacts
     ADD CONSTRAINT contacts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: default_role_permissions default_role_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.default_role_permissions
+    ADD CONSTRAINT default_role_permissions_pkey PRIMARY KEY (permission_id);
 
 
 --
@@ -713,6 +1238,14 @@ ALTER TABLE ONLY public.ticket_lifecycle_events
 
 
 --
+-- Name: ticket_number_counters ticket_number_counters_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ticket_number_counters
+    ADD CONSTRAINT ticket_number_counters_pkey PRIMARY KEY (year);
+
+
+--
 -- Name: tickets tickets_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -761,10 +1294,31 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: contacts_department_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX contacts_department_idx ON public.contacts USING btree (department_id);
+
+
+--
+-- Name: contacts_mobile_phone_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX contacts_mobile_phone_idx ON public.contacts USING btree (mobile_phone);
+
+
+--
 -- Name: contacts_organization_mobile_unique_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX contacts_organization_mobile_unique_idx ON public.contacts USING btree (organization_id, mobile_phone);
+
+
+--
+-- Name: default_role_permissions_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX default_role_permissions_created_at_idx ON public.default_role_permissions USING btree (created_at);
 
 
 --
@@ -901,6 +1455,13 @@ CREATE UNIQUE INDEX roles_code_unique_idx ON public.roles USING btree (code);
 
 
 --
+-- Name: roles_immutable_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX roles_immutable_idx ON public.roles USING btree (is_immutable) WHERE (is_immutable = true);
+
+
+--
 -- Name: roles_name_unique_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -971,13 +1532,6 @@ CREATE INDEX ticket_lifecycle_events_type_idx ON public.ticket_lifecycle_events 
 
 
 --
--- Name: tickets_assigned_employee_idx; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX tickets_assigned_employee_idx ON public.tickets USING btree (assigned_employee_id) WHERE (assigned_employee_id IS NOT NULL);
-
-
---
 -- Name: tickets_assigned_user_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1010,6 +1564,13 @@ CREATE INDEX tickets_created_by_idx ON public.tickets USING btree (created_by_us
 --
 
 CREATE INDEX tickets_department_idx ON public.tickets USING btree (department_id);
+
+
+--
+-- Name: tickets_expected_resolution_date_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX tickets_expected_resolution_date_idx ON public.tickets USING btree (expected_resolution_date);
 
 
 --
@@ -1048,10 +1609,31 @@ CREATE INDEX tickets_subject_search_idx ON public.tickets USING btree (lower((su
 
 
 --
+-- Name: tickets_ticket_number_unique_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX tickets_ticket_number_unique_idx ON public.tickets USING btree (ticket_number);
+
+
+--
+-- Name: user_roles_role_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX user_roles_role_id_idx ON public.user_roles USING btree (role_id);
+
+
+--
 -- Name: user_roles_role_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX user_roles_role_idx ON public.user_roles USING btree (role_id);
+
+
+--
+-- Name: user_roles_user_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX user_roles_user_id_idx ON public.user_roles USING btree (user_id);
 
 
 --
@@ -1083,10 +1665,31 @@ CREATE INDEX user_sessions_user_id_idx ON public.user_sessions USING btree (user
 
 
 --
+-- Name: users_department_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX users_department_idx ON public.users USING btree (department_id);
+
+
+--
+-- Name: users_designation_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX users_designation_idx ON public.users USING btree (designation);
+
+
+--
 -- Name: users_email_unique_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX users_email_unique_idx ON public.users USING btree (lower((email)::text));
+
+
+--
+-- Name: users_employee_code_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX users_employee_code_idx ON public.users USING btree (employee_code);
 
 
 --
@@ -1101,6 +1704,20 @@ CREATE INDEX users_last_login_at_idx ON public.users USING btree (last_login_at)
 --
 
 CREATE INDEX users_locked_until_idx ON public.users USING btree (locked_until) WHERE (locked_until IS NOT NULL);
+
+
+--
+-- Name: users_mobile_phone_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX users_mobile_phone_idx ON public.users USING btree (mobile_phone);
+
+
+--
+-- Name: users_organization_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX users_organization_idx ON public.users USING btree (organization_id);
 
 
 --
@@ -1139,10 +1756,17 @@ CREATE TRIGGER permissions_set_updated_at BEFORE UPDATE ON public.permissions FO
 
 
 --
+-- Name: roles roles_prevent_immutable_downgrade; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER roles_prevent_immutable_downgrade BEFORE UPDATE ON public.roles FOR EACH ROW EXECUTE FUNCTION public.prevent_immutable_role_downgrade();
+
+
+--
 -- Name: roles roles_protect_system_roles; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
-CREATE TRIGGER roles_protect_system_roles BEFORE INSERT OR DELETE OR UPDATE ON public.roles FOR EACH ROW EXECUTE FUNCTION public.protect_system_roles();
+CREATE TRIGGER roles_protect_system_roles BEFORE INSERT OR DELETE OR UPDATE ON public.roles FOR EACH ROW EXECUTE FUNCTION public.protect_system_role_identity();
 
 
 --
@@ -1177,7 +1801,14 @@ CREATE TRIGGER tickets_set_updated_at BEFORE UPDATE ON public.tickets FOR EACH R
 -- Name: user_roles user_roles_protect_singleton_system_assignments; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
-CREATE TRIGGER user_roles_protect_singleton_system_assignments BEFORE INSERT OR UPDATE ON public.user_roles FOR EACH ROW EXECUTE FUNCTION public.protect_singleton_system_assignments();
+CREATE TRIGGER user_roles_protect_singleton_system_assignments BEFORE INSERT OR DELETE OR UPDATE ON public.user_roles FOR EACH ROW EXECUTE FUNCTION public.protect_system_role_assignment();
+
+
+--
+-- Name: users users_protect_system_identity; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER users_protect_system_identity BEFORE DELETE OR UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.protect_system_identity_user();
 
 
 --
@@ -1188,11 +1819,27 @@ CREATE TRIGGER users_set_updated_at BEFORE UPDATE ON public.users FOR EACH ROW E
 
 
 --
+-- Name: contacts contacts_department_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.contacts
+    ADD CONSTRAINT contacts_department_fk FOREIGN KEY (department_id) REFERENCES public.departments(id) ON UPDATE CASCADE ON DELETE RESTRICT;
+
+
+--
 -- Name: contacts contacts_organization_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.contacts
     ADD CONSTRAINT contacts_organization_fk FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON UPDATE CASCADE ON DELETE RESTRICT;
+
+
+--
+-- Name: default_role_permissions default_role_permissions_permission_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.default_role_permissions
+    ADD CONSTRAINT default_role_permissions_permission_fk FOREIGN KEY (permission_id) REFERENCES public.permissions(id) ON DELETE CASCADE;
 
 
 --
@@ -1364,8 +2011,24 @@ ALTER TABLE ONLY public.user_sessions
 
 
 --
+-- Name: users users_department_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_department_fk FOREIGN KEY (department_id) REFERENCES public.departments(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: users users_organization_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_organization_fk FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE RESTRICT;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict fOGZJZusBxgvPlgAH9vfu3p5FMslapyek0am2MNvTRyNeZwRhD9ku3u8xcZhyBI
+\unrestrict 1OsyN7S6mESBfICGy16i2xAfHpgVkyiSL3YvLwMCFItZlGp4i96jAL4b7mEh2FG
 
