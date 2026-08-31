@@ -8,61 +8,63 @@ const SCRIPTS_DIRECTORY = path.dirname(CURRENT_FILE);
 const SERVER_DIRECTORY = path.resolve(SCRIPTS_DIRECTORY, "..");
 
 const OUTPUT_DIRECTORY = path.join(
-  SERVER_DIRECTORY,
-  "dist-database",
+    SERVER_DIRECTORY,
+    "dist-database",
 );
 
 const OUTPUT_FILE = path.join(
-  OUTPUT_DIRECTORY,
-  "migrate.mjs",
+    OUTPUT_DIRECTORY,
+    "migrate.mjs",
 );
 
 const main = async () => {
-  await fs.rm(OUTPUT_DIRECTORY, {
-    recursive: true,
-    force: true,
-  });
+    await fs.mkdir(OUTPUT_DIRECTORY, {
+        recursive: true,
+    });
 
-  await fs.mkdir(OUTPUT_DIRECTORY, {
-    recursive: true,
-  });
+    await build({
+        entryPoints: [
+            path.join(
+                SCRIPTS_DIRECTORY,
+                "migrate.js",
+            ),
+        ],
 
-  await build({
-    entryPoints: [
-      path.join(SCRIPTS_DIRECTORY, "migrate.js"),
-    ],
+        outfile: OUTPUT_FILE,
 
-    outfile: OUTPUT_FILE,
+        bundle: true,
 
-    bundle: true,
+        minify: true,
 
-    minify: true,
+        sourcemap: false,
 
-    sourcemap: false,
+        platform: "node",
 
-    platform: "node",
+        target: "node22",
 
-    target: "node22",
+        format: "esm",
 
-    format: "esm",
+        packages: "bundle",
 
-    packages: "bundle",
+        legalComments: "none",
 
-    legalComments: "none",
+        treeShaking: true,
 
-    treeShaking: true,
+        logLevel: "info",
+    });
 
-    logLevel: "info",
-  });
-
-  console.log("");
-  console.log("Migration production build completed.");
-  console.log(`Output: ${OUTPUT_FILE}`);
+    console.log("");
+    console.log(
+        "Migration production build completed.",
+    );
+    console.log(`Output: ${OUTPUT_FILE}`);
 };
 
 main().catch((error) => {
-  console.error("");
-  console.error("Migration production build failed.");
-  console.error(error);
-  process.exitCode = 1;
+    console.error("");
+    console.error(
+        "Migration production build failed.",
+    );
+    console.error(error);
+    process.exitCode = 1;
 });
