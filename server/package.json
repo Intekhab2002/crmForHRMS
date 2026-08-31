@@ -11,8 +11,8 @@
     "build": "node scripts/build.js",
     "build:migration": "node scripts/build-migration.js",
     "db:migrate": "node scripts/migrate.js",
-    "db:seed:admin": "node seeders/001_create_development_admin.js",
-    "db:seed:rbac": "node seeders/002_seed_rbac.js"
+    "db:seed": "node seeders/001_bootstrap_rbac.js",
+    "db:setup": "npm run db:migrate && npm run db:seed"
   },
   "keywords": [],
   "author": "",

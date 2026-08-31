@@ -209,15 +209,20 @@ const env = Object.freeze({
     apiVersion: process.env.API_VERSION,
   }),
 
-  seeding: Object.freeze({
-    adminUsername: process.env.SEED_ADMIN_USERNAME,
-    adminEmail: process.env.SEED_ADMIN_EMAIL,
-    adminPassword: process.env.SEED_ADMIN_PASSWORD,
-  }),
+seeding: Object.freeze({
+    developerUsername:
+        process.env.SEED_DEVELOPER_USERNAME,
 
+    developerEmail:
+        process.env.SEED_DEVELOPER_EMAIL,
+
+    developerPassword:
+        process.env.SEED_DEVELOPER_PASSWORD,
+}),
   ssl: Object.freeze({
+    
     dbSsl: process.env.DB_SSL,
-    rejectUnAuthorised: process.env.DB_SSL_REJECT_UNAUTHORIZED,
+    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED,
     dbSslCA: process.env.DB_SSL_CA
   })
 });
