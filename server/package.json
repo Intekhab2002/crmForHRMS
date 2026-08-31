@@ -8,6 +8,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "build": "node scripts/build.js",
+    "build:migration": "node scripts/build-migration.js",
     "db:migrate": "node scripts/migrate.js",
     "db:seed:admin": "node seeders/001_create_development_admin.js",
     "db:seed:rbac": "node seeders/002_seed_rbac.js"
@@ -16,7 +18,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -39,6 +41,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "eslint": "^10.7.0",
     "nodemon": "^3.1.14",
     "prettier": "^3.9.5"

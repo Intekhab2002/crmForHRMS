@@ -148,6 +148,7 @@ const env = Object.freeze({
     maxSize: process.env.LOG_MAX_SIZE,
     maxFiles: process.env.LOG_MAX_FILES,
     zippedArchive: process.env.LOG_ZIPPED_ARCHIVE === "true",
+    logDirectory: process.env.LOG_DIRECTORY,
   }),
 
   security: Object.freeze({

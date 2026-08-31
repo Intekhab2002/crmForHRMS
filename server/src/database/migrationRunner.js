@@ -37,7 +37,9 @@ const { Pool } = pg;
 const CURRENT_FILE = fileURLToPath(import.meta.url);
 const CURRENT_DIRECTORY = path.dirname(CURRENT_FILE);
 
-const MIGRATION_DIRECTORY = path.resolve(CURRENT_DIRECTORY, "../../migration");
+const MIGRATION_DIRECTORY = process.env.MIGRATION_DIRECTORY
+  ? path.resolve(process.env.MIGRATION_DIRECTORY)
+  : path.resolve(CURRENT_DIRECTORY, "../../migration");
 
 const MIGRATION_FILE_PATTERN = /^(\d+)_([a-zA-Z0-9_-]+)\.sql$/;
 

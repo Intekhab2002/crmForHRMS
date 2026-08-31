@@ -29,7 +29,7 @@
  * ============================================================================
  */
 
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 import appConfig from "../../config/app.config.js";
 

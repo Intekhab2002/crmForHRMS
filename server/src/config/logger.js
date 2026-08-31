@@ -1,16 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 
 import config from "./app.config.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const logsDirectory = path.resolve(
+  config.logging.logDirectory ||
+    path.join(process.cwd(), "logs"),
+);
 
-const logsDirectory = path.join(__dirname, "../logs");
 
 const logFolders = [
   "combined",
