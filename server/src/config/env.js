@@ -222,7 +222,7 @@ seeding: Object.freeze({
 
 ssl: Object.freeze({
     enabled:
-        process.env.DB_SSL === "false",
+        process.env.DB_SSL === "true",
 
     rejectUnauthorized:
         process.env.DB_SSL_REJECT_UNAUTHORIZED === "true",
