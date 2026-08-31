@@ -89,12 +89,12 @@ const transports = [
 
     datePattern: "YYYY-MM-DD",
 
-    maxSize: config.logging.LOG_MAX_SIZE,
+    maxSize: config.logging.maxSize,
 
-    maxFiles: config.logging.LOG_MAX_FILES,
+    maxFiles: config.logging.maxFiles,
 
     zippedArchive:
-      config.logging.LOG_ZIPPED_ARCHIVE === "true",
+      config.logging.zippedArchive === "true",
 
     level: config.logging.level,
 
@@ -110,12 +110,12 @@ const transports = [
 
     level: "error",
 
-    maxSize: config.logging.LOG_MAX_SIZE,
+    maxSize: config.logging.maxSize,
 
-    maxFiles: config.logging.LOG_MAX_FILES,
+    maxFiles: config.logging.maxFiles,
 
     zippedArchive:
-      config.logging.LOG_ZIPPED_ARCHIVE === "true",
+      config.logging.zippedArchive === "true",
 
     format: jsonFormat,
   }),
@@ -129,12 +129,12 @@ const transports = [
 
     level: "http",
 
-    maxSize: config.logging.LOG_MAX_SIZE,
+    maxSize: config.logging.maxSize,
 
-    maxFiles: config.logging.LOG_MAX_FILES,
+    maxFiles: config.logging.maxFiles,
 
     zippedArchive:
-      config.logging.LOG_ZIPPED_ARCHIVE === "true",
+      config.logging.zippedArchive === "true",
 
     format: jsonFormat,
   }),

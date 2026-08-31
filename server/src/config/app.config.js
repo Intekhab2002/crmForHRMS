@@ -13,6 +13,7 @@ const appConfig = Object.freeze({
   security: env.security,
   features: env.features,
   seeding: env.seeding,
+  ssl:env.ssl
 });
 
 export default appConfig;

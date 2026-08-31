@@ -26,7 +26,7 @@ import logger from "../logger.js";
  * @type {import("express").OptionsJson}
  */
 const jsonParserOptions = {
-  limit: appConfig.http.requestBodySize,
+  limit: appConfig.http.jsonLimit,
   strict: true,
   type: "application/json",
 };
@@ -38,7 +38,7 @@ const jsonParserOptions = {
  */
 const urlEncodedParserOptions = {
   extended: true,
-  limit: appConfig.http.requestBodySize,
+  limit: appConfig.http.jsonLimit,
   parameterLimit: appConfig.http.parameterLimit,
 };
 

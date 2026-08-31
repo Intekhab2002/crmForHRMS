@@ -204,7 +204,6 @@ const env = Object.freeze({
 
     corsCredentials: process.env.CORS_CREDENTIALS === "true",
 
-    requestBodySize: process.env.REQUEST_BODY_SIZE,
     parameterLimit: parseNumber(process.env.PARAMETER_LIMIT, "PARAMETER_LIMIT"),
     apiPrefix: process.env.API_PREFIX,
     apiVersion: process.env.API_VERSION,
@@ -215,6 +214,12 @@ const env = Object.freeze({
     adminEmail: process.env.SEED_ADMIN_EMAIL,
     adminPassword: process.env.SEED_ADMIN_PASSWORD,
   }),
+
+  ssl: Object.freeze({
+    dbSsl: process.env.DB_SSL,
+    rejectUnAuthorised: process.env.DB_SSL_REJECT_UNAUTHORIZED,
+    dbSslCA: process.env.DB_SSL_CA
+  })
 });
 
 export default env;
