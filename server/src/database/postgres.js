@@ -30,7 +30,18 @@ const poolConfig = {
     application_name: config.app.name,
     slowQueryThreshold: config.database.dbSlowQueryThreshold,
 
-    ssl: config.ssl.rejectUnauthorized
+   ssl: config.ssl.enabled
+    ? {
+        rejectUnauthorized:
+            config.ssl.rejectUnauthorized,
+
+        ...(config.ssl.ca
+            ? {
+                ca: config.ssl.ca,
+            }
+            : {}),
+    }
+    : false,
         
 };
 

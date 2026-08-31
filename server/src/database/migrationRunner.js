@@ -68,7 +68,7 @@ const createMigrationPool = () =>
 
     connectionTimeoutMillis: 10_000,
 
-    ssl: appConfig.ssl.dbSsl
+    ssl: appConfig.ssl.enabled
       ? {
           rejectUnauthorized: appConfig.ssl.rejectUnauthorized,
         }

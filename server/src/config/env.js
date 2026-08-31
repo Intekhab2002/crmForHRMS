@@ -219,12 +219,17 @@ seeding: Object.freeze({
     developerPassword:
         process.env.SEED_DEVELOPER_PASSWORD,
 }),
-  ssl: Object.freeze({
-    
-    dbSsl: process.env.DB_SSL,
-    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED,
-    dbSslCA: process.env.DB_SSL_CA
-  })
+
+ssl: Object.freeze({
+    enabled:
+        process.env.DB_SSL === "false",
+
+    rejectUnauthorized:
+        process.env.DB_SSL_REJECT_UNAUTHORIZED === "true",
+
+    ca:
+        process.env.DB_SSL_CA?.trim() || null,
+}),
 });
 
 export default env;
