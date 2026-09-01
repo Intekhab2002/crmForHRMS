@@ -154,8 +154,30 @@ const buildErrorPayload = (
  *
  * @returns {import("express").Response}
  */
-const send = (response, statusCode, payload) =>
-  response.status(statusCode).json(payload);
+const send = (response, statusCode, payload) => {
+  if (
+    response &&
+    typeof response.once === "function"
+  ) {
+    response.once("finish", () => {
+      console.log("LOGIN_TRACE_12_RESPONSE_FINISHED");
+    });
+
+    response.once("close", () => {
+      console.log("LOGIN_TRACE_13_RESPONSE_CLOSED");
+    });
+  }
+
+  console.log("LOGIN_TRACE_10_RESPONSE_JSON_CALLING");
+
+  const result = response
+    .status(statusCode)
+    .json(payload);
+
+  console.log("LOGIN_TRACE_11_RESPONSE_JSON_RETURNED");
+
+  return result;
+};
 
 /**
  * ============================================================================

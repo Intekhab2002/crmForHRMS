@@ -112,12 +112,28 @@ async function login(req, res, next) {
       userAgent: getUserAgent(req),
     });
 
-    return ApiResponse.success(
+    console.log("LOGIN_TRACE_08_CONTROLLER_RECEIVED_RESULT");
+
+    if (
+      !authenticationResult ||
+      typeof authenticationResult !== "object"
+    ) {
+      throw new Error(
+        "Authentication service returned an invalid result.",
+      );
+    }
+
+    console.log("LOGIN_TRACE_09_RESPONSE_HELPER_ENTERING");
+
+    const response = ApiResponse.success(
       res,
       authenticationResult,
       "Login successful.",
-      StatusCodes.OK,
     );
+
+    
+
+    return response;
   } catch (error) {
     return next(error);
   }

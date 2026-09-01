@@ -6,20 +6,22 @@
  * Registers HTTP request logging using Morgan integrated with Winston.
  *
  * Responsibilities
- * ----------------
+ * ----------------------------------------------------------------------------
  * • Generate a unique request ID for every request.
  * • Expose request ID via:
  *      - req.requestId
  *      - res.locals.requestId
  * • Log HTTP request metadata.
- * • Forward Morgan logs to Winston.
+ * • Safely log request payloads in non-production environments.
+ * • Never log authentication credentials or token material.
  *
  * This middleware intentionally does NOT:
  * • Perform authentication.
  * • Log business events.
  * • Modify request payloads.
  * • Handle errors.
- * * ============================================================================
+ *
+ * ============================================================================
  */
 
 import crypto from "node:crypto";
@@ -39,6 +41,57 @@ const morganStream = Object.freeze({
 });
 
 /**
+ * Fields that must never appear in HTTP request logs.
+ */
+const SENSITIVE_FIELDS = new Set([
+  "password",
+  "currentPassword",
+  "newPassword",
+  "confirmPassword",
+  "accessToken",
+  "refreshToken",
+  "token",
+  "authorization",
+  "cookie",
+]);
+
+/**
+ * Recursively redact sensitive object properties.
+ *
+ * @param {*} value
+ * @returns {*}
+ */
+function redactSensitiveData(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      redactSensitiveData(item),
+    );
+  }
+
+  if (
+    value === null ||
+    typeof value !== "object"
+  ) {
+    return value;
+  }
+
+  const redacted = {};
+
+  for (const [key, currentValue] of Object.entries(value)) {
+    if (SENSITIVE_FIELDS.has(key)) {
+      redacted[key] = "[REDACTED]";
+      continue;
+    }
+
+    redacted[key] = redactSensitiveData(
+      currentValue,
+    );
+  }
+
+  return redacted;
+}
+
+/**
  * Generates a unique request identifier.
  *
  * @param {import("express").Request} req
@@ -50,7 +103,7 @@ function assignRequestId(req, res, next) {
 
   req.requestId = requestId;
   res.locals.requestId = requestId;
-  
+
   next();
 }
 
@@ -75,20 +128,33 @@ morgan.token("user", (req) => {
 
 /**
  * Morgan token: Request Body
+ *
+ * Request bodies are logged only outside production.
+ *
+ * Sensitive fields are always recursively redacted.
  */
 morgan.token("body", (req) => {
-  if (appConfig.app.isProduction) {
-    return "";
+  if (
+    appConfig.app.environment === "production"
+  ) {
+    return "[REDACTED]";
   }
 
   if (
     !req.body ||
+    typeof req.body !== "object" ||
     Object.keys(req.body).length === 0
   ) {
     return "";
   }
 
-  return JSON.stringify(req.body);
+  try {
+    return JSON.stringify(
+      redactSensitiveData(req.body),
+    );
+  } catch {
+    return "[UNAVAILABLE]";
+  }
 });
 
 /**
@@ -106,6 +172,9 @@ const developmentFormat = [
   "body=:body",
 ].join(" | ");
 
+/**
+ * Production format intentionally excludes request bodies.
+ */
 const productionFormat = [
   ":request-id",
   ":remote-ip",
@@ -123,10 +192,14 @@ const productionFormat = [
  * @returns {import("express").RequestHandler[]}
  */
 export default function configureRequestLogger() {
+  const isProduction =
+    appConfig.app.environment === "production";
+
   return [
     assignRequestId,
+
     morgan(
-      appConfig.app.isProduction
+      isProduction
         ? productionFormat
         : developmentFormat,
       {

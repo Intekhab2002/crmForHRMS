@@ -285,6 +285,28 @@ function sanitizeAuthenticatedUser(user) {
 }
 
 /**
+ * Remove security-sensitive fields from a persisted session before
+ * returning it to an API consumer.
+ *
+ * IMPORTANT:
+ * refresh_token_hash is an authentication secret derivative and must
+ * never be exposed through the API response.
+ *
+ * @param {object|null} session
+ *
+ * @returns {object|null}
+ */
+function sanitizeAuthenticatedSession(session) {
+  if (!session) {
+    return null;
+  }
+
+  const { refresh_token_hash, ...safeSession } = session;
+
+  return safeSession;
+}
+
+/**
  * ============================================================================
  * Login
  * ============================================================================
@@ -379,6 +401,7 @@ async function login({
       AUTH_ERROR_CODES.INVALID_CREDENTIALS,
     );
   }
+  console.log("LOGIN_TRACE_01_PASSWORD_VERIFIED");
 
   /**
    * ------------------------------------------------------------------------
@@ -407,6 +430,8 @@ async function login({
     userAgent: metadata.userAgent,
   });
 
+  console.log("LOGIN_TRACE_02_SESSION_CREATED");
+
   /**
    * ------------------------------------------------------------------------
    * Generate access token.
@@ -418,7 +443,7 @@ async function login({
     userId: user.id,
     sessionId: sessionResult.session.id,
   });
-
+  console.log("LOGIN_TRACE_03_ACCESS_TOKEN_GENERATED");
   /**
    * ------------------------------------------------------------------------
    * Update successful-login metadata.
@@ -426,19 +451,58 @@ async function login({
    */
   await authRepository.updateLastLogin(user.id, metadata.ipAddress);
 
-  const authorization = await rbacRepository.findAuthorizationContext(user.id);
+  console.log("LOGIN_TRACE_04_LAST_LOGIN_UPDATED");
 
-  return {
+  /**
+   * ------------------------------------------------------------------------
+   * Load authorization roles.
+   * ------------------------------------------------------------------------
+   */
+
+  const authorization = await rbacRepository.findAuthorizationContext(user.id);
+  console.log("LOGIN_TRACE_05_RBAC_LOADED");
+
+  /**
+   * ------------------------------------------------------------------------
+   * Validate RBAC result before constructing response.
+   * ------------------------------------------------------------------------
+   */
+  if (!authorization || typeof authorization !== "object") {
+    throw new Error("Authentication authorization context is invalid.");
+  }
+
+  if (!Array.isArray(authorization.roles)) {
+    throw new Error("Authentication authorization roles are invalid.");
+  }
+
+  console.log("LOGIN_TRACE_06_RESPONSE_OBJECT_BUILDING");
+  /**
+   * ------------------------------------------------------------------------
+   * Build the response DTO explicitly.
+   *
+   * Do NOT return sessionResult.session directly.
+   * ------------------------------------------------------------------------
+   */
+
+  const authenticationResult = {
     user: sanitizeAuthenticatedUser(user),
+
     roles: authorization.roles,
-    permissions: authorization.permissions,
+
+    permissions: Array.isArray(authorization.permissions)
+      ? authorization.permissions
+      : [],
 
     accessToken,
 
     refreshToken: sessionResult.refreshToken,
 
-    session: sessionResult.session,
+    session: sanitizeAuthenticatedSession(sessionResult.session),
   };
+
+  console.log("LOGIN_TRACE_07_SERVICE_RETURNING");
+
+  return authenticationResult;
 }
 
 /**
@@ -480,7 +544,9 @@ async function refresh({ refreshToken, ipAddress = null, userAgent = null }) {
     sessionId: result.session.id,
   });
 
-  const authorization = await rbacRepository.findAuthorizationContext(result.user.id);
+  const authorization = await rbacRepository.findAuthorizationContext(
+    result.user.id,
+  );
 
   return {
     user: sanitizeAuthenticatedUser(result.user),
