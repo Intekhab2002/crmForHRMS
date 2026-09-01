@@ -66,9 +66,7 @@ import passwordService from "../src/modules/auth/auth.password.js";
 import authConstants from "../src/modules/auth/auth.constants.js";
 import logger from "../src/config/logger.js";
 
-const {
-    AUTH_ACCOUNT_STATUS,
-} = authConstants;
+const { AUTH_ACCOUNT_STATUS } = authConstants;
 
 /**
  * ============================================================================
@@ -84,19 +82,19 @@ const {
  */
 
 const SYSTEM_ROLES = Object.freeze([
-    Object.freeze({
-        code: "developer",
-        name: "Developer",
-        description:
-            "Protected highest-authority system role used for system administration, bootstrap and recovery.",
-    }),
+  Object.freeze({
+    code: "developer",
+    name: "Developer",
+    description:
+      "Protected highest-authority system role used for system administration, bootstrap and recovery.",
+  }),
 
-    Object.freeze({
-        code: "superadmin",
-        name: "Super Administrator",
-        description:
-            "Protected application administrator role managed by the Developer.",
-    }),
+  Object.freeze({
+    code: "superadmin",
+    name: "Super Administrator",
+    description:
+      "Protected application administrator role managed by the Developer.",
+  }),
 ]);
 
 /**
@@ -110,321 +108,321 @@ const SYSTEM_ROLES = Object.freeze([
  */
 
 const SYSTEM_PERMISSIONS = Object.freeze([
-    // -------------------------------------------------------------------------
-    // User Management
-    // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // User Management
+  // -------------------------------------------------------------------------
 
-    Object.freeze({
-        code: "user:read",
-        name: "Read Users",
-        description: "View user records.",
-        resource: "user",
-        action: "read",
-    }),
+  Object.freeze({
+    code: "user:read",
+    name: "Read Users",
+    description: "View user records.",
+    resource: "user",
+    action: "read",
+  }),
 
-    Object.freeze({
-        code: "user:create",
-        name: "Create Users",
-        description: "Create new users.",
-        resource: "user",
-        action: "create",
-    }),
+  Object.freeze({
+    code: "user:create",
+    name: "Create Users",
+    description: "Create new users.",
+    resource: "user",
+    action: "create",
+  }),
 
-    Object.freeze({
-        code: "user:update",
-        name: "Update Users",
-        description: "Update existing users.",
-        resource: "user",
-        action: "update",
-    }),
+  Object.freeze({
+    code: "user:update",
+    name: "Update Users",
+    description: "Update existing users.",
+    resource: "user",
+    action: "update",
+  }),
 
-    Object.freeze({
-        code: "user:delete",
-        name: "Delete Users",
-        description: "Delete users where permitted by business rules.",
-        resource: "user",
-        action: "delete",
-    }),
+  Object.freeze({
+    code: "user:delete",
+    name: "Delete Users",
+    description: "Delete users where permitted by business rules.",
+    resource: "user",
+    action: "delete",
+  }),
 
-    // -------------------------------------------------------------------------
-    // Role Management
-    // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Role Management
+  // -------------------------------------------------------------------------
 
-    Object.freeze({
-        code: "role:read",
-        name: "Read Roles",
-        description: "View roles.",
-        resource: "role",
-        action: "read",
-    }),
+  Object.freeze({
+    code: "role:read",
+    name: "Read Roles",
+    description: "View roles.",
+    resource: "role",
+    action: "read",
+  }),
 
-    Object.freeze({
-        code: "role:create",
-        name: "Create Roles",
-        description: "Create normal application roles.",
-        resource: "role",
-        action: "create",
-    }),
+  Object.freeze({
+    code: "role:create",
+    name: "Create Roles",
+    description: "Create normal application roles.",
+    resource: "role",
+    action: "create",
+  }),
 
-    Object.freeze({
-        code: "role:update",
-        name: "Update Roles",
-        description: "Update normal application roles.",
-        resource: "role",
-        action: "update",
-    }),
+  Object.freeze({
+    code: "role:update",
+    name: "Update Roles",
+    description: "Update normal application roles.",
+    resource: "role",
+    action: "update",
+  }),
 
-    Object.freeze({
-        code: "role:delete",
-        name: "Delete Roles",
-        description: "Delete normal application roles where permitted.",
-        resource: "role",
-        action: "delete",
-    }),
+  Object.freeze({
+    code: "role:delete",
+    name: "Delete Roles",
+    description: "Delete normal application roles where permitted.",
+    resource: "role",
+    action: "delete",
+  }),
 
-    // -------------------------------------------------------------------------
-    // Permission Management
-    // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Permission Management
+  // -------------------------------------------------------------------------
 
-    Object.freeze({
-        code: "permission:read",
-        name: "Read Permissions",
-        description: "View permissions.",
-        resource: "permission",
-        action: "read",
-    }),
+  Object.freeze({
+    code: "permission:read",
+    name: "Read Permissions",
+    description: "View permissions.",
+    resource: "permission",
+    action: "read",
+  }),
 
-    Object.freeze({
-        code: "permission:create",
-        name: "Create Permissions",
-        description: "Create application permissions where permitted.",
-        resource: "permission",
-        action: "create",
-    }),
+  Object.freeze({
+    code: "permission:create",
+    name: "Create Permissions",
+    description: "Create application permissions where permitted.",
+    resource: "permission",
+    action: "create",
+  }),
 
-    Object.freeze({
-        code: "permission:update",
-        name: "Update Permissions",
-        description: "Update application permissions where permitted.",
-        resource: "permission",
-        action: "update",
-    }),
+  Object.freeze({
+    code: "permission:update",
+    name: "Update Permissions",
+    description: "Update application permissions where permitted.",
+    resource: "permission",
+    action: "update",
+  }),
 
-    Object.freeze({
-        code: "permission:delete",
-        name: "Delete Permissions",
-        description: "Delete application permissions where permitted.",
-        resource: "permission",
-        action: "delete",
-    }),
+  Object.freeze({
+    code: "permission:delete",
+    name: "Delete Permissions",
+    description: "Delete application permissions where permitted.",
+    resource: "permission",
+    action: "delete",
+  }),
 
-    // -------------------------------------------------------------------------
-    // Organization Management
-    // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Organization Management
+  // -------------------------------------------------------------------------
 
-    Object.freeze({
-        code: "organization:read",
-        name: "Read Organizations",
-        description: "View organization records.",
-        resource: "organization",
-        action: "read",
-    }),
+  Object.freeze({
+    code: "organization:read",
+    name: "Read Organizations",
+    description: "View organization records.",
+    resource: "organization",
+    action: "read",
+  }),
 
-    Object.freeze({
-        code: "organization:create",
-        name: "Create Organizations",
-        description: "Create organizations.",
-        resource: "organization",
-        action: "create",
-    }),
+  Object.freeze({
+    code: "organization:create",
+    name: "Create Organizations",
+    description: "Create organizations.",
+    resource: "organization",
+    action: "create",
+  }),
 
-    Object.freeze({
-        code: "organization:update",
-        name: "Update Organizations",
-        description: "Update organization records.",
-        resource: "organization",
-        action: "update",
-    }),
+  Object.freeze({
+    code: "organization:update",
+    name: "Update Organizations",
+    description: "Update organization records.",
+    resource: "organization",
+    action: "update",
+  }),
 
-    Object.freeze({
-        code: "organization:delete",
-        name: "Delete Organizations",
-        description: "Deactivate organizations where permitted.",
-        resource: "organization",
-        action: "delete",
-    }),
+  Object.freeze({
+    code: "organization:delete",
+    name: "Delete Organizations",
+    description: "Deactivate organizations where permitted.",
+    resource: "organization",
+    action: "delete",
+  }),
 
-    // -------------------------------------------------------------------------
-    // Department Management
-    // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Department Management
+  // -------------------------------------------------------------------------
 
-    Object.freeze({
-        code: "department:read",
-        name: "Read Departments",
-        description: "View department records.",
-        resource: "department",
-        action: "read",
-    }),
+  Object.freeze({
+    code: "department:read",
+    name: "Read Departments",
+    description: "View department records.",
+    resource: "department",
+    action: "read",
+  }),
 
-    Object.freeze({
-        code: "department:create",
-        name: "Create Departments",
-        description: "Create departments.",
-        resource: "department",
-        action: "create",
-    }),
+  Object.freeze({
+    code: "department:create",
+    name: "Create Departments",
+    description: "Create departments.",
+    resource: "department",
+    action: "create",
+  }),
 
-    Object.freeze({
-        code: "department:update",
-        name: "Update Departments",
-        description: "Update department records.",
-        resource: "department",
-        action: "update",
-    }),
+  Object.freeze({
+    code: "department:update",
+    name: "Update Departments",
+    description: "Update department records.",
+    resource: "department",
+    action: "update",
+  }),
 
-    Object.freeze({
-        code: "department:delete",
-        name: "Delete Departments",
-        description: "Deactivate departments where permitted.",
-        resource: "department",
-        action: "delete",
-    }),
+  Object.freeze({
+    code: "department:delete",
+    name: "Delete Departments",
+    description: "Deactivate departments where permitted.",
+    resource: "department",
+    action: "delete",
+  }),
 
-    // -------------------------------------------------------------------------
-    // Employee Management
-    // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Employee Management
+  // -------------------------------------------------------------------------
 
-    Object.freeze({
-        code: "employee:read",
-        name: "Read Employees",
-        description: "View employee records.",
-        resource: "employee",
-        action: "read",
-    }),
+  Object.freeze({
+    code: "employee:read",
+    name: "Read Employees",
+    description: "View employee records.",
+    resource: "employee",
+    action: "read",
+  }),
 
-    Object.freeze({
-        code: "employee:create",
-        name: "Create Employees",
-        description: "Create employee records.",
-        resource: "employee",
-        action: "create",
-    }),
+  Object.freeze({
+    code: "employee:create",
+    name: "Create Employees",
+    description: "Create employee records.",
+    resource: "employee",
+    action: "create",
+  }),
 
-    Object.freeze({
-        code: "employee:update",
-        name: "Update Employees",
-        description: "Update employee records.",
-        resource: "employee",
-        action: "update",
-    }),
+  Object.freeze({
+    code: "employee:update",
+    name: "Update Employees",
+    description: "Update employee records.",
+    resource: "employee",
+    action: "update",
+  }),
 
-    Object.freeze({
-        code: "employee:delete",
-        name: "Delete Employees",
-        description: "Deactivate employee records.",
-        resource: "employee",
-        action: "delete",
-    }),
+  Object.freeze({
+    code: "employee:delete",
+    name: "Delete Employees",
+    description: "Deactivate employee records.",
+    resource: "employee",
+    action: "delete",
+  }),
 
-    // -------------------------------------------------------------------------
-    // Ticket Management
-    // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Ticket Management
+  // -------------------------------------------------------------------------
 
-    Object.freeze({
-        code: "ticket:read",
-        name: "Read Tickets",
-        description: "View tickets.",
-        resource: "ticket",
-        action: "read",
-    }),
+  Object.freeze({
+    code: "ticket:read",
+    name: "Read Tickets",
+    description: "View tickets.",
+    resource: "ticket",
+    action: "read",
+  }),
 
-    Object.freeze({
-        code: "ticket:create",
-        name: "Create Tickets",
-        description: "Create tickets.",
-        resource: "ticket",
-        action: "create",
-    }),
+  Object.freeze({
+    code: "ticket:create",
+    name: "Create Tickets",
+    description: "Create tickets.",
+    resource: "ticket",
+    action: "create",
+  }),
 
-    Object.freeze({
-        code: "ticket:update",
-        name: "Update Tickets",
-        description: "Update tickets.",
-        resource: "ticket",
-        action: "update",
-    }),
+  Object.freeze({
+    code: "ticket:update",
+    name: "Update Tickets",
+    description: "Update tickets.",
+    resource: "ticket",
+    action: "update",
+  }),
 
-    Object.freeze({
-        code: "ticket:assign",
-        name: "Assign Tickets",
-        description: "Assign and reassign tickets.",
-        resource: "ticket",
-        action: "assign",
-    }),
+  Object.freeze({
+    code: "ticket:assign",
+    name: "Assign Tickets",
+    description: "Assign and reassign tickets.",
+    resource: "ticket",
+    action: "assign",
+  }),
 
-    Object.freeze({
-        code: "ticket:resolve",
-        name: "Resolve Tickets",
-        description: "Resolve tickets.",
-        resource: "ticket",
-        action: "resolve",
-    }),
+  Object.freeze({
+    code: "ticket:resolve",
+    name: "Resolve Tickets",
+    description: "Resolve tickets.",
+    resource: "ticket",
+    action: "resolve",
+  }),
 
-    Object.freeze({
-        code: "ticket:close",
-        name: "Close Tickets",
-        description: "Close tickets.",
-        resource: "ticket",
-        action: "close",
-    }),
+  Object.freeze({
+    code: "ticket:close",
+    name: "Close Tickets",
+    description: "Close tickets.",
+    resource: "ticket",
+    action: "close",
+  }),
 
-    // -------------------------------------------------------------------------
-    // SLA Management
-    // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // SLA Management
+  // -------------------------------------------------------------------------
 
-    Object.freeze({
-        code: "sla:read",
-        name: "Read SLA",
-        description: "View SLA configuration and information.",
-        resource: "sla",
-        action: "read",
-    }),
+  Object.freeze({
+    code: "sla:read",
+    name: "Read SLA",
+    description: "View SLA configuration and information.",
+    resource: "sla",
+    action: "read",
+  }),
 
-    Object.freeze({
-        code: "sla:create",
-        name: "Create SLA",
-        description: "Create SLA policies.",
-        resource: "sla",
-        action: "create",
-    }),
+  Object.freeze({
+    code: "sla:create",
+    name: "Create SLA",
+    description: "Create SLA policies.",
+    resource: "sla",
+    action: "create",
+  }),
 
-    Object.freeze({
-        code: "sla:update",
-        name: "Update SLA",
-        description: "Update SLA policies.",
-        resource: "sla",
-        action: "update",
-    }),
+  Object.freeze({
+    code: "sla:update",
+    name: "Update SLA",
+    description: "Update SLA policies.",
+    resource: "sla",
+    action: "update",
+  }),
 
-    Object.freeze({
-        code: "sla:delete",
-        name: "Delete SLA",
-        description: "Delete SLA policies where permitted.",
-        resource: "sla",
-        action: "delete",
-    }),
+  Object.freeze({
+    code: "sla:delete",
+    name: "Delete SLA",
+    description: "Delete SLA policies where permitted.",
+    resource: "sla",
+    action: "delete",
+  }),
 
-    // -------------------------------------------------------------------------
-    // Dashboard
-    // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Dashboard
+  // -------------------------------------------------------------------------
 
-    Object.freeze({
-        code: "dashboard:read",
-        name: "Read Dashboard",
-        description: "View role-authorized dashboards.",
-        resource: "dashboard",
-        action: "read",
-    }),
+  Object.freeze({
+    code: "dashboard:read",
+    name: "Read Dashboard",
+    description: "View role-authorized dashboards.",
+    resource: "dashboard",
+    action: "read",
+  }),
 ]);
 
 /**
@@ -444,11 +442,11 @@ const SYSTEM_PERMISSIONS = Object.freeze([
  */
 
 const SUPERADMIN_PERMISSION_CODES = Object.freeze(
-    SYSTEM_PERMISSIONS.map(({ code }) => code),
+  SYSTEM_PERMISSIONS.map(({ code }) => code),
 );
 
 const DEVELOPER_PERMISSION_CODES = Object.freeze(
-    SYSTEM_PERMISSIONS.map(({ code }) => code),
+  SYSTEM_PERMISSIONS.map(({ code }) => code),
 );
 
 /**
@@ -462,44 +460,35 @@ const DEVELOPER_PERMISSION_CODES = Object.freeze(
  */
 
 function getSeedConfiguration() {
-    const username =
-        appConfig.seeding?.developerUsername?.trim();
+  const username = appConfig.seeding?.developerUsername?.trim();
 
-    const email =
-        appConfig.seeding?.developerEmail?.trim();
+  const email = appConfig.seeding?.developerEmail?.trim();
 
-    const password =
-        appConfig.seeding?.developerPassword;
+  const password = appConfig.seeding?.developerPassword;
 
-    if (!username) {
-        throw new Error(
-            "SEED_DEVELOPER_USERNAME is required.",
-        );
-    }
+  if (!username) {
+    throw new Error("SEED_DEVELOPER_USERNAME is required.");
+  }
 
-    if (!email) {
-        throw new Error(
-            "SEED_DEVELOPER_EMAIL is required.",
-        );
-    }
+  if (!email) {
+    throw new Error("SEED_DEVELOPER_EMAIL is required.");
+  }
 
-    if (!password) {
-        throw new Error(
-            "SEED_DEVELOPER_PASSWORD is required.",
-        );
-    }
+  if (!password) {
+    throw new Error("SEED_DEVELOPER_PASSWORD is required.");
+  }
 
-    if (password.length < 12) {
-        throw new Error(
-            "SEED_DEVELOPER_PASSWORD must contain at least 12 characters.",
-        );
-    }
+  if (password.length < 12) {
+    throw new Error(
+      "SEED_DEVELOPER_PASSWORD must contain at least 12 characters.",
+    );
+  }
 
-    return Object.freeze({
-        username,
-        email,
-        password,
-    });
+  return Object.freeze({
+    username,
+    email,
+    password,
+  });
 }
 
 /**
@@ -509,14 +498,14 @@ function getSeedConfiguration() {
  */
 
 function validateEnvironment() {
-    if (
-        appConfig.app.environment !== "development" &&
-        appConfig.app.environment !== "production"
-    ) {
-        throw new Error(
-            "RBAC bootstrap seeder can only run in development or production environments.",
-        );
-    }
+  if (
+    appConfig.app.environment !== "development" &&
+    appConfig.app.environment !== "production"
+  ) {
+    throw new Error(
+      "RBAC bootstrap seeder can only run in development or production environments.",
+    );
+  }
 }
 
 /**
@@ -526,70 +515,45 @@ function validateEnvironment() {
  */
 
 function validateRbacDefinitions() {
-    const roleCodes = new Set(
-        SYSTEM_ROLES.map(({ code }) => code),
-    );
+  const roleCodes = new Set(SYSTEM_ROLES.map(({ code }) => code));
 
-    if (roleCodes.size !== SYSTEM_ROLES.length) {
-        throw new Error(
-            "Duplicate system role code detected.",
-        );
+  if (roleCodes.size !== SYSTEM_ROLES.length) {
+    throw new Error("Duplicate system role code detected.");
+  }
+
+  if (!roleCodes.has("developer") || !roleCodes.has("superadmin")) {
+    throw new Error("Developer and Super Admin system roles are mandatory.");
+  }
+
+  if (SYSTEM_ROLES.length !== 2) {
+    throw new Error("Bootstrap seeder must contain exactly two system roles.");
+  }
+
+  const permissionCodes = new Set(SYSTEM_PERMISSIONS.map(({ code }) => code));
+
+  if (permissionCodes.size !== SYSTEM_PERMISSIONS.length) {
+    throw new Error("Duplicate system permission code detected.");
+  }
+
+  for (const permission of SYSTEM_PERMISSIONS) {
+    if (permission.code !== `${permission.resource}:${permission.action}`) {
+      throw new Error(
+        `Permission code/resource/action mismatch: ${permission.code}`,
+      );
     }
+  }
 
-    if (
-        !roleCodes.has("developer") ||
-        !roleCodes.has("superadmin")
-    ) {
-        throw new Error(
-            "Developer and Super Admin system roles are mandatory.",
-        );
+  for (const permissionCode of SUPERADMIN_PERMISSION_CODES) {
+    if (!permissionCodes.has(permissionCode)) {
+      throw new Error(`Unknown Super Admin permission: ${permissionCode}`);
     }
+  }
 
-    if (SYSTEM_ROLES.length !== 2) {
-        throw new Error(
-            "Bootstrap seeder must contain exactly two system roles.",
-        );
+  for (const permissionCode of DEVELOPER_PERMISSION_CODES) {
+    if (!permissionCodes.has(permissionCode)) {
+      throw new Error(`Unknown Developer permission: ${permissionCode}`);
     }
-
-    const permissionCodes = new Set(
-        SYSTEM_PERMISSIONS.map(({ code }) => code),
-    );
-
-    if (
-        permissionCodes.size !==
-        SYSTEM_PERMISSIONS.length
-    ) {
-        throw new Error(
-            "Duplicate system permission code detected.",
-        );
-    }
-
-    for (const permission of SYSTEM_PERMISSIONS) {
-        if (
-            permission.code !==
-            `${permission.resource}:${permission.action}`
-        ) {
-            throw new Error(
-                `Permission code/resource/action mismatch: ${permission.code}`,
-            );
-        }
-    }
-
-    for (const permissionCode of SUPERADMIN_PERMISSION_CODES) {
-        if (!permissionCodes.has(permissionCode)) {
-            throw new Error(
-                `Unknown Super Admin permission: ${permissionCode}`,
-            );
-        }
-    }
-
-    for (const permissionCode of DEVELOPER_PERMISSION_CODES) {
-        if (!permissionCodes.has(permissionCode)) {
-            throw new Error(
-                `Unknown Developer permission: ${permissionCode}`,
-            );
-        }
-    }
+  }
 }
 
 /**
@@ -599,8 +563,8 @@ function validateRbacDefinitions() {
  */
 
 async function ensureSystemRole(executor, role) {
-    const existingResult = await executor.query(
-        `
+  const existingResult = await executor.query(
+    `
             SELECT
                 id,
                 code,
@@ -613,12 +577,12 @@ async function ensureSystemRole(executor, role) {
             WHERE code = $1
             LIMIT 1
         `,
-        [role.code],
-    );
+    [role.code],
+  );
 
-    if (existingResult.rowCount === 0) {
-        const insertResult = await executor.query(
-            `
+  if (existingResult.rowCount === 0) {
+    const insertResult = await executor.query(
+      `
                 INSERT INTO roles (
                     id,
                     code,
@@ -646,36 +610,31 @@ async function ensureSystemRole(executor, role) {
                     is_immutable,
                     is_active
             `,
-            [
-                randomUUID(),
-                role.code,
-                role.name,
-                role.description,
-            ],
-        );
+      [randomUUID(), role.code, role.name, role.description],
+    );
 
-        return insertResult.rows[0];
-    }
+    return insertResult.rows[0];
+  }
 
-    const existingRole = existingResult.rows[0];
+  const existingRole = existingResult.rows[0];
 
-    if (
-        existingRole.is_system !== true ||
-        existingRole.is_immutable !== true ||
-        existingRole.is_active !== true
-    ) {
-        throw new Error(
-            `Protected role '${role.code}' exists in an invalid state.`,
-        );
-    }
+  if (
+    existingRole.is_system !== true ||
+    existingRole.is_immutable !== true ||
+    existingRole.is_active !== true
+  ) {
+    throw new Error(
+      `Protected role '${role.code}' exists in an invalid state.`,
+    );
+  }
 
-    if (existingRole.name !== role.name) {
-        throw new Error(
-            `Protected role '${role.code}' has an invalid name '${existingRole.name}'.`,
-        );
-    }
+  if (existingRole.name !== role.name) {
+    throw new Error(
+      `Protected role '${role.code}' has an invalid name '${existingRole.name}'.`,
+    );
+  }
 
-    return existingRole;
+  return existingRole;
 }
 
 /**
@@ -684,12 +643,9 @@ async function ensureSystemRole(executor, role) {
  * ============================================================================
  */
 
-async function ensureSystemPermission(
-    executor,
-    permission,
-) {
-    const result = await executor.query(
-        `
+async function ensureSystemPermission(executor, permission) {
+  const result = await executor.query(
+    `
             INSERT INTO permissions (
                 id,
                 code,
@@ -729,17 +685,17 @@ async function ensureSystemPermission(
                 is_system,
                 is_active
         `,
-        [
-            randomUUID(),
-            permission.code,
-            permission.name,
-            permission.description,
-            permission.resource,
-            permission.action,
-        ],
-    );
+    [
+      randomUUID(),
+      permission.code,
+      permission.name,
+      permission.description,
+      permission.resource,
+      permission.action,
+    ],
+  );
 
-    return result.rows[0];
+  return result.rows[0];
 }
 
 /**
@@ -748,13 +704,9 @@ async function ensureSystemPermission(
  * ============================================================================
  */
 
-async function ensureRolePermission(
-    executor,
-    roleId,
-    permissionId,
-) {
-    await executor.query(
-        `
+async function ensureRolePermission(executor, roleId, permissionId) {
+  await executor.query(
+    `
             INSERT INTO role_permissions (
                 role_id,
                 permission_id
@@ -766,11 +718,8 @@ async function ensureRolePermission(
             )
             DO NOTHING
         `,
-        [
-            roleId,
-            permissionId,
-        ],
-    );
+    [roleId, permissionId],
+  );
 }
 
 /**
@@ -779,12 +728,9 @@ async function ensureRolePermission(
  * ============================================================================
  */
 
-async function ensureDeveloperUser(
-    executor,
-    seedConfiguration,
-) {
-    const existingResult = await executor.query(
-        `
+async function ensureDeveloperUser(executor, seedConfiguration) {
+  const existingResult = await executor.query(
+    `
             SELECT
                 id,
                 username,
@@ -802,46 +748,35 @@ async function ensureDeveloperUser(
                 OR LOWER(email) = LOWER($2)
             LIMIT 1
         `,
-        [
-            seedConfiguration.username,
-            seedConfiguration.email,
-        ],
-    );
+    [seedConfiguration.username, seedConfiguration.email],
+  );
 
-    if (existingResult.rowCount > 0) {
-        const existingUser =
-            existingResult.rows[0];
+  if (existingResult.rowCount > 0) {
+    const existingUser = existingResult.rows[0];
 
-        if (
-            existingUser.username.toLowerCase() !==
-                seedConfiguration.username.toLowerCase() ||
-            existingUser.email.toLowerCase() !==
-                seedConfiguration.email.toLowerCase()
-        ) {
-            throw new Error(
-                "Developer bootstrap username/email conflicts with an existing user.",
-            );
-        }
-
-        if (
-            existingUser.status !==
-            AUTH_ACCOUNT_STATUS.ACTIVE
-        ) {
-            throw new Error(
-                "Existing Developer bootstrap user is not active.",
-            );
-        }
-
-        return existingUser;
+    if (
+      existingUser.username.toLowerCase() !==
+        seedConfiguration.username.toLowerCase() ||
+      existingUser.email.toLowerCase() !== seedConfiguration.email.toLowerCase()
+    ) {
+      throw new Error(
+        "Developer bootstrap username/email conflicts with an existing user.",
+      );
     }
 
-    const passwordHash =
-        await passwordService.hashPassword(
-            seedConfiguration.password,
-        );
+    if (existingUser.status !== AUTH_ACCOUNT_STATUS.ACTIVE) {
+      throw new Error("Existing Developer bootstrap user is not active.");
+    }
 
-    const result = await executor.query(
-        `
+    return existingUser;
+  }
+
+  const passwordHash = await passwordService.hashPassword(
+    seedConfiguration.password,
+  );
+
+  const result = await executor.query(
+    `
             INSERT INTO users (
                 id,
                 username,
@@ -875,16 +810,16 @@ async function ensureDeveloperUser(
                 password_changed_at,
                 deactivated_at
         `,
-        [
-            randomUUID(),
-            seedConfiguration.username,
-            seedConfiguration.email,
-            passwordHash,
-            AUTH_ACCOUNT_STATUS.ACTIVE,
-        ],
-    );
+    [
+      randomUUID(),
+      seedConfiguration.username,
+      seedConfiguration.email,
+      passwordHash,
+      AUTH_ACCOUNT_STATUS.ACTIVE,
+    ],
+  );
 
-    return result.rows[0];
+  return result.rows[0];
 }
 
 /**
@@ -901,24 +836,21 @@ async function ensureDeveloperUser(
  */
 
 async function synchronizeDeveloperRole(
-    executor,
-    developerUserId,
-    developerRoleId,
+  executor,
+  developerUserId,
+  developerRoleId,
 ) {
-    await executor.query(
-        `
+  await executor.query(
+    `
             DELETE FROM user_roles
             WHERE user_id = $1
               AND role_id <> $2
         `,
-        [
-            developerUserId,
-            developerRoleId,
-        ],
-    );
+    [developerUserId, developerRoleId],
+  );
 
-    await executor.query(
-        `
+  await executor.query(
+    `
             INSERT INTO user_roles (
                 user_id,
                 role_id
@@ -930,11 +862,8 @@ async function synchronizeDeveloperRole(
             )
             DO NOTHING
         `,
-        [
-            developerUserId,
-            developerRoleId,
-        ],
-    );
+    [developerUserId, developerRoleId],
+  );
 }
 
 /**
@@ -944,14 +873,13 @@ async function synchronizeDeveloperRole(
  */
 
 async function verifyBootstrapState(
-    executor,
-    developerUser,
-    developerRole,
-    superadminRole,
+  executor,
+  developerUser,
+  developerRole,
+  superadminRole,
 ) {
-    const developerAssignment =
-        await executor.query(
-            `
+  const developerAssignment = await executor.query(
+    `
                 SELECT COUNT(*)::INTEGER AS count
                 FROM user_roles ur
                 INNER JOIN roles r
@@ -959,56 +887,43 @@ async function verifyBootstrapState(
                 WHERE ur.user_id = $1
                   AND r.code = 'developer'
             `,
-            [developerUser.id],
-        );
+    [developerUser.id],
+  );
 
-    if (
-        developerAssignment.rows[0].count !== 1
-    ) {
-        throw new Error(
-            "Developer bootstrap role assignment validation failed.",
-        );
-    }
+  if (developerAssignment.rows[0].count !== 1) {
+    throw new Error("Developer bootstrap role assignment validation failed.");
+  }
 
-    const developerRoleAssignments =
-        await executor.query(
-            `
+  const developerRoleAssignments = await executor.query(
+    `
                 SELECT COUNT(*)::INTEGER AS count
                 FROM user_roles ur
                 WHERE ur.role_id = $1
             `,
-            [developerRole.id],
-        );
+    [developerRole.id],
+  );
 
-    if (
-        developerRoleAssignments.rows[0].count !== 1
-    ) {
-        throw new Error(
-            "Developer role must have exactly one assigned user.",
-        );
-    }
+  if (developerRoleAssignments.rows[0].count !== 1) {
+    throw new Error("Developer role must have exactly one assigned user.");
+  }
 
-    const superadminAssignments =
-        await executor.query(
-            `
+  const superadminAssignments = await executor.query(
+    `
                 SELECT COUNT(*)::INTEGER AS count
                 FROM user_roles ur
                 WHERE ur.role_id = $1
             `,
-            [superadminRole.id],
-        );
+    [superadminRole.id],
+  );
 
-    if (
-        superadminAssignments.rows[0].count !== 0
-    ) {
-        throw new Error(
-            "Super Admin role must not have an initial user assignment.",
-        );
-    }
+  if (superadminAssignments.rows[0].count !== 0) {
+    throw new Error(
+      "Super Admin role must not have an initial user assignment.",
+    );
+  }
 
-    const roleCountResult =
-        await executor.query(
-            `
+  const roleCountResult = await executor.query(
+    `
                 SELECT COUNT(*)::INTEGER AS count
                 FROM roles
                 WHERE code IN (
@@ -1016,24 +931,17 @@ async function verifyBootstrapState(
                     'superadmin'
                 )
             `,
-        );
+  );
 
-    if (
-        roleCountResult.rows[0].count !== 2
-    ) {
-        throw new Error(
-            "Developer and Super Admin system-role validation failed.",
-        );
-    }
+  if (roleCountResult.rows[0].count !== 2) {
+    throw new Error("Developer and Super Admin system-role validation failed.");
+  }
 
-    logger.info(
-        "RBAC bootstrap state validated successfully.",
-        {
-            developerUserId: developerUser.id,
-            developerRoleId: developerRole.id,
-            superadminRoleId: superadminRole.id,
-        },
-    );
+  logger.info("RBAC bootstrap state validated successfully.", {
+    developerUserId: developerUser.id,
+    developerRoleId: developerRole.id,
+    superadminRoleId: superadminRole.id,
+  });
 }
 
 /**
@@ -1043,192 +951,139 @@ async function verifyBootstrapState(
  */
 
 async function seedRbac() {
-    validateEnvironment();
-    validateRbacDefinitions();
+  validateEnvironment();
+  validateRbacDefinitions();
 
-    const seedConfiguration =
-        getSeedConfiguration();
+  const seedConfiguration = getSeedConfiguration();
 
-    await database.initialize();
+  await database.initialize();
 
-    try {
-        await executeTransaction(
-            async (transactionContext) => {
-                const executor =
-                    getQueryExecutor(
-                        transactionContext,
-                    );
+  try {
+    await executeTransaction(async (transactionContext) => {
+      const executor = getQueryExecutor(transactionContext);
+      await executor.query("SET LOCAL app.rbac_bootstrap = 'true'");
 
-                /**
-                 * ------------------------------------------------------------
-                 * 1. Ensure fixed system roles.
-                 * ------------------------------------------------------------
-                 */
+      /**
+       * ------------------------------------------------------------
+       * 1. Ensure fixed system roles.
+       * ------------------------------------------------------------
+       */
 
-                const roles = new Map();
+      const roles = new Map();
 
-                for (const role of SYSTEM_ROLES) {
-                    const systemRole =
-                        await ensureSystemRole(
-                            executor,
-                            role,
-                        );
+      for (const role of SYSTEM_ROLES) {
+        const systemRole = await ensureSystemRole(executor, role);
 
-                    roles.set(
-                        systemRole.code,
-                        systemRole,
-                    );
-                }
+        roles.set(systemRole.code, systemRole);
+      }
 
-                const developerRole =
-                    roles.get("developer");
+      const developerRole = roles.get("developer");
 
-                const superadminRole =
-                    roles.get("superadmin");
+      const superadminRole = roles.get("superadmin");
 
-                if (
-                    !developerRole ||
-                    !superadminRole
-                ) {
-                    throw new Error(
-                        "Required system roles are unavailable.",
-                    );
-                }
+      if (!developerRole || !superadminRole) {
+        throw new Error("Required system roles are unavailable.");
+      }
 
-                /**
-                 * ------------------------------------------------------------
-                 * 2. Ensure system permissions.
-                 * ------------------------------------------------------------
-                 */
+      /**
+       * ------------------------------------------------------------
+       * 2. Ensure system permissions.
+       * ------------------------------------------------------------
+       */
 
-                const permissions = new Map();
+      const permissions = new Map();
 
-                for (
-                    const permission
-                    of SYSTEM_PERMISSIONS
-                ) {
-                    const systemPermission =
-                        await ensureSystemPermission(
-                            executor,
-                            permission,
-                        );
-
-                    permissions.set(
-                        systemPermission.code,
-                        systemPermission,
-                    );
-                }
-
-                /**
-                 * ------------------------------------------------------------
-                 * 3. Developer permissions.
-                 * ------------------------------------------------------------
-                 */
-
-                for (
-                    const permissionCode
-                    of DEVELOPER_PERMISSION_CODES
-                ) {
-                    const permission =
-                        permissions.get(
-                            permissionCode,
-                        );
-
-                    if (!permission) {
-                        throw new Error(
-                            `Developer permission was not found: ${permissionCode}`,
-                        );
-                    }
-
-                    await ensureRolePermission(
-                        executor,
-                        developerRole.id,
-                        permission.id,
-                    );
-                }
-
-                /**
-                 * ------------------------------------------------------------
-                 * 4. Super Admin permissions.
-                 * ------------------------------------------------------------
-                 */
-
-                for (
-                    const permissionCode
-                    of SUPERADMIN_PERMISSION_CODES
-                ) {
-                    const permission =
-                        permissions.get(
-                            permissionCode,
-                        );
-
-                    if (!permission) {
-                        throw new Error(
-                            `Super Admin permission was not found: ${permissionCode}`,
-                        );
-                    }
-
-                    await ensureRolePermission(
-                        executor,
-                        superadminRole.id,
-                        permission.id,
-                    );
-                }
-
-                /**
-                 * ------------------------------------------------------------
-                 * 5. Ensure Developer bootstrap user.
-                 * ------------------------------------------------------------
-                 */
-
-                const developerUser =
-                    await ensureDeveloperUser(
-                        executor,
-                        seedConfiguration,
-                    );
-
-                /**
-                 * ------------------------------------------------------------
-                 * 6. Assign Developer role.
-                 * ------------------------------------------------------------
-                 */
-
-                await synchronizeDeveloperRole(
-                    executor,
-                    developerUser.id,
-                    developerRole.id,
-                );
-
-                /**
-                 * ------------------------------------------------------------
-                 * 7. Final verification.
-                 * ------------------------------------------------------------
-                 */
-
-                await verifyBootstrapState(
-                    executor,
-                    developerUser,
-                    developerRole,
-                    superadminRole,
-                );
-
-                logger.info(
-                    "Initial RBAC bootstrap completed.",
-                    {
-                        roleCount:
-                            SYSTEM_ROLES.length,
-                        permissionCount:
-                            SYSTEM_PERMISSIONS.length,
-                        developerUser:
-                            developerUser.email,
-                        superadminUserCount: 0,
-                    },
-                );
-            },
+      for (const permission of SYSTEM_PERMISSIONS) {
+        const systemPermission = await ensureSystemPermission(
+          executor,
+          permission,
         );
-    } finally {
-        await database.close();
-    }
+
+        permissions.set(systemPermission.code, systemPermission);
+      }
+
+      /**
+       * ------------------------------------------------------------
+       * 3. Developer permissions.
+       * ------------------------------------------------------------
+       */
+
+      for (const permissionCode of DEVELOPER_PERMISSION_CODES) {
+        const permission = permissions.get(permissionCode);
+
+        if (!permission) {
+          throw new Error(
+            `Developer permission was not found: ${permissionCode}`,
+          );
+        }
+
+        await ensureRolePermission(executor, developerRole.id, permission.id);
+      }
+
+      /**
+       * ------------------------------------------------------------
+       * 4. Super Admin permissions.
+       * ------------------------------------------------------------
+       */
+
+      for (const permissionCode of SUPERADMIN_PERMISSION_CODES) {
+        const permission = permissions.get(permissionCode);
+
+        if (!permission) {
+          throw new Error(
+            `Super Admin permission was not found: ${permissionCode}`,
+          );
+        }
+
+        await ensureRolePermission(executor, superadminRole.id, permission.id);
+      }
+
+      /**
+       * ------------------------------------------------------------
+       * 5. Ensure Developer bootstrap user.
+       * ------------------------------------------------------------
+       */
+
+      const developerUser = await ensureDeveloperUser(
+        executor,
+        seedConfiguration,
+      );
+
+      /**
+       * ------------------------------------------------------------
+       * 6. Assign Developer role.
+       * ------------------------------------------------------------
+       */
+
+      await synchronizeDeveloperRole(
+        executor,
+        developerUser.id,
+        developerRole.id,
+      );
+
+      /**
+       * ------------------------------------------------------------
+       * 7. Final verification.
+       * ------------------------------------------------------------
+       */
+
+      await verifyBootstrapState(
+        executor,
+        developerUser,
+        developerRole,
+        superadminRole,
+      );
+
+      logger.info("Initial RBAC bootstrap completed.", {
+        roleCount: SYSTEM_ROLES.length,
+        permissionCount: SYSTEM_PERMISSIONS.length,
+        developerUser: developerUser.email,
+        superadminUserCount: 0,
+      });
+    });
+  } finally {
+    await database.close();
+  }
 }
 
 /**
@@ -1238,19 +1093,14 @@ async function seedRbac() {
  */
 
 try {
-    await seedRbac();
+  await seedRbac();
 
-    logger.info(
-        "RBAC bootstrap seeder completed successfully.",
-    );
+  logger.info("RBAC bootstrap seeder completed successfully.");
 } catch (error) {
-    logger.error(
-        "RBAC bootstrap seeder failed.",
-        {
-            message: error.message,
-            stack: error.stack,
-        },
-    );
+  logger.error("RBAC bootstrap seeder failed.", {
+    message: error.message,
+    stack: error.stack,
+  });
 
-    process.exitCode = 1;
+  process.exitCode = 1;
 }

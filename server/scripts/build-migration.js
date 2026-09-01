@@ -44,7 +44,7 @@ const main = async () => {
 
         format: "esm",
 
-        packages: "bundle",
+        packages: "external",
 
         legalComments: "none",
 
