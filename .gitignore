@@ -5,6 +5,9 @@
 .env
 .env.
 !.env.example
+.env.production
+/server/.env.production
+
 
 # ============================================================
 # Node.js
@@ -79,3 +82,4 @@ desktop.ini
 
 /storage/
 server/storage/
+/deployment
