@@ -83,6 +83,18 @@ const UPDATE_CONTACT = `
     RETURNING ${CONTACT_RETURNING_FIELDS};
 `;
 
+const FIND_ACTIVE_DISTRICT_BY_ID = `
+    SELECT
+        id,
+        code,
+        name
+    FROM districts
+    WHERE
+        id = $1::UUID
+        AND is_active = TRUE
+    LIMIT 1;
+`;
+
 function normalizeMobile(mobilePhone) {
   return String(mobilePhone ?? "").trim();
 }
@@ -157,7 +169,7 @@ async function updateContact(id, data, tx = null) {
 async function findOrCreateContact(data, tx = null) {
   const existing = await findContactByMobile(
     data.organizationId,
-    data.mobilePhone,
+    data.mobile,
     tx,
   );
 
@@ -168,10 +180,25 @@ async function findOrCreateContact(data, tx = null) {
   return createContact(data, tx);
 }
 
+async function findActiveDistrictById(
+  districtId,
+  tx = null,
+) {
+  const executor = getQueryExecutor(tx);
+
+  const result = await executor.query(
+    FIND_ACTIVE_DISTRICT_BY_ID,
+    [districtId],
+  );
+
+  return result.rows[0] ?? null;
+}
+
 export default Object.freeze({
   findContactByMobile,
   findContactById,
   createContact,
   updateContact,
   findOrCreateContact,
+  findActiveDistrictById,
 });

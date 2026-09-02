@@ -7,6 +7,23 @@ function normalizeMobile(mobile) {
   return String(mobile ?? "").trim();
 }
 
+async function validateDistrict(districtId, tx = null) {
+  if (!districtId) {
+    return;
+  }
+
+  const district = await contactRepository.findActiveDistrictById(
+    districtId,
+    tx,
+  );
+
+  if (!district) {
+    throw AppError.badRequest("Invalid or inactive district.", {
+      code: CONTACT_ERROR_CODES.INVALID_DISTRICT,
+    });
+  }
+}
+
 async function getContactByMobile(organizationId, mobile, tx = null) {
   const normalizedMobile = normalizeMobile(mobile);
 
@@ -24,6 +41,7 @@ async function getContactByMobile(organizationId, mobile, tx = null) {
 async function findOrCreateContact(data, tx = null) {
   const normalizedMobile = normalizeMobile(data.mobile);
 
+  await validateDistrict(data.district, tx);
   const existingContact = await contactRepository.findContactByMobile(
     data.organizationId,
     normalizedMobile,
@@ -88,6 +106,8 @@ async function updateContactFromTicket(contactId, data, tx = null) {
       code: CONTACT_ERROR_CODES.NOT_FOUND,
     });
   }
+
+  await validateDistrict(data.district, tx);
 
   await contactRepository.updateContact(
     contactId,
