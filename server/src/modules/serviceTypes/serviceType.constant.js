@@ -1,5 +1,5 @@
 const SERVICE_TYPE_MESSAGES = Object.freeze({
-    LIST_SUCCESS: "Service types retrieved successfully.",
+    LIST_SUCCESS: "Service type retrieved successfully.",
     GET_SUCCESS: "Service type retrieved successfully.",
     CREATE_SUCCESS: "Service type created successfully.",
     UPDATE_SUCCESS: "Service type updated successfully.",

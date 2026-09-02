@@ -48,6 +48,8 @@ import contactRouter from "../modules/contacts/contact.routes.js";
 
 import serviceTypeRouter from "../modules/serviceTypes/serviceType.routes.js";
 
+import ticketCategoryRouter from "../modules/ticketCategories/ticketCategory.routes.js";
+
 const router = Router();
 
 /**
@@ -89,6 +91,10 @@ router.use(`/${apiVersion}/tickets`, ticketRouter);
 router.use(`/${apiVersion}/contacts`, contactRouter);
 
 router.use(`/${apiVersion}/serviceTypes`, serviceTypeRouter);
+
+router.use(`/${apiVersion}/ticketCategories`, ticketCategoryRouter);
+
+
 
 // router.use(`/${apiVersion}/sla`, slaRouter);
 

@@ -42,6 +42,15 @@ export const RBAC_RESOURCES = Object.freeze({
   TICKET: "ticket",
   SLA: "sla",
   DASHBOARD: "dashboard",
+  SERVICE_TYPE: "service_type",
+  DISTRICT: "district",
+  TICKET_CATEGORY: "ticket_category",
+  PROBLEM_STATEMENT: "problem_statement",
+  CURRENT_BILL_STATUS: "current_bill_status",
+  TICKET_STATUS: "ticket_status",
+  TICKET_SEVERITY: "ticket_severity",
+  TICKET_ISSUE_CATEGORY: "ticket_issue_category",
+  TICKET_DEPENDENCY_CATEGORY: "ticket_dependency_category",
 });
 
 /**
@@ -113,6 +122,64 @@ export const RBAC_PERMISSIONS = Object.freeze({
 
   DASHBOARD_READ: "dashboard:read",
 
+  SERVICE_TYPE_READ: "service_type:read",
+  SERVICE_TYPE_CREATE: "service_type:create",
+  SERVICE_TYPE_UPDATE: "service_type:update",
+  SERVICE_TYPE_DELETE: "service_type:delete",
+
+  // Service Type
+  SERVICE_TYPE_READ: "service_type:read",
+  SERVICE_TYPE_CREATE: "service_type:create",
+  SERVICE_TYPE_UPDATE: "service_type:update",
+  SERVICE_TYPE_DELETE: "service_type:delete",
+
+  // District
+  DISTRICT_READ: "district:read",
+  DISTRICT_CREATE: "district:create",
+  DISTRICT_UPDATE: "district:update",
+  DISTRICT_DELETE: "district:delete",
+
+  // Ticket Category
+  TICKET_CATEGORY_READ: "ticket_category:read",
+  TICKET_CATEGORY_CREATE: "ticket_category:create",
+  TICKET_CATEGORY_UPDATE: "ticket_category:update",
+  TICKET_CATEGORY_DELETE: "ticket_category:delete",
+
+  // Problem Statement
+  PROBLEM_STATEMENT_READ: "problem_statement:read",
+  PROBLEM_STATEMENT_CREATE: "problem_statement:create",
+  PROBLEM_STATEMENT_UPDATE: "problem_statement:update",
+  PROBLEM_STATEMENT_DELETE: "problem_statement:delete",
+
+  // Current Bill Status
+  CURRENT_BILL_STATUS_READ: "current_bill_status:read",
+  CURRENT_BILL_STATUS_CREATE: "current_bill_status:create",
+  CURRENT_BILL_STATUS_UPDATE: "current_bill_status:update",
+  CURRENT_BILL_STATUS_DELETE: "current_bill_status:delete",
+
+  // Ticket Status
+  TICKET_STATUS_READ: "ticket_status:read",
+  TICKET_STATUS_CREATE: "ticket_status:create",
+  TICKET_STATUS_UPDATE: "ticket_status:update",
+  TICKET_STATUS_DELETE: "ticket_status:delete",
+
+  // Ticket Severity
+  TICKET_SEVERITY_READ: "ticket_severity:read",
+  TICKET_SEVERITY_CREATE: "ticket_severity:create",
+  TICKET_SEVERITY_UPDATE: "ticket_severity:update",
+  TICKET_SEVERITY_DELETE: "ticket_severity:delete",
+
+  // Ticket Issue Category
+  TICKET_ISSUE_CATEGORY_READ: "ticket_issue_category:read",
+  TICKET_ISSUE_CATEGORY_CREATE: "ticket_issue_category:create",
+  TICKET_ISSUE_CATEGORY_UPDATE: "ticket_issue_category:update",
+  TICKET_ISSUE_CATEGORY_DELETE: "ticket_issue_category:delete",
+
+  // Ticket Dependency Category
+  TICKET_DEPENDENCY_CATEGORY_READ: "ticket_dependency_category:read",
+  TICKET_DEPENDENCY_CATEGORY_CREATE: "ticket_dependency_category:create",
+  TICKET_DEPENDENCY_CATEGORY_UPDATE: "ticket_dependency_category:update",
+  TICKET_DEPENDENCY_CATEGORY_DELETE: "ticket_dependency_category:delete",
 });
 
 /**

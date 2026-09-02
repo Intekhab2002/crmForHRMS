@@ -423,6 +423,277 @@ const SYSTEM_PERMISSIONS = Object.freeze([
     resource: "dashboard",
     action: "read",
   }),
+
+
+  // Service Type
+Object.freeze({
+  code: "service_type:read",
+  name: "Read Service Type",
+  description: "View service type configuration and information.",
+  resource: "service_type",
+  action: "read",
+}),
+Object.freeze({
+  code: "service_type:create",
+  name: "Create Service Type",
+  description: "Create service type entries.",
+  resource: "service_type",
+  action: "create",
+}),
+Object.freeze({
+  code: "service_type:update",
+  name: "Update Service Type",
+  description: "Update service type entries.",
+  resource: "service_type",
+  action: "update",
+}),
+Object.freeze({
+  code: "service_type:delete",
+  name: "Delete Service Type",
+  description: "Delete service type entries where permitted.",
+  resource: "service_type",
+  action: "delete",
+}),
+
+// District
+Object.freeze({
+  code: "district:read",
+  name: "Read District",
+  description: "View district configuration and information.",
+  resource: "district",
+  action: "read",
+}),
+Object.freeze({
+  code: "district:create",
+  name: "Create District",
+  description: "Create district entries.",
+  resource: "district",
+  action: "create",
+}),
+Object.freeze({
+  code: "district:update",
+  name: "Update District",
+  description: "Update district entries.",
+  resource: "district",
+  action: "update",
+}),
+Object.freeze({
+  code: "district:delete",
+  name: "Delete District",
+  description: "Delete district entries where permitted.",
+  resource: "district",
+  action: "delete",
+}),
+
+// Ticket Category
+Object.freeze({
+  code: "ticket_category:read",
+  name: "Read Ticket Category",
+  description: "View ticket category configuration and information.",
+  resource: "ticket_category",
+  action: "read",
+}),
+Object.freeze({
+  code: "ticket_category:create",
+  name: "Create Ticket Category",
+  description: "Create ticket categories.",
+  resource: "ticket_category",
+  action: "create",
+}),
+Object.freeze({
+  code: "ticket_category:update",
+  name: "Update Ticket Category",
+  description: "Update ticket categories.",
+  resource: "ticket_category",
+  action: "update",
+}),
+Object.freeze({
+  code: "ticket_category:delete",
+  name: "Delete Ticket Category",
+  description: "Delete ticket categories where permitted.",
+  resource: "ticket_category",
+  action: "delete",
+}),
+
+// Problem Statement
+Object.freeze({
+  code: "problem_statement:read",
+  name: "Read Problem Statement",
+  description: "View problem statement configuration and information.",
+  resource: "problem_statement",
+  action: "read",
+}),
+Object.freeze({
+  code: "problem_statement:create",
+  name: "Create Problem Statement",
+  description: "Create problem statements.",
+  resource: "problem_statement",
+  action: "create",
+}),
+Object.freeze({
+  code: "problem_statement:update",
+  name: "Update Problem Statement",
+  description: "Update problem statements.",
+  resource: "problem_statement",
+  action: "update",
+}),
+Object.freeze({
+  code: "problem_statement:delete",
+  name: "Delete Problem Statement",
+  description: "Delete problem statements where permitted.",
+  resource: "problem_statement",
+  action: "delete",
+}),
+
+// Current Bill Status
+Object.freeze({
+  code: "current_bill_status:read",
+  name: "Read Current Bill Status",
+  description: "View current bill status configuration and information.",
+  resource: "current_bill_status",
+  action: "read",
+}),
+Object.freeze({
+  code: "current_bill_status:create",
+  name: "Create Current Bill Status",
+  description: "Create current bill status entries.",
+  resource: "current_bill_status",
+  action: "create",
+}),
+Object.freeze({
+  code: "current_bill_status:update",
+  name: "Update Current Bill Status",
+  description: "Update current bill status entries.",
+  resource: "current_bill_status",
+  action: "update",
+}),
+Object.freeze({
+  code: "current_bill_status:delete",
+  name: "Delete Current Bill Status",
+  description: "Delete current bill status entries where permitted.",
+  resource: "current_bill_status",
+  action: "delete",
+}),
+
+// Ticket Status
+Object.freeze({
+  code: "ticket_status:read",
+  name: "Read Ticket Status",
+  description: "View ticket status configuration and information.",
+  resource: "ticket_status",
+  action: "read",
+}),
+Object.freeze({
+  code: "ticket_status:create",
+  name: "Create Ticket Status",
+  description: "Create ticket statuses.",
+  resource: "ticket_status",
+  action: "create",
+}),
+Object.freeze({
+  code: "ticket_status:update",
+  name: "Update Ticket Status",
+  description: "Update ticket statuses.",
+  resource: "ticket_status",
+  action: "update",
+}),
+Object.freeze({
+  code: "ticket_status:delete",
+  name: "Delete Ticket Status",
+  description: "Delete ticket statuses where permitted.",
+  resource: "ticket_status",
+  action: "delete",
+}),
+
+// Ticket Severity
+Object.freeze({
+  code: "ticket_severity:read",
+  name: "Read Ticket Severity",
+  description: "View ticket severity configuration and information.",
+  resource: "ticket_severity",
+  action: "read",
+}),
+Object.freeze({
+  code: "ticket_severity:create",
+  name: "Create Ticket Severity",
+  description: "Create ticket severity entries.",
+  resource: "ticket_severity",
+  action: "create",
+}),
+Object.freeze({
+  code: "ticket_severity:update",
+  name: "Update Ticket Severity",
+  description: "Update ticket severity entries.",
+  resource: "ticket_severity",
+  action: "update",
+}),
+Object.freeze({
+  code: "ticket_severity:delete",
+  name: "Delete Ticket Severity",
+  description: "Delete ticket severity entries where permitted.",
+  resource: "ticket_severity",
+  action: "delete",
+}),
+
+// Ticket Issue Category
+Object.freeze({
+  code: "ticket_issue_category:read",
+  name: "Read Ticket Issue Category",
+  description: "View ticket issue category configuration and information.",
+  resource: "ticket_issue_category",
+  action: "read",
+}),
+Object.freeze({
+  code: "ticket_issue_category:create",
+  name: "Create Ticket Issue Category",
+  description: "Create ticket issue categories.",
+  resource: "ticket_issue_category",
+  action: "create",
+}),
+Object.freeze({
+  code: "ticket_issue_category:update",
+  name: "Update Ticket Issue Category",
+  description: "Update ticket issue categories.",
+  resource: "ticket_issue_category",
+  action: "update",
+}),
+Object.freeze({
+  code: "ticket_issue_category:delete",
+  name: "Delete Ticket Issue Category",
+  description: "Delete ticket issue categories where permitted.",
+  resource: "ticket_issue_category",
+  action: "delete",
+}),
+
+// Ticket Dependency Category
+Object.freeze({
+  code: "ticket_dependency_category:read",
+  name: "Read Ticket Dependency Category",
+  description: "View ticket dependency category configuration and information.",
+  resource: "ticket_dependency_category",
+  action: "read",
+}),
+Object.freeze({
+  code: "ticket_dependency_category:create",
+  name: "Create Ticket Dependency Category",
+  description: "Create ticket dependency categories.",
+  resource: "ticket_dependency_category",
+  action: "create",
+}),
+Object.freeze({
+  code: "ticket_dependency_category:update",
+  name: "Update Ticket Dependency Category",
+  description: "Update ticket dependency categories.",
+  resource: "ticket_dependency_category",
+  action: "update",
+}),
+Object.freeze({
+  code: "ticket_dependency_category:delete",
+  name: "Delete Ticket Dependency Category",
+  description: "Delete ticket dependency categories where permitted.",
+  resource: "ticket_dependency_category",
+  action: "delete",
+}),
 ]);
 
 /**
