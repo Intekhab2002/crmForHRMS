@@ -1,3 +1,4 @@
+
 /**
  * Canonical Ticket field configuration.
  *
@@ -5,12 +6,14 @@
  * metadata. Repository SQL is generated only from database columns declared
  * here; arbitrary request keys are never interpolated into SQL.
  *
- * Database schema changes remain migrations. Changing labels, options,
- * validation limits, editability or UI metadata should normally require only
- * this file.
+ * Database schema changes remain migrations. Changing labels, validation,
+ * editability or UI metadata should normally require only this file.
+ *
+ * Lookup/master-data fields use UUID foreign keys in the database.
+ * The API field keys remain stable so existing application contracts do not
+ * need unnecessary renaming.
  */
 
-const option = (value, label = value) => Object.freeze({ value, label });
 
 const TICKET_FIELD_CONFIG = Object.freeze({
   subject: Object.freeze({
@@ -41,42 +44,36 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     key: "service_type",
     label: "Service Type",
     entity: "ticket",
-    column: "service_type",
+    column: "service_type_id",
     type: "select",
-    dataType: "string",
+    dataType: "uuid",
     required: false,
     editable: true,
-    options: Object.freeze([
-      option("MISCELLANEOUS", "Miscellaneous"),
-      option("GENERAL_INFORMATION", "General Information"),
-    ]),
+    reference: "service_types",
   }),
 
   category: Object.freeze({
     key: "category",
     label: "Category",
     entity: "ticket",
-    column: "category",
+    column: "category_id",
     type: "select",
-    dataType: "string",
+    dataType: "uuid",
     required: true,
     editable: true,
-    options: Object.freeze([
-      option("ENQUIRY", "Enquiry"),
-      option("ISSUE", "Issue"),
-      option("ENHANCEMENT", "Enhancement"),
-    ]),
+    reference: "ticket_categories",
   }),
 
   problem_statement: Object.freeze({
     key: "problem_statement",
     label: "Problem Statement",
     entity: "ticket",
-    column: "problem_statement",
+    column: "problem_statement_id",
     type: "select",
-    dataType: "string",
+    dataType: "uuid",
+    required: false,
     editable: true,
-    options: Object.freeze([]),
+    reference: "problem_statements",
   }),
 
   employee_current_office_name_id: Object.freeze({
@@ -105,11 +102,12 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     key: "current_bill_status",
     label: "Current Bill Status",
     entity: "ticket",
-    column: "current_bill_status",
+    column: "current_bill_status_id",
     type: "select",
-    dataType: "string",
+    dataType: "uuid",
+    required: false,
     editable: true,
-    options: Object.freeze([]),
+    reference: "current_bill_statuses",
   }),
 
   bill_reference_no: Object.freeze({
@@ -127,17 +125,12 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     key: "status",
     label: "Status",
     entity: "ticket",
-    column: "status",
+    column: "status_id",
     type: "select",
-    dataType: "string",
+    dataType: "uuid",
     required: true,
     editable: true,
-    options: Object.freeze([
-      option("OPEN", "Open"),
-      option("IN_PROGRESS", "Inprogress"),
-      option("WAIT_FOR_RESPONSE", "Wait for Response"),
-      option("CLOSED", "Closed"),
-    ]),
+    reference: "ticket_statuses",
   }),
 
   assigned_to: Object.freeze({
@@ -155,15 +148,12 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     key: "severity",
     label: "Severity",
     entity: "ticket",
-    column: "severity",
+    column: "severity_id",
     type: "select",
-    dataType: "string",
+    dataType: "uuid",
+    required: false,
     editable: true,
-    options: Object.freeze([
-      option("SEVERITY1", "Severity1"),
-      option("SEVERITY2", "Severity2"),
-      option("SEVERITY3", "Severity3"),
-    ]),
+    reference: "ticket_severities",
   }),
 
   expected_resolution_date: Object.freeze({
@@ -203,14 +193,12 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     key: "issue_category",
     label: "Issue Category",
     entity: "ticket",
-    column: "issue_category",
+    column: "issue_category_id",
     type: "select",
-    dataType: "string",
+    dataType: "uuid",
+    required: false,
     editable: true,
-    options: Object.freeze([
-      option("SUSPECTED_ERROR", "Suspected Error"),
-      option("PROCESS_VIOLATION", "Process violation"),
-    ]),
+    reference: "ticket_issue_categories",
   }),
 
   letter_no: Object.freeze({
@@ -228,16 +216,12 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     key: "dependency_category",
     label: "Dependency Category",
     entity: "ticket",
-    column: "dependency_category",
+    column: "dependency_category_id",
     type: "select",
-    dataType: "string",
+    dataType: "uuid",
+    required: false,
     editable: true,
-    options: Object.freeze([
-      option("CFMS", "CFMS"),
-      option("DEV_TEAM", "Dev. Team"),
-      option("POLICY_MATTER", "Policy Matter"),
-      option("USER_END", "User-End"),
-    ]),
+    reference: "ticket_dependency_categories",
   }),
 
   initial_diagnosis: Object.freeze({
@@ -355,18 +339,22 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     key: "district",
     label: "District",
     entity: "contact",
-    column: "district",
+    column: "district_id",
     type: "select",
-    dataType: "string",
+    dataType: "uuid",
     editable: true,
-    options: Object.freeze([]),
+    reference: "districts",
   }),
 });
 
-const fields = Object.freeze(Object.values(TICKET_FIELD_CONFIG));
+const fields = Object.freeze(
+  Object.values(TICKET_FIELD_CONFIG),
+);
 
 const fieldsByKey = Object.freeze(
-  Object.fromEntries(fields.map((field) => [field.key, field])),
+  Object.fromEntries(
+    fields.map((field) => [field.key, field]),
+  ),
 );
 
 const ticketFields = Object.freeze(
@@ -390,7 +378,9 @@ export function getField(fieldKey) {
 }
 
 export function getFieldsByEntity(entity) {
-  return entity === "ticket" ? ticketFields : contactFields;
+  return entity === "ticket"
+    ? ticketFields
+    : contactFields;
 }
 
 export function getDatabaseField(fieldKey) {
@@ -404,3 +394,4 @@ export function getDatabaseField(fieldKey) {
 }
 
 export default TICKET_CONFIG;
+

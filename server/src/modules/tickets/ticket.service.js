@@ -1,15 +1,16 @@
-import AppError from "../../helpers/AppError.js";
+import { randomUUID } from "node:crypto";
+
 import { executeTransaction } from "../../database/transaction.js";
+import AppError from "../../helpers/AppError.js";
 
 import contactService from "../contacts/contact.service.js";
 
-import ticketRepository from "./ticket.repository.js";
-import ticketValidator from "./ticket.validator.js";
-import { TICKET_ERROR_CODES, TICKET_STATUS } from "./ticket.constants.js";
 import { TICKET_CONFIG } from "./ticket.config.js";
-import ticketNumberService from "./ticketNumber.service.js";
-import { randomUUID } from "node:crypto";
 import ticketLifecycleService from "./ticketLifecycle.service.js";
+import ticketNumberService from "./ticketNumber.service.js";
+import ticketRepository from "./ticket.repository.js";
+import { TICKET_ERROR_CODES } from "./ticket.constants.js";
+import ticketValidator from "./ticket.validator.js";
 
 function getContactValue(payload, key) {
   if (key === "name") {
@@ -37,7 +38,118 @@ function splitPayload(payload) {
     }
   }
 
-  return { ticket, contact };
+  return {
+    ticket,
+    contact,
+  };
+}
+
+/**
+ * Converts the repository's nested API-oriented ticket representation
+ * into the scalar reference values required by the service.
+ *
+ * Request payloads continue to use UUID values.
+ * Repository responses use nested relationship objects.
+ */
+function getTicketReferenceId(ticket, reference) {
+  if (!ticket) {
+    return null;
+  }
+
+  const value = ticket[reference];
+
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === "object") {
+    return value.id ?? null;
+  }
+
+  return value;
+}
+
+/**
+ * Creates a compatibility snapshot for the existing lifecycle service.
+ *
+ * The lifecycle service currently reads configured database-column names
+ * from the current ticket object. Until that service is migrated to the
+ * nested representation, this adapter keeps that boundary isolated here.
+ */
+function buildLifecycleSnapshot(ticket) {
+  if (!ticket) {
+    return null;
+  }
+
+  return {
+    ...ticket,
+
+    id: ticket.id,
+
+    ticket_number: ticket.ticketNumber,
+
+    subject: ticket.subject,
+
+    description: ticket.description,
+
+    priority: ticket.priority,
+
+    status_id: ticket.status?.id ?? null,
+
+    requester_user_id: ticket.requester?.id ?? null,
+
+    created_by_user_id: ticket.createdBy?.id ?? null,
+
+    organization_id: ticket.organization?.id ?? null,
+
+    department_id: ticket.department?.id ?? null,
+
+    assigned_user_id: ticket.assignedUser?.id ?? null,
+
+    contact_id: ticket.contact?.id ?? null,
+
+    service_type_id: ticket.serviceType?.id ?? null,
+
+    category_id: ticket.category?.id ?? null,
+
+    problem_statement_id: ticket.problemStatement?.id ?? null,
+
+    current_bill_status_id: ticket.currentBillStatus?.id ?? null,
+
+    severity_id: ticket.severity?.id ?? null,
+
+    issue_category_id: ticket.issueCategory?.id ?? null,
+
+    dependency_category_id: ticket.dependencyCategory?.id ?? null,
+
+    employee_current_office_name_id: ticket.employeeCurrentOfficeNameId ?? null,
+
+    employee_id: ticket.employeeId ?? null,
+
+    bill_reference_no: ticket.billReferenceNo ?? null,
+
+    expected_resolution_date: ticket.expectedResolutionDate ?? null,
+
+    duplicate_ticket: ticket.duplicateTicket ?? null,
+
+    letter_no: ticket.letterNo ?? null,
+
+    initial_diagnosis: ticket.initialDiagnosis ?? null,
+
+    solution: ticket.solution ?? null,
+
+    resolution: ticket.resolution ?? null,
+
+    contact_name: ticket.contact?.name ?? null,
+
+    mobile_phone: ticket.contact?.mobilePhone ?? null,
+
+    contact_email: ticket.contact?.email ?? null,
+
+    contact_district: ticket.contact?.district?.id ?? null,
+
+    contact_department_id: ticket.contact?.department?.id ?? null,
+  };
 }
 
 async function validateReferences(data, tx) {
@@ -122,7 +234,9 @@ async function validateReferences(data, tx) {
     if (user.status !== "active") {
       throw AppError.conflict(
         "Ticket can only be assigned to an active user.",
-        { code: TICKET_ERROR_CODES.ASSIGNED_USER_INACTIVE },
+        {
+          code: TICKET_ERROR_CODES.ASSIGNED_USER_INACTIVE,
+        },
       );
     }
   }
@@ -161,12 +275,15 @@ async function listTickets(query) {
 
   return {
     data: result.rows,
+
     meta: {
       page: query.page,
       limit: query.limit,
       total: result.total,
       totalPages,
+
       hasNextPage: query.page < totalPages,
+
       hasPreviousPage: query.page > 1 && totalPages > 0,
     },
   };
@@ -197,12 +314,21 @@ async function createTicket(payload, authenticatedUserId) {
 
     ticket.ticket_number = await ticketNumberService.generateTicketNumber(tx);
 
+    /*
+     * created_by is an internal field populated from
+     * the authenticated session. It is never trusted
+     * from the request body.
+     */
     ticket.created_by = authenticatedUserId;
 
     if (!ticket.requester_user_id) {
       ticket.requester_user_id = authenticatedUserId;
     }
 
+    /*
+     * Department determines organization when
+     * organization was not explicitly supplied.
+     */
     if (!ticket.organization && ticket.department) {
       const department = await ticketRepository.findDepartment(
         ticket.department,
@@ -238,6 +364,11 @@ async function createTicket(payload, authenticatedUserId) {
 
     const contactName = getContactValue(contact, "name");
 
+    /*
+     * A ticket may reference an existing contact,
+     * or create/find one from the supplied contact
+     * details.
+     */
     if (!contactId) {
       if (!mobile || !contactName) {
         throw AppError.validation(
@@ -261,10 +392,15 @@ async function createTicket(payload, authenticatedUserId) {
       const createdContact = await contactService.findOrCreateContact(
         {
           organizationId: ticket.organization ?? null,
+
           name: contactName,
+
           mobile,
+
           email: getContactValue(contact, "email_id"),
+
           district: getContactValue(contact, "district"),
+
           departmentId: ticket.department ?? null,
         },
         tx,
@@ -275,27 +411,19 @@ async function createTicket(payload, authenticatedUserId) {
 
     ticket.contact = contactId;
 
-    const createdAt = new Date();
-
-    if (ticket.assigned_user_id) {
-      ticket.assigned_at = createdAt;
-    }
-
-    if (ticket.status === "RESOLVED" || ticket.status === "CLOSED") {
-      ticket.resolved_at = createdAt;
-    }
-
-    if (ticket.status === "CLOSED") {
-      ticket.closed_at = createdAt;
-    }
-
+    /*
+     * Repository field mapping is responsible for
+     * converting application field names into the
+     * actual database columns.
+     */
     await ticketRepository.createTicket(ticket, tx);
 
     const createdTicket = await ticketRepository.findTicketById(ticket.id, tx);
 
     await ticketLifecycleService.recordTicketCreated(
       {
-        ticket: createdTicket ?? ticket,
+        ticket: buildLifecycleSnapshot(createdTicket),
+
         actorUserId: authenticatedUserId,
       },
       tx,
@@ -335,35 +463,67 @@ async function updateTicket(ticketId, payload, authenticatedUserId) {
     const { ticket, contact } = splitPayload(payload);
 
     /*
-     * Capture changes BEFORE the ticket/contact payload is
-     * transformed or deleted.
-     *
-     * The lifecycle service uses ticket.config.js as the
-     * single source of field metadata.
+     * Lifecycle comparison currently expects a scalar
+     * ticket representation. Keep that translation
+     * isolated from the rest of the service.
      */
-    const changes = ticketLifecycleService.getTicketChanges(current, payload);
+    const lifecycleCurrent = buildLifecycleSnapshot(current);
+
+    const changes = ticketLifecycleService.getTicketChanges(
+      lifecycleCurrent,
+      payload,
+    );
+
+    const currentDepartmentId = getTicketReferenceId(current, "department");
+
+    const currentOrganizationId = getTicketReferenceId(current, "organization");
+
+    const currentRequesterId = getTicketReferenceId(current, "requester");
+
+    const currentAssignedUserId = getTicketReferenceId(current, "assignedUser");
+
+    const currentContactId = getTicketReferenceId(current, "contact");
 
     const effective = {
-      department: ticket.department ?? current.department_id,
+      department: Object.prototype.hasOwnProperty.call(ticket, "department")
+        ? ticket.department
+        : currentDepartmentId,
 
-      organization: ticket.organization ?? current.organization_id,
+      organization: Object.prototype.hasOwnProperty.call(ticket, "organization")
+        ? ticket.organization
+        : currentOrganizationId,
 
-      requester_user_id: ticket.requester_user_id ?? current.requester_user_id,
+      requester_user_id: Object.prototype.hasOwnProperty.call(
+        ticket,
+        "requester_user_id",
+      )
+        ? ticket.requester_user_id
+        : currentRequesterId,
 
       assigned_to: Object.prototype.hasOwnProperty.call(ticket, "assigned_to")
         ? ticket.assigned_to
-        : current.assigned_user_id,
+        : currentAssignedUserId,
 
       contact: Object.prototype.hasOwnProperty.call(ticket, "contact")
         ? ticket.contact
-        : current.contact_id,
+        : currentContactId,
     };
 
+    /*
+     * Validate references against the effective
+     * post-update state, not merely the submitted
+     * fields.
+     */
     await validateReferences(effective, tx);
 
-    if (Object.keys(contact).length) {
+    /*
+     * Contact fields belong to the contact entity.
+     * Keep their update separate from the ticket
+     * update.
+     */
+    if (Object.keys(contact).length && currentContactId) {
       await contactService.updateContactFromTicket(
-        current.contact_id,
+        currentContactId,
         {
           name: contact.name ?? contact.contact_name,
 
@@ -373,64 +533,73 @@ async function updateTicket(ticketId, payload, authenticatedUserId) {
 
           district: contact.district,
 
-          departmentId: ticket.department ?? current.department_id ?? null,
+          departmentId: effective.department ?? null,
         },
         tx,
       );
     }
 
-    delete ticket.contact;
-    delete ticket.department;
-    delete ticket.organization;
-    delete ticket.assigned_to;
-    delete ticket.requester_user_id;
-    delete ticket.created_by;
+    /*
+     * The following relationship fields are handled
+     * through their canonical ticket configuration
+     * keys. Do not send duplicate relationship
+     * representations to the repository.
+     */
+    const repositoryTicket = {
+      ...ticket,
+    };
 
     /*
-     * Preserve the existing ticket field semantics.
+     * Contact is already handled by contactService.
+     * The ticket itself still needs the contact FK
+     * when the caller explicitly changes it.
+     */
+    if (Object.prototype.hasOwnProperty.call(payload, "contact")) {
+      repositoryTicket.contact = payload.contact;
+    }
+
+    /*
+     * These fields are valid ticket fields and are
+     * mapped to *_id database columns by
+     * ticket.config.js.
      */
     if (Object.prototype.hasOwnProperty.call(payload, "department")) {
-      ticket.department = payload.department;
+      repositoryTicket.department = payload.department;
     }
 
     if (Object.prototype.hasOwnProperty.call(payload, "organization")) {
-      ticket.organization = payload.organization;
+      repositoryTicket.organization = payload.organization;
     }
 
     if (Object.prototype.hasOwnProperty.call(payload, "assigned_to")) {
-      ticket.assigned_to = payload.assigned_to;
+      repositoryTicket.assigned_to = payload.assigned_to;
     }
 
     if (Object.prototype.hasOwnProperty.call(payload, "requester_user_id")) {
-      ticket.requester_user_id = payload.requester_user_id;
+      repositoryTicket.requester_user_id = payload.requester_user_id;
     }
 
-    if (Object.prototype.hasOwnProperty.call(payload, "contact")) {
-      ticket.contact = payload.contact;
-    }
-
-    await ticketRepository.updateTicket(ticketId, ticket, tx);
+    /*
+     * The current contact object is updated separately.
+     * The ticket repository receives only ticket fields.
+     */
+    await ticketRepository.updateTicket(ticketId, repositoryTicket, tx);
 
     await ticketLifecycleService.recordTicketChanges(
       {
         ticketId,
+
         actorUserId: authenticatedUserId,
+
         changes,
       },
       tx,
     );
 
-    /*
-     * Wait for lifecycle recording to complete before committing.
-     *
-     * This is deliberately after the ticket mutation but inside
-     * the same transaction.
-     */
-    await changes;
-
     return ticketRepository.findTicketById(ticketId, tx);
   });
 }
+
 async function getAssignableUsers() {
   return ticketRepository.getAssignableUsers();
 }
