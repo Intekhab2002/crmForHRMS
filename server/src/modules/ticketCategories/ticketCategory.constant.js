@@ -1,5 +1,5 @@
 const TICKET_CATEGORY_MESSAGES = Object.freeze({
-    LIST_SUCCESS: "Ticket categorys retrieved successfully.",
+    LIST_SUCCESS: "Ticket category retrieved successfully.",
     GET_SUCCESS: "Ticket category retrieved successfully.",
     CREATE_SUCCESS: "Ticket category created successfully.",
     UPDATE_SUCCESS: "Ticket category updated successfully.",

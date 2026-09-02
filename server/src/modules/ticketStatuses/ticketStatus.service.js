@@ -1,36 +1,36 @@
 import AppError from "../../helpers/AppError.js";
 
-import ticketCategoryRepository from "./ticketCategory.repository.js";
+import ticketStatusRepository from "./ticketStatus.repository.js";
 
 import {
-    TICKET_CATEGORY_ERROR_CODES,
-} from "./ticketCategory.constant.js";
+    TICKET_STATUS_ERROR_CODES,
+} from "./ticketStatus.constant.js";
 
-async function getTicketCategory(ticketCategoryId) {
-    const ticketCategory =
-        await ticketCategoryRepository.findTicketCategoryById(
-            ticketCategoryId,
+async function getTicketStatus(ticketStatusId) {
+    const ticketStatus =
+        await ticketStatusRepository.findTicketStatusById(
+            ticketStatusId,
         );
 
-    if (!ticketCategory) {
+    if (!ticketStatus) {
         throw AppError.notFound(
-            "Ticket category not found.",
+            "Ticket status not found.",
             {
                 code:
-                    TICKET_CATEGORY_ERROR_CODES.NOT_FOUND,
+                    TICKET_STATUS_ERROR_CODES.NOT_FOUND,
             },
         );
     }
 
-    return ticketCategory;
+    return ticketStatus;
 }
 
-async function listTicketCategories(query) {
+async function listticketStatus(query) {
     const page = query.page;
     const limit = query.limit;
 
     const result =
-        await ticketCategoryRepository.findTicketCategories({
+        await ticketStatusRepository.findticketStatus({
             search: query.search,
             isActive: query.isActive,
             limit,
@@ -60,49 +60,49 @@ async function listTicketCategories(query) {
     };
 }
 
-async function createTicketCategory(data) {
+async function createTicketStatus(data) {
     const existingByCode =
-        await ticketCategoryRepository
-            .findTicketCategoryByCode(
+        await ticketStatusRepository
+            .findTicketStatusByCode(
                 data.code,
             );
 
     if (existingByCode) {
         throw AppError.conflict(
-            "A ticket category with this code already exists.",
+            "A ticket status with this code already exists.",
             {
                 code:
-                    TICKET_CATEGORY_ERROR_CODES.CODE_EXISTS,
+                    TICKET_STATUS_ERROR_CODES.CODE_EXISTS,
             },
         );
     }
 
     const existingByName =
-        await ticketCategoryRepository
-            .findTicketCategoryByName(
+        await ticketStatusRepository
+            .findTicketStatusByName(
                 data.name,
             );
 
     if (existingByName) {
         throw AppError.conflict(
-            "A ticket category with this name already exists.",
+            "A ticket status with this name already exists.",
             {
                 code:
-                    TICKET_CATEGORY_ERROR_CODES.NAME_EXISTS,
+                    TICKET_STATUS_ERROR_CODES.NAME_EXISTS,
             },
         );
     }
 
     try {
-        return await ticketCategoryRepository
-            .createTicketCategory(data);
+        return await ticketStatusRepository
+            .createTicketStatus(data);
     } catch (error) {
         if (error?.code === "23505") {
             throw AppError.conflict(
-                "A ticket category with the supplied code or name already exists.",
+                "A ticket status with the supplied code or name already exists.",
                 {
                     code:
-                        TICKET_CATEGORY_ERROR_CODES.ALREADY_EXISTS,
+                        TICKET_STATUS_ERROR_CODES.ALREADY_EXISTS,
                     cause: error,
                 },
             );
@@ -112,27 +112,27 @@ async function createTicketCategory(data) {
     }
 }
 
-async function updateTicketCategory(
-    ticketCategoryId,
+async function updateTicketStatus(
+    ticketStatusId,
     data,
 ) {
 
     if (data.code) {
         const duplicate =
-            await ticketCategoryRepository
-                .findTicketCategoryByCode(
+            await ticketStatusRepository
+                .findTicketStatusByCode(
                     data.code,
                 );
 
         if (
             duplicate &&
-            duplicate.id !== ticketCategoryId
+            duplicate.id !== ticketStatusId
         ) {
             throw AppError.conflict(
-                "A ticket category with this code already exists.",
+                "A ticket status with this code already exists.",
                 {
                     code:
-                        TICKET_CATEGORY_ERROR_CODES.CODE_EXISTS,
+                        TICKET_STATUS_ERROR_CODES.CODE_EXISTS,
                 },
             );
         }
@@ -140,38 +140,38 @@ async function updateTicketCategory(
 
     if (data.name) {
         const duplicate =
-            await ticketCategoryRepository
-                .findTicketCategoryByName(
+            await ticketStatusRepository
+                .findTicketStatusByName(
                     data.name,
                 );
 
         if (
             duplicate &&
-            duplicate.id !== ticketCategoryId
+            duplicate.id !== ticketStatusId
         ) {
             throw AppError.conflict(
-                "A ticket category with this name already exists.",
+                "A ticket status with this name already exists.",
                 {
                     code:
-                        TICKET_CATEGORY_ERROR_CODES.NAME_EXISTS,
+                        TICKET_STATUS_ERROR_CODES.NAME_EXISTS,
                 },
             );
         }
     }
 
     try {
-        return await ticketCategoryRepository
-            .updateTicketCategory(
-                ticketCategoryId,
+        return await ticketStatusRepository
+            .updateTicketStatus(
+                ticketStatusId,
                 data,
             );
     } catch (error) {
         if (error?.code === "23505") {
             throw AppError.conflict(
-                "A ticket category with the supplied code or name already exists.",
+                "A ticket status with the supplied code or name already exists.",
                 {
                     code:
-                        TICKET_CATEGORY_ERROR_CODES.ALREADY_EXISTS,
+                        TICKET_STATUS_ERROR_CODES.ALREADY_EXISTS,
                     cause: error,
                 },
             );
@@ -181,28 +181,28 @@ async function updateTicketCategory(
     }
 }
 
-async function deactivateTicketCategory(
-    ticketCategoryId,
+async function deactivateTicketStatus(
+    ticketStatusId,
 ) {
     const existing =
-        await getTicketCategory(
-            ticketCategoryId,
+        await getTicketStatus(
+            ticketStatusId,
         );
 
     if (!existing.is_active) {
         return existing;
     }
 
-    return ticketCategoryRepository
-        .deactivateTicketCategory(
-            ticketCategoryId,
+    return ticketStatusRepository
+        .deactivateTicketStatus(
+            ticketStatusId,
         );
 }
 
 export default Object.freeze({
-    listTicketCategories,
-    getTicketCategory,
-    createTicketCategory,
-    updateTicketCategory,
-    deactivateTicketCategory,
+    listticketStatus,
+    getTicketStatus,
+    createTicketStatus,
+    updateTicketStatus,
+    deactivateTicketStatus,
 });

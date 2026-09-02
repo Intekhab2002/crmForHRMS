@@ -1,36 +1,36 @@
 import AppError from "../../helpers/AppError.js";
 
-import ticketCategoryRepository from "./ticketCategory.repository.js";
+import districtRepository from "./district.repository.js";
 
 import {
-    TICKET_CATEGORY_ERROR_CODES,
-} from "./ticketCategory.constant.js";
+    DISTRICT_ERROR_CODES,
+} from "./district.constant.js";
 
-async function getTicketCategory(ticketCategoryId) {
-    const ticketCategory =
-        await ticketCategoryRepository.findTicketCategoryById(
-            ticketCategoryId,
+async function getDistrict(districtId) {
+    const district =
+        await districtRepository.findDistrictById(
+            districtId,
         );
 
-    if (!ticketCategory) {
+    if (!district) {
         throw AppError.notFound(
-            "Ticket category not found.",
+            "District not found.",
             {
                 code:
-                    TICKET_CATEGORY_ERROR_CODES.NOT_FOUND,
+                    DISTRICT_ERROR_CODES.NOT_FOUND,
             },
         );
     }
 
-    return ticketCategory;
+    return district;
 }
 
-async function listTicketCategories(query) {
+async function listDistricts(query) {
     const page = query.page;
     const limit = query.limit;
 
     const result =
-        await ticketCategoryRepository.findTicketCategories({
+        await districtRepository.findDistricts({
             search: query.search,
             isActive: query.isActive,
             limit,
@@ -60,49 +60,49 @@ async function listTicketCategories(query) {
     };
 }
 
-async function createTicketCategory(data) {
+async function createDistrict(data) {
     const existingByCode =
-        await ticketCategoryRepository
-            .findTicketCategoryByCode(
+        await districtRepository
+            .findDistrictByCode(
                 data.code,
             );
 
     if (existingByCode) {
         throw AppError.conflict(
-            "A ticket category with this code already exists.",
+            "A district with this code already exists.",
             {
                 code:
-                    TICKET_CATEGORY_ERROR_CODES.CODE_EXISTS,
+                    DISTRICT_ERROR_CODES.CODE_EXISTS,
             },
         );
     }
 
     const existingByName =
-        await ticketCategoryRepository
-            .findTicketCategoryByName(
+        await districtRepository
+            .findDistrictByName(
                 data.name,
             );
 
     if (existingByName) {
         throw AppError.conflict(
-            "A ticket category with this name already exists.",
+            "A district with this name already exists.",
             {
                 code:
-                    TICKET_CATEGORY_ERROR_CODES.NAME_EXISTS,
+                    DISTRICT_ERROR_CODES.NAME_EXISTS,
             },
         );
     }
 
     try {
-        return await ticketCategoryRepository
-            .createTicketCategory(data);
+        return await districtRepository
+            .createDistrict(data);
     } catch (error) {
         if (error?.code === "23505") {
             throw AppError.conflict(
-                "A ticket category with the supplied code or name already exists.",
+                "A district with the supplied code or name already exists.",
                 {
                     code:
-                        TICKET_CATEGORY_ERROR_CODES.ALREADY_EXISTS,
+                        DISTRICT_ERROR_CODES.ALREADY_EXISTS,
                     cause: error,
                 },
             );
@@ -112,27 +112,26 @@ async function createTicketCategory(data) {
     }
 }
 
-async function updateTicketCategory(
-    ticketCategoryId,
+async function updateDistrict(
+    districtId,
     data,
 ) {
-
-    if (data.code) {
+   if (data.code) {
         const duplicate =
-            await ticketCategoryRepository
-                .findTicketCategoryByCode(
+            await districtRepository
+                .findDistrictByCode(
                     data.code,
                 );
 
         if (
             duplicate &&
-            duplicate.id !== ticketCategoryId
+            duplicate.id !== districtId
         ) {
             throw AppError.conflict(
-                "A ticket category with this code already exists.",
+                "A district with this code already exists.",
                 {
                     code:
-                        TICKET_CATEGORY_ERROR_CODES.CODE_EXISTS,
+                        DISTRICT_ERROR_CODES.CODE_EXISTS,
                 },
             );
         }
@@ -140,38 +139,38 @@ async function updateTicketCategory(
 
     if (data.name) {
         const duplicate =
-            await ticketCategoryRepository
-                .findTicketCategoryByName(
+            await districtRepository
+                .findDistrictByName(
                     data.name,
                 );
 
         if (
             duplicate &&
-            duplicate.id !== ticketCategoryId
+            duplicate.id !== districtId
         ) {
             throw AppError.conflict(
-                "A ticket category with this name already exists.",
+                "A district with this name already exists.",
                 {
                     code:
-                        TICKET_CATEGORY_ERROR_CODES.NAME_EXISTS,
+                        DISTRICT_ERROR_CODES.NAME_EXISTS,
                 },
             );
         }
     }
 
     try {
-        return await ticketCategoryRepository
-            .updateTicketCategory(
-                ticketCategoryId,
+        return await districtRepository
+            .updateDistrict(
+                districtId,
                 data,
             );
     } catch (error) {
         if (error?.code === "23505") {
             throw AppError.conflict(
-                "A ticket category with the supplied code or name already exists.",
+                "A district with the supplied code or name already exists.",
                 {
                     code:
-                        TICKET_CATEGORY_ERROR_CODES.ALREADY_EXISTS,
+                        DISTRICT_ERROR_CODES.ALREADY_EXISTS,
                     cause: error,
                 },
             );
@@ -181,28 +180,28 @@ async function updateTicketCategory(
     }
 }
 
-async function deactivateTicketCategory(
-    ticketCategoryId,
+async function deactivateDistrict(
+    districtId,
 ) {
     const existing =
-        await getTicketCategory(
-            ticketCategoryId,
+        await getDistrict(
+            districtId,
         );
 
     if (!existing.is_active) {
         return existing;
     }
 
-    return ticketCategoryRepository
-        .deactivateTicketCategory(
-            ticketCategoryId,
+    return districtRepository
+        .deactivateDistrict(
+            districtId,
         );
 }
 
 export default Object.freeze({
-    listTicketCategories,
-    getTicketCategory,
-    createTicketCategory,
-    updateTicketCategory,
-    deactivateTicketCategory,
+    listDistricts,
+    getDistrict,
+    createDistrict,
+    updateDistrict,
+    deactivateDistrict,
 });

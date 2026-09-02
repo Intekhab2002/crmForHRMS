@@ -15,6 +15,17 @@ const SERVICE_TYPE_FIELDS = `
     st.updated_at
 `;
 
+const SERVICE_TYPE_RETURNING_FIELDS = `
+    id,
+    code,
+    name,
+    description,
+    is_active,
+    display_order,
+    created_at,
+    updated_at
+`;
+
 const FIND_SERVICE_TYPES = `
     SELECT
         ${SERVICE_TYPE_FIELDS}
@@ -99,7 +110,7 @@ const CREATE_SERVICE_TYPE = `
         $6::INTEGER
     )
     RETURNING
-        ${SERVICE_TYPE_FIELDS};
+        ${SERVICE_TYPE_RETURNING_FIELDS};
 `;
 
 const UPDATE_SERVICE_TYPE = `
@@ -118,7 +129,7 @@ const UPDATE_SERVICE_TYPE = `
         )
     WHERE id = $1::UUID
     RETURNING
-        ${SERVICE_TYPE_FIELDS};
+        ${SERVICE_TYPE_RETURNING_FIELDS};
 `;
 
 const DEACTIVATE_SERVICE_TYPE = `
@@ -126,7 +137,7 @@ const DEACTIVATE_SERVICE_TYPE = `
     SET is_active = FALSE
     WHERE id = $1::UUID
     RETURNING
-        ${SERVICE_TYPE_FIELDS};
+        ${SERVICE_TYPE_RETURNING_FIELDS};
 `;
 
 async function findServiceTypes(filters, tx = null) {

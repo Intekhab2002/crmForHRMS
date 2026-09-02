@@ -116,12 +116,7 @@ async function updateServiceType(
     serviceTypeId,
     data,
 ) {
-    const existing =
-        await getServiceType(
-            serviceTypeId,
-        );
-
-    if (data.code) {
+   if (data.code) {
         const duplicate =
             await serviceTypeRepository
                 .findServiceTypeByCode(

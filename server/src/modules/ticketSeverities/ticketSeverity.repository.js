@@ -4,18 +4,18 @@ import {
     getQueryExecutor,
 } from "../../database/queryExecutor.js";
 
-const TICKET_CATEGORY_FIELDS = `
-    tc.id,
-    tc.code,
-    tc.name,
-    tc.description,
-    tc.is_active,
-    tc.display_order,
-    tc.created_at,
-    tc.updated_at
+const TICKET_SEVERITY_FIELDS = `
+    ts.id,
+    ts.code,
+    ts.name,
+    ts.description,
+    ts.is_active,
+    ts.display_order,
+    ts.created_at,
+    ts.updated_at
 `;
 
-const TICKET_CATEGORY_RETURNING_FIELDS = `
+const TICKET_SEVERITY_RETURNING_FIELDS = `
     id,
     code,
     name,
@@ -26,74 +26,74 @@ const TICKET_CATEGORY_RETURNING_FIELDS = `
     updated_at
 `;
 
-const FIND_TICKET_CATEGORIES = `
+const FIND_TICKET_SEVERITIES = `
     SELECT
-        ${TICKET_CATEGORY_FIELDS}
-    FROM TICKET_CATEGORIES tc
+        ${TICKET_SEVERITY_FIELDS}
+    FROM TICKET_SEVERITIES ts
     WHERE
         (
             $1::VARCHAR IS NULL
-            OR tc.code ILIKE '%' || $1::VARCHAR || '%'
-            OR tc.name ILIKE '%' || $1::VARCHAR || '%'
+            OR ts.code ILIKE '%' || $1::VARCHAR || '%'
+            OR ts.name ILIKE '%' || $1::VARCHAR || '%'
         )
         AND (
             $2::BOOLEAN IS NULL
-            OR tc.is_active = $2::BOOLEAN
+            OR ts.is_active = $2::BOOLEAN
         )
     ORDER BY
-        tc.display_order ASC,
-        tc.name ASC
+        ts.display_order ASC,
+        ts.name ASC
     LIMIT $3::INTEGER
     OFFSET $4::INTEGER;
 `;
 
-const COUNT_TICKET_CATEGORIES = `
+const COUNT_TICKET_SEVERITIES = `
     SELECT COUNT(*)::INTEGER AS total
-    FROM TICKET_CATEGORIES tc
+    FROM TICKET_SEVERITIES ts
     WHERE
         (
             $1::VARCHAR IS NULL
-            OR tc.code ILIKE '%' || $1::VARCHAR || '%'
-            OR tc.name ILIKE '%' || $1::VARCHAR || '%'
+            OR ts.code ILIKE '%' || $1::VARCHAR || '%'
+            OR ts.name ILIKE '%' || $1::VARCHAR || '%'
         )
         AND (
             $2::BOOLEAN IS NULL
-            OR tc.is_active = $2::BOOLEAN
+            OR ts.is_active = $2::BOOLEAN
         );
 `;
 
-const FIND_TICKET_CATEGORY_BY_ID = `
+const FIND_TICKET_SEVERITY_BY_ID = `
     SELECT
-        ${TICKET_CATEGORY_FIELDS}
-    FROM TICKET_CATEGORIES tc
-    WHERE tc.id = $1::UUID
+        ${TICKET_SEVERITY_FIELDS}
+    FROM TICKET_SEVERITIES ts
+    WHERE ts.id = $1::UUID
     LIMIT 1;
 `;
 
-const FIND_TICKET_CATEGORY_BY_CODE = `
+const FIND_TICKET_SEVERITY_BY_CODE = `
     SELECT
         id,
         code,
         name,
         is_active
-    FROM TICKET_CATEGORIES
+    FROM TICKET_SEVERITIES
     WHERE LOWER(code) = LOWER($1::VARCHAR)
     LIMIT 1;
 `;
 
-const FIND_TICKET_CATEGORY_BY_NAME = `
+const FIND_TICKET_SEVERITY_BY_NAME = `
     SELECT
         id,
         code,
         name,
         is_active
-    FROM TICKET_CATEGORIES
+    FROM TICKET_SEVERITIES
     WHERE LOWER(name) = LOWER($1::VARCHAR)
     LIMIT 1;
 `;
 
-const CREATE_TICKET_CATEGORY = `
-    INSERT INTO TICKET_CATEGORIES (
+const CREATE_TICKET_SEVERITY = `
+    INSERT INTO TICKET_SEVERITIES (
         id,
         code,
         name,
@@ -110,11 +110,11 @@ const CREATE_TICKET_CATEGORY = `
         $6::INTEGER
     )
     RETURNING
-        ${TICKET_CATEGORY_RETURNING_FIELDS};
+        ${TICKET_SEVERITY_RETURNING_FIELDS};
 `;
 
-const UPDATE_TICKET_CATEGORY = `
-    UPDATE TICKET_CATEGORIES
+const UPDATE_TICKET_SEVERITY = `
+    UPDATE TICKET_SEVERITIES
     SET
         code = COALESCE($2::VARCHAR, code),
         name = COALESCE($3::VARCHAR, name),
@@ -129,18 +129,18 @@ const UPDATE_TICKET_CATEGORY = `
         )
     WHERE id = $1::UUID
     RETURNING
-        ${TICKET_CATEGORY_RETURNING_FIELDS};
+        ${TICKET_SEVERITY_RETURNING_FIELDS};
 `;
 
-const DEACTIVATE_TICKET_CATEGORY = `
-    UPDATE TICKET_CATEGORIES
+const DEACTIVATE_TICKET_SEVERITY = `
+    UPDATE TICKET_SEVERITIES
     SET is_active = FALSE
     WHERE id = $1::UUID
     RETURNING
-        ${TICKET_CATEGORY_RETURNING_FIELDS};
+        ${TICKET_SEVERITY_RETURNING_FIELDS};
 `;
 
-async function findTicketCategories(filters, tx = null) {
+async function findTicketSeverities(filters, tx = null) {
     const executor = getQueryExecutor(tx);
 
     const values = [
@@ -150,7 +150,7 @@ async function findTicketCategories(filters, tx = null) {
 
     const [rowsResult, countResult] = await Promise.all([
         executor.query(
-            FIND_TICKET_CATEGORIES,
+            FIND_TICKET_SEVERITIES,
             [
                 ...values,
                 filters.limit,
@@ -158,7 +158,7 @@ async function findTicketCategories(filters, tx = null) {
             ],
         ),
         executor.query(
-            COUNT_TICKET_CATEGORIES,
+            COUNT_TICKET_SEVERITIES,
             values,
         ),
     ]);
@@ -171,56 +171,56 @@ async function findTicketCategories(filters, tx = null) {
     };
 }
 
-async function findTicketCategoryById(
-    ticketCategoryId,
+async function findTicketSeverityById(
+    ticketSeverityId,
     tx = null,
 ) {
     const executor = getQueryExecutor(tx);
 
     const result = await executor.query(
-        FIND_TICKET_CATEGORY_BY_ID,
-        [ticketCategoryId],
+        FIND_TICKET_SEVERITY_BY_ID,
+        [ticketSeverityId],
     );
 
     return result.rows[0] ?? null;
 }
 
-async function findTicketCategoryByCode(
+async function findTicketSeverityByCode(
     code,
     tx = null,
 ) {
     const executor = getQueryExecutor(tx);
 
     const result = await executor.query(
-        FIND_TICKET_CATEGORY_BY_CODE,
+        FIND_TICKET_SEVERITY_BY_CODE,
         [code],
     );
 
     return result.rows[0] ?? null;
 }
 
-async function findTicketCategoryByName(
+async function findTicketSeverityByName(
     name,
     tx = null,
 ) {
     const executor = getQueryExecutor(tx);
 
     const result = await executor.query(
-        FIND_TICKET_CATEGORY_BY_NAME,
+        FIND_TICKET_SEVERITY_BY_NAME,
         [name],
     );
 
     return result.rows[0] ?? null;
 }
 
-async function createTicketCategory(
+async function createTicketSeverity(
     data,
     tx = null,
 ) {
     const executor = getQueryExecutor(tx);
 
     const result = await executor.query(
-        CREATE_TICKET_CATEGORY,
+        CREATE_TICKET_SEVERITY,
         [
             randomUUID(),
             data.code,
@@ -234,8 +234,8 @@ async function createTicketCategory(
     return result.rows[0];
 }
 
-async function updateTicketCategory(
-    ticketCategoryId,
+async function updateTicketSeverity(
+    ticketSeverityId,
     data,
     tx = null,
 ) {
@@ -248,9 +248,9 @@ async function updateTicketCategory(
         );
 
     const result = await executor.query(
-        UPDATE_TICKET_CATEGORY,
+        UPDATE_TICKET_SEVERITY,
         [
-            ticketCategoryId,
+            ticketSeverityId,
             data.code ?? null,
             data.name ?? null,
             hasDescription,
@@ -263,26 +263,26 @@ async function updateTicketCategory(
     return result.rows[0] ?? null;
 }
 
-async function deactivateTicketCategory(
-    ticketCategoryId,
+async function deactivateTicketSeverity(
+    ticketSeverityId,
     tx = null,
 ) {
     const executor = getQueryExecutor(tx);
 
     const result = await executor.query(
-        DEACTIVATE_TICKET_CATEGORY,
-        [ticketCategoryId],
+        DEACTIVATE_TICKET_SEVERITY,
+        [ticketSeverityId],
     );
 
     return result.rows[0] ?? null;
 }
 
 export default Object.freeze({
-    findTicketCategories,
-    findTicketCategoryById,
-    findTicketCategoryByCode,
-    findTicketCategoryByName,
-    createTicketCategory,
-    updateTicketCategory,
-    deactivateTicketCategory,
+    findTicketSeverities,
+    findTicketSeverityById,
+    findTicketSeverityByCode,
+    findTicketSeverityByName,
+    createTicketSeverity,
+    updateTicketSeverity,
+    deactivateTicketSeverity,
 });

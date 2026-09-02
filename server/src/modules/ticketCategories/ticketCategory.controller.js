@@ -6,7 +6,7 @@ import {
     TICKET_CATEGORY_MESSAGES,
 } from "./ticketCategory.constant.js";
 
-async function getTicketCategorys(
+async function getTicketCategories(
     req,
     res,
     next,
@@ -14,7 +14,7 @@ async function getTicketCategorys(
     try {
         const result =
             await ticketCategoryService
-                .listTicketCategorys(
+                .listTicketCategories(
                     req.validatedQuery,
                 );
 
@@ -119,7 +119,7 @@ async function deleteTicketCategory(
 }
 
 export default Object.freeze({
-    getTicketCategorys,
+    getTicketCategories,
     getTicketCategory,
     createTicketCategory,
     updateTicketCategory,

@@ -43,7 +43,7 @@ router.get(
             .ticketCategoryListQuerySchema,
     ),
     ticketCategoryController
-        .getTicketCategorys,
+        .getTicketCategories,
 );
 
 router.get(
