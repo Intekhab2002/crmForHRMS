@@ -1,22 +1,15 @@
 import ApiResponse from "../../helpers/ApiResponse.js";
-
 import departmentService from "./department.service.js";
-
 import {
     DEPARTMENT_MESSAGES,
 } from "./department.constant.js";
 
-async function getDepartments(
-    req,
-    res,
-    next,
-) {
+async function getDepartments(req, res, next) {
     try {
         const result =
-            await departmentService
-                .listDepartments(
-                    req.validatedQuery,
-                );
+            await departmentService.listDepartments(
+                req.validatedQuery,
+            );
 
         return ApiResponse.paginated(
             res,
@@ -29,17 +22,12 @@ async function getDepartments(
     }
 }
 
-async function getDepartment(
-    req,
-    res,
-    next,
-) {
+async function getDepartment(req, res, next) {
     try {
-        const Department =
-            await departmentService
-                .getDepartment(
-                    req.params.departmentId,
-                );
+        const department =
+            await departmentService.getDepartment(
+                req.params.departmentId,
+            );
 
         return ApiResponse.success(
             res,
@@ -51,17 +39,12 @@ async function getDepartment(
     }
 }
 
-async function createDepartment(
-    req,
-    res,
-    next,
-) {
+async function createDepartment(req, res, next) {
     try {
         const department =
-            await departmentService
-                .createDepartment(
-                    req.body,
-                );
+            await departmentService.createDepartment(
+                req.body,
+            );
 
         return ApiResponse.created(
             res,
@@ -73,18 +56,13 @@ async function createDepartment(
     }
 }
 
-async function updateDepartment(
-    req,
-    res,
-    next,
-) {
+async function updateDepartment(req, res, next) {
     try {
-        const Department =
-            await DepartmentService
-                .updateDepartment(
-                    req.params.DepartmentId,
-                    req.body,
-                );
+        const department =
+            await departmentService.updateDepartment(
+                req.params.departmentId,
+                req.body,
+            );
 
         return ApiResponse.updated(
             res,
@@ -96,17 +74,12 @@ async function updateDepartment(
     }
 }
 
-async function deleteDepartment(
-    req,
-    res,
-    next,
-) {
+async function deleteDepartment(req, res, next) {
     try {
         const department =
-            await departmentService
-                .deactivateDepartment(
-                    req.params.departmentId,
-                );
+            await departmentService.deactivateDepartment(
+                req.params.departmentId,
+            );
 
         return ApiResponse.deleted(
             res,

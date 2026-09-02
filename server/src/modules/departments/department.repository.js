@@ -5,285 +5,229 @@ import {
 } from "../../database/queryExecutor.js";
 
 const DEPARTMENT_FIELDS = `
-    d.id,
-    d.organization_id,
-    o.code AS organization_code,
-    o.name AS organization_name,
-    d.parent_department_id,
-    pd.name AS parent_department_name,
-    d.code,
-    d.name,
-    d.description,
-    d.status,
-    d.created_at,
-    d.updated_at
+    dt.id,
+    dt.code,
+    dt.name,
+    dt.description,
+    dt.is_active,
+    dt.display_order,
+    dt.created_at,
+    dt.updated_at
+`;
+
+const DEPARTMENT_RETURNING_FIELDS = `
+    id,
+    code,
+    name,
+    description,
+    is_active,
+    display_order,
+    created_at,
+    updated_at
 `;
 
 const FIND_DEPARTMENTS = `
     SELECT
         ${DEPARTMENT_FIELDS}
-    FROM departments d
-    INNER JOIN organizations o
-        ON o.id = d.organization_id
-    LEFT JOIN departments pd
-        ON pd.id = d.parent_department_id
+    FROM departments dt
     WHERE
-        ($1::UUID IS NULL OR d.organization_id = $1::UUID)
-        AND (
-            $2::UUID IS NULL
-            OR d.parent_department_id = $2::UUID
+        (
+            $1::VARCHAR IS NULL
+            OR dt.code ILIKE '%' || $1::VARCHAR || '%'
+            OR dt.name ILIKE '%' || $1::VARCHAR || '%'
         )
         AND (
-            $3::VARCHAR IS NULL
-            OR d.code ILIKE '%' || $3::VARCHAR || '%'
-            OR d.name ILIKE '%' || $3::VARCHAR || '%'
+            $2::BOOLEAN IS NULL
+            OR dt.is_active = $2::BOOLEAN
         )
-        AND (
-            $4::VARCHAR IS NULL
-            OR d.status = $4::VARCHAR
-        )
-    ORDER BY d.name ASC
-    LIMIT $5::INTEGER
-    OFFSET $6::INTEGER;
+    ORDER BY
+        dt.display_order ASC,
+        dt.name ASC
+    LIMIT $3::INTEGER
+    OFFSET $4::INTEGER;
 `;
 
 const COUNT_DEPARTMENTS = `
     SELECT COUNT(*)::INTEGER AS total
-    FROM departments d
+    FROM departments dt
     WHERE
-        ($1::UUID IS NULL OR d.organization_id = $1::UUID)
-        AND (
-            $2::UUID IS NULL
-            OR d.parent_department_id = $2::UUID
+        (
+            $1::VARCHAR IS NULL
+            OR dt.code ILIKE '%' || $1::VARCHAR || '%'
+            OR dt.name ILIKE '%' || $1::VARCHAR || '%'
         )
         AND (
-            $3::VARCHAR IS NULL
-            OR d.code ILIKE '%' || $3::VARCHAR || '%'
-            OR d.name ILIKE '%' || $3::VARCHAR || '%'
-        )
-        AND (
-            $4::VARCHAR IS NULL
-            OR d.status = $4::VARCHAR
+            $2::BOOLEAN IS NULL
+            OR dt.is_active = $2::BOOLEAN
         );
 `;
 
 const FIND_DEPARTMENT_BY_ID = `
     SELECT
         ${DEPARTMENT_FIELDS}
-    FROM departments d
-    INNER JOIN organizations o
-        ON o.id = d.organization_id
-    LEFT JOIN departments pd
-        ON pd.id = d.parent_department_id
-    WHERE d.id = $1::UUID
+    FROM departments dt
+    WHERE dt.id = $1::UUID
     LIMIT 1;
 `;
 
 const FIND_DEPARTMENT_BY_CODE = `
-    SELECT id, organization_id, code, name, status
+    SELECT
+        id,
+        code,
+        name,
+        is_active
     FROM departments
-    WHERE
-        organization_id = $1::UUID
-        AND LOWER(code) = LOWER($2::VARCHAR)
+    WHERE LOWER(code) = LOWER($1::VARCHAR)
     LIMIT 1;
 `;
 
 const FIND_DEPARTMENT_BY_NAME = `
-    SELECT id, organization_id, code, name, status
+    SELECT
+        id,
+        code,
+        name,
+        is_active
     FROM departments
-    WHERE
-        organization_id = $1::UUID
-        AND LOWER(name) = LOWER($2::VARCHAR)
-    LIMIT 1;
-`;
-
-const FIND_ORGANIZATION = `
-    SELECT id, status
-    FROM organizations
-    WHERE id = $1::UUID
-    LIMIT 1;
-`;
-
-const FIND_PARENT_DEPARTMENT = `
-    SELECT id, organization_id, status
-    FROM departments
-    WHERE id = $1::UUID
+    WHERE LOWER(name) = LOWER($1::VARCHAR)
     LIMIT 1;
 `;
 
 const CREATE_DEPARTMENT = `
     INSERT INTO departments (
         id,
-        organization_id,
-        parent_department_id,
-        code,
-        name,
-        description
-    )
-    VALUES (
-        $1::UUID,
-        $2::UUID,
-        $3::UUID,
-        $4::VARCHAR,
-        $5::VARCHAR,
-        $6::TEXT
-    )
-    RETURNING
-        id,
-        organization_id,
-        parent_department_id,
         code,
         name,
         description,
-        status,
-        created_at,
-        updated_at;
+        is_active,
+        display_order
+    )
+    VALUES (
+        $1::UUID,
+        $2::VARCHAR,
+        $3::VARCHAR,
+        $4::TEXT,
+        $5::BOOLEAN,
+        $6::INTEGER
+    )
+    RETURNING
+        ${DEPARTMENT_RETURNING_FIELDS};
 `;
 
 const UPDATE_DEPARTMENT = `
     UPDATE departments
     SET
-        parent_department_id = CASE
-            WHEN $2::BOOLEAN THEN $3::UUID
-            ELSE parent_department_id
-        END,
-        name = COALESCE($4::VARCHAR, name),
+        code = COALESCE($2::VARCHAR, code),
+        name = COALESCE($3::VARCHAR, name),
         description = CASE
-            WHEN $5::BOOLEAN THEN $6::TEXT
+            WHEN $4::BOOLEAN THEN $5::TEXT
             ELSE description
         END,
-        status = COALESCE($7::VARCHAR, status)
+        is_active = COALESCE($6::BOOLEAN, is_active),
+        display_order = COALESCE(
+            $7::INTEGER,
+            display_order
+        )
     WHERE id = $1::UUID
     RETURNING
-        id,
-        organization_id,
-        parent_department_id,
-        code,
-        name,
-        description,
-        status,
-        created_at,
-        updated_at;
+        ${DEPARTMENT_RETURNING_FIELDS};
 `;
 
 const DEACTIVATE_DEPARTMENT = `
     UPDATE departments
-    SET status = 'inactive'
+    SET is_active = FALSE
     WHERE id = $1::UUID
     RETURNING
-        id,
-        organization_id,
-        parent_department_id,
-        code,
-        name,
-        description,
-        status,
-        created_at,
-        updated_at;
-`;
-
-const COUNT_CHILDREN = `
-    SELECT COUNT(*)::INTEGER AS total
-    FROM departments
-    WHERE parent_department_id = $1::UUID;
+        ${DEPARTMENT_RETURNING_FIELDS};
 `;
 
 async function findDepartments(filters, tx = null) {
     const executor = getQueryExecutor(tx);
 
     const values = [
-        filters.organizationId ?? null,
-        filters.parentDepartmentId ?? null,
         filters.search ?? null,
-        filters.status ?? null,
+        filters.isActive ?? null,
     ];
 
     const [rowsResult, countResult] = await Promise.all([
-        executor.query(FIND_DEPARTMENTS, [
-            ...values,
-            filters.limit,
-            filters.offset,
-        ]),
-        executor.query(COUNT_DEPARTMENTS, values),
+        executor.query(
+            FIND_DEPARTMENTS,
+            [
+                ...values,
+                filters.limit,
+                filters.offset,
+            ],
+        ),
+        executor.query(
+            COUNT_DEPARTMENTS,
+            values,
+        ),
     ]);
 
     return {
         rows: rowsResult.rows,
-        total: Number(countResult.rows[0]?.total ?? 0),
+        total: Number(
+            countResult.rows[0]?.total ?? 0,
+        ),
     };
 }
 
-async function findDepartmentById(id, tx = null) {
+async function findDepartmentById(
+    DepartmentId,
+    tx = null,
+) {
     const executor = getQueryExecutor(tx);
+
     const result = await executor.query(
         FIND_DEPARTMENT_BY_ID,
-        [id],
+        [DepartmentId],
     );
+
     return result.rows[0] ?? null;
 }
 
 async function findDepartmentByCode(
-    organizationId,
     code,
     tx = null,
 ) {
     const executor = getQueryExecutor(tx);
+
     const result = await executor.query(
         FIND_DEPARTMENT_BY_CODE,
-        [organizationId, code],
+        [code],
     );
+
     return result.rows[0] ?? null;
 }
 
 async function findDepartmentByName(
-    organizationId,
     name,
     tx = null,
 ) {
     const executor = getQueryExecutor(tx);
+
     const result = await executor.query(
         FIND_DEPARTMENT_BY_NAME,
-        [organizationId, name],
+        [name],
     );
+
     return result.rows[0] ?? null;
 }
 
-async function findOrganization(
-    organizationId,
+async function createDepartment(
+    data,
     tx = null,
 ) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(
-        FIND_ORGANIZATION,
-        [organizationId],
-    );
-    return result.rows[0] ?? null;
-}
-
-async function findParentDepartment(
-    departmentId,
-    tx = null,
-) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(
-        FIND_PARENT_DEPARTMENT,
-        [departmentId],
-    );
-    return result.rows[0] ?? null;
-}
-
-async function createDepartment(data, tx = null) {
     const executor = getQueryExecutor(tx);
 
     const result = await executor.query(
         CREATE_DEPARTMENT,
         [
             randomUUID(),
-            data.organizationId,
-            data.parentDepartmentId ?? null,
             data.code,
             data.name,
             data.description ?? null,
+            data.isActive ?? true,
+            data.displayOrder ?? 0,
         ],
     );
 
@@ -291,17 +235,11 @@ async function createDepartment(data, tx = null) {
 }
 
 async function updateDepartment(
-    departmentId,
+    DepartmentId,
     data,
     tx = null,
 ) {
     const executor = getQueryExecutor(tx);
-
-    const hasParent =
-        Object.prototype.hasOwnProperty.call(
-            data,
-            "parentDepartmentId",
-        );
 
     const hasDescription =
         Object.prototype.hasOwnProperty.call(
@@ -312,40 +250,30 @@ async function updateDepartment(
     const result = await executor.query(
         UPDATE_DEPARTMENT,
         [
-            departmentId,
-            hasParent,
-            data.parentDepartmentId ?? null,
+            DepartmentId,
+            data.code ?? null,
             data.name ?? null,
             hasDescription,
             data.description ?? null,
-            data.status ?? null,
+            data.isActive ?? null,
+            data.displayOrder ?? null,
         ],
     );
 
     return result.rows[0] ?? null;
 }
 
-async function countChildren(
-    departmentId,
-    tx = null,
-) {
-    const executor = getQueryExecutor(tx);
-    const result = await executor.query(
-        COUNT_CHILDREN,
-        [departmentId],
-    );
-    return Number(result.rows[0]?.total ?? 0);
-}
-
 async function deactivateDepartment(
-    departmentId,
+    DepartmentId,
     tx = null,
 ) {
     const executor = getQueryExecutor(tx);
+
     const result = await executor.query(
         DEACTIVATE_DEPARTMENT,
-        [departmentId],
+        [DepartmentId],
     );
+
     return result.rows[0] ?? null;
 }
 
@@ -354,10 +282,7 @@ export default Object.freeze({
     findDepartmentById,
     findDepartmentByCode,
     findDepartmentByName,
-    findOrganization,
-    findParentDepartment,
     createDepartment,
     updateDepartment,
-    countChildren,
     deactivateDepartment,
 });

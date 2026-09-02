@@ -2,15 +2,26 @@ import { Router } from "express";
 
 import authMiddleware from "../auth/auth.middleware.js";
 import rbacMiddleware from "../rbac/rbac.middleware.js";
-import { RBAC_PERMISSIONS } from "../rbac/rbac.constants.js";
+import {
+    RBAC_PERMISSIONS,
+} from "../rbac/rbac.constants.js";
 
 import departmentController from "./department.controller.js";
 import departmentValidator from "./department.validator.js";
-import {validateBody,validateParams,validateQuery} from "../../middleware/validation.middleware.js"
 
-const { authenticate } = authMiddleware;
-const { requirePermission } = rbacMiddleware;
+import {
+    validateBody,
+    validateParams,
+    validateQuery,
+} from "../../middleware/validation.middleware.js";
 
+const {
+    authenticate,
+} = authMiddleware;
+
+const {
+    requirePermission,
+} = rbacMiddleware;
 
 const {
     DEPARTMENT_READ,
@@ -21,58 +32,78 @@ const {
 
 const router = Router();
 
-
 router.get(
     "/",
     authenticate,
-    requirePermission(DEPARTMENT_READ),
-    validateQuery(
-        departmentValidator.departmentListQuerySchema,
+    requirePermission(
+        DEPARTMENT_READ,
     ),
-    departmentController.getDepartments,
+    validateQuery(
+        departmentValidator
+            .departmentListQuerySchema,
+    ),
+    departmentController
+        .getDepartments,
 );
 
 router.get(
     "/:departmentId",
     authenticate,
-    requirePermission(DEPARTMENT_READ),
-    validateParams(
-        departmentValidator.departmentIdParamSchema,
+    requirePermission(
+        DEPARTMENT_READ,
     ),
-    departmentController.getDepartment,
+    validateParams(
+        departmentValidator
+            .departmentIdParamSchema,
+    ),
+    departmentController
+        .getDepartment,
 );
 
 router.post(
     "/",
     authenticate,
-    requirePermission(DEPARTMENT_CREATE),
-    validateBody(
-        departmentValidator.createDepartmentSchema,
+    requirePermission(
+        DEPARTMENT_CREATE,
     ),
-    departmentController.createDepartment,
+    validateBody(
+        departmentValidator
+            .createDepartmentSchema,
+    ),
+    departmentController
+        .createDepartment,
 );
 
 router.patch(
     "/:departmentId",
     authenticate,
-    requirePermission(DEPARTMENT_UPDATE),
+    requirePermission(
+        DEPARTMENT_UPDATE,
+    ),
     validateParams(
-        departmentValidator.departmentIdParamSchema,
+        departmentValidator
+            .departmentIdParamSchema,
     ),
     validateBody(
-        departmentValidator.updateDepartmentSchema,
+        departmentValidator
+            .updateDepartmentSchema,
     ),
-    departmentController.updateDepartment,
+    departmentController
+        .updateDepartment,
 );
 
 router.delete(
     "/:departmentId",
     authenticate,
-    requirePermission(DEPARTMENT_DELETE),
-    validateParams(
-        departmentValidator.departmentIdParamSchema,
+    requirePermission(
+        DEPARTMENT_DELETE,
     ),
-    departmentController.deleteDepartment,
+    validateParams(
+        departmentValidator
+            .departmentIdParamSchema,
+    ),
+    departmentController
+        .deleteDepartment,
 );
 
 export default router;

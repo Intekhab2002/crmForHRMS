@@ -6,10 +6,10 @@ const codeSchema = z
     .string()
     .trim()
     .min(2)
-    .max(100)
+    .max(50)
     .regex(
         /^[A-Z][A-Z0-9_-]*$/,
-        "Department code must start with an uppercase letter and contain only uppercase letters, numbers, underscores or hyphens.",
+        "Department code must start with a uppercase letter and contain only uppercase letters, numbers, underscores or hyphens.",
     );
 
 const nameSchema = z
@@ -18,26 +18,25 @@ const nameSchema = z
     .min(2)
     .max(150);
 
-const descriptionSchema = z
+const statusSchema = z.enum([
+    "active",
+    "inactive",
+]);
+
+const optionalText = z
     .string()
     .trim()
     .max(2000)
     .nullable()
     .optional();
 
-const activeSchema = z.boolean();
-
-const displayOrderSchema = z
-    .coerce
-    .number()
-    .int()
-    .min(0);
-
 const departmentListQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
+    organizationId: uuidSchema.optional(),
+    parentDepartmentId: uuidSchema.optional(),
     search: z.string().trim().max(100).optional(),
-    isActive: z.coerce.boolean().optional(),
+    status: statusSchema.optional(),
 }).strict();
 
 const departmentIdParamSchema = z.object({
@@ -45,24 +44,22 @@ const departmentIdParamSchema = z.object({
 }).strict();
 
 const createDepartmentSchema = z.object({
+    organizationId: uuidSchema,
+    parentDepartmentId: uuidSchema.nullable().optional(),
     code: codeSchema,
     name: nameSchema,
-    description: descriptionSchema,
-    isActive: activeSchema.optional(),
-    displayOrder: displayOrderSchema.optional(),
+    description: optionalText,
 }).strict();
 
 const updateDepartmentSchema = z.object({
-    code: codeSchema.optional(),
+    parentDepartmentId: uuidSchema.nullable().optional(),
     name: nameSchema.optional(),
-    description: descriptionSchema,
-    isActive: activeSchema.optional(),
-    displayOrder: displayOrderSchema.optional(),
+    description: optionalText,
+    status: statusSchema.optional(),
 }).strict().refine(
     (value) => Object.keys(value).length > 0,
     {
-        message:
-            "At least one department field must be provided.",
+        message: "At least one department field must be provided.",
     },
 );
 

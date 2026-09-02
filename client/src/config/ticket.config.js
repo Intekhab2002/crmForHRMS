@@ -149,7 +149,8 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "Service Type",
     type: "select",
     entity: "ticket",
-    options: TICKET_SERVICE_TYPE_OPTIONS,
+    required: true,
+    options: apiOptions("/service-types"),
     form: { create: true, update: true, detail: true },
     grid: { visible: true, width: 170 },
   },
@@ -167,7 +168,8 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "District",
     type: "select",
     entity: "contact",
-    options: BIHAR_DISTRICTS,
+    required: true,
+    options: apiOptions("/districts"),
     form: { create: true, update: true, detail: true },
     grid: { visible: true, width: 150 },
   },
@@ -192,7 +194,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     type: "select",
     entity: "ticket",
     required: true,
-    options: TICKET_CATEGORY_OPTIONS,
+    options: apiOptions("/ticket-categories"),
     form: { create: true, update: true, detail: true },
     grid: { visible: true, width: 140 },
   },
@@ -212,7 +214,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "Problem Statement",
     type: "select",
     entity: "ticket",
-    options: PROBLEM_STATEMENT_OPTIONS,
+    options: apiOptions("/problem-statements"),
     form: { create: true, update: true, detail: true },
     grid: { visible: false },
   },
@@ -239,7 +241,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "Current Bill Status",
     type: "select",
     entity: "ticket",
-    options: CURRENT_BILL_STATUS_OPTIONS,
+    options: apiOptions("/current-bill-statuses"),
     form: { create: true, update: true, detail: true },
     grid: { visible: false },
   },
@@ -258,8 +260,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     type: "select",
     entity: "ticket",
     required: true,
-    defaultValue: "OPEN",
-    options: TICKET_STATUS_OPTIONS,
+    options: apiOptions("/ticket-statuses"),
     form: { create: true, update: true, detail: true },
     grid: { visible: true, width: 160 },
   },
@@ -282,7 +283,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "Severity",
     type: "select",
     entity: "ticket",
-    options: TICKET_SEVERITY_OPTIONS,
+    options: apiOptions("/ticket-severities"),
     form: { create: true, update: true, detail: true },
     grid: { visible: true, width: 130 },
   },
@@ -332,7 +333,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "Issue Category",
     type: "select",
     entity: "ticket",
-    options: TICKET_ISSUE_CATEGORY_OPTIONS,
+    options: apiOptions("/ticket-issue-categories"),
     form: { create: true, update: true, detail: true },
     grid: { visible: true, width: 180 },
   },
@@ -350,7 +351,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "Dependency Category",
     type: "select",
     entity: "ticket",
-    options: TICKET_DEPENDENCY_CATEGORY_OPTIONS,
+    options: apiOptions("/ticket-dependency-categories"),
     form: { create: true, update: true, detail: true },
     grid: { visible: true, width: 170 },
   },
@@ -421,9 +422,8 @@ export const TICKET_FORM_CONFIG = Object.freeze({
 });
 
 export const TICKET_GRID_CONFIG = Object.freeze({
-  columns: TICKET_FIELD_CONFIG
-    .filter((field) => field.grid?.visible)
-    .map((field) => {
+  columns: TICKET_FIELD_CONFIG.filter((field) => field.grid?.visible).map(
+    (field) => {
       const grid = field.grid ?? {};
 
       return {
@@ -434,12 +434,11 @@ export const TICKET_GRID_CONFIG = Object.freeze({
         flex: grid.flex,
         presentation:
           grid.presentation ??
-          (field.type === "select"
-            ? "optionLabel"
-            : undefined),
+          (field.type === "select" ? "optionLabel" : undefined),
         valueIsDisplay: grid.valueIsDisplay === true,
       };
-    }),
+    },
+  ),
 
   action: {
     field: "actions",

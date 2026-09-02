@@ -64,7 +64,6 @@ import ticketIssueCategoryRouter from "../modules/ticketIssueCategories/ticketIs
 
 import ticketDependencyCategoryRouter from "../modules/ticketDependencyCategories/ticketDependencyCategory.routes.js";
 
-
 const router = Router();
 
 /**
@@ -105,24 +104,26 @@ router.use(`/${apiVersion}/tickets`, ticketRouter);
 
 router.use(`/${apiVersion}/contacts`, contactRouter);
 
-router.use(`/${apiVersion}/serviceTypes`, serviceTypeRouter);
+router.use(`/${apiVersion}/service-types`, serviceTypeRouter);
 
-router.use(`/${apiVersion}/ticketCategories`, ticketCategoryRouter);
+router.use(`/${apiVersion}/ticket-categories`, ticketCategoryRouter);
 
 router.use(`/${apiVersion}/districts`, districtRouter);
 
-router.use(`/${apiVersion}/problemStatements`, problemStatementRouter);
+router.use(`/${apiVersion}/problem-statements`, problemStatementRouter);
 
-router.use(`/${apiVersion}/currentBillStatuses`, currentBillStatusRouter);
+router.use(`/${apiVersion}/current-bill-statuses`, currentBillStatusRouter);
 
-router.use(`/${apiVersion}/ticketStatuses`, ticketStatusRouter);
+router.use(`/${apiVersion}/ticket-statuses`, ticketStatusRouter);
 
-router.use(`/${apiVersion}/ticketSeverities`, ticketSeverityRouter);
+router.use(`/${apiVersion}/ticket-severities`, ticketSeverityRouter);
 
-router.use(`/${apiVersion}/ticketIssueCategories`, ticketIssueCategoryRouter);
+router.use(`/${apiVersion}/ticket-issue-categories`, ticketIssueCategoryRouter);
 
-router.use(`/${apiVersion}/ticketDependencyCategories`, ticketDependencyCategoryRouter);
-
+router.use(
+  `/${apiVersion}/ticket-dependency-categories`,
+  ticketDependencyCategoryRouter,
+);
 
 // router.use(`/${apiVersion}/sla`, slaRouter);
 
