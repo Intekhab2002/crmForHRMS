@@ -11,6 +11,8 @@ import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
 import DynamicFormOutlinedIcon from "@mui/icons-material/DynamicFormOutlined";
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
+
 
 import { Link, useLocation } from "react-router";
 
@@ -22,6 +24,7 @@ const ICONS = Object.freeze({
   users: PeopleOutlinedIcon,
   tickets: ConfirmationNumberOutlinedIcon,
   formConfiguration: DynamicFormOutlinedIcon,
+  roles: AdminPanelSettingsIcon
 });
 
 export default function Sidebar({ onNavigate }) {

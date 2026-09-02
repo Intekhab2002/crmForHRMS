@@ -42,13 +42,11 @@ import organizationRouter from "../modules/organizations/organization.routes.js"
 
 import departmentRouter from "../modules/departments/department.routes.js";
 
-
 import ticketRouter from "../modules/tickets/ticket.routes.js";
 
-import contactRouter
-    from "../modules/contacts/contact.routes.js";
+import contactRouter from "../modules/contacts/contact.routes.js";
 
-
+import serviceTypeRouter from "../modules/serviceTypes/serviceType.routes.js";
 
 const router = Router();
 
@@ -88,10 +86,9 @@ router.use(`/${apiVersion}/departments`, departmentRouter);
 
 router.use(`/${apiVersion}/tickets`, ticketRouter);
 
-router.use(
-    `/${apiVersion}/contacts`,
-    contactRouter,
-);
+router.use(`/${apiVersion}/contacts`, contactRouter);
+
+router.use(`/${apiVersion}/serviceTypes`, serviceTypeRouter);
 
 // router.use(`/${apiVersion}/sla`, slaRouter);
 

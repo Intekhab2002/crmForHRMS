@@ -42,9 +42,6 @@ export const RBAC_RESOURCES = Object.freeze({
   TICKET: "ticket",
   SLA: "sla",
   DASHBOARD: "dashboard",
-  EMPLOYEE: "employee",
-  FORM_FIELD: "form_field",
-  FORM_DEFINITION: "form_definition",
 });
 
 /**
@@ -114,25 +111,8 @@ export const RBAC_PERMISSIONS = Object.freeze({
   SLA_UPDATE: "sla:update",
   SLA_DELETE: "sla:delete",
 
-  EMPLOYEE_READ: "employee:read",
-  EMPLOYEE_CREATE: "employee:create",
-  EMPLOYEE_UPDATE: "employee:update",
-  EMPLOYEE_DELETE: "employee:delete",
-
   DASHBOARD_READ: "dashboard:read",
 
-  FORM_FIELD_READ: "form_field:read",
-  FORM_FIELD_CREATE: "form_field:create",
-  FORM_FIELD_UPDATE: "form_field:update",
-  FORM_FIELD_DELETE: "form_field:delete",
-  FORM_FIELD_RESTORE: "form_field:restore",
-  FORM_FIELD_ENABLE: "form_field:enable",
-  FORM_FIELD_DISABLE: "form_field:disable",
-
-  FORM_DEFINITION_READ: "form_definition:read",
-  FORM_DEFINITION_CREATE: "form_definition:create",
-  FORM_DEFINITION_UPDATE: "form_definition:update",
-  FORM_DEFINITION_DELETE: "form_definition:delete",
 });
 
 /**
