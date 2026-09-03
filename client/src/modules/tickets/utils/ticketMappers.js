@@ -171,140 +171,40 @@ function formatLifecycleFieldName(fieldName) {
     .replace(/^./, (character) => character.toUpperCase());
 }
 
-const LIFECYCLE_LOOKUP_FIELDS = Object.freeze({
-  status: {
-    idKey: "id",
-    nameKey: "name",
-  },
 
-  organization: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  department: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  service_type: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  category: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  problem_statement: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  current_bill_status: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  severity: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  issue_category: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  dependency_category: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  assigned_to: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  requester_user_id: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  created_by: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  district: {
-    idKey: "id",
-    nameKey: "name",
-  },
-
-  caller_department: {
-    idKey: "id",
-    nameKey: "name",
-  },
-});
-
-function resolveLifecycleLookupValue(fieldName, value, lookupOptions = {}) {
-  if (value === null || value === undefined || value === "") {
-    return value ?? null;
-  }
-
-  const fieldConfig = LIFECYCLE_LOOKUP_FIELDS[fieldName];
-
-  if (!fieldConfig) {
-    return value;
-  }
-
-  const options = lookupOptions[fieldName];
-
-  if (!Array.isArray(options)) {
-    return value;
-  }
-
-  const matchedOption = options.find((option) => {
-    if (!option) {
-      return false;
-    }
-
-    return (
-      option[fieldConfig.idKey] === value ||
-      option.value === value ||
-      option.id === value ||
-      option.code === value
-    );
-  });
-
-  if (!matchedOption) {
-    return value;
-  }
-
-  return (
-    matchedOption[fieldConfig.nameKey] ??
-    matchedOption.label ??
-    matchedOption.name ??
-    matchedOption.code ??
-    value
-  );
-}
 
 function mapLifecycleEvent(event) {
+  if (!event) {
+    return null;
+  }
+
   const metadata =
-    event.metadata && typeof event.metadata === "object"
+    event.metadata &&
+    typeof event.metadata === "object"
       ? event.metadata
       : {};
 
-  const fieldName = event.field_name ?? null;
+  const fieldName =
+    event.field_name ??
+    event.fieldName ??
+    null;
 
   const oldValue =
-    event.old_value ?? event.oldValue ?? null;
+    event.old_value ??
+    event.oldValue ??
+    null;
 
   const newValue =
-    event.new_value ?? event.newValue ?? null;
+    event.new_value ??
+    event.newValue ??
+    null;
 
+  /*
+   * Backend now provides explicit display values.
+   *
+   * Raw values are retained for audit/data purposes.
+   * Display values are used by the UI.
+   */
   const oldDisplayValue =
     event.old_display_value ??
     event.oldDisplayValue ??
@@ -318,19 +218,32 @@ function mapLifecycleEvent(event) {
   const change = fieldName
     ? {
         field: fieldName,
+
         label:
           metadata.fieldLabel ??
-          formatLifecycleFieldName(fieldName),
+          formatLifecycleFieldName(
+            fieldName,
+          ),
+
         from: oldValue,
-        fromDisplayValue: oldDisplayValue,
+
+        fromDisplayValue:
+          oldDisplayValue,
+
         to: newValue,
-        toDisplayValue: newDisplayValue,
+
+        toDisplayValue:
+          newDisplayValue,
       }
     : null;
 
   return {
     id: event.id ?? null,
-    ticketId: event.ticket_id ?? event.ticketId ?? null,
+
+    ticketId:
+      event.ticket_id ??
+      event.ticketId ??
+      null,
 
     actorUserId:
       event.actor_user_id ??
@@ -342,11 +255,23 @@ function mapLifecycleEvent(event) {
         event.actor_user_id ??
         event.actorUserId ??
         null,
-      username: event.username,
-      email: event.email,
-      name: event.name,
-      first_name: event.first_name,
-      last_name: event.last_name,
+
+      username:
+        event.username ?? "",
+
+      email:
+        event.email ?? "",
+
+      name:
+        event.actor_name ??
+        event.name ??
+        "",
+
+      first_name:
+        event.first_name,
+
+      last_name:
+        event.last_name,
     }),
 
     eventType:
@@ -361,15 +286,26 @@ function mapLifecycleEvent(event) {
 
     fieldName,
 
+    /*
+     * Raw/audit values.
+     */
     oldValue,
-    oldDisplayValue,
 
     newValue,
+
+    /*
+     * Human-readable values supplied by backend.
+     */
+    oldDisplayValue,
+
     newDisplayValue,
 
     metadata,
 
-    changes: change ? [change] : [],
+    changes:
+      change
+        ? [change]
+        : [],
 
     createdAt:
       event.created_at ??
@@ -773,7 +709,9 @@ export function mapLifecycleFromApi(events) {
     return [];
   }
 
-  return events.map(mapLifecycleEvent).filter(Boolean);
+  return events
+    .map(mapLifecycleEvent)
+    .filter(Boolean);
 }
 
 function mapCommentFromApi(comment) {

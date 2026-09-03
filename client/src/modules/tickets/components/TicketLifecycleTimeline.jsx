@@ -826,7 +826,7 @@ export default function TicketLifecycleTimeline({
                                     >
                                       <ValuePreview
                                         field={field}
-                                        value={change.from}
+                                        value={change.fromDisplayValue ?? change.from ?? "—"}
                                         fallback={fallback}
                                         onOpen={() => setSelectedChange(change)}
                                       />
@@ -851,7 +851,7 @@ export default function TicketLifecycleTimeline({
                                     >
                                       <ValuePreview
                                         field={field}
-                                        value={change.to}
+                                        value={change.toDisplayValue ?? change.to ?? "—"}
                                         fallback={fallback}
                                         onOpen={() => setSelectedChange(change)}
                                       />
