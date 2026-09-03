@@ -77,6 +77,18 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     form: { create: true, update: true, detail: true },
     grid: { visible: true, width: 150 },
   },
+
+  {
+    key: "organization",
+    label: "Organization",
+    type: "select",
+    entity: "ticket",
+    required: true,
+    options: apiOptions("/organizations"),
+    readOnly: true,
+    form: { create: true, update: false, detail: true },
+    grid: { visible: false },
+  },
   {
     key: "department",
     label: "Department",

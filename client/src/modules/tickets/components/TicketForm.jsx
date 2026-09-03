@@ -92,16 +92,7 @@ export default function TicketForm({
 
   const [options, setOptions] = useState({});
   const [loadingOptions, setLoadingOptions] = useState({});
-  const organizationId =
-    user?.organization_id ??
-    user?.organizationId ??
-    user?.organization?.id ??
-    "";
 
-  console.log("[TicketForm] Contact lookup context", {
-    user,
-    organizationId,
-  });
   useEffect(() => {
     let active = true;
 
@@ -183,7 +174,6 @@ export default function TicketForm({
             fields={fields}
             options={options}
             loadingOptions={loadingOptions}
-            organizationId={organizationId}
             submitting={submitting}
             submitLabel={submitLabel ?? TICKET_FORM_CONFIG[mode].submitLabel}
             onCancel={onCancel}

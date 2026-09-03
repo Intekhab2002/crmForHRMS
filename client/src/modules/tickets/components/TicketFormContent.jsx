@@ -13,7 +13,6 @@ export default function TicketFormContent({
   fields,
   options,
   loadingOptions,
-  organizationId,
   submitting,
   submitLabel,
   onCancel,
@@ -53,7 +52,7 @@ export default function TicketFormContent({
 
   const { status: contactLookupStatus, isLoading: contactLookupLoading } =
     useContactLookup({
-      organizationId,
+       organizationId: formik.values.organization,
       mobilePhone: formik.values.mobile_phone,
       enabled: mode === "create",
       onContactFound: handleContactFound,

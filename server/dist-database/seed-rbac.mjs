@@ -157,7 +157,7 @@ import{randomUUID as N}from"node:crypto";import G from"dotenv";import W from"nod
         $3,
         $4
       )
-      ON CONFLICT (code)
+      ON CONFLICT (LOWER(code))
       DO UPDATE SET
         name = EXCLUDED.name,
         description = EXCLUDED.description,

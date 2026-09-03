@@ -376,6 +376,38 @@ const SYSTEM_PERMISSIONS = Object.freeze([
     action: "close",
   }),
 
+  {
+    code: "attachment:read",
+    name: "Read Attachments",
+    description: "View and download attachments.",
+    resource: "attachment",
+    action: "read",
+  },
+
+  {
+    code: "attachment:create",
+    name: "Create Attachments",
+    description: "Upload attachments.",
+    resource: "attachment",
+    action: "create",
+  },
+
+  {
+    code: "attachment:update",
+    name: "Update Attachments",
+    description: "Update attachment metadata where permitted.",
+    resource: "attachment",
+    action: "update",
+  },
+
+  {
+    code: "attachment:delete",
+    name: "Delete Attachments",
+    description: "Delete attachments where permitted.",
+    resource: "attachment",
+    action: "delete",
+  },
+
   // -------------------------------------------------------------------------
   // SLA Management
   // -------------------------------------------------------------------------
@@ -1140,7 +1172,7 @@ async function ensureDefaultOrganization(executor, seedConfiguration) {
         $3,
         $4
       )
-      ON CONFLICT (code)
+      ON CONFLICT (LOWER(code))
       DO UPDATE SET
         name = EXCLUDED.name,
         description = EXCLUDED.description,
