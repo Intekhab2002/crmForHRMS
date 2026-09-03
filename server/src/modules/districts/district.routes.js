@@ -24,10 +24,10 @@ const {
 } = rbacMiddleware;
 
 const {
-    DISTRICT_READ,
-    DISTRICT_CREATE,
-    DISTRICT_UPDATE,
-    DISTRICT_DELETE,
+    OPTION_READ,
+    OPTION_CREATE,
+    OPTION_UPDATE,
+    OPTION_DELETE,
 } = RBAC_PERMISSIONS;
 
 const router = Router();
@@ -36,7 +36,7 @@ router.get(
     "/",
     authenticate,
     requirePermission(
-        DISTRICT_READ,
+        OPTION_READ,
     ),
     validateQuery(
         districtValidator
@@ -50,7 +50,7 @@ router.get(
     "/:districtId",
     authenticate,
     requirePermission(
-        DISTRICT_READ,
+        OPTION_READ,
     ),
     validateParams(
         districtValidator
@@ -64,7 +64,7 @@ router.post(
     "/",
     authenticate,
     requirePermission(
-        DISTRICT_CREATE,
+        OPTION_CREATE,
     ),
     validateBody(
         districtValidator
@@ -78,7 +78,7 @@ router.patch(
     "/:districtId",
     authenticate,
     requirePermission(
-        DISTRICT_UPDATE,
+        OPTION_UPDATE,
     ),
     validateParams(
         districtValidator
@@ -96,7 +96,7 @@ router.delete(
     "/:districtId",
     authenticate,
     requirePermission(
-        DISTRICT_DELETE,
+        OPTION_DELETE,
     ),
     validateParams(
         districtValidator

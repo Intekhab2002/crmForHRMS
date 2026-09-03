@@ -24,10 +24,10 @@ const {
 } = rbacMiddleware;
 
 const {
-    TICKET_STATUS_READ,
-    TICKET_STATUS_CREATE,
-    TICKET_STATUS_UPDATE,
-    TICKET_STATUS_DELETE,
+    OPTION_READ,
+    OPTION_CREATE,
+    OPTION_UPDATE,
+    OPTION_DELETE,
 } = RBAC_PERMISSIONS;
 
 const router = Router();
@@ -36,7 +36,7 @@ router.get(
     "/",
     authenticate,
     requirePermission(
-        TICKET_STATUS_READ,
+        OPTION_READ,
     ),
     validateQuery(
         ticketStatusValidator
@@ -50,7 +50,7 @@ router.get(
     "/:ticketStatusId",
     authenticate,
     requirePermission(
-        TICKET_STATUS_READ,
+        OPTION_READ,
     ),
     validateParams(
         ticketStatusValidator
@@ -64,7 +64,7 @@ router.post(
     "/",
     authenticate,
     requirePermission(
-        TICKET_STATUS_CREATE,
+        OPTION_CREATE,
     ),
     validateBody(
         ticketStatusValidator
@@ -78,7 +78,7 @@ router.patch(
     "/:ticketStatusId",
     authenticate,
     requirePermission(
-        TICKET_STATUS_UPDATE,
+        OPTION_UPDATE,
     ),
     validateParams(
         ticketStatusValidator
@@ -96,7 +96,7 @@ router.delete(
     "/:ticketStatusId",
     authenticate,
     requirePermission(
-        TICKET_STATUS_DELETE,
+        OPTION_DELETE,
     ),
     validateParams(
         ticketStatusValidator

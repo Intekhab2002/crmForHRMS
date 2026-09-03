@@ -24,10 +24,10 @@ const {
 } = rbacMiddleware;
 
 const {
-    SERVICE_TYPE_READ,
-    SERVICE_TYPE_CREATE,
-    SERVICE_TYPE_UPDATE,
-    SERVICE_TYPE_DELETE,
+    OPTION_READ,
+    OPTION_CREATE,
+    OPTION_UPDATE,
+    OPTION_DELETE,
 } = RBAC_PERMISSIONS;
 
 const router = Router();
@@ -36,7 +36,7 @@ router.get(
     "/",
     authenticate,
     requirePermission(
-        SERVICE_TYPE_READ,
+        OPTION_READ,
     ),
     validateQuery(
         serviceTypeValidator
@@ -50,7 +50,7 @@ router.get(
     "/:serviceTypeId",
     authenticate,
     requirePermission(
-        SERVICE_TYPE_READ,
+        OPTION_READ,
     ),
     validateParams(
         serviceTypeValidator
@@ -64,7 +64,7 @@ router.post(
     "/",
     authenticate,
     requirePermission(
-        SERVICE_TYPE_CREATE,
+        OPTION_CREATE,
     ),
     validateBody(
         serviceTypeValidator
@@ -78,7 +78,7 @@ router.patch(
     "/:serviceTypeId",
     authenticate,
     requirePermission(
-        SERVICE_TYPE_UPDATE,
+        OPTION_UPDATE,
     ),
     validateParams(
         serviceTypeValidator
@@ -96,7 +96,7 @@ router.delete(
     "/:serviceTypeId",
     authenticate,
     requirePermission(
-        SERVICE_TYPE_DELETE,
+        OPTION_DELETE,
     ),
     validateParams(
         serviceTypeValidator

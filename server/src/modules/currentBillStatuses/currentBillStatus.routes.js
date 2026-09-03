@@ -24,10 +24,10 @@ const {
 } = rbacMiddleware;
 
 const {
-    CURRENT_BILL_STATUS_READ,
-    CURRENT_BILL_STATUS_CREATE,
-    CURRENT_BILL_STATUS_UPDATE,
-    CURRENT_BILL_STATUS_DELETE,
+    OPTION_READ,
+    OPTION_CREATE,
+    OPTION_UPDATE,
+    OPTION_DELETE,
 } = RBAC_PERMISSIONS;
 
 const router = Router();
@@ -36,7 +36,7 @@ router.get(
     "/",
     authenticate,
     requirePermission(
-        CURRENT_BILL_STATUS_READ,
+        OPTION_READ,
     ),
     validateQuery(
         currentBillStatusValidator
@@ -50,7 +50,7 @@ router.get(
     "/:currentBillStatusId",
     authenticate,
     requirePermission(
-        CURRENT_BILL_STATUS_READ,
+        OPTION_READ,
     ),
     validateParams(
         currentBillStatusValidator
@@ -64,7 +64,7 @@ router.post(
     "/",
     authenticate,
     requirePermission(
-        CURRENT_BILL_STATUS_CREATE,
+        OPTION_CREATE,
     ),
     validateBody(
         currentBillStatusValidator
@@ -78,7 +78,7 @@ router.patch(
     "/:currentBillStatusId",
     authenticate,
     requirePermission(
-        CURRENT_BILL_STATUS_UPDATE,
+        OPTION_UPDATE,
     ),
     validateParams(
         currentBillStatusValidator
@@ -96,7 +96,7 @@ router.delete(
     "/:currentBillStatusId",
     authenticate,
     requirePermission(
-        CURRENT_BILL_STATUS_DELETE,
+        OPTION_DELETE,
     ),
     validateParams(
         currentBillStatusValidator

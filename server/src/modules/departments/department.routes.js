@@ -24,10 +24,10 @@ const {
 } = rbacMiddleware;
 
 const {
-    DEPARTMENT_READ,
-    DEPARTMENT_CREATE,
-    DEPARTMENT_UPDATE,
-    DEPARTMENT_DELETE,
+    OPTION_READ,
+    OPTION_CREATE,
+    OPTION_UPDATE,
+    OPTION_DELETE,
 } = RBAC_PERMISSIONS;
 
 const router = Router();
@@ -36,7 +36,7 @@ router.get(
     "/",
     authenticate,
     requirePermission(
-        DEPARTMENT_READ,
+        OPTION_READ,
     ),
     validateQuery(
         departmentValidator
@@ -50,7 +50,7 @@ router.get(
     "/:departmentId",
     authenticate,
     requirePermission(
-        DEPARTMENT_READ,
+        OPTION_READ,
     ),
     validateParams(
         departmentValidator
@@ -64,7 +64,7 @@ router.post(
     "/",
     authenticate,
     requirePermission(
-        DEPARTMENT_CREATE,
+        OPTION_CREATE,
     ),
     validateBody(
         departmentValidator
@@ -78,7 +78,7 @@ router.patch(
     "/:departmentId",
     authenticate,
     requirePermission(
-        DEPARTMENT_UPDATE,
+        OPTION_UPDATE,
     ),
     validateParams(
         departmentValidator
@@ -96,7 +96,7 @@ router.delete(
     "/:departmentId",
     authenticate,
     requirePermission(
-        DEPARTMENT_DELETE,
+        OPTION_DELETE,
     ),
     validateParams(
         departmentValidator

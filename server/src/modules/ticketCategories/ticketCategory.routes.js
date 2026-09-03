@@ -24,10 +24,10 @@ const {
 } = rbacMiddleware;
 
 const {
-    TICKET_CATEGORY_READ,
-    TICKET_CATEGORY_CREATE,
-    TICKET_CATEGORY_UPDATE,
-    TICKET_CATEGORY_DELETE,
+    OPTION_READ,
+    OPTION_CREATE,
+    OPTION_UPDATE,
+    OPTION_DELETE,
 } = RBAC_PERMISSIONS;
 
 const router = Router();
@@ -36,7 +36,7 @@ router.get(
     "/",
     authenticate,
     requirePermission(
-        TICKET_CATEGORY_READ,
+        OPTION_READ,
     ),
     validateQuery(
         ticketCategoryValidator
@@ -50,7 +50,7 @@ router.get(
     "/:ticketCategoryId",
     authenticate,
     requirePermission(
-        TICKET_CATEGORY_READ,
+        OPTION_READ,
     ),
     validateParams(
         ticketCategoryValidator
@@ -64,7 +64,7 @@ router.post(
     "/",
     authenticate,
     requirePermission(
-        TICKET_CATEGORY_CREATE,
+        OPTION_CREATE,
     ),
     validateBody(
         ticketCategoryValidator
@@ -78,7 +78,7 @@ router.patch(
     "/:ticketCategoryId",
     authenticate,
     requirePermission(
-        TICKET_CATEGORY_UPDATE,
+        OPTION_UPDATE,
     ),
     validateParams(
         ticketCategoryValidator
@@ -96,7 +96,7 @@ router.delete(
     "/:ticketCategoryId",
     authenticate,
     requirePermission(
-        TICKET_CATEGORY_DELETE,
+        OPTION_DELETE,
     ),
     validateParams(
         ticketCategoryValidator

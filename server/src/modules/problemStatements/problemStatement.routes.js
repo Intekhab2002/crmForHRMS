@@ -24,10 +24,10 @@ const {
 } = rbacMiddleware;
 
 const {
-    PROBLEM_STATEMENT_READ,
-    PROBLEM_STATEMENT_CREATE,
-    PROBLEM_STATEMENT_UPDATE,
-    PROBLEM_STATEMENT_DELETE,
+    OPTION_READ,
+    OPTION_CREATE,
+    OPTION_UPDATE,
+    OPTION_DELETE,
 } = RBAC_PERMISSIONS;
 
 const router = Router();
@@ -36,7 +36,7 @@ router.get(
     "/",
     authenticate,
     requirePermission(
-        PROBLEM_STATEMENT_READ,
+        OPTION_READ,
     ),
     validateQuery(
         problemStatementValidator
@@ -50,7 +50,7 @@ router.get(
     "/:problemStatementId",
     authenticate,
     requirePermission(
-        PROBLEM_STATEMENT_READ,
+        OPTION_READ,
     ),
     validateParams(
         problemStatementValidator
@@ -64,7 +64,7 @@ router.post(
     "/",
     authenticate,
     requirePermission(
-        PROBLEM_STATEMENT_CREATE,
+        OPTION_CREATE,
     ),
     validateBody(
         problemStatementValidator
@@ -78,7 +78,7 @@ router.patch(
     "/:problemStatementId",
     authenticate,
     requirePermission(
-        PROBLEM_STATEMENT_UPDATE,
+        OPTION_UPDATE,
     ),
     validateParams(
         problemStatementValidator
@@ -96,7 +96,7 @@ router.delete(
     "/:problemStatementId",
     authenticate,
     requirePermission(
-        PROBLEM_STATEMENT_DELETE,
+        OPTION_DELETE,
     ),
     validateParams(
         problemStatementValidator

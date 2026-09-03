@@ -24,10 +24,10 @@ const {
 } = rbacMiddleware;
 
 const {
-    TICKET_SEVERITY_READ,
-    TICKET_SEVERITY_CREATE,
-    TICKET_SEVERITY_UPDATE,
-    TICKET_SEVERITY_DELETE,
+    OPTION_READ,
+    OPTION_CREATE,
+    OPTION_UPDATE,
+    OPTION_DELETE,
 } = RBAC_PERMISSIONS;
 
 const router = Router();
@@ -36,7 +36,7 @@ router.get(
     "/",
     authenticate,
     requirePermission(
-        TICKET_SEVERITY_READ,
+        OPTION_READ,
     ),
     validateQuery(
         ticketSeverityValidator
@@ -50,7 +50,7 @@ router.get(
     "/:ticketSeverityId",
     authenticate,
     requirePermission(
-        TICKET_SEVERITY_READ,
+        OPTION_READ,
     ),
     validateParams(
         ticketSeverityValidator
@@ -64,7 +64,7 @@ router.post(
     "/",
     authenticate,
     requirePermission(
-        TICKET_SEVERITY_CREATE,
+        OPTION_CREATE,
     ),
     validateBody(
         ticketSeverityValidator
@@ -78,7 +78,7 @@ router.patch(
     "/:ticketSeverityId",
     authenticate,
     requirePermission(
-        TICKET_SEVERITY_UPDATE,
+        OPTION_UPDATE,
     ),
     validateParams(
         ticketSeverityValidator
@@ -96,7 +96,7 @@ router.delete(
     "/:ticketSeverityId",
     authenticate,
     requirePermission(
-        TICKET_SEVERITY_DELETE,
+        OPTION_DELETE,
     ),
     validateParams(
         ticketSeverityValidator
