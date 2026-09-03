@@ -50,22 +50,36 @@ const TICKET_SELECT = `
     ticket_status.name AS status_name,
 
     t.requester_user_id,
-    TRIM(
-        CONCAT_WS(
-            ' ',
-            requester.first_name,
-            requester.last_name
-        )
-    ) AS requester_name,
+COALESCE(
+    NULLIF(
+        TRIM(
+            CONCAT_WS(
+                ' ',
+                creator.first_name,
+                creator.last_name
+            )
+        ),
+        ''
+    ),
+    creator.username,
+    creator.email
+) AS created_by_name,
 
     t.created_by_user_id,
-    TRIM(
-        CONCAT_WS(
-            ' ',
-            creator.first_name,
-            creator.last_name
-        )
-    ) AS created_by_name,
+COALESCE(
+    NULLIF(
+        TRIM(
+            CONCAT_WS(
+                ' ',
+                creator.first_name,
+                creator.last_name
+            )
+        ),
+        ''
+    ),
+    creator.username,
+    creator.email
+) AS created_by_name,
 
     t.organization_id,
     organization.code AS organization_code,

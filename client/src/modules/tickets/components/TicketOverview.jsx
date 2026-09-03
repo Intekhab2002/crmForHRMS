@@ -23,6 +23,7 @@ const DISPLAY_VALUE_FIELDS = Object.freeze({
 
   assigned_to: "assignedUserName",
   created_by: "createdByName",
+  district: "districtName",
 
   caller_department: "callerDepartmentName",
 
