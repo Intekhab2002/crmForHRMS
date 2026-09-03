@@ -46,7 +46,7 @@ import { getOptionSource } from "../components/TicketForm";
 import {
   TICKET_FIELD_CONFIG,
   TICKET_MODULE_CONFIG,
-  TICKET_STATUS_OPTIONS,
+  TICKET_FIELD_MAP,
 } from "../../../config/ticket.config";
 
 const DETAIL_FIELDS = TICKET_FIELD_CONFIG.filter((field) => field.form?.detail)
@@ -92,10 +92,12 @@ function buildUpdateValues(ticket) {
   );
 }
 
-function getStatusLabel(status) {
+function getStatusLabel(ticket) {
   return (
-    TICKET_STATUS_OPTIONS?.find((option) => option.value === status)?.label ??
-    status
+    ticket.statusName ||
+    ticket.statusCode ||
+    ticket.status ||
+    TICKET_MODULE_CONFIG.labels.notAvailable
   );
 }
 
@@ -522,7 +524,7 @@ export default function TicketLifecyclePage() {
               </Typography>
 
               <Chip
-                label={getStatusLabel(ticket.status)}
+                label={getStatusLabel(ticket)}
                 size="small"
                 color="primary"
               />
@@ -549,9 +551,9 @@ export default function TicketLifecyclePage() {
                   size="small"
                   value={pendingStatus}
                   onChange={handleStatusChange}
-                  disabled={saving}
+                  disabled={saving || statusOptionsLoading}
                 >
-                  {TICKET_STATUS_OPTIONS.map((option) => (
+                  {statusOptions.map((option) => (
                     <MenuItem key={option.value} value={option.value}>
                       {option.label}
                     </MenuItem>

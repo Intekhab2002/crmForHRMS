@@ -22,8 +22,6 @@ import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
 
 import CanAccess from "../../../components/rbac/CanAccess";
 
-import { useAuth } from "../../../context/useAuth";
-
 import { ticketService } from "../services/ticket.service";
 
 import TicketAttachmentViewer from "./TicketAttachmentViewer";
@@ -85,16 +83,8 @@ export default function TicketAttachmentList({ ticketId }) {
 
   const [deletingId, setDeletingId] = useState(null);
 
-  const { hasPermission } = useAuth();
-
   const { attachment: attachmentPermissions } =
     TICKET_MODULE_CONFIG.permissions;
-
-  const canReadAttachments = hasPermission(attachmentPermissions.read);
-
-  const canCreateAttachments = hasPermission(attachmentPermissions.create);
-
-  const canDeleteAttachments = hasPermission(attachmentPermissions.delete);
 
   const loadAttachments = async () => {
     setIsLoading(true);
@@ -248,7 +238,7 @@ export default function TicketAttachmentList({ ticketId }) {
   };
 
   return (
-    <CanAccess permission="ticket:attachment">
+    <CanAccess permission={attachmentPermissions.read}>
       <Paper
         variant="outlined"
         sx={{
@@ -480,7 +470,7 @@ export default function TicketAttachmentList({ ticketId }) {
                         </IconButton>
                       </Tooltip>
 
-                     <CanAccess permission={attachmentPermissions.delete}>
+                      <CanAccess permission={attachmentPermissions.delete}>
                         <Tooltip title="Delete">
                           <span>
                             <IconButton
