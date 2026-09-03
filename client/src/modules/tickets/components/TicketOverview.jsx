@@ -11,17 +11,31 @@ import {
 
 import { useAuth } from "../../../context/useAuth";
 
-
 /*
  * Fields whose persisted value is an ID but whose API response
  * already contains the corresponding human-readable display value.
  */
 const DISPLAY_VALUE_FIELDS = Object.freeze({
+  status: "statusName",
+
+  organization: "organizationName",
   department: "departmentName",
+
   assigned_to: "assignedUserName",
   created_by: "createdByName",
-  organization: "organizationName",
+
   caller_department: "callerDepartmentName",
+
+  service_type: "serviceTypeName",
+  category: "categoryName",
+  problem_statement: "problemStatementName",
+
+  current_bill_status: "currentBillStatusName",
+
+  severity: "severityName",
+
+  issue_category: "issueCategoryName",
+  dependency_category: "dependencyCategoryName",
 });
 
 function canReadField(field, enforcePermissions, hasPermission) {
@@ -53,9 +67,7 @@ function getFieldValue(field, ticket) {
 }
 
 function renderValue(field, ticket, fallback) {
-  // const value = ticket[field.key];
   const value = getFieldValue(field, ticket);
-
 
   if (value === null || value === undefined || value === "") {
     return fallback;
@@ -69,10 +81,6 @@ function renderValue(field, ticket, fallback) {
     return formatDate(value, fallback);
   }
 
-  /*
-   * Prefer API-provided display values for
-   * relational/API-backed fields.
-   */
   const displayValue = getDisplayValue(field, ticket);
 
   if (
@@ -83,11 +91,6 @@ function renderValue(field, ticket, fallback) {
     return displayValue;
   }
 
-  /*
-   * Static select fields have an array of options.
-   * Dynamic API fields have an options descriptor object,
-   * so formatTicketValue must not call .find() on them.
-   */
   if (
     field.type === "select" &&
     Array.isArray(field.options) &&
@@ -98,10 +101,8 @@ function renderValue(field, ticket, fallback) {
     );
   }
 
-  return formatTicketValue(field, value, fallback);
+  return formatTicketValue(field, value, fallback, ticket);
 }
-
-
 
 export default function TicketOverview({
   ticket,
