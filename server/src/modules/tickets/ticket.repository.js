@@ -574,8 +574,7 @@ async function findDepartment(id, tx = null) {
     `
         SELECT
             id,
-            organization_id,
-            status
+            is_active
         FROM departments
         WHERE id = $1::UUID
         LIMIT 1;

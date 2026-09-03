@@ -172,25 +172,6 @@ async function validateReferences(data, tx) {
     }
   }
 
-  if (data.organization) {
-    const organization = await ticketRepository.findOrganization(
-      data.organization,
-      tx,
-    );
-
-    if (!organization) {
-      throw AppError.notFound("Organization not found.", {
-        code: TICKET_ERROR_CODES.ORGANIZATION_NOT_FOUND,
-      });
-    }
-
-    if (organization.status !== "active") {
-      throw AppError.conflict("Organization is inactive.", {
-        code: TICKET_ERROR_CODES.ORGANIZATION_INACTIVE,
-      });
-    }
-  }
-
   if (data.department) {
     const department = await ticketRepository.findDepartment(
       data.department,
@@ -203,19 +184,10 @@ async function validateReferences(data, tx) {
       });
     }
 
-    if (department.status !== "active") {
+    if (!department.is_active) {
       throw AppError.conflict("Department is inactive.", {
         code: TICKET_ERROR_CODES.DEPARTMENT_INACTIVE,
       });
-    }
-
-    if (data.organization && department.organization_id !== data.organization) {
-      throw AppError.conflict(
-        "Department does not belong to the selected organization.",
-        {
-          code: TICKET_ERROR_CODES.DEPARTMENT_DIFFERENT_ORGANIZATION,
-        },
-      );
     }
   }
 
@@ -325,37 +297,6 @@ async function createTicket(payload, authenticatedUserId) {
       ticket.requester_user_id = authenticatedUserId;
     }
 
-    /*
-     * Department determines organization when
-     * organization was not explicitly supplied.
-     */
-    if (!ticket.organization && ticket.department) {
-      const department = await ticketRepository.findDepartment(
-        ticket.department,
-        tx,
-      );
-
-      if (!department) {
-        throw AppError.notFound("Department not found.", {
-          code: TICKET_ERROR_CODES.DEPARTMENT_NOT_FOUND,
-        });
-      }
-
-      ticket.organization = department.organization_id;
-    }
-
-    if (!ticket.organization) {
-      throw AppError.validation(
-        "Organization is required for ticket creation.",
-        [
-          {
-            path: "organization",
-            message: "Organization is required.",
-          },
-        ],
-      );
-    }
-
     await validateReferences(ticket, tx);
 
     let contactId = ticket.contact ?? null;
@@ -391,7 +332,8 @@ async function createTicket(payload, authenticatedUserId) {
 
       const createdContact = await contactService.findOrCreateContact(
         {
-          organizationId: ticket.organization ?? null,
+          organizationId:
+            ticket.organization ?? "fd4ee358-be79-40cc-b136-7dd9179a5a10",
 
           name: contactName,
 

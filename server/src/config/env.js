@@ -79,13 +79,14 @@ const env = Object.freeze({
   server: Object.freeze({
     host: process.env.HOST,
     port: parseNumber(process.env.PORT, "PORT"),
-    trustProxy: process.env.TRUST_PROXY === "true"
-            ? true
-            : process.env.TRUST_PROXY === "false"
-              ? false
-              : Number.isInteger(Number(process.env.TRUST_PROXY))
-                ? Number(process.env.TRUST_PROXY)
-                : process.env.TRUST_PROXY,
+    trustProxy:
+      process.env.TRUST_PROXY === "true"
+        ? true
+        : process.env.TRUST_PROXY === "false"
+          ? false
+          : Number.isInteger(Number(process.env.TRUST_PROXY))
+            ? Number(process.env.TRUST_PROXY)
+            : process.env.TRUST_PROXY,
   }),
 
   database: Object.freeze({
@@ -209,27 +210,26 @@ const env = Object.freeze({
     apiVersion: process.env.API_VERSION,
   }),
 
-seeding: Object.freeze({
-    developerUsername:
-        process.env.SEED_DEVELOPER_USERNAME,
+  seeding: Object.freeze({
+    developerUsername: process.env.SEED_DEVELOPER_USERNAME,
 
-    developerEmail:
-        process.env.SEED_DEVELOPER_EMAIL,
+    developerEmail: process.env.SEED_DEVELOPER_EMAIL,
 
-    developerPassword:
-        process.env.SEED_DEVELOPER_PASSWORD,
-}),
+    developerPassword: process.env.SEED_DEVELOPER_PASSWORD,
+    defaultOrganizationCode: process.env.DEFAULT_ORGANIZATION_CODE,
 
-ssl: Object.freeze({
-    enabled:
-        process.env.DB_SSL === "true",
+    defaultOrganizationName: process.env.DEFAULT_ORGANIZATION_NAME,
 
-    rejectUnauthorized:
-        process.env.DB_SSL_REJECT_UNAUTHORIZED === "true",
+    defaultOrganizationStatus: process.env.DEFAULT_ORGANIZATION_STATUS,
+  }),
 
-    ca:
-        process.env.DB_SSL_CA?.trim() || null,
-}),
+  ssl: Object.freeze({
+    enabled: process.env.DB_SSL === "true",
+
+    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === "true",
+
+    ca: process.env.DB_SSL_CA?.trim() || null,
+  }),
 });
 
 export default env;

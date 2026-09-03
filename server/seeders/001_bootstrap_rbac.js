@@ -737,6 +737,14 @@ function getSeedConfiguration() {
 
   const password = appConfig.seeding?.developerPassword;
 
+  const defaultOrganizationCode = appConfig.seeding?.defaultOrganizationCode?.trim();
+
+  const defaultOrganizationName = appConfig.seeding?.defaultOrganizationName?.trim();
+
+  const defaultOrganizationStatus = appConfig.seeding?.defaultOrganizationStatus?.trim();
+
+  
+
   if (!username) {
     throw new Error("SEED_DEVELOPER_USERNAME is required.");
   }
@@ -1093,6 +1101,36 @@ async function ensureDeveloperUser(executor, seedConfiguration) {
   return result.rows[0];
 }
 
+
+async function ensureDefaultOrganization(executor, seedConfiguration) {
+  const result = await executor.query(
+    `
+    INSERT INTO organizations (
+      id,
+      code,
+      name,
+      description,
+      status
+    )
+    VALUES (
+      gen_random_uuid(),
+      $1,
+      $2,
+      $3,
+      'active'
+    )
+    ON CONFLICT (code)
+    DO UPDATE SET
+      name = EXCLUDED.name,
+      description = EXCLUDED.description,
+      status = EXCLUDED.status;
+  `,
+  [   seedConfiguration.defaultOrganizationCode,
+    seedConfiguration.defaultOrganizationName,
+    seedConfiguration.defaultOrganizationStatus,]
+  )
+}
+
 /**
  * ============================================================================
  * Developer Role Assignment
@@ -1319,6 +1357,11 @@ async function seedRbac() {
         executor,
         seedConfiguration,
       );
+
+      const defaultOrganization = await ensureDefaultOrganization(
+        executor,
+        seedConfiguration,
+      )
 
       /**
        * ------------------------------------------------------------
