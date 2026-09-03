@@ -6,7 +6,7 @@ import {
     TICKET_STATUS_MESSAGES,
 } from "./ticketStatus.constant.js";
 
-async function getticketStatus(
+async function getTicketStatuses(
     req,
     res,
     next,
@@ -119,7 +119,7 @@ async function deleteTicketStatus(
 }
 
 export default Object.freeze({
-    getticketStatus,
+    getTicketStatuses,
     getTicketStatus,
     createTicketStatus,
     updateTicketStatus,

@@ -11,44 +11,39 @@
  */
 
 export const PERMISSIONS = Object.freeze({
-    DASHBOARD_READ:
-        "dashboard:read",
+  DASHBOARD_READ: "dashboard:read",
 
-    USER_READ:
-        "user:read",
+  USER_READ: "user:read",
 
-    USER_CREATE:
-        "user:create",
+  USER_CREATE: "user:create",
 
-    USER_UPDATE:
-        "user:update",
+  USER_UPDATE: "user:update",
 
-    USER_DELETE:
-        "user:delete",
+  USER_DELETE: "user:delete",
 
-    ROLE_READ:
-        "role:read",
+  ROLE_READ: "role:read",
 
-    ROLE_CREATE:
-        "role:create",
+  ROLE_CREATE: "role:create",
 
-    ROLE_UPDATE:
-        "role:update",
+  ROLE_UPDATE: "role:update",
 
-    ROLE_DELETE:
-        "role:delete",
+  ROLE_DELETE: "role:delete",
 
-    TICKET_READ:
-        "ticket:read",
+  TICKET_READ: "ticket:read",
 
-    TICKET_CREATE:
-        "ticket:create",
+  TICKET_CREATE: "ticket:create",
 
-    TICKET_UPDATE:
-        "ticket:update",
+  TICKET_UPDATE: "ticket:update",
 
-    TICKET_DELETE:
-        "ticket:delete",
+  TICKET_DELETE: "ticket:delete",
+  
+  OPTION_READ: "option:read",
+
+  OPTION_CREATE: "option:create",
+
+  OPTION_UPDATE: "option:update",
+
+  OPTION_DELETE: "option:delete",
 });
 
 export default PERMISSIONS;

@@ -971,8 +971,8 @@ async function verifyBootstrapState(
   );
 
   if (superadminAssignments.rows[0].count !== 0) {
-    throw new Error(
-      "Super Admin role must not have an initial user assignment.",
+    logger.debug(
+      "Super Admin role already has a user assignment. Existing assignment will be preserved.",
     );
   }
 

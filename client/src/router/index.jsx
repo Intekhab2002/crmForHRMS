@@ -30,6 +30,9 @@ import DefaultEntryPage from "../pages/common/DefaultEntryPage";
 import RoleManagementPage
     from "../modules/roles/pages/RoleManagementPage";
 
+import OptionManagementPage
+    from "../modules/options/pages/OptionManagementPage";
+
 import {
   APP_MODULE_CONFIG,
   SYSTEM_ROUTES,
@@ -61,6 +64,7 @@ const COMPONENTS = Object.freeze({
   forbidden: ForbiddenPage,
   notFound: NotFoundPage,
   defaultEntry: DefaultEntryPage,
+  options: OptionManagementPage,
 });
 
 function applyPermissionGuard(route, element) {

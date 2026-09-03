@@ -122,6 +122,23 @@ export const APP_MODULE_CONFIG = Object.freeze({
       }),
 
       createRoute({
+        id: "options",
+        path: "/options",
+        label: "Option Management",
+        component: "options",
+
+        access: {
+          permissions: [PERMISSIONS.OPTION_READ],
+        },
+
+        navigation: {
+          section: "app",
+          icon: "options",
+          order: 27,
+        },
+      }),
+
+      createRoute({
         id: "tickets",
         path: "/tickets",
         label: "Tickets",

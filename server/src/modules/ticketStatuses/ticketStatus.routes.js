@@ -43,7 +43,7 @@ router.get(
             .ticketStatusListQuerySchema,
     ),
     ticketStatusController
-        .getticketStatus,
+        .getTicketStatuses,
 );
 
 router.get(

@@ -40,5 +40,17 @@ export const API_CONFIG = Object.freeze({
           `/contacts/${organizationId}/by-mobile/${encodeURIComponent(mobilePhone)}`,
       }),
     }),
+    options: Object.freeze({
+      serviceTypes: "/service-types",
+      districts: "/districts",
+      departments: "/departments",
+      ticketCategories: "/ticket-categories",
+      problemStatements: "/problem-statements",
+      currentBillStatuses: "/current-bill-statuses",
+      ticketStatuses: "/ticket-statuses",
+      ticketSeverities: "/ticket-severities",
+      ticketIssueCategories: "/ticket-issue-categories",
+      ticketDependencyCategories: "/ticket-dependency-categories",
+    }),
   }),
 });
