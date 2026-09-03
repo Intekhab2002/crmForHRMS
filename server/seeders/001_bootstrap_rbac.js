@@ -361,6 +361,22 @@ const SYSTEM_PERMISSIONS = Object.freeze([
   }),
 
   Object.freeze({
+    code: "ticket:comment",
+    name: "Comment on Tickets",
+    description: "Add comments to tickets.",
+    resource: "ticket",
+    action: "comment",
+  }),
+
+  Object.freeze({
+    code: "ticket:attachment",
+    name: "Manage Ticket Attachments",
+    description: "Upload, view, download, and delete ticket attachments.",
+    resource: "ticket",
+    action: "attachment",
+  }),
+
+  Object.freeze({
     code: "ticket:resolve",
     name: "Resolve Tickets",
     description: "Resolve tickets.",
@@ -376,73 +392,73 @@ const SYSTEM_PERMISSIONS = Object.freeze([
     action: "close",
   }),
 
-  {
-    code: "attachment:read",
-    name: "Read Attachments",
-    description: "View and download attachments.",
-    resource: "attachment",
-    action: "read",
-  },
+  // {
+  //   code: "attachment:read",
+  //   name: "Read Attachments",
+  //   description: "View and download attachments.",
+  //   resource: "attachment",
+  //   action: "read",
+  // },
 
-  {
-    code: "attachment:create",
-    name: "Create Attachments",
-    description: "Upload attachments.",
-    resource: "attachment",
-    action: "create",
-  },
+  // {
+  //   code: "attachment:create",
+  //   name: "Create Attachments",
+  //   description: "Upload attachments.",
+  //   resource: "attachment",
+  //   action: "create",
+  // },
 
-  {
-    code: "attachment:update",
-    name: "Update Attachments",
-    description: "Update attachment metadata where permitted.",
-    resource: "attachment",
-    action: "update",
-  },
+  // {
+  //   code: "attachment:update",
+  //   name: "Update Attachments",
+  //   description: "Update attachment metadata where permitted.",
+  //   resource: "attachment",
+  //   action: "update",
+  // },
 
-  {
-    code: "attachment:delete",
-    name: "Delete Attachments",
-    description: "Delete attachments where permitted.",
-    resource: "attachment",
-    action: "delete",
-  },
+  // {
+  //   code: "attachment:delete",
+  //   name: "Delete Attachments",
+  //   description: "Delete attachments where permitted.",
+  //   resource: "attachment",
+  //   action: "delete",
+  // },
 
   // -------------------------------------------------------------------------
   // Ticket Comments
   // -------------------------------------------------------------------------
 
-  Object.freeze({
-    code: "comment:read",
-    name: "Read Comments",
-    description: "View ticket comments.",
-    resource: "comment",
-    action: "read",
-  }),
+  // Object.freeze({
+  //   code: "comment:read",
+  //   name: "Read Comments",
+  //   description: "View ticket comments.",
+  //   resource: "comment",
+  //   action: "read",
+  // }),
 
-  Object.freeze({
-    code: "comment:create",
-    name: "Create Comments",
-    description: "Add comments to tickets.",
-    resource: "comment",
-    action: "create",
-  }),
+  // Object.freeze({
+  //   code: "comment:create",
+  //   name: "Create Comments",
+  //   description: "Add comments to tickets.",
+  //   resource: "comment",
+  //   action: "create",
+  // }),
 
-  Object.freeze({
-    code: "comment:update",
-    name: "Update Comments",
-    description: "Update comments where permitted.",
-    resource: "comment",
-    action: "update",
-  }),
+  // Object.freeze({
+  //   code: "comment:update",
+  //   name: "Update Comments",
+  //   description: "Update comments where permitted.",
+  //   resource: "comment",
+  //   action: "update",
+  // }),
 
-  Object.freeze({
-    code: "comment:delete",
-    name: "Delete Comments",
-    description: "Delete comments where permitted.",
-    resource: "comment",
-    action: "delete",
-  }),
+  // Object.freeze({
+  //   code: "comment:delete",
+  //   name: "Delete Comments",
+  //   description: "Delete comments where permitted.",
+  //   resource: "comment",
+  //   action: "delete",
+  // }),
 
   // -------------------------------------------------------------------------
   // SLA Management

@@ -122,11 +122,6 @@ export const RBAC_PERMISSIONS = Object.freeze({
 
   DASHBOARD_READ: "dashboard:read",
 
-  SERVICE_TYPE_READ: "service_type:read",
-  SERVICE_TYPE_CREATE: "service_type:create",
-  SERVICE_TYPE_UPDATE: "service_type:update",
-  SERVICE_TYPE_DELETE: "service_type:delete",
-
   // Service Type
   SERVICE_TYPE_READ: "service_type:read",
   SERVICE_TYPE_CREATE: "service_type:create",
