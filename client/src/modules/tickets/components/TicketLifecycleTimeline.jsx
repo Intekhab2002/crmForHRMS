@@ -310,14 +310,13 @@ function ActivityDetailDialog({ open, onClose, activity, fields, fallback }) {
               {changes.map((change) => {
                 const field = getField(fields, change.field);
 
-                const oldValue = formatTicketValue(
-                  field,
-                  change.from,
-                  fallback,
-                );
+                const oldValue =
+                  change.fromDisplayValue ??
+                  formatTicketValue(field, change.from, fallback);
 
-                const newValue = formatTicketValue(field, change.to, fallback);
-
+                const newValue =
+                  change.toDisplayValue ??
+                  formatTicketValue(field, change.to, fallback);
                 return (
                   <Paper
                     key={`${activity.id}-${change.field}`}
@@ -341,7 +340,7 @@ function ActivityDetailDialog({ open, onClose, activity, fields, fallback }) {
                     <Stack
                       direction={{
                         xs: "column",
-                                            }}
+                      }}
                       spacing={1.5}
                       alignItems="stretch"
                     >
@@ -770,7 +769,6 @@ export default function TicketLifecycleTimeline({
                         >
                           {actor}
                         </Typography>
-
                       </Stack>
 
                       {/* Changes */}
@@ -826,7 +824,11 @@ export default function TicketLifecycleTimeline({
                                     >
                                       <ValuePreview
                                         field={field}
-                                        value={change.fromDisplayValue ?? change.from ?? "—"}
+                                        value={
+                                          change.fromDisplayValue ??
+                                          change.from ??
+                                          "—"
+                                        }
                                         fallback={fallback}
                                         onOpen={() => setSelectedChange(change)}
                                       />
@@ -851,7 +853,11 @@ export default function TicketLifecycleTimeline({
                                     >
                                       <ValuePreview
                                         field={field}
-                                        value={change.toDisplayValue ?? change.to ?? "—"}
+                                        value={
+                                          change.toDisplayValue ??
+                                          change.to ??
+                                          "—"
+                                        }
                                         fallback={fallback}
                                         onOpen={() => setSelectedChange(change)}
                                       />

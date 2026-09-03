@@ -11,70 +11,44 @@ const TICKET_STATUS_RESOLVED = "RESOLVED";
 
 const TICKET_STATUS_CLOSED = "CLOSED";
 
-function normalizeComparableValue(value) {
+function normalizeComparableValue(value, dataType = null) {
   if (value === undefined || value === null || value === "") {
     return null;
   }
 
-  if (value instanceof Date) {
-    return value.toISOString();
+  if (dataType === "date") {
+    if (value instanceof Date) {
+      return value.toISOString().slice(0, 10);
+    }
+
+    return String(value).trim().slice(0, 10);
   }
 
   if (typeof value === "boolean") {
     return value ? "true" : "false";
   }
 
-  return String(value);
+  return String(value).trim();
 }
 
-function getCurrentValue(current, field) {
-  if (field.entity === "ticket") {
-    const value = current[field.key];
-
-    if (
-      value &&
-      typeof value === "object" &&
-      Object.prototype.hasOwnProperty.call(value, "id")
-    ) {
-      return value.id;
-    }
-
-    return value;
-  }
-
-  if (field.entity === "contact") {
-    const contact = current.contact;
-
-    if (!contact) {
-      return undefined;
-    }
-
-    const values = {
-      name: contact.name,
-      mobile_phone: contact.mobilePhone,
-      email: contact.email,
-      district: contact.district?.id,
-    };
-
-    return values[field.key];
-  }
-
-  return undefined;
-}
-
-/**
- * Uses TICKET_CONFIG as the only source of field definitions.
- */
 function getTicketChanges(current, payload) {
+  if (!current || !payload) {
+    return [];
+  }
+
   return TICKET_CONFIG.fields
     .filter((field) => field.editable !== false)
     .filter((field) => Object.prototype.hasOwnProperty.call(payload, field.key))
     .map((field) => {
       const oldValue = normalizeComparableValue(
         getCurrentValue(current, field),
+        field.dataType,
       );
 
-      const newValue = normalizeComparableValue(payload[field.key]);
+      const newValue = normalizeComparableValue(
+        payload[field.key],
+        field.dataType,
+      );
 
       if (oldValue === newValue) {
         return null;
@@ -89,6 +63,18 @@ function getTicketChanges(current, payload) {
     })
     .filter(Boolean);
 }
+
+function getCurrentValue(current, field) {
+  if (!current || !field) {
+    return undefined;
+  }
+
+  return current[field.key];
+}
+
+/**
+ * Uses TICKET_CONFIG as the only source of field definitions.
+ */
 
 function getStatusEventAction(oldValue, newValue) {
   if (newValue === TICKET_STATUS_RESOLVED) {

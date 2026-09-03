@@ -409,6 +409,42 @@ const SYSTEM_PERMISSIONS = Object.freeze([
   },
 
   // -------------------------------------------------------------------------
+  // Ticket Comments
+  // -------------------------------------------------------------------------
+
+  Object.freeze({
+    code: "comment:read",
+    name: "Read Comments",
+    description: "View ticket comments.",
+    resource: "comment",
+    action: "read",
+  }),
+
+  Object.freeze({
+    code: "comment:create",
+    name: "Create Comments",
+    description: "Add comments to tickets.",
+    resource: "comment",
+    action: "create",
+  }),
+
+  Object.freeze({
+    code: "comment:update",
+    name: "Update Comments",
+    description: "Update comments where permitted.",
+    resource: "comment",
+    action: "update",
+  }),
+
+  Object.freeze({
+    code: "comment:delete",
+    name: "Delete Comments",
+    description: "Delete comments where permitted.",
+    resource: "comment",
+    action: "delete",
+  }),
+
+  // -------------------------------------------------------------------------
   // SLA Management
   // -------------------------------------------------------------------------
 

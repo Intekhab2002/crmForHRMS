@@ -82,73 +82,184 @@ function buildLifecycleSnapshot(ticket) {
   }
 
   return {
-    ...ticket,
+    /*
+     * ========================================================================
+     * Ticket identity / scalar fields
+     * ========================================================================
+     */
 
-    id: ticket.id,
+    id: ticket.id ?? null,
 
-    ticket_number: ticket.ticketNumber,
+    ticketNumber:
+      ticket.ticketNumber ??
+      ticket.ticket_number ??
+      null,
 
-    subject: ticket.subject,
+    subject:
+      ticket.subject ??
+      null,
 
-    description: ticket.description,
+    description:
+      ticket.description ??
+      null,
 
-    priority: ticket.priority,
+    priority:
+      ticket.priority ??
+      null,
 
-    status_id: ticket.status?.id ?? null,
+    employee_current_office_name_id:
+      ticket.employeeCurrentOfficeNameId ??
+      ticket.employee_current_office_name_id ??
+      null,
 
-    requester_user_id: ticket.requester?.id ?? null,
+    employee_id:
+      ticket.employeeId ??
+      ticket.employee_id ??
+      null,
 
-    created_by_user_id: ticket.createdBy?.id ?? null,
+    bill_reference_no:
+      ticket.billReferenceNo ??
+      ticket.bill_reference_no ??
+      null,
 
-    organization_id: ticket.organization?.id ?? null,
+    expected_resolution_date:
+      ticket.expectedResolutionDate ??
+      ticket.expected_resolution_date ??
+      null,
 
-    department_id: ticket.department?.id ?? null,
+    duplicate_ticket:
+      ticket.duplicateTicket ??
+      ticket.duplicate_ticket ??
+      null,
 
-    assigned_user_id: ticket.assignedUser?.id ?? null,
+    letter_no:
+      ticket.letterNo ??
+      ticket.letter_no ??
+      null,
 
-    contact_id: ticket.contact?.id ?? null,
+    initial_diagnosis:
+      ticket.initialDiagnosis ??
+      ticket.initial_diagnosis ??
+      null,
 
-    service_type_id: ticket.serviceType?.id ?? null,
+    solution:
+      ticket.solution ??
+      null,
 
-    category_id: ticket.category?.id ?? null,
+    resolution:
+      ticket.resolution ??
+      null,
 
-    problem_statement_id: ticket.problemStatement?.id ?? null,
+    /*
+     * ========================================================================
+     * Ticket UUID relationships
+     *
+     * IMPORTANT:
+     * These keys MUST match TICKET_CONFIG.fields[].key.
+     * Do not use database column names here.
+     * ========================================================================
+     */
 
-    current_bill_status_id: ticket.currentBillStatus?.id ?? null,
+    status:
+      ticket.status?.id ??
+      ticket.status_id ??
+      null,
 
-    severity_id: ticket.severity?.id ?? null,
+    service_type:
+      ticket.serviceType?.id ??
+      ticket.service_type_id ??
+      null,
 
-    issue_category_id: ticket.issueCategory?.id ?? null,
+    category:
+      ticket.category?.id ??
+      ticket.category_id ??
+      null,
 
-    dependency_category_id: ticket.dependencyCategory?.id ?? null,
+    problem_statement:
+      ticket.problemStatement?.id ??
+      ticket.problem_statement_id ??
+      null,
 
-    employee_current_office_name_id: ticket.employeeCurrentOfficeNameId ?? null,
+    current_bill_status:
+      ticket.currentBillStatus?.id ??
+      ticket.current_bill_status_id ??
+      null,
 
-    employee_id: ticket.employeeId ?? null,
+    assigned_to:
+      ticket.assignedUser?.id ??
+      ticket.assigned_user_id ??
+      null,
 
-    bill_reference_no: ticket.billReferenceNo ?? null,
+    severity:
+      ticket.severity?.id ??
+      ticket.severity_id ??
+      null,
 
-    expected_resolution_date: ticket.expectedResolutionDate ?? null,
+    issue_category:
+      ticket.issueCategory?.id ??
+      ticket.issue_category_id ??
+      null,
 
-    duplicate_ticket: ticket.duplicateTicket ?? null,
+    dependency_category:
+      ticket.dependencyCategory?.id ??
+      ticket.dependency_category_id ??
+      null,
 
-    letter_no: ticket.letterNo ?? null,
+    department:
+      ticket.department?.id ??
+      ticket.department_id ??
+      null,
 
-    initial_diagnosis: ticket.initialDiagnosis ?? null,
+    organization:
+      ticket.organization?.id ??
+      ticket.organization_id ??
+      null,
 
-    solution: ticket.solution ?? null,
+    requester_user_id:
+      ticket.requester?.id ??
+      ticket.requester_user_id ??
+      null,
 
-    resolution: ticket.resolution ?? null,
+    created_by:
+      ticket.createdBy?.id ??
+      ticket.created_by_user_id ??
+      null,
 
-    contact_name: ticket.contact?.name ?? null,
+    contact:
+      ticket.contact?.id ??
+      ticket.contact_id ??
+      null,
 
-    mobile_phone: ticket.contact?.mobilePhone ?? null,
+    /*
+     * ========================================================================
+     * Contact fields
+     *
+     * Keys MUST match TICKET_CONFIG contact fields.
+     * ========================================================================
+     */
 
-    contact_email: ticket.contact?.email ?? null,
+    name:
+      ticket.contact?.name ??
+      ticket.name ??
+      ticket.contact_name ??
+      null,
 
-    contact_district: ticket.contact?.district?.id ?? null,
+    mobile_phone:
+      ticket.contact?.mobilePhone ??
+      ticket.mobile_phone ??
+      null,
 
-    contact_department_id: ticket.contact?.department?.id ?? null,
+    email_id:
+      ticket.contact?.email ??
+      ticket.email_id ??
+      ticket.contact_email ??
+      null,
+
+    district:
+      ticket.contact?.district?.id ??
+      ticket.district ??
+      ticket.contact_district_id ??
+      null,
   };
 }
 

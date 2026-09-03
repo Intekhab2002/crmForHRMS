@@ -12,6 +12,8 @@ function getErrorMessage(error, fallback) {
   return error?.response?.data?.message ?? error?.message ?? fallback;
 }
 
+
+
 export const ticketService = {
   async getFields(context) {
     const { getTicketFields } = await import("../../../config/ticket.config");

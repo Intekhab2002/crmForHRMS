@@ -171,6 +171,43 @@ function formatLifecycleFieldName(fieldName) {
     .replace(/^./, (character) => character.toUpperCase());
 }
 
+function getLifecycleSummary(
+  eventType,
+  eventAction,
+  fieldName,
+  metadata,
+) {
+  if (
+    eventType === "TICKET" &&
+    eventAction === "CREATED"
+  ) {
+    const ticketNumber =
+      metadata?.ticketNumber;
+
+    return ticketNumber
+      ? `Ticket ${ticketNumber} was created.`
+      : "Ticket was created.";
+  }
+
+  if (fieldName) {
+    return `${formatLifecycleFieldName(
+      fieldName,
+    )} was updated.`;
+  }
+
+  if (eventAction) {
+    return eventAction
+      .replaceAll("_", " ")
+      .toLowerCase()
+      .replace(
+        /^./,
+        (character) =>
+          character.toUpperCase(),
+      );
+  }
+
+  return "Ticket activity.";
+}
 
 
 function mapLifecycleEvent(event) {
@@ -183,6 +220,16 @@ function mapLifecycleEvent(event) {
     typeof event.metadata === "object"
       ? event.metadata
       : {};
+
+  const eventType =
+    event.event_type ??
+    event.eventType ??
+    null;
+
+  const eventAction =
+    event.event_action ??
+    event.eventAction ??
+    null;
 
   const fieldName =
     event.field_name ??
@@ -199,12 +246,6 @@ function mapLifecycleEvent(event) {
     event.newValue ??
     null;
 
-  /*
-   * Backend now provides explicit display values.
-   *
-   * Raw values are retained for audit/data purposes.
-   * Display values are used by the UI.
-   */
   const oldDisplayValue =
     event.old_display_value ??
     event.oldDisplayValue ??
@@ -274,29 +315,24 @@ function mapLifecycleEvent(event) {
         event.last_name,
     }),
 
-    eventType:
-      event.event_type ??
-      event.eventType ??
-      null,
+    eventType,
 
-    eventAction:
-      event.event_action ??
-      event.eventAction ??
-      null,
+    eventAction,
 
     fieldName,
 
-    /*
-     * Raw/audit values.
-     */
+    summary: getLifecycleSummary(
+      eventType,
+      eventAction,
+      fieldName,
+      metadata,
+    ),
+
     oldValue,
 
-    newValue,
-
-    /*
-     * Human-readable values supplied by backend.
-     */
     oldDisplayValue,
+
+    newValue,
 
     newDisplayValue,
 
