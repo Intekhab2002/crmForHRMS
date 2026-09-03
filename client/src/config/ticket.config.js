@@ -1,7 +1,5 @@
 const option = (value, label = value) => Object.freeze({ value, label });
 
-
-
 const apiOptions = (endpoint, valueKey = "id", labelKey = "name") =>
   Object.freeze({
     source: "api",
@@ -9,7 +7,6 @@ const apiOptions = (endpoint, valueKey = "id", labelKey = "name") =>
     valueKey,
     labelKey,
   });
-
 
 export const TICKET_FIELD_CONFIG = Object.freeze([
   {
@@ -367,7 +364,11 @@ export const TICKET_MODULE_CONFIG = Object.freeze({
     update: "ticket:update",
     assign: "ticket:assign",
     comment: "ticket:comment",
-    attachment: "ticket:attachment",
+    attachment: Object.freeze({
+      create: "ticket:attachment:create",
+      read: "ticket:attachment:read",
+      delete: "ticket:attachment:delete",
+    }),
   },
   labels: {
     notAvailable: "Not available",

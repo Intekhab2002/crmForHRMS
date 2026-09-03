@@ -60,8 +60,7 @@ export const ticketService = {
       values,
     );
 
-    // return mapTicketFromApi(response.data?.data ?? response.data);
-     return response.data?.data ?? response.data;
+    return mapTicketFromApi(response.data?.data ?? response.data);
   },
 
   async assignTicket(ticketId, assignedUserId) {

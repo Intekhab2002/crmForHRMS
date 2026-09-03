@@ -40,6 +40,8 @@ import TicketAttachmentList from "../components/TicketAttachmentList";
 import TicketLifecycleTimeline from "../components/TicketLifecycleTimeline";
 
 import { ticketService } from "../services/ticket.service";
+import { useAuth } from "../../../context/useAuth";
+import { getOptionSource } from "../components/TicketForm";
 
 import {
   TICKET_FIELD_CONFIG,
@@ -119,6 +121,11 @@ export default function TicketLifecyclePage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pendingStatus, setPendingStatus] = useState("");
+
+  const { user } = useAuth();
+
+  const [statusOptions, setStatusOptions] = useState([]);
+  const [statusOptionsLoading, setStatusOptionsLoading] = useState(true);
 
   const refreshTicket = useCallback(
     async ({ initial = false, showRefreshing = true } = {}) => {
@@ -290,6 +297,43 @@ export default function TicketLifecyclePage() {
     },
     [refreshTicket],
   );
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadStatusOptions() {
+      setStatusOptionsLoading(true);
+
+      try {
+        const statusField = TICKET_FIELD_MAP.status;
+
+        const options = await getOptionSource(statusField, user);
+
+        if (active) {
+          setStatusOptions(Array.isArray(options) ? options : []);
+        }
+      } catch (requestError) {
+        if (active) {
+          setStatusOptions([]);
+          setError(
+            requestError?.response?.data?.message ??
+              requestError?.message ??
+              "Unable to load ticket statuses.",
+          );
+        }
+      } finally {
+        if (active) {
+          setStatusOptionsLoading(false);
+        }
+      }
+    }
+
+    loadStatusOptions();
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     loadAll(true);
