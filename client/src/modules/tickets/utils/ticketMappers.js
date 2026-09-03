@@ -8,6 +8,7 @@ function mapActor({
 } = {}) {
   const firstName = first_name ?? "";
   const lastName = last_name ?? "";
+
   const fullName = `${firstName} ${lastName}`.trim();
 
   return {
@@ -20,16 +21,65 @@ function mapActor({
   };
 }
 
-function mapLookup(row, { idKey, codeKey, nameKey }) {
+/**
+ * Normalize a lookup object returned by the backend.
+ *
+ * Current backend contract:
+ *
+ * {
+ *   id: "...",
+ *   code: "...",
+ *   name: "..."
+ * }
+ *
+ * Legacy flat responses are also supported so the mapper remains
+ * compatible with any existing ticket list/API response that has
+ * not yet been migrated.
+ */
+function mapLookup(
+  row,
+  {
+    nestedKey,
+    idKey,
+    codeKey,
+    nameKey,
+  },
+) {
   if (!row) {
     return null;
+  }
+
+  const nested = row[nestedKey];
+
+  if (
+    nested &&
+    typeof nested === "object" &&
+    !Array.isArray(nested)
+  ) {
+    if (
+      nested.id == null &&
+      nested.code == null &&
+      nested.name == null
+    ) {
+      return null;
+    }
+
+    return {
+      id: nested.id ?? null,
+      code: nested.code ?? "",
+      name: nested.name ?? nested.code ?? "",
+    };
   }
 
   const id = row[idKey];
   const code = row[codeKey];
   const name = row[nameKey];
 
-  if (id == null && code == null && name == null) {
+  if (
+    id == null &&
+    code == null &&
+    name == null
+  ) {
     return null;
   }
 
@@ -37,6 +87,132 @@ function mapLookup(row, { idKey, codeKey, nameKey }) {
     id: id ?? null,
     code: code ?? "",
     name: name ?? code ?? "",
+  };
+}
+
+/**
+ * Map an assignee/user relationship.
+ *
+ * The ticket API returns assignedUser as:
+ *
+ * {
+ *   id,
+ *   name
+ * }
+ */
+function mapAssignedUser(ticket) {
+  const assignedUser = ticket.assignedUser;
+
+  if (
+    assignedUser &&
+    typeof assignedUser === "object"
+  ) {
+    return {
+      id: assignedUser.id ?? null,
+      name:
+        assignedUser.name ??
+        assignedUser.username ??
+        "",
+    };
+  }
+
+  if (
+    ticket.assigned_user_id == null &&
+    ticket.assigned_user_name == null
+  ) {
+    return null;
+  }
+
+  return {
+    id: ticket.assigned_user_id ?? null,
+    name: ticket.assigned_user_name ?? "",
+  };
+}
+
+/**
+ * Map contact relationship returned by the backend.
+ */
+function mapContact(ticket) {
+  const contact = ticket.contact;
+
+  if (
+    contact &&
+    typeof contact === "object"
+  ) {
+    const district = mapNestedLookup(
+      contact.district,
+    );
+
+    const department = mapNestedLookup(
+      contact.department,
+    );
+
+    return {
+      id: contact.id ?? null,
+      name: contact.name ?? "",
+      mobilePhone:
+        contact.mobilePhone ??
+        contact.mobile_phone ??
+        "",
+      email:
+        contact.email ??
+        contact.contact_email ??
+        "",
+      district,
+      department,
+    };
+  }
+
+  if (!ticket.contact_id) {
+    return null;
+  }
+
+  return {
+    id: ticket.contact_id,
+    name: ticket.contact_name ?? "",
+    mobilePhone:
+      ticket.mobile_phone ?? "",
+    email:
+      ticket.contact_email ?? "",
+    district: mapLookup(ticket, {
+      nestedKey: "district",
+      idKey: "contact_district_id",
+      codeKey: "contact_district_code",
+      nameKey: "contact_district_name",
+    }),
+    department: mapLookup(ticket, {
+      nestedKey: "callerDepartment",
+      idKey: "contact_department_id",
+      codeKey: "caller_department_code",
+      nameKey: "caller_department_name",
+    }),
+  };
+}
+
+/**
+ * Normalize an already nested lookup object.
+ */
+function mapNestedLookup(value) {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value)
+  ) {
+    return null;
+  }
+
+  if (
+    value.id == null &&
+    value.code == null &&
+    value.name == null
+  ) {
+    return null;
+  }
+
+  return {
+    id: value.id ?? null,
+    code: value.code ?? "",
+    name: value.name ?? value.code ?? "",
   };
 }
 
@@ -48,7 +224,9 @@ function formatLifecycleFieldName(fieldName) {
   return fieldName
     .replaceAll("_", " ")
     .replace(/([A-Z])/g, " $1")
-    .replace(/^./, (character) => character.toUpperCase());
+    .replace(/^./, (character) =>
+      character.toUpperCase(),
+    );
 }
 
 function mapLifecycleEvent(event) {
@@ -57,28 +235,46 @@ function mapLifecycleEvent(event) {
   }
 
   const metadata =
-    event.metadata && typeof event.metadata === "object"
+    event.metadata &&
+    typeof event.metadata === "object"
       ? event.metadata
       : {};
 
-  const fieldName = event.field_name ?? null;
+  const fieldName =
+    event.field_name ?? null;
 
   const change = fieldName
     ? {
         field: fieldName,
-        label: formatLifecycleFieldName(fieldName),
-        from: event.old_value ?? null,
-        to: event.new_value ?? null,
+        label:
+          formatLifecycleFieldName(
+            fieldName,
+          ),
+        from:
+          event.old_value ?? null,
+        to:
+          event.new_value ?? null,
       }
     : null;
 
   return {
     id: event.id ?? null,
-    ticketId: event.ticket_id ?? null,
-    actorUserId: event.actor_user_id ?? null,
+
+    ticketId:
+      event.ticket_id ??
+      event.ticketId ??
+      null,
+
+    actorUserId:
+      event.actor_user_id ??
+      event.actorUserId ??
+      null,
 
     actor: mapActor({
-      id: event.actor_user_id,
+      id:
+        event.actor_user_id ??
+        event.actorUserId,
+
       username: event.username,
       email: event.email,
       name: event.actor_name,
@@ -86,255 +282,554 @@ function mapLifecycleEvent(event) {
       last_name: event.last_name,
     }),
 
-    type: event.event_type ?? "",
-    action: event.event_action ?? "",
+    type:
+      event.event_type ??
+      event.eventType ??
+      "",
+
+    action:
+      event.event_action ??
+      event.eventAction ??
+      "",
 
     fieldName,
 
-    oldValue: event.old_value ?? null,
-    newValue: event.new_value ?? null,
+    oldValue:
+      event.old_value ??
+      event.oldValue ??
+      null,
 
-    changes: change ? [change] : [],
+    newValue:
+      event.new_value ??
+      event.newValue ??
+      null,
 
-    comment: metadata.comment ?? null,
-    files: Array.isArray(metadata.files) ? metadata.files : [],
+    changes: change
+      ? [change]
+      : [],
+
+    comment:
+      metadata.comment ?? null,
+
+    files: Array.isArray(
+      metadata.files,
+    )
+      ? metadata.files
+      : [],
 
     metadata,
 
-    createdAt: event.created_at ?? null,
+    createdAt:
+      event.created_at ??
+      event.createdAt ??
+      null,
 
     summary: fieldName
-      ? `${formatLifecycleFieldName(fieldName)} was updated.`
+      ? `${formatLifecycleFieldName(
+          fieldName,
+        )} was updated.`
       : event.event_action
         ? event.event_action
             .replaceAll("_", " ")
             .toLowerCase()
-            .replace(/^./, (character) => character.toUpperCase())
+            .replace(/^./, (character) =>
+              character.toUpperCase(),
+            )
         : "Ticket activity.",
   };
 }
 
+/**
+ * Map the canonical ticket API response into
+ * the frontend ticket model.
+ *
+ * Current backend response uses camelCase and
+ * nested relationship objects.
+ */
 export function mapTicketFromApi(ticket) {
   if (!ticket) {
     return null;
   }
 
   const status = mapLookup(ticket, {
+    nestedKey: "status",
     idKey: "status_id",
     codeKey: "status_code",
     nameKey: "status_name",
   });
 
+  const requester = mapLookup(ticket, {
+    nestedKey: "requester",
+    idKey: "requester_user_id",
+    codeKey: "requester_code",
+    nameKey: "requester_name",
+  });
+
+  const createdBy = mapLookup(ticket, {
+    nestedKey: "createdBy",
+    idKey: "created_by_user_id",
+    codeKey: "created_by_code",
+    nameKey: "created_by_name",
+  });
+
   const organization = mapLookup(ticket, {
+    nestedKey: "organization",
     idKey: "organization_id",
     codeKey: "organization_code",
     nameKey: "organization_name",
   });
 
   const department = mapLookup(ticket, {
+    nestedKey: "department",
     idKey: "department_id",
     codeKey: "department_code",
     nameKey: "department_name",
   });
 
   const serviceType = mapLookup(ticket, {
+    nestedKey: "serviceType",
     idKey: "service_type_id",
     codeKey: "service_type_code",
     nameKey: "service_type_name",
   });
 
   const category = mapLookup(ticket, {
+    nestedKey: "category",
     idKey: "category_id",
     codeKey: "category_code",
     nameKey: "category_name",
   });
 
-  const problemStatement = mapLookup(ticket, {
-    idKey: "problem_statement_id",
-    codeKey: "problem_statement_code",
-    nameKey: "problem_statement_name",
-  });
+  const problemStatement = mapLookup(
+    ticket,
+    {
+      nestedKey: "problemStatement",
+      idKey: "problem_statement_id",
+      codeKey: "problem_statement_code",
+      nameKey: "problem_statement_name",
+    },
+  );
 
-  const currentBillStatus = mapLookup(ticket, {
-    idKey: "current_bill_status_id",
-    codeKey: "current_bill_status_code",
-    nameKey: "current_bill_status_name",
-  });
+  const currentBillStatus = mapLookup(
+    ticket,
+    {
+      nestedKey: "currentBillStatus",
+      idKey: "current_bill_status_id",
+      codeKey: "current_bill_status_code",
+      nameKey: "current_bill_status_name",
+    },
+  );
 
   const severity = mapLookup(ticket, {
+    nestedKey: "severity",
     idKey: "severity_id",
     codeKey: "severity_code",
     nameKey: "severity_name",
   });
 
-  const issueCategory = mapLookup(ticket, {
-    idKey: "issue_category_id",
-    codeKey: "issue_category_code",
-    nameKey: "issue_category_name",
-  });
+  const issueCategory = mapLookup(
+    ticket,
+    {
+      nestedKey: "issueCategory",
+      idKey: "issue_category_id",
+      codeKey: "issue_category_code",
+      nameKey: "issue_category_name",
+    },
+  );
 
-  const dependencyCategory = mapLookup(ticket, {
-    idKey: "dependency_category_id",
-    codeKey: "dependency_category_code",
-    nameKey: "dependency_category_name",
-  });
+  const dependencyCategory = mapLookup(
+    ticket,
+    {
+      nestedKey: "dependencyCategory",
+      idKey: "dependency_category_id",
+      codeKey:
+        "dependency_category_code",
+      nameKey:
+        "dependency_category_name",
+    },
+  );
 
-  const district = mapLookup(ticket, {
-    idKey: "contact_district_id",
-    codeKey: "contact_district_code",
-    nameKey: "contact_district_name",
-  });
+  const contact = mapContact(ticket);
 
-  const callerDepartment = mapLookup(ticket, {
-    idKey: "contact_department_id",
-    codeKey: "caller_department_code",
-    nameKey: "caller_department_name",
-  });
+  const assignedUser =
+    mapAssignedUser(ticket);
 
-  const contact = ticket.contact_id
-    ? {
-        id: ticket.contact_id,
-        name: ticket.contact_name ?? "",
-        mobilePhone: ticket.mobile_phone ?? "",
-        email: ticket.contact_email ?? "",
-        district,
-        department: callerDepartment,
-      }
-    : null;
+  const district =
+    contact?.district ?? null;
+
+  const callerDepartment =
+    contact?.department ?? null;
 
   return {
+    /*
+     * ========================================================================
+     * Identity
+     * ========================================================================
+     */
+
     id: ticket.id ?? null,
 
-    ticketNumber: ticket.ticket_number ?? "",
-    reference: ticket.ticket_number ?? "",
+    ticketNumber:
+      ticket.ticketNumber ??
+      ticket.ticket_number ??
+      "",
+
+    reference:
+      ticket.ticketNumber ??
+      ticket.ticket_number ??
+      "",
+
+    /*
+     * ========================================================================
+     * Core ticket fields
+     * ========================================================================
+     */
 
     subject: ticket.subject ?? "",
-    description: ticket.description ?? "",
-    priority: ticket.priority ?? "",
 
-    status: status?.id ?? "",
-    statusCode: status?.code ?? "",
-    statusName: status?.name ?? "",
+    description:
+      ticket.description ?? "",
+
+    priority:
+      ticket.priority ?? "",
+
+    /*
+     * ========================================================================
+     * Status
+     * ========================================================================
+     */
+
+    status:
+      status?.id ?? "",
+
+    statusCode:
+      status?.code ?? "",
+
+    statusName:
+      status?.name ?? "",
+
     statusOption: status,
 
-    requester_user_id: ticket.requester_user_id ?? "",
-    requesterName: ticket.requester_name ?? "",
+    /*
+     * ========================================================================
+     * Requester
+     * ========================================================================
+     */
+
+    requester_user_id:
+      requester?.id ?? "",
+
+    requesterName:
+      requester?.name ?? "",
 
     requester: mapActor({
-      id: ticket.requester_user_id,
-      name: ticket.requester_name,
+      id: requester?.id,
+      name: requester?.name,
     }),
 
-    organization: organization?.id ?? "",
-    organizationCode: organization?.code ?? "",
-    organizationName: organization?.name ?? "",
-    organizationOption: organization,
+    /*
+     * ========================================================================
+     * Created By
+     * ========================================================================
+     */
 
-    department: department?.id ?? "",
-    departmentCode: department?.code ?? "",
-    departmentName: department?.name ?? "",
-    departmentOption: department,
+    created_by:
+      createdBy?.id ?? "",
 
-    assigned_to: ticket.assigned_user_id ?? "",
-    assignedUserName: ticket.assigned_user_name ?? "",
-
-    assignee: mapActor({
-      id: ticket.assigned_user_id,
-      name: ticket.assigned_user_name,
-    }),
-
-    created_by: ticket.created_by_user_id ?? "",
-    createdByName: ticket.created_by_name ?? "",
+    createdByName:
+      createdBy?.name ?? "",
 
     createdBy: mapActor({
-      id: ticket.created_by_user_id,
-      name: ticket.created_by_name,
+      id: createdBy?.id,
+      name: createdBy?.name,
     }),
 
-    contact: ticket.contact_id ?? "",
-    contactId: ticket.contact_id ?? "",
+    /*
+     * ========================================================================
+     * Organization
+     * ========================================================================
+     */
 
-    contact_name: ticket.contact_name ?? "",
-    name: ticket.contact_name ?? "",
+    organization:
+      organization?.id ?? "",
 
-    mobile_phone: ticket.mobile_phone ?? "",
-    mobilePhone: ticket.mobile_phone ?? "",
+    organizationCode:
+      organization?.code ?? "",
 
-    email_id: ticket.contact_email ?? "",
-    email: ticket.contact_email ?? "",
+    organizationName:
+      organization?.name ?? "",
 
-    district: district?.id ?? "",
-    districtName: district?.name ?? "",
+    organizationOption:
+      organization,
 
-    caller_department: callerDepartment?.id ?? "",
-    callerDepartmentName: callerDepartment?.name ?? "",
+    /*
+     * ========================================================================
+     * Department
+     * ========================================================================
+     */
 
-    contactDetails: contact,
+    department:
+      department?.id ?? "",
 
-    service_type: serviceType?.id ?? "",
-    serviceTypeCode: serviceType?.code ?? "",
-    serviceTypeName: serviceType?.name ?? "",
+    departmentCode:
+      department?.code ?? "",
 
-    category: category?.id ?? "",
-    categoryCode: category?.code ?? "",
-    categoryName: category?.name ?? "",
+    departmentName:
+      department?.name ?? "",
 
-    problem_statement: problemStatement?.id ?? "",
-    problemStatementCode: problemStatement?.code ?? "",
-    problemStatementName: problemStatement?.name ?? "",
+    departmentOption:
+      department,
+
+    /*
+     * ========================================================================
+     * Assignment
+     * ========================================================================
+     */
+
+    assigned_to:
+      assignedUser?.id ?? "",
+
+    assignedUserName:
+      assignedUser?.name ?? "",
+
+    assignee: mapActor({
+      id: assignedUser?.id,
+      name: assignedUser?.name,
+    }),
+
+    /*
+     * ========================================================================
+     * Contact
+     * ========================================================================
+     */
+
+    contact:
+      contact?.id ?? "",
+
+    contactId:
+      contact?.id ?? "",
+
+    contact_name:
+      contact?.name ?? "",
+
+    name:
+      contact?.name ?? "",
+
+    mobile_phone:
+      contact?.mobilePhone ?? "",
+
+    mobilePhone:
+      contact?.mobilePhone ?? "",
+
+    email_id:
+      contact?.email ?? "",
+
+    email:
+      contact?.email ?? "",
+
+    district:
+      district?.id ?? "",
+
+    districtName:
+      district?.name ?? "",
+
+    caller_department:
+      callerDepartment?.id ?? "",
+
+    callerDepartmentName:
+      callerDepartment?.name ?? "",
+
+    contactDetails:
+      contact,
+
+    /*
+     * ========================================================================
+     * Ticket lookup fields
+     * ========================================================================
+     */
+
+    service_type:
+      serviceType?.id ?? "",
+
+    serviceTypeCode:
+      serviceType?.code ?? "",
+
+    serviceTypeName:
+      serviceType?.name ?? "",
+
+    serviceTypeOption:
+      serviceType,
+
+    category:
+      category?.id ?? "",
+
+    categoryCode:
+      category?.code ?? "",
+
+    categoryName:
+      category?.name ?? "",
+
+    categoryOption:
+      category,
+
+    problem_statement:
+      problemStatement?.id ?? "",
+
+    problemStatementCode:
+      problemStatement?.code ?? "",
+
+    problemStatementName:
+      problemStatement?.name ?? "",
+
+    problemStatementOption:
+      problemStatement,
+
+    current_bill_status:
+      currentBillStatus?.id ?? "",
+
+    currentBillStatusCode:
+      currentBillStatus?.code ?? "",
+
+    currentBillStatusName:
+      currentBillStatus?.name ?? "",
+
+    currentBillStatusOption:
+      currentBillStatus,
+
+    severity:
+      severity?.id ?? "",
+
+    severityCode:
+      severity?.code ?? "",
+
+    severityName:
+      severity?.name ?? "",
+
+    severityOption:
+      severity,
+
+    issue_category:
+      issueCategory?.id ?? "",
+
+    issueCategoryCode:
+      issueCategory?.code ?? "",
+
+    issueCategoryName:
+      issueCategory?.name ?? "",
+
+    issueCategoryOption:
+      issueCategory,
+
+    dependency_category:
+      dependencyCategory?.id ?? "",
+
+    dependencyCategoryCode:
+      dependencyCategory?.code ?? "",
+
+    dependencyCategoryName:
+      dependencyCategory?.name ?? "",
+
+    dependencyCategoryOption:
+      dependencyCategory,
+
+    /*
+     * ========================================================================
+     * Additional ticket fields
+     * ========================================================================
+     */
 
     employee_current_office_name_id:
-      ticket.employee_current_office_name_id ?? "",
+      ticket.employeeCurrentOfficeNameId ??
+      ticket.employee_current_office_name_id ??
+      "",
 
-    employee_id: ticket.employee_id ?? "",
+    employee_id:
+      ticket.employeeId ??
+      ticket.employee_id ??
+      "",
 
-    current_bill_status: currentBillStatus?.id ?? "",
-    currentBillStatusCode: currentBillStatus?.code ?? "",
-    currentBillStatusName: currentBillStatus?.name ?? "",
-
-    bill_reference_no: ticket.bill_reference_no ?? "",
-
-    severity: severity?.id ?? "",
-    severityCode: severity?.code ?? "",
-    severityName: severity?.name ?? "",
+    bill_reference_no:
+      ticket.billReferenceNo ??
+      ticket.bill_reference_no ??
+      "",
 
     expected_resolution_date:
-      ticket.expected_resolution_date ?? "",
+      ticket.expectedResolutionDate ??
+      ticket.expected_resolution_date ??
+      "",
 
-    duplicate_ticket: ticket.duplicate_ticket ?? "",
+    duplicate_ticket:
+      ticket.duplicateTicket ??
+      ticket.duplicate_ticket ??
+      "",
 
-    issue_category: issueCategory?.id ?? "",
-    issueCategoryCode: issueCategory?.code ?? "",
-    issueCategoryName: issueCategory?.name ?? "",
+    letter_no:
+      ticket.letterNo ??
+      ticket.letter_no ??
+      "",
 
-    letter_no: ticket.letter_no ?? "",
+    initial_diagnosis:
+      ticket.initialDiagnosis ??
+      ticket.initial_diagnosis ??
+      "",
 
-    dependency_category: dependencyCategory?.id ?? "",
-    dependencyCategoryCode: dependencyCategory?.code ?? "",
-    dependencyCategoryName: dependencyCategory?.name ?? "",
+    solution:
+      ticket.solution ?? "",
 
-    initial_diagnosis: ticket.initial_diagnosis ?? "",
-    solution: ticket.solution ?? "",
-    resolution: ticket.resolution ?? "",
+    resolution:
+      ticket.resolution ?? "",
 
-    assignedAt: ticket.assigned_at ?? null,
-    resolvedAt: ticket.resolved_at ?? null,
-    closedAt: ticket.closed_at ?? null,
+    /*
+     * ========================================================================
+     * Lifecycle timestamps
+     * ========================================================================
+     */
 
-    createdAt: ticket.created_at ?? null,
-    updatedAt: ticket.updated_at ?? null,
+    assignedAt:
+      ticket.assignedAt ??
+      ticket.assigned_at ??
+      null,
 
-    comments: Array.isArray(ticket.comments)
-      ? ticket.comments
-      : [],
+    resolvedAt:
+      ticket.resolvedAt ??
+      ticket.resolved_at ??
+      null,
 
-    attachments: Array.isArray(ticket.attachments)
-      ? ticket.attachments
-      : [],
+    closedAt:
+      ticket.closedAt ??
+      ticket.closed_at ??
+      null,
 
-    lifecycle: Array.isArray(ticket.lifecycle)
-      ? ticket.lifecycle
-      : [],
+    createdAt:
+      ticket.createdAt ??
+      ticket.created_at ??
+      null,
+
+    updatedAt:
+      ticket.updatedAt ??
+      ticket.updated_at ??
+      null,
+
+    /*
+     * ========================================================================
+     * Related collections
+     * ========================================================================
+     */
+
+    comments:
+      Array.isArray(ticket.comments)
+        ? ticket.comments
+        : [],
+
+    attachments:
+      Array.isArray(ticket.attachments)
+        ? ticket.attachments
+        : [],
+
+    lifecycle:
+      Array.isArray(ticket.lifecycle)
+        ? ticket.lifecycle
+        : [],
   };
 }
 
@@ -385,6 +880,7 @@ function mapCommentFromApi(comment) {
 
   return {
     id: comment.id ?? null,
+
     ticketId:
       comment.ticket_id ??
       comment.ticketId ??
@@ -395,7 +891,8 @@ function mapCommentFromApi(comment) {
       comment.userId ??
       null,
 
-    comment: comment.comment ?? "",
+    comment:
+      comment.comment ?? "",
 
     author: mapActor({
       id:
