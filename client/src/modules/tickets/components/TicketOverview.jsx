@@ -7,23 +7,10 @@ import {
   formatDate,
   formatDateTime,
   formatTicketValue,
-  getField,
 } from "../utils/ticketFormatters";
 
 import { useAuth } from "../../../context/useAuth";
 
-const METADATA_FIELDS = [
-  {
-    key: "createdAt",
-    label: "Created",
-    type: "dateTime",
-  },
-  {
-    key: "updatedAt",
-    label: "Last Updated",
-    type: "dateTime",
-  },
-];
 
 /*
  * Fields whose persisted value is an ID but whose API response
@@ -62,45 +49,13 @@ function getFieldValue(field, ticket) {
     return undefined;
   }
 
-  const value = ticket[field.key];
-
-  if (value !== undefined && value !== null) {
-    return value;
-  }
-
-  /*
-   * Explicit API/UI aliases.
-   *
-   * The Ticket API uses snake_case while some normalized
-   * frontend properties use camelCase. Keep this mapping
-   * centralized so individual renderers do not need to know
-   * about API naming differences.
-   */
-  const aliases = {
-    ticketNumber: "ticket_number",
-    expected_resolution_date: "expectedResolutionDate",
-    mobile_phone: "mobilePhone",
-    email_id: "email",
-  };
-
-  const alias = aliases[field.key];
-
-  if (!alias) {
-    return undefined;
-  }
-
-  return ticket[alias];
+  return ticket[field.key];
 }
 
 function renderValue(field, ticket, fallback) {
   // const value = ticket[field.key];
   const value = getFieldValue(field, ticket);
 
-  //   console.log(
-  //   "[TicketOverview]",
-  //   field.key,
-  //   ticket[field.key],
-  // );
 
   if (value === null || value === undefined || value === "") {
     return fallback;
