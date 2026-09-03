@@ -1,47 +1,6 @@
 const option = (value, label = value) => Object.freeze({ value, label });
 
-const BIHAR_DISTRICTS = Object.freeze(
-  [
-    "Araria",
-    "Arwal",
-    "Aurangabad",
-    "Banka",
-    "Begusarai",
-    "Bhagalpur",
-    "Bhojpur",
-    "Buxar",
-    "Darbhanga",
-    "East Champaran",
-    "Gaya",
-    "Gopalganj",
-    "Jamui",
-    "Jehanabad",
-    "Kaimur",
-    "Katihar",
-    "Khagaria",
-    "Kishanganj",
-    "Lakhisarai",
-    "Madhepura",
-    "Madhubani",
-    "Munger",
-    "Muzaffarpur",
-    "Nalanda",
-    "Nawada",
-    "Patna",
-    "Purnia",
-    "Rohtas",
-    "Saharsa",
-    "Samastipur",
-    "Saran",
-    "Sheikhpura",
-    "Sheohar",
-    "Sitamarhi",
-    "Siwan",
-    "Supaul",
-    "Vaishali",
-    "West Champaran",
-  ].map((value) => option(value)),
-);
+
 
 const apiOptions = (endpoint, valueKey = "id", labelKey = "name") =>
   Object.freeze({
@@ -51,58 +10,6 @@ const apiOptions = (endpoint, valueKey = "id", labelKey = "name") =>
     labelKey,
   });
 
-export const TICKET_STATUS_OPTIONS = Object.freeze([
-  option("OPEN", "Open"),
-  option("IN_PROGRESS", "Inprogress"),
-  option("WAIT_FOR_RESPONSE", "Wait for Response"),
-  option("CLOSED", "Closed"),
-]);
-
-export const PROBLEM_STATEMENT_OPTIONS = Object.freeze([
-  option("LTC_RELATED", "LTC Related"),
-  option("GPF_NPS_RELATED_PROBLEM", "GPF/NPS Related Problem"),
-  option("PF_TAX_DEDUCTION_PROBLEM", "PF Tax Deduction Problem"),
-  option("RECOVERY_RELATED_PROBLEM", "Recovery Related Problem"),
-  option("HOA_OFFICE_NOT_PRESENT", "HOA Office Not Present"),
-  option("GPF_PRAN_MISMATCH", "GPF PRAN Mismatch"),
-]);
-
-export const TICKET_CATEGORY_OPTIONS = Object.freeze([
-  option("ENQUIRY", "Enquiry"),
-  option("ISSUE", "Issue"),
-  option("ENHANCEMENT", "Enhancement"),
-]);
-
-export const TICKET_SERVICE_TYPE_OPTIONS = Object.freeze([
-  option("MISCELLANEOUS", "Miscellaneous"),
-  option("GENERAL_INFORMATION", "General Information"),
-]);
-
-export const TICKET_SEVERITY_OPTIONS = Object.freeze([
-  option("SEVERITY1", "Severity1"),
-  option("SEVERITY2", "Severity2"),
-  option("SEVERITY3", "Severity3"),
-]);
-
-export const TICKET_ISSUE_CATEGORY_OPTIONS = Object.freeze([
-  option("SUSPECTED_ERROR", "Suspected Error"),
-  option("PROCESS_VIOLATION", "Process violation"),
-]);
-
-export const TICKET_DEPENDENCY_CATEGORY_OPTIONS = Object.freeze([
-  option("CFMS", "CFMS"),
-  option("DEV_TEAM", "Dev. Team"),
-  option("POLICY_MATTER", "Policy Matter"),
-  option("USER_END", "User-End"),
-]);
-
-export const CURRENT_BILL_STATUS_OPTIONS = Object.freeze([
-  option("HRMS_MAKER", "HRMS Maker"),
-  option("HRMS_CHECKER", "HRMS Checker"),
-  option("HRMS_APPROVER", "HRMS Approver"),
-  option("HRMS_APPROVER_UNCONFIRN", "HRMS Approver Unconfirmed"),
-  option("FAILED_TO_PREPARE_INTG_FILI", "Failed to Prepare Intg Fili"),
-]);
 
 export const TICKET_FIELD_CONFIG = Object.freeze([
   {

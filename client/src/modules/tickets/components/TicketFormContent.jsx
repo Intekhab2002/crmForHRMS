@@ -17,7 +17,7 @@ export default function TicketFormContent({
   submitting,
   submitLabel,
   onCancel,
-  mode
+  mode,
 }) {
   const notification = useNotification();
   const handleContactFound = useCallback(
@@ -26,8 +26,13 @@ export default function TicketFormContent({
 
       formik.setFieldValue("email_id", contact.email ?? "", false);
 
-      formik.setFieldValue("district", contact.district ?? "", false);
-      formik.setFieldValue("department", contact.department_id ?? "", false);
+      formik.setFieldValue("district", contact.district?.id ?? "", false);
+
+      formik.setFieldValue(
+        "department",
+        contact.department?.id ?? contact.departmentId ?? "",
+        false,
+      );
 
       notification.success("Contact found. Details have been populated.");
     },
