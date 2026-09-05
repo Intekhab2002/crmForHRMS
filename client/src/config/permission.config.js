@@ -36,6 +36,8 @@ export const PERMISSIONS = Object.freeze({
   TICKET_UPDATE: "ticket:update",
 
   TICKET_DELETE: "ticket:delete",
+
+  TICKET_ATTACHMENT: "ticket:attachment",
   
   OPTION_READ: "option:read",
 

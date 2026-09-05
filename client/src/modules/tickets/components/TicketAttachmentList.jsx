@@ -20,6 +20,7 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutl
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
 
+
 import CanAccess from "../../../components/rbac/CanAccess";
 
 import { ticketService } from "../services/ticket.service";
@@ -238,7 +239,7 @@ export default function TicketAttachmentList({ ticketId }) {
   };
 
   return (
-    <CanAccess permission={attachmentPermissions.read}>
+    <CanAccess permission={attachmentPermissions}>
       <Paper
         variant="outlined"
         sx={{
@@ -278,7 +279,7 @@ export default function TicketAttachmentList({ ticketId }) {
               </Stack>
             </Stack>
 
-            <CanAccess permission={attachmentPermissions.create}>
+            <CanAccess permission={attachmentPermissions}>
               <input
                 ref={inputRef}
                 hidden
@@ -470,7 +471,7 @@ export default function TicketAttachmentList({ ticketId }) {
                         </IconButton>
                       </Tooltip>
 
-                      <CanAccess permission={attachmentPermissions.delete}>
+                      <CanAccess permission={attachmentPermissions}>
                         <Tooltip title="Delete">
                           <span>
                             <IconButton
