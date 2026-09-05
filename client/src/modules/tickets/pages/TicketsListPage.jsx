@@ -55,9 +55,7 @@ export default function TicketsListPage() {
         description={TICKET_MODULE_CONFIG.list.description}
         actions={
           <CanAccess
-            permission={
-              TICKET_MODULE_CONFIG.list.createAction.permission
-            }
+            permission={TICKET_MODULE_CONFIG.list.createAction.permission}
           >
             <Button
               component={Link}
@@ -76,10 +74,7 @@ export default function TicketsListPage() {
       <TicketDataGrid
         rows={rows}
         fields={TICKET_FIELD_CONFIG}
-        columns={[
-          ...TICKET_GRID_CONFIG.columns,
-          TICKET_GRID_CONFIG.action,
-        ]}
+        columns={[TICKET_GRID_CONFIG.action, ...TICKET_GRID_CONFIG.columns]}
         pageSizeOptions={TICKET_GRID_CONFIG.pageSizeOptions}
         defaultPageSize={TICKET_GRID_CONFIG.defaultPageSize}
         title={TICKET_MODULE_CONFIG.list.title}

@@ -4,18 +4,14 @@ export function getOption(options = [], value) {
   }
 
   return options.find((option) => {
-    const optionValue =
-      option?.value ??
-      option?.id ??
-      option?.code ??
-      null;
+    const optionValue = option?.value ?? option?.id ?? option?.code ?? null;
 
     return optionValue === value;
   });
 }
 
 export function getField(fields = [], name) {
-  return fields.find((field) => field.name === name);
+  return fields.find((field) => field.key === name || field.name === name);
 }
 
 export function formatDateTime(value, fallback = "Not available") {
@@ -33,10 +29,7 @@ export function formatDateTime(value, fallback = "Not available") {
   }).format(date);
 }
 
-export function formatDate(
-  value,
-  fallback = "Not available",
-) {
+export function formatDate(value, fallback = "Not available") {
   if (value === null || value === undefined || value === "") {
     return fallback;
   }
@@ -49,17 +42,9 @@ export function formatDate(
     return fallback;
   }
 
-  const [year, month, day] = datePart
-    .split("-")
-    .map(Number);
+  const [year, month, day] = datePart.split("-").map(Number);
 
-  const date = new Date(
-    Date.UTC(
-      year,
-      month - 1,
-      day,
-    ),
-  );
+  const date = new Date(Date.UTC(year, month - 1, day));
 
   if (Number.isNaN(date.getTime())) {
     return fallback;
@@ -85,9 +70,7 @@ export function formatFileSize(size = 0) {
 
   const value = size / 1024 ** index;
 
-  return `${value.toFixed(
-    value >= 10 || index === 0 ? 0 : 1,
-  )} ${units[index]}`;
+  return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
 }
 
 /**
@@ -108,11 +91,7 @@ export function formatFileSize(size = 0) {
  *   label
  * }
  */
-export function getLookupDisplayValue(
-  field,
-  value,
-  ticket,
-) {
+export function getLookupDisplayValue(field, value, ticket) {
   if (!field || !ticket) {
     return undefined;
   }
@@ -128,6 +107,7 @@ export function getLookupDisplayValue(
     assigned_to: "assignedUserName",
     created_by: "createdByName",
     caller_department: "callerDepartmentName",
+    district: "districtName",
     service_type: "serviceTypeName",
     category: "categoryName",
     problem_statement: "problemStatementName",
@@ -158,12 +138,7 @@ export function getLookupDisplayValue(
     const option = getOption(field.options, value);
 
     if (option) {
-      return (
-        option.label ??
-        option.name ??
-        option.code ??
-        value
-      );
+      return option.label ?? option.name ?? option.code ?? value;
     }
   }
 
@@ -180,21 +155,12 @@ export function formatTicketValue(
   fallback = "Not available",
   ticket = null,
 ) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
+  if (value === null || value === undefined || value === "") {
     return fallback;
   }
 
   if (field?.type === "select") {
-    const lookupDisplayValue =
-      getLookupDisplayValue(
-        field,
-        value,
-        ticket,
-      );
+    const lookupDisplayValue = getLookupDisplayValue(field, value, ticket);
 
     if (
       lookupDisplayValue !== undefined &&

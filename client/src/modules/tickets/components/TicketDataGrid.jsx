@@ -32,11 +32,12 @@ function renderColumnCell(column, field, fallback) {
     return (params) => (
       <Typography variant="body2">
         {column.valueIsDisplay
-          ? params.row[column.field] ?? fallback
+          ? (params.row[column.field] ?? fallback)
           : formatTicketValue(
               field,
               params.row[column.field],
               fallback,
+              params.row,
             )}
       </Typography>
     );
@@ -45,10 +46,7 @@ function renderColumnCell(column, field, fallback) {
   if (column.presentation === "dateTime") {
     return (params) => (
       <Typography variant="body2">
-        {formatDateTime(
-          params.row[column.field],
-          fallback,
-        )}
+        {formatDateTime(params.row[column.field], fallback)}
       </Typography>
     );
   }
@@ -123,7 +121,7 @@ export default function TicketDataGrid({
           showToolbar
           disableRowSelectionOnClick
           ignoreDiacritics
-          onRowDoubleClick={(params) => onOpenTicket(params.row)}
+          // onRowDoubleClick={(params) => onOpenTicket(params.row)}
           slotProps={{
             toolbar: {
               showQuickFilter: true,
@@ -139,6 +137,15 @@ export default function TicketDataGrid({
             },
             "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
               outline: "none",
+            },
+            "& .MuiDataGrid-cell": {
+              display: "flex",
+              alignItems: "center",
+            },
+
+            "& .MuiDataGrid-columnHeader": {
+              display: "flex",
+              alignItems: "center",
             },
           }}
         />
