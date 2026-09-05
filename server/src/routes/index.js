@@ -64,6 +64,7 @@ import ticketIssueCategoryRouter from "../modules/ticketIssueCategories/ticketIs
 
 import ticketDependencyCategoryRouter from "../modules/ticketDependencyCategories/ticketDependencyCategory.routes.js";
 
+import publicTicketStatusModule from "../modules/publicTicketStatus/index.js";
 const router = Router();
 
 /**
@@ -87,6 +88,11 @@ router.use(`/${apiVersion}/health`, healthRouter);
  * Feature Routes
  * ============================================================================
  */
+
+router.use(
+  `/${apiVersion}/public/tickets/status`,
+  publicTicketStatusModule.routes,
+);
 
 router.use(`/${apiVersion}/auth`, authModule.routes);
 

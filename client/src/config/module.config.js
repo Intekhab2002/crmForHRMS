@@ -8,7 +8,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
     routes: Object.freeze([
       createRoute({
         id: "home",
-        path: "/home",
+        path: "/",
         label: "Home",
         component: "home",
         navigation: {
@@ -25,17 +25,6 @@ export const APP_MODULE_CONFIG = Object.freeze({
         navigation: {
           section: "public",
           order: 20,
-        },
-      }),
-
-      createRoute({
-        id: "about",
-        path: "/about",
-        label: "About",
-        component: "about",
-        navigation: {
-          section: "public",
-          order: 30,
         },
       }),
 

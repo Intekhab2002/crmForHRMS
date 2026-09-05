@@ -52,5 +52,8 @@ export const API_CONFIG = Object.freeze({
       ticketIssueCategories: "/ticket-issue-categories",
       ticketDependencyCategories: "/ticket-dependency-categories",
     }),
+    public: Object.freeze({
+      ticketStatus: "/public/tickets/status",
+    }),
   }),
 });

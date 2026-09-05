@@ -145,5 +145,14 @@ export const ticketService = {
     return response.data;
   },
 
+  async lookupPublicTicketStatus(values) {
+  const response = await apiClient.post(
+    API_CONFIG.endpoints.public.ticketStatus,
+    values,
+  );
+
+  return response.data?.data ?? [];
+},
+
   getErrorMessage,
 };

@@ -1,7 +1,4 @@
-import {
-  Outlet,
-  createBrowserRouter,
-} from "react-router";
+import { Outlet, createBrowserRouter } from "react-router";
 
 import PublicLayout from "../layouts/PublicLayout/PublicLayout";
 import AuthLayout from "../layouts/AuthLayout/AuthLayout";
@@ -27,16 +24,12 @@ import LoginPage from "../modules/auth/pages/LoginPage";
 import ForbiddenPage from "../pages/common/ForbiddenPage";
 import NotFoundPage from "../pages/common/NotFoundPage";
 import DefaultEntryPage from "../pages/common/DefaultEntryPage";
-import RoleManagementPage
-    from "../modules/roles/pages/RoleManagementPage";
+import RoleManagementPage from "../modules/roles/pages/RoleManagementPage";
 
-import OptionManagementPage
-    from "../modules/options/pages/OptionManagementPage";
+import OptionManagementPage from "../modules/options/pages/OptionManagementPage";
 
-import {
-  APP_MODULE_CONFIG,
-  SYSTEM_ROUTES,
-} from "../config/module.config";
+import { APP_MODULE_CONFIG, SYSTEM_ROUTES } from "../config/module.config";
+import LandingPage from "../pages/public/LandingPage";
 
 const LAYOUTS = Object.freeze({
   public: PublicLayout,
@@ -75,36 +68,22 @@ function applyPermissionGuard(route, element) {
   }
 
   return (
-    <PermissionRoute allPermissions={permissions}>
-      {element}
-    </PermissionRoute>
+    <PermissionRoute allPermissions={permissions}>{element}</PermissionRoute>
   );
 }
 
 function buildRoute(route) {
-  const Guard = route.guard
-    ? GUARDS[route.guard]
-    : null;
+  const Guard = route.guard ? GUARDS[route.guard] : null;
 
-  const Layout = route.layout
-    ? LAYOUTS[route.layout]
-    : null;
+  const Layout = route.layout ? LAYOUTS[route.layout] : null;
 
-  const Component = route.component
-    ? COMPONENTS[route.component]
-    : null;
+  const Component = route.component ? COMPONENTS[route.component] : null;
 
   /*
    * Layout routes own the Outlet.
    * Component routes render their component.
    */
-  let element = Layout ? (
-    <Layout />
-  ) : Component ? (
-    <Component />
-  ) : (
-    <Outlet />
-  );
+  let element = Layout ? <Layout /> : Component ? <Component /> : <Outlet />;
 
   /*
    * Permission protection must wrap the actual route
@@ -124,11 +103,7 @@ function buildRoute(route) {
    * Page/Layout
    */
   if (Guard) {
-    element = (
-      <Guard>
-        {element}
-      </Guard>
-    );
+    element = <Guard>{element}</Guard>;
   }
 
   const result = {
@@ -178,7 +153,7 @@ const dashboardRoutes = {
 export const router = createBrowserRouter([
   {
     path: SYSTEM_ROUTES.defaultEntry,
-    element: <DefaultEntryPage />,
+    element: <LandingPage />,
   },
 
   buildRoute(publicRoutes),
