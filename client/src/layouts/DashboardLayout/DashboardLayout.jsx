@@ -175,12 +175,22 @@ export default function DashboardLayout() {
               xs: 2,
               sm: 3,
             },
-            overflow: "hidden",
+            overflowY: "auto",
+            overflowX: "hidden",
             display: "flex",
             flexDirection: "column",
+            overscrollBehaviorY: "contain",
           }}
         >
-          <Outlet />
+          <Box
+            sx={{
+              minWidth: 0,
+              minHeight: 0,
+              flex: "0 0 auto",
+            }}
+          >
+            <Outlet />
+          </Box>
         </Box>
       </Box>
     </Box>

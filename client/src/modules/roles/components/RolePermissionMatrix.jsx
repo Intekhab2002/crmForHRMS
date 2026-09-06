@@ -455,6 +455,7 @@ export default function RolePermissionMatrix({
       variant="outlined"
       sx={{
         width: "100%",
+         minWidth: 0,
       }}
     >
       <CardContent>
