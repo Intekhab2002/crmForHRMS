@@ -167,7 +167,7 @@ export default function DashboardLayout() {
       >
         <Toolbar />
 
-        <PageViewport>
+        <PageViewport >
           <Outlet />
         </PageViewport>
       </Box>
