@@ -15,6 +15,7 @@ import { useTheme } from "@mui/material/styles";
 
 import { useAuth } from "../../context/useAuth";
 import Sidebar from "../../components/navigation/Sidebar";
+import PageViewport from "../../components/layout/PageViewport";
 
 const DRAWER_WIDTH = 260;
 const COLLAPSED_DRAWER_WIDTH = 72;
@@ -166,32 +167,9 @@ export default function DashboardLayout() {
       >
         <Toolbar />
 
-        <Box
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            minHeight: 0,
-            p: {
-              xs: 2,
-              sm: 3,
-            },
-            overflowY: "auto",
-            overflowX: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            overscrollBehaviorY: "contain",
-          }}
-        >
-          <Box
-            sx={{
-              minWidth: 0,
-              minHeight: 0,
-              flex: "0 0 auto",
-            }}
-          >
-            <Outlet />
-          </Box>
-        </Box>
+        <PageViewport>
+          <Outlet />
+        </PageViewport>
       </Box>
     </Box>
   );
