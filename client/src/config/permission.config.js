@@ -10,6 +10,8 @@
  * for client-side authorization decisions.
  */
 
+
+
 export const PERMISSIONS = Object.freeze({
   DASHBOARD_READ: "dashboard:read",
 
@@ -49,3 +51,39 @@ export const PERMISSIONS = Object.freeze({
 });
 
 export default PERMISSIONS;
+
+const PERMISSION_RESOURCE_CONFIG = Object.freeze({
+  user: Object.freeze({
+    label: "Users",
+  }),
+
+  role: Object.freeze({
+    label: "Roles",
+  }),
+
+  permission: Object.freeze({
+    label: "Permissions",
+  }),
+
+  ticket: Object.freeze({
+    label: "Tickets",
+  }),
+
+  contact: Object.freeze({
+    label: "Contacts",
+  }),
+
+  dashboard: Object.freeze({
+    label: "Dashboard",
+  }),
+
+  sla: Object.freeze({
+    label: "SLA",
+  }),
+
+  report: Object.freeze({
+    label: "Reports",
+  }),
+});
+
+export { PERMISSION_RESOURCE_CONFIG };

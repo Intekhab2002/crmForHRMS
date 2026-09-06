@@ -408,18 +408,18 @@ export default function TicketLifecyclePage() {
   }
 
   return (
-<Stack
-  spacing={2}
-  sx={{
-    width: "100%",
-    minWidth: 0,
-    minHeight: 0,
-    height: "100%",
-    overflow: "hidden",
-    display: "flex",
-    flexDirection: "column",
-  }}
->
+    <Stack
+      spacing={2}
+      sx={{
+        width: "100%",
+        minWidth: 0,
+        minHeight: 0,
+        height: "100%",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <CompactPageToolbar
         title={ticket.subject || ticket.ticketNumber || ticket.reference}
         description={ticket.ticketNumber ?? ticket.reference}
@@ -514,32 +514,32 @@ export default function TicketLifecyclePage() {
       ) : null}
 
       {error ? <Alert severity="error">{error}</Alert> : null}
-
-<Grid
-  container
-  spacing={1.5}
-  sx={{
-    flex: 1,
-    minWidth: 0,
-    minHeight: 0,
-    alignItems: "stretch",
-  }}
->
+      <Grid
+        container
+        spacing={1.5}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          overflow: "hidden",
+          alignItems: "stretch",
+        }}
+      >
         <Grid
           size={{ xs: 12, md: 7 }}
           sx={{
             minWidth: 0,
-            minHeight: { md: 0 },
+            minHeight: 0,
             display: "flex",
+            flexDirection: "column",
           }}
         >
           <Paper
             variant="outlined"
             sx={{
-              width: "100%",
+              flex: "1 1 0",
               minWidth: 0,
               minHeight: 0,
-              height: { md: "100%" },
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
@@ -547,7 +547,8 @@ export default function TicketLifecyclePage() {
           >
             <Box
               sx={{
-                flex: 1,
+                flex: "1 1 0",
+                minWidth: 0,
                 minHeight: 0,
                 overflowY: "auto",
                 overflowX: "hidden",
@@ -570,17 +571,17 @@ export default function TicketLifecyclePage() {
           size={{ xs: 12, md: 5 }}
           sx={{
             minWidth: 0,
-            minHeight: { md: 0 },
+            minHeight: 0,
             display: "flex",
+            flexDirection: "column",
           }}
         >
           <Paper
             variant="outlined"
             sx={{
-              width: "100%",
+              flex: "1 1 0",
               minWidth: 0,
-              minHeight: { md: 0 },
-              height: { md: "100%" },
+              minHeight: 0,
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
@@ -590,6 +591,9 @@ export default function TicketLifecyclePage() {
               value={activeTab}
               onChange={(_, value) => setActiveTab(value)}
               variant="fullWidth"
+              sx={{
+                flexShrink: 0,
+              }}
             >
               <Tab
                 value="activity"
@@ -617,7 +621,8 @@ export default function TicketLifecyclePage() {
 
             <Box
               sx={{
-                flex: 1,
+                flex: "1 1 0",
+                minWidth: 0,
                 minHeight: 0,
                 overflow: "hidden",
                 display: "flex",
@@ -627,7 +632,8 @@ export default function TicketLifecyclePage() {
               {activeTab === "activity" ? (
                 <Box
                   sx={{
-                    flex: 1,
+                    flex: "1 1 0",
+                    minWidth: 0,
                     minHeight: 0,
                     overflowY: "auto",
                     overflowX: "hidden",
@@ -648,7 +654,8 @@ export default function TicketLifecyclePage() {
               {activeTab === "comments" ? (
                 <Box
                   sx={{
-                    flex: 1,
+                    flex: "1 1 0",
+                    minWidth: 0,
                     minHeight: 0,
                     overflowY: "auto",
                     overflowX: "hidden",
@@ -673,7 +680,8 @@ export default function TicketLifecyclePage() {
               {activeTab === "attachments" ? (
                 <Box
                   sx={{
-                    flex: 1,
+                    flex: "1 1 0",
+                    minWidth: 0,
                     minHeight: 0,
                     overflowY: "auto",
                     overflowX: "hidden",
