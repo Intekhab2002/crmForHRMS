@@ -1,7 +1,9 @@
 import { useMemo } from "react";
-import { Divider, Grid, Paper, Stack, Typography } from "@mui/material";
+import { Divider, Paper, Stack } from "@mui/material";
 
 import OptionChip from "../../../components/display/OptionChip";
+import DetailField from "../../../components/display/DetailField";
+import DetailGrid, { DetailGridItem } from "../../../components/display/DetailGrid";
 
 import {
   formatDate,
@@ -11,38 +13,25 @@ import {
 
 import { useAuth } from "../../../context/useAuth";
 
-/*
- * Fields whose persisted value is an ID but whose API response
- * already contains the corresponding human-readable display value.
- */
 const DISPLAY_VALUE_FIELDS = Object.freeze({
   status: "statusName",
-
   organization: "organizationName",
   department: "departmentName",
-
   assigned_to: "assignedUserName",
   created_by: "createdByName",
   district: "districtName",
-
   caller_department: "callerDepartmentName",
-
   service_type: "serviceTypeName",
   category: "categoryName",
   problem_statement: "problemStatementName",
-
   current_bill_status: "currentBillStatusName",
-
   severity: "severityName",
-
   issue_category: "issueCategoryName",
   dependency_category: "dependencyCategoryName",
 });
 
 function canReadField(field, enforcePermissions, hasPermission) {
-  if (!enforcePermissions) {
-    return true;
-  }
+  if (!enforcePermissions) return true;
 
   const permission = field.permissions?.read ?? field.permission;
 
@@ -52,17 +41,13 @@ function canReadField(field, enforcePermissions, hasPermission) {
 function getDisplayValue(field, ticket) {
   const displayKey = DISPLAY_VALUE_FIELDS[field.key];
 
-  if (!displayKey) {
-    return undefined;
-  }
+  if (!displayKey) return undefined;
 
   return ticket[displayKey];
 }
 
 function getFieldValue(field, ticket) {
-  if (!field || !ticket) {
-    return undefined;
-  }
+  if (!field || !ticket) return undefined;
 
   return ticket[field.key];
 }
@@ -114,6 +99,7 @@ export default function TicketOverview({
   enforcePermissions = true,
 }) {
   const { hasPermission } = useAuth();
+
   const visibleFields = useMemo(() => {
     const detailFieldKeys = new Set(fieldNames);
 
@@ -123,61 +109,41 @@ export default function TicketOverview({
         canReadField(field, enforcePermissions, hasPermission),
       );
   }, [enforcePermissions, fieldNames, fields, hasPermission]);
+
   return (
     <Paper
       variant="outlined"
       sx={{
-        p: {
-          xs: 2,
-          md: 3,
-        },
+        p: { xs: 1.5, md: 2 },
+        minWidth: 0,
       }}
     >
-      <Stack spacing={2.5}>
-        {title ? (
-          <>
-            <Typography variant="h6" fontWeight={800}>
-              {title}
-            </Typography>
+      {title ? (
+        <>
+          <Stack sx={{ mb: 1 }}>
+            <DetailField label={title} value="" empty />
+          </Stack>
+          <Divider sx={{ mb: 1.25 }} />
+        </>
+      ) : null}
 
-            <Divider />
-          </>
-        ) : null}
+      <DetailGrid spacing={1.25}>
+        {visibleFields.map((field) => {
+          const value = renderValue(field, ticket, fallback);
+          const multiline = field.type === "textarea";
 
-        <Grid container spacing={2}>
-          {visibleFields.map((field) => {
-            return (
-              <Grid
-                key={field.key}
-                size={{
-                  xs: 12,
-                  sm: 6,
-                  md: field.type === "textarea" ? 12 : 6,
-                }}
-              >
-                <Stack spacing={0.5}>
-                  <Typography variant="caption" color="text.secondary">
-                    {field.label}
-                  </Typography>
-
-                  <Typography
-                    component="div"
-                    fontWeight={600}
-                    sx={{
-                      whiteSpace:
-                        field.type === "textarea" ? "pre-wrap" : "normal",
-                      wordBreak: "break-word",
-                      minHeight: "1.5rem",
-                    }}
-                  >
-                    {renderValue(field, ticket, fallback)}
-                  </Typography>
-                </Stack>
-              </Grid>
-            );
-          })}
-        </Grid>
-      </Stack>
+          return (
+            <DetailGridItem key={field.key} multiline={multiline}>
+              <DetailField
+                label={field.label}
+                value={value}
+                multiline={multiline}
+                empty={value === fallback}
+              />
+            </DetailGridItem>
+          );
+        })}
+      </DetailGrid>
     </Paper>
   );
 }

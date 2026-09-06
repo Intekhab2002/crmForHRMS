@@ -287,10 +287,15 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     entity: "ticket",
     required: true,
     minRows: 5,
-    form: { create: true, update: true, detail: true , grid: {
+    form: {
+      create: true,
+      update: true,
+      detail: true,
+      width: {
         xs: 12,
         md: 12,
-      }, },
+      },
+    },
     grid: { visible: false },
   },
   {
@@ -303,7 +308,10 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
       create: true,
       update: true,
       detail: true,
-
+      width: {
+        xs: 12,
+        md: 12,
+      },
     },
     grid: { visible: false },
   },
@@ -313,7 +321,15 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     type: "textarea",
     entity: "ticket",
     minRows: 5,
-    form: { create: true, update: true, detail: true },
+    form: {
+      create: true,
+      update: true,
+      detail: true,
+      width: {
+        xs: 12,
+        md: 12,
+      },
+    },
     grid: { visible: false },
   },
   {
@@ -322,7 +338,15 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     type: "text",
     entity: "ticket",
     maxLength: 5000,
-    form: { create: false, update: true, detail: true },
+    form: {
+      create: false,
+      update: true,
+      detail: true,
+      width: {
+        xs: 12,
+        md: 12,
+      },
+    },
     grid: { visible: false },
   },
   {
