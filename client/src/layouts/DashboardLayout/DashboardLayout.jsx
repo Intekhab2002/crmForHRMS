@@ -41,6 +41,8 @@ export default function DashboardLayout() {
       sx={{
         display: "flex",
         minHeight: "100vh",
+        height: "100dvh",
+        overflow: "hidden",
       }}
     >
       <AppBar
@@ -155,16 +157,27 @@ export default function DashboardLayout() {
         sx={{
           flexGrow: 1,
           minWidth: 0,
+          minHeight: 0,
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
         }}
       >
         <Toolbar />
 
         <Box
           sx={{
+            flex: 1,
+            minHeight: 0,
+            minWidth: 0,
             p: {
               xs: 2,
               sm: 3,
             },
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <Outlet />
