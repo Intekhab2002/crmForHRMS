@@ -62,7 +62,7 @@ export default function TicketFormContent({
 
   return (
     <Form noValidate>
-      <Grid container spacing={1}>
+      <Grid container spacing={0.5}>
         {fields.map((field) => (
           <Grid key={field.key} size={field.form?.width ?? { xs: 6, md: 4 }}>
             <FieldRenderer
@@ -88,7 +88,7 @@ export default function TicketFormContent({
       <Stack
         direction="row"
         justifyContent="flex-end"
-        spacing={2}
+        spacing={1}
         sx={{ mt: 2 }}
       >
         {onCancel ? (

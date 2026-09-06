@@ -287,7 +287,10 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     entity: "ticket",
     required: true,
     minRows: 5,
-    form: { create: true, update: true, detail: true },
+    form: { create: true, update: true, detail: true , grid: {
+        xs: 12,
+        md: 12,
+      }, },
     grid: { visible: false },
   },
   {
@@ -296,7 +299,12 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     type: "textarea",
     entity: "ticket",
     minRows: 5,
-    form: { create: true, update: true, detail: true },
+    form: {
+      create: true,
+      update: true,
+      detail: true,
+
+    },
     grid: { visible: false },
   },
   {

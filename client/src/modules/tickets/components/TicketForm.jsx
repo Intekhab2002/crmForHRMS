@@ -107,14 +107,14 @@ export default function TicketForm({
         (field) => field.type === "select" || field.type === "autocomplete",
       );
 
-      console.log(
-        "[TicketForm] Option fields:",
-        optionFields.map((field) => ({
-          key: field.key,
-          source: field.options?.source,
-          endpoint: field.options?.endpoint,
-        })),
-      );
+      // console.log(
+      //   "[TicketForm] Option fields:",
+      //   optionFields.map((field) => ({
+      //     key: field.key,
+      //     source: field.options?.source,
+      //     endpoint: field.options?.endpoint,
+      //   })),
+      // );
 
       const results = await Promise.all(
         optionFields.map(async (field) => {

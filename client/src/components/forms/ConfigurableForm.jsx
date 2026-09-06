@@ -1,4 +1,4 @@
-import  { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -22,7 +22,7 @@ function getDefaultValue(field) {
 
 function buildInitialValues(fields, initialValues) {
   return fields.reduce((values, field) => {
-    values[field.name] = initialValues[field.name] ?? getDefaultValue(field);
+    values[field.key] = initialValues[field.key] ?? getDefaultValue(field);
     return values;
   }, {});
 }
@@ -33,7 +33,10 @@ function canUseField(field, mode, hasPermission) {
 }
 
 function validateField(field, value) {
-  if (field.required && (value === "" || value === null || value === undefined)) {
+  if (
+    field.required &&
+    (value === "" || value === null || value === undefined)
+  ) {
     return `${field.label} is required.`;
   }
 
@@ -56,7 +59,7 @@ function renderField(field, value, error, handleChange) {
         control={
           <Switch
             checked={Boolean(value)}
-            onChange={(event) => handleChange(field.name, event.target.checked)}
+            onChange={(event) => handleChange(field.key, event.target.checked)}
           />
         }
         label={field.label}
@@ -66,14 +69,14 @@ function renderField(field, value, error, handleChange) {
 
   const commonProps = {
     fullWidth: true,
-    name: field.name,
+    name: field.key,
     label: field.label,
     value,
     required: field.required,
     placeholder: field.placeholder,
     error: Boolean(error),
     helperText: error || field.helperText,
-    onChange: (event) => handleChange(field.name, event.target.value),
+    onChange: (event) => handleChange(field.key, event.target.value),
   };
 
   if (field.type === "select") {
@@ -90,11 +93,7 @@ function renderField(field, value, error, handleChange) {
 
   if (field.type === "textarea") {
     return (
-      <TextField
-        {...commonProps}
-        multiline
-        minRows={field.minRows ?? 3}
-      />
+      <TextField {...commonProps} multiline minRows={field.minRows ?? 3} />
     );
   }
 
@@ -109,22 +108,22 @@ function renderField(field, value, error, handleChange) {
   }
 
   if (field.type === "autocomplete") {
-  return (
-    <FormAutocomplete
-      field={field}
-      formik={{
-        values: { [field.name]: value },
-        errors: { [field.name]: error },
-        touched: { [field.name]: Boolean(error) },
-        setFieldValue: (_name, nextValue) =>
-          handleChange(field.name, nextValue),
-        setFieldTouched: () => {},
-      }}
-      options={field.options ?? []}
-      multiple={field.multiple === true}
-    />
-  );
-}
+    return (
+      <FormAutocomplete
+        field={field}
+        formik={{
+          values: { [field.key]: value },
+          errors: { [field.key]: error },
+          touched: { [field.key]: Boolean(error) },
+          setFieldValue: (_name, nextValue) =>
+            handleChange(field.key, nextValue),
+          setFieldTouched: () => {},
+        }}
+        options={field.options ?? []}
+        multiple={field.multiple === true}
+      />
+    );
+  }
 
   return <TextField {...commonProps} type={field.type ?? "text"} />;
 }
@@ -145,14 +144,14 @@ export default function ConfigurableForm({
     () => fields.filter((field) => canUseField(field, mode, hasPermission)),
     [fields, hasPermission, mode],
   );
-const initialFormValues = useMemo(
-  () => buildInitialValues(visibleFields, initialValues),
-  [initialValues, visibleFields],
-);
+  const initialFormValues = useMemo(
+    () => buildInitialValues(visibleFields, initialValues),
+    [initialValues, visibleFields],
+  );
 
-const [values, setValues] = useState(initialFormValues);
-const [errors, setErrors] = useState({});
-const [isSubmitting, setIsSubmitting] = useState(false);
+  const [values, setValues] = useState(initialFormValues);
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (name, value) => {
     setValues((current) => ({ ...current, [name]: value }));
@@ -163,8 +162,8 @@ const [isSubmitting, setIsSubmitting] = useState(false);
     event.preventDefault();
 
     const nextErrors = visibleFields.reduce((fieldErrors, field) => {
-      const error = validateField(field, values[field.name]);
-      if (error) fieldErrors[field.name] = error;
+      const error = validateField(field, values[field.key]);
+      if (error) fieldErrors[field.key] = error;
       return fieldErrors;
     }, {});
 
@@ -188,11 +187,20 @@ const [isSubmitting, setIsSubmitting] = useState(false);
   return (
     <Box component="form" onSubmit={handleSubmit} noValidate>
       <Grid container spacing={2}>
-        {visibleFields.map((field) => (
-          <Grid key={field.name} size={field.grid ?? { xs: 12, md: 6 }}>
-            {renderField(field, values[field.name], errors[field.name], handleChange)}
+        {visibleFields.map((field) => {
+          console.log(field);
+          return   (
+          <Grid key={field.key} size={field.form?.grid ?? { xs: 12, md: 6 }}>
+            {renderField(
+              field,
+              values[field.key],
+              errors[field.key],
+              handleChange,
+            )}
           </Grid>
-        ))}
+        )
+        }
+     )}
       </Grid>
 
       <Stack direction="row" spacing={1.5} justifyContent="flex-end" mt={3}>
