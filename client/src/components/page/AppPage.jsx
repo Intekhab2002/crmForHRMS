@@ -1,39 +1,57 @@
-import { Stack } from "@mui/material";
+import { Box } from "@mui/material";
 
 export default function AppPage({
   children,
+  mode = "flow",
   spacing = 3,
-  mode = "scroll",
   sx,
 }) {
-  const workspace = mode === "workspace";
+  const isWorkspace = mode === "workspace";
 
   return (
-    <Stack
-      spacing={spacing}
+    <Box
       sx={{
         width: "100%",
         minWidth: 0,
         minHeight: 0,
-        p:2,
 
-        ...(workspace
+        ...(isWorkspace
           ? {
               height: "100%",
-              overflow: "hidden",
               display: "flex",
               flexDirection: "column",
+              overflow: "hidden",
             }
           : {
-              minHeight: "100%",
-              overflowY: "auto",
-              overflowX: "hidden",
+              display: "block",
+              overflow: "visible",
             }),
 
         ...sx,
       }}
     >
-      {children}
-    </Stack>
+      <Box
+        component="div"
+        sx={{
+          width: "100%",
+          minWidth: 0,
+          minHeight: 0,
+
+          ...(isWorkspace
+            ? {
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+              }
+            : {
+                display: "flex",
+                flexDirection: "column",
+                gap: (theme) => theme.spacing(spacing),
+              }),
+        }}
+      >
+        {children}
+      </Box>
+    </Box>
   );
 }
