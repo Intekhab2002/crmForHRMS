@@ -19,14 +19,11 @@ import {
   Tabs,
   Typography,
 } from "@mui/material";
-import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import CommentOutlinedIcon from "@mui/icons-material/CommentOutlined";
 import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
 import { Link, useParams } from "react-router";
-import { useTheme } from "@mui/material/styles";
 
 import CompactPageToolbar from "../../../components/page/CompactPageToolbar";
 import CanAccess from "../../../components/rbac/CanAccess";
@@ -39,7 +36,6 @@ import TicketLifecycleTimeline from "../components/TicketLifecycleTimeline";
 import { ticketService } from "../services/ticket.service";
 import { useAuth } from "../../../context/useAuth";
 import { getOptionSource } from "../components/TicketForm";
-
 import {
   TICKET_FIELD_CONFIG,
   TICKET_MODULE_CONFIG,
@@ -100,8 +96,7 @@ function getStatusLabel(ticket) {
 
 export default function TicketLifecyclePage() {
   const { ticketId } = useParams();
-  const theme = useTheme();
-  const { user } = useAuth();
+    const { user } = useAuth();
 
   const [ticket, setTicket] = useState(null);
   const [comments, setComments] = useState([]);
@@ -129,8 +124,12 @@ export default function TicketLifecyclePage() {
       setError("");
 
       try {
-        const [ticketResult, commentsResult, lifecycleResult, attachmentsResult] =
-          await Promise.all([
+        const [
+          ticketResult,
+          commentsResult,
+          lifecycleResult,
+          attachmentsResult,
+        ] = await Promise.all([
           ticketService.getTicket(ticketId),
           ticketService.listComments(ticketId),
           ticketService.listLifecycle(ticketId),
@@ -354,10 +353,6 @@ export default function TicketLifecyclePage() {
     }
   };
 
-  const handleStatusChange = (event) => {
-    setPendingStatus(event.target.value);
-  };
-
   const handleStatusUpdate = async () => {
     if (!pendingStatus || pendingStatus === ticket?.status) {
       return;
@@ -408,42 +403,13 @@ export default function TicketLifecyclePage() {
     );
   }
 
-  if (!ticket) {
-    return (
-      <Stack spacing={2}>
-        <CompactPageToolbar
-          title="Ticket Details"
-          backAction={{ component: Link, to: "/tickets" }}
-          backTooltip="Back to Tickets"
-        />
-        <Alert
-          severity="error"
-          action={
-            <Button color="inherit" size="small" onClick={() => loadAll(true)}>
-              Retry
-            </Button>
-          }
-        >
-          {error || TICKET_MODULE_CONFIG.labels.notFound}
-        </Alert>
-      </Stack>
-    );
-  }
-
-  const availableContentHeight = `calc(100dvh - ${theme.mixins.toolbar.minHeight}px - ${theme.spacing(6)})`;
-
   return (
-    <Stack
-      spacing={1}
-      sx={{
-        minWidth: 0,
-        minHeight: { md: availableContentHeight },
-      }}
-    >
+    <Stack spacing={2}>
       <CompactPageToolbar
         title={ticket.subject || ticket.ticketNumber || ticket.reference}
         description={ticket.ticketNumber ?? ticket.reference}
         backAction={{ component: Link, to: "/tickets" }}
+        backLabel="Back"
         backTooltip="Back to Tickets"
         refreshAction={{
           onClick: () => loadAll(false),
@@ -451,17 +417,49 @@ export default function TicketLifecyclePage() {
           "aria-label": "Refresh ticket",
         }}
         actions={
-          <>
-            <Chip label={getStatusLabel(ticket)} size="small" />
+          <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
+            <Stack
+              direction="row"
+              spacing={0.75}
+              alignItems="center"
+              flexWrap="wrap"
+              useFlexGap
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.75,
+                  px: 0.75,
+                  py: 0.5,
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 1.5,
+                  bgcolor: "background.default",
+                }}
+              >
+                <Typography
+                  component="span"
+                  variant="caption"
+                  fontWeight={700}
+                  color="text.secondary"
+                >
+                  Status
+                </Typography>
 
-              <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
                 <Select
                   size="small"
                   value={pendingStatus}
-                onChange={(event) => setPendingStatus(event.target.value)}
+                  onChange={handleStatusUpdate}
                   disabled={saving || statusOptionsLoading}
-                inputProps={{ "aria-label": "Ticket status" }}
-                sx={{ minWidth: { xs: 120, sm: 140 } }}
+                  inputProps={{ "aria-label": "Ticket status" }}
+                  sx={{
+                    minWidth: { xs: 130, sm: 150 },
+                    "& .MuiSelect-select": {
+                      py: 0.75,
+                      fontWeight: 700,
+                    },
+                  }}
                 >
                   {statusOptions.map((option) => (
                     <MenuItem key={option.value} value={option.value}>
@@ -469,16 +467,17 @@ export default function TicketLifecyclePage() {
                     </MenuItem>
                   ))}
                 </Select>
+              </Box>
 
-                <Button
+              <Button
                 variant="outlined"
-                  onClick={handleStatusUpdate}
-                  disabled={
-                    saving || !pendingStatus || pendingStatus === ticket.status
-                  }
-                >
-                  Update
-                </Button>
+                onClick={handleStatusUpdate}
+                disabled={
+                  saving || !pendingStatus || pendingStatus === ticket.status
+                }
+              >
+                Update Status
+              </Button>
 
               <Button
                 variant="contained"
@@ -488,8 +487,8 @@ export default function TicketLifecyclePage() {
               >
                 Edit
               </Button>
-            </CanAccess>
-          </>
+            </Stack>
+          </CanAccess>
         }
       />
 
@@ -507,6 +506,7 @@ export default function TicketLifecyclePage() {
         sx={{
           flex: { md: 1 },
           minHeight: { md: 0 },
+          height: { md: 0 },
           alignItems: "stretch",
         }}
       >
@@ -524,6 +524,7 @@ export default function TicketLifecyclePage() {
               width: "100%",
               minWidth: 0,
               minHeight: { md: 0 },
+              height: { md: "100%" },
               overflow: "auto",
               p: 1,
             }}
@@ -553,6 +554,7 @@ export default function TicketLifecyclePage() {
               width: "100%",
               minWidth: 0,
               minHeight: { md: 0 },
+              height: { md: "100%" },
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
