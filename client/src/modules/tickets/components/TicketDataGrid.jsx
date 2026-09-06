@@ -1,9 +1,12 @@
 import { useMemo } from "react";
-import { Box, Paper, Typography } from "@mui/material";
+import { Paper } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
-import { DataGrid, GridActionsCellItem } from "@mui/x-data-grid";
+import { GridActionsCellItem } from "@mui/x-data-grid";
+
+import { AppDataGrid } from "../../../components/data-grid";
 import OptionChip from "../../../components/display/OptionChip";
 import { useAuth } from "../../../context/useAuth";
+
 import {
   formatDateTime,
   formatTicketValue,
@@ -30,7 +33,7 @@ function renderColumnCell(column, field, fallback) {
 
   if (column.presentation === "optionLabel") {
     return (params) => (
-      <Typography variant="body2">
+      <span>
         {column.valueIsDisplay
           ? (params.row[column.field] ?? fallback)
           : formatTicketValue(
@@ -39,20 +42,24 @@ function renderColumnCell(column, field, fallback) {
               fallback,
               params.row,
             )}
-      </Typography>
+      </span>
     );
   }
 
   if (column.presentation === "dateTime") {
     return (params) => (
-      <Typography variant="body2">
-        {formatDateTime(params.row[column.field], fallback)}
-      </Typography>
+      <span>
+        {formatDateTime(
+          params.row[column.field],
+          fallback,
+        )}
+      </span>
     );
   }
 
   return undefined;
 }
+
 export default function TicketDataGrid({
   rows,
   fields,
@@ -69,7 +76,12 @@ export default function TicketDataGrid({
   const gridColumns = useMemo(
     () =>
       columns
-        .filter((column) => canReadColumn(column, hasPermission))
+        .filter((column) =>
+          canReadColumn(
+            column,
+            hasPermission,
+          ),
+        )
         .map((column) => {
           if (column.type === "actions") {
             return {
@@ -77,79 +89,88 @@ export default function TicketDataGrid({
               sortable: false,
               filterable: false,
               disableColumnMenu: true,
+
               getActions: (params) => [
                 <GridActionsCellItem
                   key="open"
-                  icon={<VisibilityOutlinedIcon />}
-                  label={column.actionLabel}
-                  onClick={() => onOpenTicket(params.row)}
+                  icon={
+                    <VisibilityOutlinedIcon />
+                  }
+                  label={
+                    column.actionLabel
+                  }
+                  onClick={() =>
+                    onOpenTicket(
+                      params.row,
+                    )
+                  }
                   showInMenu={false}
                 />,
               ],
             };
           }
 
-          const field = getField(fields, column.sourceField ?? column.field);
+          const field = getField(
+            fields,
+            column.sourceField ??
+              column.field,
+          );
 
           return {
             ...column,
-            renderCell: renderColumnCell(column, field, fallback),
+            renderCell:
+              renderColumnCell(
+                column,
+                field,
+                fallback,
+              ),
           };
         }),
-    [columns, fallback, fields, hasPermission, onOpenTicket],
+    [
+      columns,
+      fallback,
+      fields,
+      hasPermission,
+      onOpenTicket,
+    ],
   );
 
   return (
-    <Paper variant="outlined" sx={{ height: 650, width: "100%" }}>
-      <Box sx={{ height: "100%", width: "100%" }}>
-        <DataGrid
-          rows={rows}
-          columns={gridColumns}
-          loading={loading}
-          label={title}
-          getRowId={(row) => row.id}
-          pagination
-          pageSizeOptions={pageSizeOptions}
-          initialState={{
-            pagination: {
-              paginationModel: {
-                page: 0,
-                pageSize: defaultPageSize,
-              },
+    <Paper
+      variant="outlined"
+      sx={{
+        width: "100%",
+        overflow: "hidden",
+      }}
+    >
+      <AppDataGrid
+        rows={rows}
+        columns={gridColumns}
+        loading={loading}
+        getRowId={(row) => row.id}
+        pageSizeOptions={
+          pageSizeOptions
+        }
+        initialState={{
+          pagination: {
+            paginationModel: {
+              page: 0,
+              pageSize:
+                defaultPageSize,
             },
-          }}
-          showToolbar
-          disableRowSelectionOnClick
-          ignoreDiacritics
-          // onRowDoubleClick={(params) => onOpenTicket(params.row)}
-          slotProps={{
-            toolbar: {
-              showQuickFilter: true,
-              quickFilterProps: {
-                debounceMs: 300,
-              },
+          },
+        }}
+        showToolbar
+        slotProps={{
+          toolbar: {
+            showQuickFilter: true,
+            quickFilterProps: {
+              debounceMs: 300,
             },
-          }}
-          sx={{
-            border: 0,
-            "& .MuiDataGrid-columnHeaderTitle": {
-              fontWeight: 800,
-            },
-            "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus": {
-              outline: "none",
-            },
-            "& .MuiDataGrid-cell": {
-              display: "flex",
-              alignItems: "center",
-            },
-
-            "& .MuiDataGrid-columnHeader": {
-              display: "flex",
-              alignItems: "center",
-            },
-          }}
-        />
-      </Box>
+          },
+        }}
+        aria-label={title}
+      />
     </Paper>
   );
 }

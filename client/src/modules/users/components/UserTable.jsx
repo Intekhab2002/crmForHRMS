@@ -1,30 +1,16 @@
-import {
-  Box,
-  Chip,
-  IconButton,
-  Tooltip,
-} from "@mui/material";
+import { Box, Chip, IconButton, Tooltip } from "@mui/material";
 
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
 import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutline";
 
-import { DataGrid } from "@mui/x-data-grid";
+import { AppDataGrid } from "../../../components/data-grid";
 
-import {
-  USER_COLUMNS,
-  isDeveloper,
-  isSuperAdmin,
-} from "../users.config";
+import { USER_COLUMNS, isDeveloper, isSuperAdmin } from "../users.config";
 
 function formatUserName(row) {
-  return (
-    [row.first_name, row.last_name]
-      .filter(Boolean)
-      .join(" ") ||
-    "—"
-  );
+  return [row.first_name, row.last_name].filter(Boolean).join(" ") || "—";
 }
 
 function formatLastLogin(value) {
@@ -81,8 +67,7 @@ export default function UserTable({
       if (column.field === "name") {
         return {
           ...column,
-          valueGetter: (_value, row) =>
-            formatUserName(row),
+          valueGetter: (_value, row) => formatUserName(row),
         };
       }
 
@@ -101,17 +86,14 @@ export default function UserTable({
       if (column.field === "status") {
         return {
           ...column,
-          renderCell: ({ value }) => (
-            <StatusChip status={value} />
-          ),
+          renderCell: ({ value }) => <StatusChip status={value} />,
         };
       }
 
       if (column.field === "last_login_at") {
         return {
           ...column,
-          renderCell: ({ value }) =>
-            formatLastLogin(value),
+          renderCell: ({ value }) => formatLastLogin(value),
         };
       }
 
@@ -127,11 +109,9 @@ export default function UserTable({
       width: 150,
 
       renderCell: ({ row }) => {
-        const developer =
-          isDeveloper(row);
+        const developer = isDeveloper(row);
 
-        const superAdmin =
-          isSuperAdmin(row);
+        const superAdmin = isSuperAdmin(row);
 
         /*
          * Developer is never an ordinary
@@ -145,19 +125,13 @@ export default function UserTable({
          * Super Admin may only be managed
          * by Developer.
          */
-        const protectedSuperAdmin =
-          superAdmin &&
-          !currentUserIsDeveloper;
+        const protectedSuperAdmin = superAdmin && !currentUserIsDeveloper;
 
         if (protectedSuperAdmin) {
           return (
             <Tooltip title="Protected system administrator">
               <span>
-                <Chip
-                  size="small"
-                  label="Protected"
-                  variant="outlined"
-                />
+                <Chip size="small" label="Protected" variant="outlined" />
               </span>
             </Tooltip>
           );
@@ -168,32 +142,16 @@ export default function UserTable({
             {canUpdate ? (
               <>
                 <Tooltip title="Edit">
-                  <IconButton
-                    size="small"
-                    onClick={() =>
-                      onEdit(row)
-                    }
-                  >
+                  <IconButton size="small" onClick={() => onEdit(row)}>
                     <EditOutlinedIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
 
                 <Tooltip
-                  title={
-                    row.status ===
-                    "active"
-                      ? "Deactivate"
-                      : "Activate"
-                  }
+                  title={row.status === "active" ? "Deactivate" : "Activate"}
                 >
-                  <IconButton
-                    size="small"
-                    onClick={() =>
-                      onStatusChange(row)
-                    }
-                  >
-                    {row.status ===
-                    "active" ? (
+                  <IconButton size="small" onClick={() => onStatusChange(row)}>
+                    {row.status === "active" ? (
                       <BlockOutlinedIcon fontSize="small" />
                     ) : (
                       <CheckCircleOutlineOutlinedIcon fontSize="small" />
@@ -208,9 +166,7 @@ export default function UserTable({
                 <IconButton
                   size="small"
                   color="error"
-                  onClick={() =>
-                    onDelete(row)
-                  }
+                  onClick={() => onDelete(row)}
                 >
                   <DeleteOutlineOutlinedIcon fontSize="small" />
                 </IconButton>
@@ -228,42 +184,20 @@ export default function UserTable({
   }));
 
   return (
-    <DataGrid
-      autoHeight
+    <AppDataGrid
       rows={rows}
       columns={columns}
       loading={loading}
-      disableRowSelectionOnClick
-
       pagination
       paginationMode="server"
-
-      rowCount={
-        pagination?.total ?? 0
-      }
-
-      paginationModel={
-        paginationModel
-      }
-
-      onPaginationModelChange={
-        onPaginationModelChange
-      }
-
-      pageSizeOptions={[
-        20,
-        50,
-        100,
-      ]}
-
+      rowCount={pagination?.total ?? 0}
+      paginationModel={paginationModel}
+      onPaginationModelChange={onPaginationModelChange}
+      pageSizeOptions={[20, 50, 100]}
       getRowId={(row) => row.id}
-
+      height="clamp(420px, calc(100vh - 390px), 720px)"
       slots={{
-        noRowsOverlay: () => (
-          <Box sx={{ p: 4 }}>
-            No users found.
-          </Box>
-        ),
+        noRowsOverlay: () => <Box sx={{ p: 4 }}>No users found.</Box>,
       }}
     />
   );

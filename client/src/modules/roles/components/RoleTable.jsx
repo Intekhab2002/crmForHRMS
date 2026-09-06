@@ -1,9 +1,4 @@
-import {
-  Box,
-  Chip,
-  IconButton,
-  Tooltip,
-} from "@mui/material";
+import { Box, Chip, IconButton, Tooltip } from "@mui/material";
 
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutline";
@@ -17,23 +12,14 @@ import {
   isDeveloperRole,
   isSuperAdminRole,
 } from "../roles.config";
+import { AppDataGrid } from "../../../components/data-grid";
 
-function StatusChip({
-  active,
-}) {
+function StatusChip({ active }) {
   return (
     <Chip
       size="small"
-      label={
-        active
-          ? "Active"
-          : "Inactive"
-      }
-      color={
-        active
-          ? "success"
-          : "default"
-      }
+      label={active ? "Active" : "Inactive"}
+      color={active ? "success" : "default"}
       variant="outlined"
     />
   );
@@ -80,16 +66,10 @@ export default function RoleTable({
       headerName: "Type",
       width: 120,
 
-      renderCell: ({
-        value,
-      }) => (
+      renderCell: ({ value }) => (
         <Chip
           size="small"
-          label={
-            value
-              ? "System"
-              : "Custom"
-          }
+          label={value ? "System" : "Custom"}
           variant="outlined"
         />
       ),
@@ -100,13 +80,7 @@ export default function RoleTable({
       headerName: "Status",
       width: 120,
 
-      renderCell: ({
-        value,
-      }) => (
-        <StatusChip
-          active={value}
-        />
-      ),
+      renderCell: ({ value }) => <StatusChip active={value} />,
     },
 
     {
@@ -117,14 +91,10 @@ export default function RoleTable({
       filterable: false,
       disableColumnMenu: true,
 
-      renderCell: ({
-        row,
-      }) => {
-        const developer =
-          isDeveloperRole(row);
+      renderCell: ({ row }) => {
+        const developer = isDeveloperRole(row);
 
-        const superAdmin =
-          isSuperAdminRole(row);
+        const superAdmin = isSuperAdminRole(row);
 
         /*
          * Developer is never exposed
@@ -134,75 +104,46 @@ export default function RoleTable({
           return null;
         }
 
-        const manageable =
-          canManageRole(
-            row,
-            currentUserIsDeveloper,
-          );
+        const manageable = canManageRole(row, currentUserIsDeveloper);
 
         return (
           <Box>
-            {manageable &&
-            canUpdate ? (
+            {manageable && canUpdate ? (
               <Tooltip title="Edit role">
-                <IconButton
-                  size="small"
-                  onClick={() =>
-                    onEdit(row)
-                  }
-                >
+                <IconButton size="small" onClick={() => onEdit(row)}>
                   <EditOutlinedIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             ) : null}
 
-            {manageable &&
-            canUpdate ? (
+            {manageable && canUpdate ? (
               <Tooltip title="Permissions">
-                <IconButton
-                  size="small"
-                  onClick={() =>
-                    onPermissions(row)
-                  }
-                >
+                <IconButton size="small" onClick={() => onPermissions(row)}>
                   <SecurityOutlinedIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             ) : null}
 
             <Tooltip title="Assigned users">
-              <IconButton
-                size="small"
-                onClick={() =>
-                  onUsers(row)
-                }
-              >
+              <IconButton size="small" onClick={() => onUsers(row)}>
                 <PeopleOutlinedIcon fontSize="small" />
               </IconButton>
             </Tooltip>
 
-            {manageable &&
-            canDelete ? (
+            {manageable && canDelete ? (
               <Tooltip title="Delete role">
                 <IconButton
                   size="small"
                   color="error"
-                  onClick={() =>
-                    onDelete(row)
-                  }
+                  onClick={() => onDelete(row)}
                 >
                   <DeleteOutlineOutlinedIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             ) : null}
 
-            {superAdmin &&
-            !currentUserIsDeveloper ? (
-              <Chip
-                size="small"
-                label="Protected"
-                variant="outlined"
-              />
+            {superAdmin && !currentUserIsDeveloper ? (
+              <Chip size="small" label="Protected" variant="outlined" />
             ) : null}
           </Box>
         );
@@ -211,37 +152,20 @@ export default function RoleTable({
   ];
 
   return (
-    <DataGrid
-      autoHeight
+    <AppDataGrid
       rows={roles}
       columns={columns}
       loading={loading}
-      disableRowSelectionOnClick
       pagination
       paginationMode="server"
-      rowCount={
-        pagination?.total ?? 0
-      }
-      paginationModel={
-        paginationModel
-      }
-      onPaginationModelChange={
-        onPaginationModelChange
-      }
-      pageSizeOptions={[
-        20,
-        50,
-        100,
-      ]}
-      getRowId={(row) =>
-        row.id
-      }
+      rowCount={pagination?.total ?? 0}
+      paginationModel={paginationModel}
+      onPaginationModelChange={onPaginationModelChange}
+      pageSizeOptions={[20, 50, 100]}
+      getRowId={(row) => row.id}
+      height="clamp(420px, calc(100vh - 390px), 720px)"
       slots={{
-        noRowsOverlay: () => (
-          <Box sx={{ p: 4 }}>
-            No roles found.
-          </Box>
-        ),
+        noRowsOverlay: () => <Box sx={{ p: 4 }}>No roles found.</Box>,
       }}
     />
   );
