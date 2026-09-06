@@ -169,8 +169,8 @@ export default function DashboardLayout() {
         <Box
           sx={{
             flex: 1,
-            minHeight: 0,
             minWidth: 0,
+            minHeight: 0,
             p: {
               xs: 2,
               sm: 3,

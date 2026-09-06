@@ -408,16 +408,18 @@ export default function TicketLifecyclePage() {
   }
 
   return (
-    <Stack
-      spacing={2}
-      sx={{
-        minWidth: 0,
-        minHeight: 0,
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+<Stack
+  spacing={2}
+  sx={{
+    width: "100%",
+    minWidth: 0,
+    minHeight: 0,
+    height: "100%",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+  }}
+>
       <CompactPageToolbar
         title={ticket.subject || ticket.ticketNumber || ticket.reference}
         description={ticket.ticketNumber ?? ticket.reference}
@@ -513,16 +515,16 @@ export default function TicketLifecyclePage() {
 
       {error ? <Alert severity="error">{error}</Alert> : null}
 
-      <Grid
-        container
-        spacing={1.5}
-        sx={{
-          flex: { md: 1 },
-          minHeight: { md: 0 },
-          height: { md: 0 },
-          alignItems: "stretch",
-        }}
-      >
+<Grid
+  container
+  spacing={1.5}
+  sx={{
+    flex: 1,
+    minWidth: 0,
+    minHeight: 0,
+    alignItems: "stretch",
+  }}
+>
         <Grid
           size={{ xs: 12, md: 7 }}
           sx={{
