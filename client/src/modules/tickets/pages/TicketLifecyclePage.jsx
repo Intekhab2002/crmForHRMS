@@ -41,7 +41,7 @@ import {
   TICKET_MODULE_CONFIG,
   TICKET_FIELD_MAP,
 } from "../../../config/ticket.config";
-import PageContainer from "../../../components/page/PageContainer";
+import AppPage from "../../../components/page/AppPage";
 
 const DETAIL_FIELDS = TICKET_FIELD_CONFIG.filter((field) => field.form?.detail)
   .map((field) => field.key)
@@ -409,7 +409,7 @@ export default function TicketLifecyclePage() {
   }
 
   return (
-    <PageContainer fill spacing={2}>
+    <AppPage fill spacing={2}>
       <CompactPageToolbar
         title={ticket.subject || ticket.ticketNumber || ticket.reference}
         description={ticket.ticketNumber ?? ticket.reference}
@@ -510,7 +510,7 @@ export default function TicketLifecyclePage() {
         sx={{
           flex: 1,
           minWidth: 0,
-          minHeight: 600,
+          minHeight: 0,
           overflow: "hidden",
           alignItems: "stretch",
         }}
@@ -711,6 +711,6 @@ export default function TicketLifecyclePage() {
           />
         </DialogContent>
       </Dialog>
-    </PageContainer>
+    </AppPage>
   );
 }
