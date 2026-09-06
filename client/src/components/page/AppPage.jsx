@@ -3,9 +3,11 @@ import { Stack } from "@mui/material";
 export default function AppPage({
   children,
   spacing = 3,
-  fill = false,
+  mode = "scroll",
   sx,
 }) {
+  const workspace = mode === "workspace";
+
   return (
     <Stack
       spacing={spacing}
@@ -13,13 +15,21 @@ export default function AppPage({
         width: "100%",
         minWidth: 0,
         minHeight: 0,
-        ...(fill
+        p:2,
+
+        ...(workspace
           ? {
-              flex: "1 1 0",
+              height: "100%",
+              overflow: "hidden",
               display: "flex",
               flexDirection: "column",
             }
-          : {}),
+          : {
+              minHeight: "100%",
+              overflowY: "auto",
+              overflowX: "hidden",
+            }),
+
         ...sx,
       }}
     >

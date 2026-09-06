@@ -43,6 +43,7 @@ import {
 import {
     optionService,
 } from "../services/option.service";
+import AppPage from "../../../components/page/AppPage";
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -437,7 +438,7 @@ export default function OptionManagementPage() {
         activeCount;
 
     return (
-        <Stack spacing={3}>
+        <AppPage  spacing={3}>
             <PageHeader
                 title="Option Management"
                 description="Manage the reusable values used by CRM ticket forms."
@@ -706,6 +707,6 @@ export default function OptionManagementPage() {
                     handleDisable
                 }
             />
-        </Stack>
+        </AppPage>
     );
 }

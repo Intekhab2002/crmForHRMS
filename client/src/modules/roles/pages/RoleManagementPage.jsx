@@ -42,6 +42,7 @@ import RoleTable from "../components/RoleTable";
 import RoleFormDialog from "../components/RoleFormDialog";
 import RolePermissionMatrix from "../components/RolePermissionMatrix";
 import RoleAssignedUsers from "../components/RoleAssignedUsers";
+import AppPage from "../../../components/page/AppPage";
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -432,7 +433,7 @@ export default function RoleManagementPage() {
     );
 
   return (
-    <Stack spacing={3}>
+    <AppPage spacing={3}>
       <Stack
         direction={{
           xs: "column",
@@ -648,6 +649,6 @@ export default function RoleManagementPage() {
             : canCreate
         }
       />
-    </Stack>
+    </AppPage>
   );
 }

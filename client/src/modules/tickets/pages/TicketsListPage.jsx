@@ -12,6 +12,7 @@ import {
   TICKET_FIELD_CONFIG,
 } from "../../../config/ticket.config";
 import { ticketService } from "../services/ticket.service";
+import AppPage from "../../../components/page/AppPage";
 
 export default function TicketsListPage() {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ export default function TicketsListPage() {
   }, []);
 
   return (
-    <Stack spacing={3}>
+    <AppPage  spacing={3}>
       <PageHeader
         title={TICKET_MODULE_CONFIG.list.title}
         description={TICKET_MODULE_CONFIG.list.description}
@@ -82,6 +83,6 @@ export default function TicketsListPage() {
         loading={loading}
         onOpenTicket={(row) => navigate(`/tickets/${row.id}`)}
       />
-    </Stack>
+    </AppPage>
   );
 }

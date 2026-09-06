@@ -7,30 +7,10 @@ export default function PageViewport({ children }) {
         flex: "1 1 0",
         minWidth: 0,
         minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        px: {
-          xs: 2,
-          sm: 3,
-        },
-        py: {
-          xs: 2,
-          sm: 3,
-        },
+        position: "relative",
       }}
     >
-      <Box
-        sx={{
-          flex: "1 1 0",
-          minWidth: 0,
-          minHeight: 0,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {children}
-      </Box>
+      {children}
     </Box>
   );
 }
