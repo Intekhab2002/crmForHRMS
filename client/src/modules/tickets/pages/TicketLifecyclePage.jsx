@@ -96,7 +96,7 @@ function getStatusLabel(ticket) {
 
 export default function TicketLifecyclePage() {
   const { ticketId } = useParams();
-    const { user } = useAuth();
+  const { user } = useAuth();
 
   const [ticket, setTicket] = useState(null);
   const [comments, setComments] = useState([]);
@@ -353,6 +353,10 @@ export default function TicketLifecyclePage() {
     }
   };
 
+  const handleStatusChange = (event) => {
+    setPendingStatus(event.target.value);
+  };
+
   const handleStatusUpdate = async () => {
     if (!pendingStatus || pendingStatus === ticket?.status) {
       return;
@@ -450,7 +454,7 @@ export default function TicketLifecyclePage() {
                 <Select
                   size="small"
                   value={pendingStatus}
-                  onChange={handleStatusUpdate}
+                  onChange={handleStatusChange}
                   disabled={saving || statusOptionsLoading}
                   inputProps={{ "aria-label": "Ticket status" }}
                   sx={{
@@ -523,20 +527,31 @@ export default function TicketLifecyclePage() {
             sx={{
               width: "100%",
               minWidth: 0,
-              minHeight: { md: 0 },
+              minHeight: 0,
               height: { md: "100%" },
-              overflow: "auto",
-              p: 1,
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            <TicketOverview
-              ticket={ticket}
-              fields={TICKET_FIELD_CONFIG}
-              fieldNames={DETAIL_FIELDS}
-              title="Ticket Information"
-              fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
-              enforcePermissions={false}
-            />
+            <Box
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: "auto",
+                overflowX: "hidden",
+                p: 1,
+              }}
+            >
+              <TicketOverview
+                ticket={ticket}
+                fields={TICKET_FIELD_CONFIG}
+                fieldNames={DETAIL_FIELDS}
+                title="Ticket Information"
+                fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
+                enforcePermissions={false}
+              />
+            </Box>
           </Paper>
         </Grid>
 
@@ -593,35 +608,70 @@ export default function TicketLifecyclePage() {
               sx={{
                 flex: 1,
                 minHeight: 0,
-                overflow: "auto",
-                p: 1,
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
               {activeTab === "activity" ? (
-                <TicketLifecycleTimeline
-                  events={lifecycle}
-                  fields={TICKET_FIELD_CONFIG}
-                  emptyMessage="No activity recorded yet."
-                  fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
-                  loading={lifecycleLoading}
-                />
+                <Box
+                  sx={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: "auto",
+                    overflowX: "hidden",
+                    px: 1,
+                    py: 1,
+                  }}
+                >
+                  <TicketLifecycleTimeline
+                    events={lifecycle}
+                    fields={TICKET_FIELD_CONFIG}
+                    emptyMessage="No activity recorded yet."
+                    fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
+                    loading={lifecycleLoading}
+                  />
+                </Box>
               ) : null}
 
               {activeTab === "comments" ? (
-                <Stack spacing={1}>
-                  <TicketComments
-                    comments={comments}
-                    loading={commentsLoading}
-                  />
-                  <TicketCommentComposer
-                    config={COMMENT_CONFIG}
-                    onSubmit={handleComment}
-                  />
-                </Stack>
+                <Box
+                  sx={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: "auto",
+                    overflowX: "hidden",
+                    px: 1,
+                    py: 1,
+                  }}
+                >
+                  <Stack spacing={1}>
+                    <TicketComments
+                      comments={comments}
+                      loading={commentsLoading}
+                    />
+
+                    <TicketCommentComposer
+                      config={COMMENT_CONFIG}
+                      onSubmit={handleComment}
+                    />
+                  </Stack>
+                </Box>
               ) : null}
 
               {activeTab === "attachments" ? (
-                <TicketAttachmentList ticketId={ticket.id} />
+                <Box
+                  sx={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: "auto",
+                    overflowX: "hidden",
+                    px: 1,
+                    py: 1,
+                  }}
+                >
+                  <TicketAttachmentList ticketId={ticket.id} />
+                </Box>
               ) : null}
             </Box>
           </Paper>
