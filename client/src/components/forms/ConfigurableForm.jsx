@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import { useAuth } from "../../context/useAuth";
+import FormAutocomplete from "./FormAutocomplete";
 
 function getDefaultValue(field) {
   if (field.defaultValue !== undefined) return field.defaultValue;
@@ -106,6 +107,24 @@ function renderField(field, value, error, handleChange) {
       />
     );
   }
+
+  if (field.type === "autocomplete") {
+  return (
+    <FormAutocomplete
+      field={field}
+      formik={{
+        values: { [field.name]: value },
+        errors: { [field.name]: error },
+        touched: { [field.name]: Boolean(error) },
+        setFieldValue: (_name, nextValue) =>
+          handleChange(field.name, nextValue),
+        setFieldTouched: () => {},
+      }}
+      options={field.options ?? []}
+      multiple={field.multiple === true}
+    />
+  );
+}
 
   return <TextField {...commonProps} type={field.type ?? "text"} />;
 }

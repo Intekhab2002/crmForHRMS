@@ -52,7 +52,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
   {
     key: "service_type",
     label: "Service Type",
-    type: "select",
+    type: "autocomplete",
     entity: "ticket",
     required: true,
     options: apiOptions("/service-types?isActive=true&limit=100"),
@@ -71,7 +71,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
   {
     key: "district",
     label: "District",
-    type: "select",
+    type: "autocomplete",
     entity: "contact",
     required: true,
     options: apiOptions("/districts?isActive=true&limit=100"),
@@ -93,7 +93,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
   {
     key: "department",
     label: "Department",
-    type: "select",
+    type: "autocomplete",
     entity: "ticket",
     required: true,
     options: apiOptions("/departments?isActive=true&limit=100"),
@@ -108,7 +108,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
   {
     key: "category",
     label: "Category",
-    type: "select",
+    type: "autocomplete",
     entity: "ticket",
     required: true,
     options: apiOptions("/ticket-categories?isActive=true&limit=100"),
@@ -129,7 +129,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
   {
     key: "problem_statement",
     label: "Problem Statement",
-    type: "select",
+    type: "autocomplete",
     entity: "ticket",
     required: true,
     options: apiOptions("/problem-statements?isActive=true&limit=100"),
@@ -158,7 +158,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
   {
     key: "current_bill_status",
     label: "Current Bill Status",
-    type: "select",
+    type: "autocomplete",
     entity: "ticket",
     options: apiOptions("/current-bill-statuses?isActive=true&limit=100"),
     form: { create: true, update: true, detail: true },
@@ -176,7 +176,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
   {
     key: "status",
     label: "Status",
-    type: "select",
+    type: "autocomplete",
     entity: "ticket",
     required: true,
     options: apiOptions("/ticket-statuses?isActive=true&limit=100"),
@@ -186,7 +186,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
   {
     key: "assigned_to",
     label: "Assigned To",
-    type: "select",
+    type: "autocomplete",
     entity: "ticket",
     required: true,
     options: apiOptions("/tickets/assignable-users", "id", "full_name"),
@@ -201,7 +201,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
   {
     key: "severity",
     label: "Severity",
-    type: "select",
+    type: "autocomplete",
     entity: "ticket",
     required: true,
     options: apiOptions("/ticket-severities?isActive=true&limit=100"),
@@ -253,7 +253,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
   {
     key: "issue_category",
     label: "Issue Category",
-    type: "select",
+    type: "autocomplete",
     entity: "ticket",
     options: apiOptions("/ticket-issue-categories?isActive=true&limit=100"),
     form: { create: true, update: true, detail: true },
@@ -271,7 +271,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
   {
     key: "dependency_category",
     label: "Dependency Category",
-    type: "select",
+    type: "autocomplete",
     entity: "ticket",
     required: true,
     options: apiOptions(
@@ -359,7 +359,9 @@ export const TICKET_GRID_CONFIG = Object.freeze({
         flex: grid.flex,
         presentation:
           grid.presentation ??
-          (field.type === "select" ? "optionLabel" : undefined),
+          (["select", "autocomplete"].includes(field.type)
+            ? "optionLabel"
+            : undefined),
         valueIsDisplay: grid.valueIsDisplay === true,
       };
     },

@@ -155,11 +155,12 @@ export function formatTicketValue(
   fallback = "Not available",
   ticket = null,
 ) {
+  const LOOKUP_FIELD_TYPES = new Set(["select", "autocomplete"]);
   if (value === null || value === undefined || value === "") {
     return fallback;
   }
 
-  if (field?.type === "select") {
+  if (LOOKUP_FIELD_TYPES.has(field?.type)){
     const lookupDisplayValue = getLookupDisplayValue(field, value, ticket);
 
     if (
