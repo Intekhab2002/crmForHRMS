@@ -1,3 +1,4 @@
+// Hi I am original
 import {
   Avatar,
   CircularProgress,
@@ -10,7 +11,6 @@ import CommentOutlinedIcon from "@mui/icons-material/CommentOutlined";
 
 function getAuthorName(comment) {
   const author = comment?.author ?? {};
-  console.log("GetAuthorName Function",author)
 
   return (
     author?.name ||
@@ -58,36 +58,30 @@ function formatDate(value) {
 }
 
 export default function TicketComments({ comments = [], loading = false }) {
-  console.log("TicketComments", comments);
   return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: {
-          xs: 2,
-          md: 3,
-        },
-      }}
-    >
-      <Stack spacing={2}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <CommentOutlinedIcon color="action" />
-
-          <Typography variant="h6" fontWeight={800}>
+    <Paper variant="outlined" sx={{ p: 1.5 }}>
+      <Stack spacing={1}>
+        <Stack direction="row" spacing={0.75} alignItems="center">
+          <CommentOutlinedIcon color="action" fontSize="small" />
+          <Typography variant="subtitle2" fontWeight={800}>
             Comments
           </Typography>
 
           {!loading ? (
-            <Typography color="text.secondary">({comments.length})</Typography>
+            <Typography variant="caption" color="text.secondary">
+              ({comments.length})
+            </Typography>
           ) : null}
         </Stack>
 
         {loading ? (
-          <Stack alignItems="center" justifyContent="center" sx={{ py: 4 }}>
-            <CircularProgress size={28} />
+          <Stack alignItems="center" justifyContent="center" sx={{ py: 3 }}>
+            <CircularProgress size={24} />
           </Stack>
         ) : comments.length === 0 ? (
-          <Typography color="text.secondary">No comments yet.</Typography>
+          <Typography variant="body2" color="text.secondary">
+            No comments yet.
+          </Typography>
         ) : (
           <Stack divider={<Divider flexItem />} spacing={0}>
             {comments.map((comment) => {
@@ -97,50 +91,39 @@ export default function TicketComments({ comments = [], loading = false }) {
                 <Stack
                   key={comment.id}
                   direction="row"
-                  spacing={{ xs: 1.25, sm: 1.5 }}
+                  spacing={1}
                   alignItems="flex-start"
-                  sx={{
-                    py: 2,
-                    minWidth: 0,
-                  }}
+                  sx={{ py: 1.25, minWidth: 0 }}
                 >
                   <Avatar
                     sx={{
-                      width: { xs: 36, sm: 40 },
-                      height: { xs: 36, sm: 40 },
+                      width: 32,
+                      height: 32,
+                      fontSize: "0.75rem",
                       flexShrink: 0,
                     }}
                   >
                     {getCommentInitials(author)}
                   </Avatar>
 
-                  <Stack
-                    spacing={0.75}
-                    sx={{
-                      minWidth: 0,
-                      flex: 1,
-                    }}
-                  >
-                    {/* PRIMARY CONTENT */}
+                  <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
                     <Typography
-                      variant="body1"
+                      variant="body2"
                       sx={{
                         whiteSpace: "pre-wrap",
                         overflowWrap: "anywhere",
                         wordBreak: "break-word",
-                        lineHeight: 1.65,
+                        lineHeight: 1.5,
                       }}
                     >
                       {comment.comment || ""}
                     </Typography>
 
-                    {/* METADATA */}
                     <Stack
                       direction="row"
-                      spacing={0.75}
+                      spacing={0.5}
                       alignItems="center"
                       flexWrap="wrap"
-                      sx={{ minWidth: 0 }}
                     >
                       <Typography
                         variant="caption"
@@ -155,7 +138,6 @@ export default function TicketComments({ comments = [], loading = false }) {
                           • {formatDate(comment.createdAt)}
                         </Typography>
                       ) : null}
-
                     </Stack>
                   </Stack>
                 </Stack>

@@ -1,3 +1,4 @@
+// Original
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -9,7 +10,6 @@ import {
   DialogTitle,
   Divider,
   Grid,
-  IconButton,
   MenuItem,
   Paper,
   Select,
@@ -19,26 +19,23 @@ import {
   Tabs,
   Typography,
 } from "@mui/material";
-
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import CommentOutlinedIcon from "@mui/icons-material/CommentOutlined";
 import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
-
 import { Link, useParams } from "react-router";
+import { useTheme } from "@mui/material/styles";
 
-import PageHeader from "../../../components/page/PageHeader";
+import CompactPageToolbar from "../../../components/page/CompactPageToolbar";
 import CanAccess from "../../../components/rbac/CanAccess";
-
 import TicketForm from "../components/TicketForm";
 import TicketOverview from "../components/TicketOverview";
 import TicketComments from "../components/TicketComments";
 import TicketCommentComposer from "../components/TicketCommentComposer";
 import TicketAttachmentList from "../components/TicketAttachmentList";
 import TicketLifecycleTimeline from "../components/TicketLifecycleTimeline";
-
 import { ticketService } from "../services/ticket.service";
 import { useAuth } from "../../../context/useAuth";
 import { getOptionSource } from "../components/TicketForm";
@@ -103,51 +100,37 @@ function getStatusLabel(ticket) {
 
 export default function TicketLifecyclePage() {
   const { ticketId } = useParams();
+  const theme = useTheme();
+  const { user } = useAuth();
 
   const [ticket, setTicket] = useState(null);
   const [comments, setComments] = useState([]);
   const [lifecycle, setLifecycle] = useState([]);
-
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
   const [commentsLoading, setCommentsLoading] = useState(true);
   const [lifecycleLoading, setLifecycleLoading] = useState(true);
-
   const [saving, setSaving] = useState(false);
-
   const [editOpen, setEditOpen] = useState(false);
-
   const [activeTab, setActiveTab] = useState("activity");
-
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pendingStatus, setPendingStatus] = useState("");
-
-  const { user } = useAuth();
-
   const [statusOptions, setStatusOptions] = useState([]);
   const [statusOptionsLoading, setStatusOptionsLoading] = useState(true);
 
   const refreshTicket = useCallback(
     async ({ initial = false, showRefreshing = true } = {}) => {
-      if (initial) {
-        setLoading(true);
-      } else if (showRefreshing) {
-        setRefreshing(true);
-      }
+      if (initial) setLoading(true);
+      else if (showRefreshing) setRefreshing(true);
 
       setCommentsLoading(true);
       setLifecycleLoading(true);
       setError("");
 
       try {
-        const [
-          ticketResult,
-          commentsResult,
-          lifecycleResult,
-          attachmentsResult,
-        ] = await Promise.all([
+        const [ticketResult, commentsResult, lifecycleResult, attachmentsResult] =
+          await Promise.all([
           ticketService.getTicket(ticketId),
           ticketService.listComments(ticketId),
           ticketService.listLifecycle(ticketId),
@@ -159,7 +142,6 @@ export default function TicketLifecyclePage() {
           setComments([]);
           setLifecycle([]);
           setError(TICKET_MODULE_CONFIG.labels.notFound);
-
           return null;
         }
 
@@ -185,11 +167,6 @@ export default function TicketLifecyclePage() {
         setTicket(completeTicket);
         setComments(normalizedComments);
         setLifecycle(normalizedLifecycle);
-
-        console.log("ticketResult", ticketResult);
-        console.log("commentsResult", commentsResult);
-        console.log("lifecycleResult", lifecycleResult);
-
         return completeTicket;
       } catch (requestError) {
         setError(
@@ -424,10 +401,8 @@ export default function TicketLifecyclePage() {
   if (loading) {
     return (
       <Stack spacing={2}>
-        <Skeleton variant="text" width={320} height={48} />
-
+        <Skeleton variant="rounded" height={64} />
         <Skeleton variant="rounded" height={120} />
-
         <Skeleton variant="rounded" height={500} />
       </Stack>
     );
@@ -436,20 +411,11 @@ export default function TicketLifecyclePage() {
   if (!ticket) {
     return (
       <Stack spacing={2}>
-        <PageHeader
+        <CompactPageToolbar
           title="Ticket Details"
-          actions={
-            <Button
-              component={Link}
-              to="/tickets"
-              variant="outlined"
-              startIcon={<ArrowBackOutlinedIcon />}
-            >
-              Back to Tickets
-            </Button>
-          }
+          backAction={{ component: Link, to: "/tickets" }}
+          backTooltip="Back to Tickets"
         />
-
         <Alert
           severity="error"
           action={
@@ -464,35 +430,66 @@ export default function TicketLifecyclePage() {
     );
   }
 
+  const availableContentHeight = `calc(100dvh - ${theme.mixins.toolbar.minHeight}px - ${theme.spacing(6)})`;
+
   return (
     <Stack
-      spacing={2}
+      spacing={1}
       sx={{
         minWidth: 0,
+        minHeight: { md: availableContentHeight },
       }}
     >
-      <PageHeader
-        title={ticket.ticketNumber ?? ticket.reference}
-        description={ticket.subject}
+      <CompactPageToolbar
+        title={ticket.subject || ticket.ticketNumber || ticket.reference}
+        description={ticket.ticketNumber ?? ticket.reference}
+        backAction={{ component: Link, to: "/tickets" }}
+        backTooltip="Back to Tickets"
+        refreshAction={{
+          onClick: () => loadAll(false),
+          disabled: refreshing,
+          "aria-label": "Refresh ticket",
+        }}
         actions={
-          <Stack direction="row" spacing={1}>
-            <IconButton
-              onClick={() => loadAll(false)}
-              disabled={refreshing}
-              aria-label="Refresh ticket"
-            >
-              <RefreshOutlinedIcon />
-            </IconButton>
+          <>
+            <Chip label={getStatusLabel(ticket)} size="small" />
 
-            <Button
-              component={Link}
-              to="/tickets"
-              variant="outlined"
-              startIcon={<ArrowBackOutlinedIcon />}
-            >
-              Back
-            </Button>
-          </Stack>
+              <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
+                <Select
+                  size="small"
+                  value={pendingStatus}
+                onChange={(event) => setPendingStatus(event.target.value)}
+                  disabled={saving || statusOptionsLoading}
+                inputProps={{ "aria-label": "Ticket status" }}
+                sx={{ minWidth: { xs: 120, sm: 140 } }}
+                >
+                  {statusOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+
+                <Button
+                variant="outlined"
+                  onClick={handleStatusUpdate}
+                  disabled={
+                    saving || !pendingStatus || pendingStatus === ticket.status
+                  }
+                >
+                  Update
+                </Button>
+
+              <Button
+                variant="contained"
+                startIcon={<EditOutlinedIcon />}
+                onClick={() => setEditOpen(true)}
+                disabled={saving}
+              >
+                Edit
+              </Button>
+            </CanAccess>
+          </>
         }
       />
 
@@ -504,120 +501,29 @@ export default function TicketLifecyclePage() {
 
       {error ? <Alert severity="error">{error}</Alert> : null}
 
-      {/* Compact ticket header */}
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid
-            size={{
-              xs: 12,
-              md: 5,
-            }}
-          >
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              flexWrap="wrap"
-            >
-              <Typography variant="h6" fontWeight={800}>
-                {ticket.ticketNumber ?? ticket.reference}
-              </Typography>
-
-              <Chip
-                label={getStatusLabel(ticket)}
-                size="small"
-                color="primary"
-              />
-            </Stack>
-
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Created by{" "}
-              {ticket.createdBy?.name ||
-                ticket.createdByName ||
-                TICKET_MODULE_CONFIG.labels.notAvailable}
-            </Typography>
-          </Grid>
-
-          <Grid
-            size={{
-              xs: 12,
-              md: 4,
-            }}
-          >
-            <Stack direction="row" spacing={1} alignItems="center">
-              <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
-                <Select
-                  fullWidth
-                  size="small"
-                  value={pendingStatus}
-                  onChange={handleStatusChange}
-                  disabled={saving || statusOptionsLoading}
-                >
-                  {statusOptions.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-
-                <Button
-                  variant="contained"
-                  onClick={handleStatusUpdate}
-                  disabled={
-                    saving || !pendingStatus || pendingStatus === ticket.status
-                  }
-                >
-                  Update
-                </Button>
-              </CanAccess>
-            </Stack>
-          </Grid>
-
-          <Grid
-            size={{
-              xs: 12,
-              md: 3,
-            }}
-          >
-            <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
-              <Button
-                fullWidth
-                variant="contained"
-                startIcon={<EditOutlinedIcon />}
-                onClick={() => setEditOpen(true)}
-                disabled={saving}
-              >
-                Edit Ticket
-              </Button>
-            </CanAccess>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Single-screen split layout */}
       <Grid
         container
-        spacing={2}
+        spacing={1.5}
         sx={{
-          minHeight: {
-            md: "calc(100vh - 285px)",
-          },
+          flex: { md: 1 },
+          minHeight: { md: 0 },
+          alignItems: "stretch",
         }}
       >
-        {/* Ticket information */}
         <Grid
-          size={{
-            xs: 12,
-            md: 7,
+          size={{ xs: 12, md: 7 }}
+          sx={{
+            minWidth: 0,
+            minHeight: { md: 0 },
+            display: "flex",
           }}
-          sx={{ minWidth: 0 }}
         >
           <Paper
             variant="outlined"
             sx={{
-              height: {
-                md: "calc(100vh - 285px)",
-              },
+              width: "100%",
+              minWidth: 0,
+              minHeight: { md: 0 },
               overflow: "auto",
               p: 1,
             }}
@@ -633,20 +539,20 @@ export default function TicketLifecyclePage() {
           </Paper>
         </Grid>
 
-        {/* Activity / comments / attachments */}
         <Grid
-          size={{
-            xs: 12,
-            md: 5,
+          size={{ xs: 12, md: 5 }}
+          sx={{
+            minWidth: 0,
+            minHeight: { md: 0 },
+            display: "flex",
           }}
-          sx={{ minWidth: 0 }}
         >
           <Paper
             variant="outlined"
             sx={{
-              height: {
-                md: "calc(100vh - 285px)",
-              },
+              width: "100%",
+              minWidth: 0,
+              minHeight: { md: 0 },
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
@@ -684,8 +590,9 @@ export default function TicketLifecyclePage() {
             <Box
               sx={{
                 flex: 1,
+                minHeight: 0,
                 overflow: "auto",
-                p: 1.5,
+                p: 1,
               }}
             >
               {activeTab === "activity" ? (
@@ -699,12 +606,11 @@ export default function TicketLifecyclePage() {
               ) : null}
 
               {activeTab === "comments" ? (
-                <Stack spacing={1.5}>
+                <Stack spacing={1}>
                   <TicketComments
                     comments={comments}
                     loading={commentsLoading}
                   />
-
                   <TicketCommentComposer
                     config={COMMENT_CONFIG}
                     onSubmit={handleComment}
@@ -724,9 +630,7 @@ export default function TicketLifecyclePage() {
       <Dialog
         open={editOpen}
         onClose={() => {
-          if (!saving) {
-            setEditOpen(false);
-          }
+          if (!saving) setEditOpen(false);
         }}
         fullWidth
         maxWidth="lg"
@@ -741,9 +645,7 @@ export default function TicketLifecyclePage() {
             submitting={saving}
             submitLabel="Save Changes"
             onCancel={() => {
-              if (!saving) {
-                setEditOpen(false);
-              }
+              if (!saving) setEditOpen(false);
             }}
           />
         </DialogContent>
