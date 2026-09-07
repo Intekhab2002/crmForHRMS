@@ -48,12 +48,7 @@ function renderColumnCell(column, field, fallback) {
 
   if (column.presentation === "dateTime") {
     return (params) => (
-      <span>
-        {formatDateTime(
-          params.row[column.field],
-          fallback,
-        )}
-      </span>
+      <span>{formatDateTime(params.row[column.field], fallback)}</span>
     );
   }
 
@@ -62,6 +57,10 @@ function renderColumnCell(column, field, fallback) {
 
 export default function TicketDataGrid({
   rows,
+  rowCount = 0,
+  paginationModel,
+  onPaginationModelChange,
+  paginationMode = "client",
   fields,
   columns,
   pageSizeOptions,
@@ -76,12 +75,7 @@ export default function TicketDataGrid({
   const gridColumns = useMemo(
     () =>
       columns
-        .filter((column) =>
-          canReadColumn(
-            column,
-            hasPermission,
-          ),
-        )
+        .filter((column) => canReadColumn(column, hasPermission))
         .map((column) => {
           if (column.type === "actions") {
             return {
@@ -93,46 +87,23 @@ export default function TicketDataGrid({
               getActions: (params) => [
                 <GridActionsCellItem
                   key="open"
-                  icon={
-                    <VisibilityOutlinedIcon />
-                  }
-                  label={
-                    column.actionLabel
-                  }
-                  onClick={() =>
-                    onOpenTicket(
-                      params.row,
-                    )
-                  }
+                  icon={<VisibilityOutlinedIcon />}
+                  label={column.actionLabel}
+                  onClick={() => onOpenTicket(params.row)}
                   showInMenu={false}
                 />,
               ],
             };
           }
 
-          const field = getField(
-            fields,
-            column.sourceField ??
-              column.field,
-          );
+          const field = getField(fields, column.sourceField ?? column.field);
 
           return {
             ...column,
-            renderCell:
-              renderColumnCell(
-                column,
-                field,
-                fallback,
-              ),
+            renderCell: renderColumnCell(column, field, fallback),
           };
         }),
-    [
-      columns,
-      fallback,
-      fields,
-      hasPermission,
-      onOpenTicket,
-    ],
+    [columns, fallback, fields, hasPermission, onOpenTicket],
   );
 
   return (
@@ -148,15 +119,16 @@ export default function TicketDataGrid({
         columns={gridColumns}
         loading={loading}
         getRowId={(row) => row.id}
-        pageSizeOptions={
-          pageSizeOptions
-        }
+        paginationMode={paginationMode}
+        rowCount={paginationMode === "server" ? rowCount : undefined}
+        paginationModel={paginationModel}
+        onPaginationModelChange={onPaginationModelChange}
+        pageSizeOptions={pageSizeOptions}
         initialState={{
           pagination: {
             paginationModel: {
               page: 0,
-              pageSize:
-                defaultPageSize,
+              pageSize: defaultPageSize,
             },
           },
         }}

@@ -15,23 +15,39 @@ import { ticketService } from "../services/ticket.service";
 
 export default function TicketsListPage() {
   const navigate = useNavigate();
+
   const [rows, setRows] = useState([]);
+  const [rowCount, setRowCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: TICKET_GRID_CONFIG.defaultPageSize,
+  });
 
   useEffect(() => {
     let active = true;
 
+    setLoading(true);
+    setError("");
+
     ticketService
       .listTickets({
-        page: 1,
-        limit: TICKET_GRID_CONFIG.defaultPageSize,
+        page: paginationModel.page + 1,
+        limit: paginationModel.pageSize,
       })
-      .then((tickets) => {
-        if (active) setRows(tickets ?? []);
+      .then(({ rows: ticketRows, total }) => {
+        if (!active) return;
+
+        setRows(ticketRows ?? []);
+        setRowCount(total ?? 0);
       })
       .catch((requestError) => {
         if (!active) return;
+
+        setRows([]);
+        setRowCount(0);
 
         setError(
           requestError.response?.data?.message ??
@@ -40,16 +56,31 @@ export default function TicketsListPage() {
         );
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [paginationModel]);
+
+  const handlePaginationModelChange = (nextModel) => {
+    setPaginationModel((currentModel) => {
+      if (nextModel.pageSize !== currentModel.pageSize) {
+        return {
+          page: 0,
+          pageSize: nextModel.pageSize,
+        };
+      }
+
+      return nextModel;
+    });
+  };
 
   return (
-    <Stack  spacing={3}>
+    <Stack spacing={3}>
       <PageHeader
         title={TICKET_MODULE_CONFIG.list.title}
         description={TICKET_MODULE_CONFIG.list.description}
@@ -73,8 +104,15 @@ export default function TicketsListPage() {
 
       <TicketDataGrid
         rows={rows}
+        rowCount={rowCount}
+        paginationModel={paginationModel}
+        onPaginationModelChange={handlePaginationModelChange}
+        paginationMode="server"
         fields={TICKET_FIELD_CONFIG}
-        columns={[TICKET_GRID_CONFIG.action, ...TICKET_GRID_CONFIG.columns]}
+        columns={[
+          TICKET_GRID_CONFIG.action,
+          ...TICKET_GRID_CONFIG.columns,
+        ]}
         pageSizeOptions={TICKET_GRID_CONFIG.pageSizeOptions}
         defaultPageSize={TICKET_GRID_CONFIG.defaultPageSize}
         title={TICKET_MODULE_CONFIG.list.title}

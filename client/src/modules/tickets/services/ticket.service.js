@@ -12,8 +12,6 @@ function getErrorMessage(error, fallback) {
   return error?.response?.data?.message ?? error?.message ?? fallback;
 }
 
-
-
 export const ticketService = {
   async getFields(context) {
     const { getTicketFields } = await import("../../../config/ticket.config");
@@ -27,11 +25,22 @@ export const ticketService = {
     });
 
     const payload = response.data?.data ?? response.data;
-    const rows = Array.isArray(payload)
-      ? payload
-      : (payload?.data ?? payload?.rows ?? []);
 
-    return mapTicketsFromApi(rows);
+    if (Array.isArray(payload)) {
+      return {
+        rows: mapTicketsFromApi(payload),
+        total: payload.length,
+      };
+    }
+
+    const rows = payload?.data ?? payload?.rows ?? [];
+
+    const total = payload?.total ?? payload?.totalCount ?? payload?.count ?? 0;
+
+    return {
+      rows: mapTicketsFromApi(rows),
+      total,
+    };
   },
 
   async getTicket(ticketId) {
@@ -64,7 +73,6 @@ export const ticketService = {
 
     return mapTicketFromApi(response.data?.data ?? response.data);
   },
-
 
   async addComment(ticketId, body) {
     const response = await apiClient.post(
@@ -146,13 +154,13 @@ export const ticketService = {
   },
 
   async lookupPublicTicketStatus(values) {
-  const response = await apiClient.post(
-    API_CONFIG.endpoints.public.ticketStatus,
-    values,
-  );
+    const response = await apiClient.post(
+      API_CONFIG.endpoints.public.ticketStatus,
+      values,
+    );
 
-  return response.data?.data ?? [];
-},
+    return response.data?.data ?? [];
+  },
 
   getErrorMessage,
 };

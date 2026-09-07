@@ -247,7 +247,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     },
 
     grid: {
-      visible: false,
+      visible: true,
     },
   },
   {
