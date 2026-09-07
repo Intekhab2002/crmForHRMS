@@ -52,7 +52,7 @@ function FieldRenderer({ field, formik, options, loading }) {
           option.value === current.value
         }
         onChange={(_, option) =>
-          formik.setFieldValue(field.key, option?.value ?? "")
+          formik.setFieldValue(field.key, option?.value ?? null)
         }
         onBlur={() => formik.setFieldTouched(field.key, true)}
         renderInput={(params) => (

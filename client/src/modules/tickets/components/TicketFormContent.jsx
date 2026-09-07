@@ -25,11 +25,11 @@ export default function TicketFormContent({
 
       formik.setFieldValue("email_id", contact.email ?? "", false);
 
-      formik.setFieldValue("district", contact.district?.id ?? "", false);
+      formik.setFieldValue("district", contact.district?.id ?? null, false);
 
       formik.setFieldValue(
         "department",
-        contact.department?.id ?? contact.departmentId ?? "",
+        contact.department?.id ?? contact.departmentId ?? null,
         false,
       );
 

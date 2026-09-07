@@ -33,10 +33,26 @@ export async function getOptionSource(field, user) {
   });
 }
 
+function getDefaultValue(field) {
+  if (field.defaultValue !== undefined) {
+    return field.defaultValue;
+  }
+
+  if (field.type === "select" || field.type === "autocomplete") {
+    return field.multiple ? [] : null;
+  }
+
+  if (field.type === "checkbox") {
+    return false;
+  }
+
+  return "";
+}
+
 export function buildInitialValues(fields, values, user, options = {}) {
   return fields.reduce((result, field) => {
     if (values && Object.prototype.hasOwnProperty.call(values, field.key)) {
-      result[field.key] = values[field.key] ?? "";
+      result[field.key] = values[field.key] ?? getDefaultValue(field);
       return result;
     }
 
@@ -45,16 +61,15 @@ export function buildInitialValues(fields, values, user, options = {}) {
       return result;
     }
 
-  if (field.key === "organization" && Array.isArray(options.organization)) {
+    if (field.key === "organization" && Array.isArray(options.organization)) {
       result[field.key] = options.organization[0]?.value ?? "";
       return result;
     }
 
-    result[field.key] = field.defaultValue ?? "";
+    result[field.key] = getDefaultValue(field);
     return result;
   }, {});
 }
-
 
 export function buildValidationSchema(fields) {
   const shape = {};
@@ -147,7 +162,7 @@ export default function TicketForm({
   }, [fields, user]);
 
   const formInitialValues = useMemo(
-    () => buildInitialValues(fields, initialValues, user,options),
+    () => buildInitialValues(fields, initialValues, user, options),
     [fields, initialValues, user, options],
   );
 
