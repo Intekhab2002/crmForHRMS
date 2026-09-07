@@ -1,30 +1,33 @@
-import { Stack } from "@mui/material";
+import { Box } from "@mui/material";
 
-export default function PageContainer({
+export default function ModulePage({
   children,
-  fill = false,
-  spacing = 3,
+  scroll = true,
   sx,
 }) {
   return (
-    <Stack
-      spacing={spacing}
+    <Box
       sx={{
         width: "100%",
         minWidth: 0,
         minHeight: 0,
-        ...(fill
+        
+
+        ...(scroll
           ? {
+              minHeight: "100%",
+            }
+          : {
               height: "100%",
-              overflow: "hidden",
               display: "flex",
               flexDirection: "column",
-            }
-          : {}),
+              overflow: "hidden",
+            }),
+
         ...sx,
       }}
     >
       {children}
-    </Stack>
+    </Box>
   );
 }

@@ -27,6 +27,7 @@ export default function CompactPageToolbar({
         p: 1,
         minWidth: 0,
         flexShrink: 0,
+        marginY: 1,
       }}
     >
       <Stack

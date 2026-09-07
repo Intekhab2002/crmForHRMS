@@ -8,7 +8,6 @@ import {
 
 import { useAuth } from "../../context/useAuth";
 import { useAppConfig } from "../../context/useAppConfig";
-import AppPage from "../../components/page/AppPage";
 
 export default function DashboardPage() {
   const {
@@ -23,7 +22,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <AppPage spacing={3}>
+    <Stack spacing={3}>
       <Stack>
         <Typography
           variant="h4"
@@ -72,6 +71,6 @@ export default function DashboardPage() {
           </Grid>
         ))}
       </Grid>
-    </AppPage>
+    </Stack>
   );
 }

@@ -2,18 +2,15 @@ import { Box } from "@mui/material";
 
 export default function PageViewport({
   children,
-  mode = "flow",
 }) {
-  const isWorkspace = mode === "workspace";
-
   return (
     <Box
       sx={{
-        flex: 1,
+        flex: "1 1 0",
         minWidth: 0,
         minHeight: 0,
 
-        overflowY: isWorkspace ? "hidden" : "auto",
+        overflowY: "auto",
         overflowX: "hidden",
 
         display: "flex",
@@ -29,26 +26,7 @@ export default function PageViewport({
         },
       }}
     >
-      <Box
-        sx={{
-          width: "100%",
-          minWidth: 0,
-          minHeight: isWorkspace ? 0 : "100%",
-
-          display: "flex",
-          flexDirection: "column",
-
-          ...(isWorkspace
-            ? {
-                flex: "1 1 0",
-              }
-            : {
-                flex: "0 0 auto",
-              }),
-        }}
-      >
-        {children}
-      </Box>
+      {children}
     </Box>
   );
 }

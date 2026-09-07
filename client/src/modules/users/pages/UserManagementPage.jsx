@@ -49,7 +49,6 @@ import {
 
 import UserFormDialog from "../components/UserFormDialog";
 import UserTable from "../components/UserTable";
-import AppPage from "../../../components/page/AppPage";
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -521,7 +520,7 @@ export default function UserManagementPage() {
     Boolean(roleCode);
 
   return (
-    <AppPage  spacing={3}>
+    <Stack  spacing={3}>
       <Stack
         direction={{
           xs: "column",
@@ -795,6 +794,6 @@ export default function UserManagementPage() {
           }
         />
       ) : null}
-    </AppPage>
+    </Stack>
   );
 }
