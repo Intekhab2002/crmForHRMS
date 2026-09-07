@@ -1,4 +1,3 @@
-
 /**
  * Canonical Ticket field configuration.
  *
@@ -14,7 +13,6 @@
  * need unnecessary renaming.
  */
 
-
 const TICKET_FIELD_CONFIG = Object.freeze({
   subject: Object.freeze({
     key: "subject",
@@ -26,6 +24,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     required: true,
     editable: true,
     searchable: true,
+    filter: Object.freeze({
+      key: "subject",
+      type: "text",
+      operator: "contains",
+    }),
     maxLength: 255,
   }),
 
@@ -38,6 +41,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "string",
     required: true,
     editable: true,
+    filter: Object.freeze({
+      key: "description",
+      type: "text",
+      operator: "contains",
+    }),
   }),
 
   service_type: Object.freeze({
@@ -50,6 +58,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     required: false,
     editable: true,
     reference: "service_types",
+    filter: Object.freeze({
+      key: "service_type",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 
   category: Object.freeze({
@@ -62,6 +75,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     required: true,
     editable: true,
     reference: "ticket_categories",
+    filter: Object.freeze({
+      key: "category",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 
   problem_statement: Object.freeze({
@@ -74,6 +92,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     required: false,
     editable: true,
     reference: "problem_statements",
+    filter: Object.freeze({
+      key: "problem_statement",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 
   employee_current_office_name_id: Object.freeze({
@@ -85,6 +108,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "string",
     editable: true,
     maxLength: 100,
+    filter: Object.freeze({
+      key: "employee_current_office_name_id",
+      type: "text",
+      operator: "contains",
+    }),
   }),
 
   employee_id: Object.freeze({
@@ -106,6 +134,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     type: "select",
     dataType: "uuid",
     editable: true,
+    filter: Object.freeze({
+      key: "current_bill_status",
+      type: "uuid",
+      operator: "equals",
+    }),
     reference: "current_bill_statuses",
   }),
 
@@ -118,6 +151,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "string",
     editable: true,
     maxLength: 100,
+    filter: Object.freeze({
+      key: "bill_reference_no",
+      type: "text",
+      operator: "contains",
+    }),
   }),
 
   status: Object.freeze({
@@ -130,6 +168,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     required: true,
     editable: true,
     reference: "ticket_statuses",
+    filter: Object.freeze({
+      key: "status",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 
   assigned_to: Object.freeze({
@@ -141,6 +184,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "uuid",
     editable: true,
     reference: "users",
+    filter: Object.freeze({
+      key: "assigned_to",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 
   severity: Object.freeze({
@@ -153,6 +201,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     required: false,
     editable: true,
     reference: "ticket_severities",
+    filter: Object.freeze({
+      key: "severity",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 
   expected_resolution_date: Object.freeze({
@@ -174,6 +227,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "string",
     editable: true,
     maxLength: 255,
+    filter: Object.freeze({
+      key: "duplicate_ticket",
+      type: "text",
+      operator: "contains",
+    }),
   }),
 
   created_by: Object.freeze({
@@ -186,6 +244,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     editable: false,
     reference: "users",
     autoPopulate: "authenticatedUser",
+    filter: Object.freeze({
+      key: "created_by",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 
   issue_category: Object.freeze({
@@ -197,6 +260,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "uuid",
     editable: true,
     reference: "ticket_issue_categories",
+    filter: Object.freeze({
+      key: "issue_category",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 
   letter_no: Object.freeze({
@@ -208,6 +276,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "string",
     editable: true,
     maxLength: 100,
+    filter: Object.freeze({
+      key: "letter_no",
+      type: "text",
+      operator: "contains",
+    }),
   }),
 
   dependency_category: Object.freeze({
@@ -220,6 +293,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     required: false,
     editable: true,
     reference: "ticket_dependency_categories",
+    filter: Object.freeze({
+      key: "dependency_category",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 
   initial_diagnosis: Object.freeze({
@@ -230,6 +308,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     type: "textarea",
     dataType: "string",
     editable: true,
+    filter: Object.freeze({
+      key: "initial_diagnosis",
+      type: "text",
+      operator: "contains",
+    }),
   }),
 
   solution: Object.freeze({
@@ -240,6 +323,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     type: "textarea",
     dataType: "string",
     editable: true,
+    filter: Object.freeze({
+      key: "solution",
+      type: "text",
+      operator: "contains",
+    }),
   }),
 
   resolution: Object.freeze({
@@ -251,6 +339,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "string",
     editable: true,
     maxLength: 5000,
+    filter: Object.freeze({
+      key: "resolution",
+      type: "text",
+      operator: "contains",
+    }),
   }),
 
   contact: Object.freeze({
@@ -262,6 +355,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "uuid",
     editable: true,
     reference: "contacts",
+    filter: Object.freeze({
+      key: "contact",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 
   department: Object.freeze({
@@ -274,6 +372,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     required: true,
     editable: true,
     reference: "departments",
+    filter: Object.freeze({
+      key: "department",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 
   organization: Object.freeze({
@@ -296,6 +399,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "uuid",
     editable: true,
     reference: "users",
+    filter: Object.freeze({
+      key: "requester_user_id",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 
   name: Object.freeze({
@@ -308,6 +416,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     required: true,
     editable: true,
     maxLength: 200,
+    filter: Object.freeze({
+      key: "name",
+      type: "text",
+      operator: "contains",
+    }),
   }),
 
   mobile_phone: Object.freeze({
@@ -320,6 +433,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     required: true,
     editable: true,
     maxLength: 30,
+    filter: Object.freeze({
+      key: "mobile_phone",
+      type: "text",
+      operator: "contains",
+    }),
   }),
 
   email_id: Object.freeze({
@@ -331,6 +449,11 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "string",
     editable: true,
     maxLength: 320,
+    filter: Object.freeze({
+      key: "email_id",
+      type: "text",
+      operator: "contains",
+    }),
   }),
 
   district: Object.freeze({
@@ -342,17 +465,18 @@ const TICKET_FIELD_CONFIG = Object.freeze({
     dataType: "uuid",
     editable: true,
     reference: "districts",
+    filter: Object.freeze({
+      key: "district",
+      type: "uuid",
+      operator: "equals",
+    }),
   }),
 });
 
-const fields = Object.freeze(
-  Object.values(TICKET_FIELD_CONFIG),
-);
+const fields = Object.freeze(Object.values(TICKET_FIELD_CONFIG));
 
 const fieldsByKey = Object.freeze(
-  Object.fromEntries(
-    fields.map((field) => [field.key, field]),
-  ),
+  Object.fromEntries(fields.map((field) => [field.key, field])),
 );
 
 const ticketFields = Object.freeze(
@@ -376,9 +500,7 @@ export function getField(fieldKey) {
 }
 
 export function getFieldsByEntity(entity) {
-  return entity === "ticket"
-    ? ticketFields
-    : contactFields;
+  return entity === "ticket" ? ticketFields : contactFields;
 }
 
 export function getDatabaseField(fieldKey) {
@@ -392,4 +514,3 @@ export function getDatabaseField(fieldKey) {
 }
 
 export default TICKET_CONFIG;
-
