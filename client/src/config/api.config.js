@@ -30,6 +30,7 @@ export const API_CONFIG = Object.freeze({
     }),
     employees: "/employees",
     tickets: "/tickets",
+    ticketExport: "/tickets/export",
     dashboard: "/dashboard",
     formConfiguration: Object.freeze({
       forms: "/forms",

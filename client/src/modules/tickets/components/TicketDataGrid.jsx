@@ -12,6 +12,7 @@ import {
   formatTicketValue,
   getField,
 } from "../utils/ticketFormatters";
+import TicketGridToolbar from "./TicketGridToolbar";
 
 function canReadColumn(column, hasPermission) {
   return !column.permission || hasPermission(column.permission);
@@ -133,13 +134,8 @@ export default function TicketDataGrid({
           },
         }}
         showToolbar
-        slotProps={{
-          toolbar: {
-            showQuickFilter: true,
-            quickFilterProps: {
-              debounceMs: 300,
-            },
-          },
+        slots={{
+          toolbar: TicketGridToolbar,
         }}
         aria-label={title}
       />

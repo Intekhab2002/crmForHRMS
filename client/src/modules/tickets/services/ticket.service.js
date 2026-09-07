@@ -7,6 +7,8 @@ import {
   mapLifecycleFromApi,
   mapCommentsFromApi,
 } from "../utils/ticketMappers";
+    import { getExportFilename } from "../utils/ticketExport";
+
 
 function getErrorMessage(error, fallback) {
   return error?.response?.data?.message ?? error?.message ?? fallback;
@@ -161,6 +163,30 @@ export const ticketService = {
 
     return response.data?.data ?? [];
   },
+
+      async exportTickets({ fromDate, toDate }) {
+      const response = await apiClient.post(
+        API_CONFIG.endpoints.ticketExport,
+        { fromDate, toDate },
+        {
+          responseType: "blob",
+          timeout: 0,
+          headers: {
+            Accept: "text/csv",
+          },
+        },
+      );
+
+      const fallbackFilename = `tickets-${fromDate}-to-${toDate}.csv`;
+
+      return {
+        blob: response.data,
+        filename: getExportFilename(
+          response.headers["content-disposition"],
+          fallbackFilename,
+        ),
+      };
+    },
 
   getErrorMessage,
 };
