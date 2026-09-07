@@ -17,11 +17,14 @@ import { ticketAttachmentUpload } from "./ticketAttachment.upload.js";
 
 import ticketLifecycleController from "./ticketLifecycle.controller.js";
 
+import ticketExportController from "./export/ticketExport.controller.js";
+
 import {
     validateBody,
     validateParams,
     validateQuery,
 } from "../../middleware/validation.middleware.js";
+import ticketExportValidator from "./export/ticketExport.validator.js";
 
 const { authenticate } = authMiddleware;
 const { requirePermission } = rbacMiddleware;
@@ -49,6 +52,14 @@ router.get(
   authenticate,
   requirePermission(TICKET_READ),
   ticketController.getAssignableUsers,
+);
+
+router.post(
+  "/export",
+  authenticate,
+  requirePermission(TICKET_READ),
+  validateBody(ticketExportValidator.ticketExportSchema),
+  ticketExportController.exportTickets,
 );
 
 router.get(
