@@ -487,12 +487,211 @@ const contactFields = Object.freeze(
   fields.filter((field) => field.entity === "contact"),
 );
 
+const listFilterDefinitions = Object.freeze({
+  status: Object.freeze({
+    queryKey: "status",
+    column: "status_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  department: Object.freeze({
+    queryKey: "departmentId",
+    column: "department_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  assigned_to: Object.freeze({
+    queryKey: "assignedUserId",
+    column: "assigned_user_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  contact: Object.freeze({
+    queryKey: "contactId",
+    column: "contact_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  organization: Object.freeze({
+    queryKey: "organizationId",
+    column: "organization_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  requester_user_id: Object.freeze({
+    queryKey: "requesterUserId",
+    column: "requester_user_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  service_type: Object.freeze({
+    queryKey: "serviceTypeId",
+    column: "service_type_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  category: Object.freeze({
+    queryKey: "categoryId",
+    column: "category_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  problem_statement: Object.freeze({
+    queryKey: "problemStatementId",
+    column: "problem_statement_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  current_bill_status: Object.freeze({
+    queryKey: "currentBillStatusId",
+    column: "current_bill_status_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  severity: Object.freeze({
+    queryKey: "severityId",
+    column: "severity_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  issue_category: Object.freeze({
+    queryKey: "issueCategoryId",
+    column: "issue_category_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  dependency_category: Object.freeze({
+    queryKey: "dependencyCategoryId",
+    column: "dependency_category_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  created_by: Object.freeze({
+    queryKey: "createdByUserId",
+    column: "created_by_user_id",
+    type: "uuid",
+    operator: "equals",
+  }),
+
+  ticket_number: Object.freeze({
+    queryKey: "ticketNumber",
+    column: "ticket_number",
+    type: "text",
+    operator: "contains",
+  }),
+
+  subject: Object.freeze({
+    queryKey: "subject",
+    column: "subject",
+    type: "text",
+    operator: "contains",
+  }),
+
+  employee_id: Object.freeze({
+    queryKey: "employeeId",
+    column: "employee_id",
+    type: "text",
+    operator: "contains",
+  }),
+
+  employee_current_office_name_id: Object.freeze({
+    queryKey: "employeeCurrentOfficeNameId",
+    column: "employee_current_office_name_id",
+    type: "text",
+    operator: "contains",
+  }),
+
+  bill_reference_no: Object.freeze({
+    queryKey: "billReferenceNo",
+    column: "bill_reference_no",
+    type: "text",
+    operator: "contains",
+  }),
+
+  duplicate_ticket: Object.freeze({
+    queryKey: "duplicateTicket",
+    column: "duplicate_ticket",
+    type: "text",
+    operator: "contains",
+  }),
+
+  letter_no: Object.freeze({
+    queryKey: "letterNo",
+    column: "letter_no",
+    type: "text",
+    operator: "contains",
+  }),
+
+  priority: Object.freeze({
+    queryKey: "priority",
+    column: "priority",
+    type: "text",
+    operator: "equals",
+  }),
+
+  expected_resolution_date_from: Object.freeze({
+    queryKey: "expectedResolutionDateFrom",
+    column: "expected_resolution_date",
+    type: "date_from",
+    operator: "greater_than_or_equal",
+  }),
+
+  expected_resolution_date_to: Object.freeze({
+    queryKey: "expectedResolutionDateTo",
+    column: "expected_resolution_date",
+    type: "date_to",
+    operator: "less_than",
+  }),
+
+  created_at_from: Object.freeze({
+    queryKey: "createdFrom",
+    column: "created_at",
+    type: "date_from",
+    operator: "greater_than_or_equal",
+  }),
+
+  created_at_to: Object.freeze({
+    queryKey: "createdTo",
+    column: "created_at",
+    type: "date_to",
+    operator: "less_than",
+  }),
+
+  updated_at_from: Object.freeze({
+    queryKey: "updatedFrom",
+    column: "updated_at",
+    type: "date_from",
+    operator: "greater_than_or_equal",
+  }),
+
+  updated_at_to: Object.freeze({
+    queryKey: "updatedTo",
+    column: "updated_at",
+    type: "date_to",
+    operator: "less_than",
+  }),
+});
+
 export const TICKET_CONFIG = Object.freeze({
   module: "ticket",
   fields,
   fieldsByKey,
   ticketFields,
   contactFields,
+  listFilterDefinitions
 });
 
 export function getField(fieldKey) {

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { getQueryExecutor } from "../../database/queryExecutor.js";
-import { getField } from "./ticket.config.js";
+import { getField, TICKET_CONFIG } from "./ticket.config.js";
 
 const TICKET_COLUMNS = Object.freeze([
   "id",
@@ -220,34 +220,6 @@ const FIND_TICKET_BY_ID = `
     LIMIT 1;
 `;
 
-// const COUNT_TICKETS = `
-//     SELECT COUNT(*)::INTEGER AS total
-//     FROM tickets t
-//     WHERE
-//         (
-//             $1::VARCHAR IS NULL
-//             OR t.ticket_number ILIKE '%' || $1::VARCHAR || '%'
-//             OR t.subject ILIKE '%' || $1::VARCHAR || '%'
-//             OR t.employee_id ILIKE '%' || $1::VARCHAR || '%'
-//         )
-//         AND (
-//             $2::UUID IS NULL
-//             OR t.status_id = $2::UUID
-//         )
-//         AND (
-//             $3::UUID IS NULL
-//             OR t.department_id = $3::UUID
-//         )
-//         AND (
-//             $4::UUID IS NULL
-//             OR t.assigned_user_id = $4::UUID
-//         )
-//         AND (
-//             $5::UUID IS NULL
-//             OR t.contact_id = $5::UUID
-//         );
-// `;
-
 function getColumnForField(fieldKey) {
   const field = getField(fieldKey);
 
@@ -257,139 +229,6 @@ function getColumnForField(fieldKey) {
 
   return field.column;
 }
-
-const LIST_FILTER_DEFINITIONS = Object.freeze({
-  status: Object.freeze({
-    column: "t.status_id",
-    type: "uuid",
-  }),
-
-  departmentId: Object.freeze({
-    column: "t.department_id",
-    type: "uuid",
-  }),
-
-  assignedUserId: Object.freeze({
-    column: "t.assigned_user_id",
-    type: "uuid",
-  }),
-
-  contactId: Object.freeze({
-    column: "t.contact_id",
-    type: "uuid",
-  }),
-
-  organizationId: Object.freeze({
-    column: "t.organization_id",
-    type: "uuid",
-  }),
-
-  requesterUserId: Object.freeze({
-    column: "t.requester_user_id",
-    type: "uuid",
-  }),
-
-  serviceTypeId: Object.freeze({
-    column: "t.service_type_id",
-    type: "uuid",
-  }),
-
-  categoryId: Object.freeze({
-    column: "t.category_id",
-    type: "uuid",
-  }),
-
-  problemStatementId: Object.freeze({
-    column: "t.problem_statement_id",
-    type: "uuid",
-  }),
-
-  currentBillStatusId: Object.freeze({
-    column: "t.current_bill_status_id",
-    type: "uuid",
-  }),
-
-  severityId: Object.freeze({
-    column: "t.severity_id",
-    type: "uuid",
-  }),
-
-  issueCategoryId: Object.freeze({
-    column: "t.issue_category_id",
-    type: "uuid",
-  }),
-
-  dependencyCategoryId: Object.freeze({
-    column: "t.dependency_category_id",
-    type: "uuid",
-  }),
-
-  ticketNumber: Object.freeze({
-    column: "t.ticket_number",
-    type: "text",
-  }),
-
-  subject: Object.freeze({
-    column: "t.subject",
-    type: "text",
-  }),
-
-  employeeId: Object.freeze({
-    column: "t.employee_id",
-    type: "text",
-  }),
-
-  employeeCurrentOfficeNameId: Object.freeze({
-    column: "t.employee_current_office_name_id",
-    type: "text",
-  }),
-
-  billReferenceNo: Object.freeze({
-    column: "t.bill_reference_no",
-    type: "text",
-  }),
-
-  duplicateTicket: Object.freeze({
-    column: "t.duplicate_ticket",
-    type: "text",
-  }),
-
-  letterNo: Object.freeze({
-    column: "t.letter_no",
-    type: "text",
-  }),
-
-  createdFrom: Object.freeze({
-    column: "t.created_at",
-    type: "date_from",
-  }),
-
-  createdTo: Object.freeze({
-    column: "t.created_at",
-    type: "date_to",
-  }),
-
-  updatedFrom: Object.freeze({
-    column: "t.updated_at",
-    type: "date_from",
-  }),
-
-  updatedTo: Object.freeze({
-    column: "t.updated_at",
-    type: "date_to",
-  }),
-
-  expectedResolutionDateFrom: Object.freeze({
-    column: "t.expected_resolution_date",
-    type: "date_from",
-  }),
-
-  expectedResolutionDateTo: Object.freeze({
-    column: "t.expected_resolution_date",
-    type: "date_to",
-  }),
-});
-
 
 function buildTicketListWhereClause(filters = {}) {
   const conditions = [];
@@ -401,10 +240,8 @@ function buildTicketListWhereClause(filters = {}) {
   };
 
   /*
-   * Global search
-   *
-   * Keep this deliberately limited. Structured filters handle the
-   * individual ticket fields.
+   * Global search intentionally remains separate from
+   * structured field filters.
    */
   if (filters.search) {
     const parameter = addValue(filters.search);
@@ -418,16 +255,10 @@ function buildTicketListWhereClause(filters = {}) {
     `);
   }
 
-  for (const [key, definition] of Object.entries(
-    LIST_FILTER_DEFINITIONS,
-  )) {
-    const value = filters[key];
+  for (const definition of Object.values(TICKET_CONFIG.listFilterDefinitions)) {
+    const value = filters[definition.queryKey];
 
-    if (
-      value === undefined ||
-      value === null ||
-      value === ""
-    ) {
+    if (value === undefined || value === null || value === "") {
       continue;
     }
 
@@ -435,26 +266,26 @@ function buildTicketListWhereClause(filters = {}) {
 
     switch (definition.type) {
       case "uuid":
-        conditions.push(
-          `${definition.column} = ${parameter}::UUID`,
-        );
+        conditions.push(`t.${definition.column} = ${parameter}::UUID`);
         break;
 
       case "text":
-        conditions.push(
-          `${definition.column} ILIKE '%' || ${parameter} || '%'`,
-        );
+        if (definition.operator === "equals") {
+          conditions.push(`t.${definition.column} = ${parameter}`);
+        } else {
+          conditions.push(
+            `t.${definition.column} ILIKE '%' || ${parameter} || '%'`,
+          );
+        }
         break;
 
       case "date_from":
-        conditions.push(
-          `${definition.column} >= ${parameter}::DATE`,
-        );
+        conditions.push(`t.${definition.column} >= ${parameter}::DATE`);
         break;
 
       case "date_to":
         conditions.push(
-          `${definition.column} < (${parameter}::DATE + INTERVAL '1 day')`,
+          `t.${definition.column} < (${parameter}::DATE + INTERVAL '1 day')`,
         );
         break;
 
@@ -466,9 +297,7 @@ function buildTicketListWhereClause(filters = {}) {
   }
 
   return {
-    whereClause: conditions.length
-      ? `WHERE ${conditions.join("\nAND ")}`
-      : "",
+    whereClause: conditions.length ? `WHERE ${conditions.join("\nAND ")}` : "",
     values,
   };
 }
@@ -670,11 +499,7 @@ async function findTickets(filters, tx = null) {
     ${whereClause};
   `;
 
-  const listValues = [
-    ...values,
-    filters.limit,
-    filters.offset,
-  ];
+  const listValues = [...values, filters.limit, filters.offset];
 
   const [rowsResult, countResult] = await Promise.all([
     executor.query(listQuery, listValues),

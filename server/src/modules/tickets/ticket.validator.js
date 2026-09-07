@@ -139,6 +139,7 @@ const ticketListQuerySchema = z
     severityId: uuidSchema.optional(),
     issueCategoryId: uuidSchema.optional(),
     dependencyCategoryId: uuidSchema.optional(),
+    createdByUserId: uuidSchema.optional(),
 
     /*
      * Text filters
@@ -156,6 +157,8 @@ const ticketListQuerySchema = z
     duplicateTicket: z.string().trim().max(255).optional(),
 
     letterNo: z.string().trim().max(100).optional(),
+    
+    priority: z.string().trim().max(50).optional(),
 
     /*
      * Date filters
