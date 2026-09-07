@@ -24,7 +24,7 @@ export default function TicketCreatePage() {
     try {
       const ticket = await ticketService.createTicket(values);
       success("Ticket created successfully.");
-
+      
       window.location.assign(`/tickets/${ticket.id}`);
     } catch (requestError) {
       const message =

@@ -45,7 +45,7 @@ export function buildInitialValues(fields, values, user, options = {}) {
       return result;
     }
 
-       if (field.key === "organization" && Array.isArray(options.organization)) {
+  if (field.key === "organization" && Array.isArray(options.organization)) {
       result[field.key] = options.organization[0]?.value ?? "";
       return result;
     }
@@ -106,15 +106,6 @@ export default function TicketForm({
       const optionFields = fields.filter(
         (field) => field.type === "select" || field.type === "autocomplete",
       );
-
-      // console.log(
-      //   "[TicketForm] Option fields:",
-      //   optionFields.map((field) => ({
-      //     key: field.key,
-      //     source: field.options?.source,
-      //     endpoint: field.options?.endpoint,
-      //   })),
-      // );
 
       const results = await Promise.all(
         optionFields.map(async (field) => {
