@@ -33,11 +33,7 @@ const ICONS = Object.freeze({
   options: TuneOutlinedIcon,
 });
 
-export default function Sidebar({
-  onNavigate,
-  collapsed = false,
-  onToggle,
-}) {
+export default function Sidebar({ onNavigate, collapsed = false, onToggle }) {
   const location = useLocation();
   const { hasAllPermissions } = useAuth();
   const { navigation } = useAppConfig();
@@ -122,6 +118,7 @@ export default function Sidebar({
 
           const button = (
             <ListItemButton
+              key={item.id}
               component={Link}
               to={item.path}
               selected={selected}
@@ -145,19 +142,12 @@ export default function Sidebar({
                 {Icon ? <Icon /> : null}
               </ListItemIcon>
 
-              {!collapsed ? (
-                <ListItemText primary={item.label} />
-              ) : null}
+              {!collapsed ? <ListItemText primary={item.label} /> : null}
             </ListItemButton>
           );
 
           return collapsed ? (
-            <Tooltip
-              key={item.id}
-              title={item.label}
-              placement="right"
-              arrow
-            >
+            <Tooltip key={item.id} title={item.label} placement="right" arrow>
               {button}
             </Tooltip>
           ) : (

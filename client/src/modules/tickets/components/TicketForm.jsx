@@ -33,26 +33,10 @@ export async function getOptionSource(field, user) {
   });
 }
 
-function getDefaultValue(field) {
-  if (field.defaultValue !== undefined) {
-    return field.defaultValue;
-  }
-
-  if (field.type === "select" || field.type === "autocomplete") {
-    return field.multiple ? [] : null;
-  }
-
-  if (field.type === "checkbox") {
-    return false;
-  }
-
-  return "";
-}
-
 export function buildInitialValues(fields, values, user, options = {}) {
   return fields.reduce((result, field) => {
     if (values && Object.prototype.hasOwnProperty.call(values, field.key)) {
-      result[field.key] = values[field.key] ?? getDefaultValue(field);
+      result[field.key] = values[field.key] ?? "";
       return result;
     }
 
@@ -66,7 +50,7 @@ export function buildInitialValues(fields, values, user, options = {}) {
       return result;
     }
 
-    result[field.key] = getDefaultValue(field);
+    result[field.key] = field.defaultValue ?? "";
     return result;
   }, {});
 }
@@ -176,7 +160,19 @@ export default function TicketForm({
       enableReinitialize
       initialValues={formInitialValues}
       validationSchema={validationSchema}
-      onSubmit={onSubmit}
+      onSubmit={(values, formikHelpers) => {
+        const normalizedValues = {
+          ...values,
+          current_bill_status:
+            values.current_bill_status === ""
+              ? null
+              : values.current_bill_status,
+          issue_category:
+            values.issue_category === "" ? null : values.issue_category,
+        };
+
+        return onSubmit(normalizedValues, formikHelpers);
+      }}
     >
       {(formik) => {
         return (

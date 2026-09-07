@@ -641,7 +641,7 @@ export function mapTicketFromApi(ticket) {
 
     problemStatementOption: problemStatement,
 
-    current_bill_status: currentBillStatus?.id ?? null,
+    current_bill_status: currentBillStatus?.id ?? "",
 
     currentBillStatusCode: currentBillStatus?.code ?? "",
 
@@ -657,7 +657,7 @@ export function mapTicketFromApi(ticket) {
 
     severityOption: severity,
 
-    issue_category: issueCategory?.id ?? null,
+    issue_category: issueCategory?.id ?? "",
 
     issueCategoryCode: issueCategory?.code ?? "",
 

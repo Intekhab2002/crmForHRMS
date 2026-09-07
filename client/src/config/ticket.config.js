@@ -255,6 +255,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
     label: "Issue Category",
     type: "autocomplete",
     entity: "ticket",
+    required: false,
     options: apiOptions("/ticket-issue-categories?isActive=true&limit=100"),
     form: { create: true, update: true, detail: true },
     grid: { visible: true, width: 180 },
