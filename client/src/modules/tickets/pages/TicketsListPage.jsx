@@ -170,6 +170,7 @@ export default function TicketsListPage() {
         onOpenTicket={(row) => navigate(`/tickets/${row.id}`)}
         search={searchInput}
         onSearchChange={setSearchInput}
+        filters={filters}
         onOpenFilters={() => setFiltersOpen(true)}
         activeFilterCount={getTicketListFilterCount(filters)}
       />

@@ -73,6 +73,7 @@ export default function TicketDataGrid({
   search = "",
   onSearchChange,
   onOpenFilters,
+  filters = {},
   activeFilterCount = 0,
   selectedTicketIds = [],
   onSelectedTicketIdsChange,
@@ -161,8 +162,11 @@ export default function TicketDataGrid({
           toolbar: {
             search,
             onSearchChange,
+            filters,
             onOpenFilters,
             activeFilterCount,
+            rowCount,
+            selectedTicketIds,
           },
         }}
         aria-label={title}

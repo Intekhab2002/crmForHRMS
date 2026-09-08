@@ -14,8 +14,10 @@ export default function TicketGridToolbar({
   search = "",
   onSearchChange,
   onOpenFilters,
+  filters = {},
   activeFilterCount = 0,
   selectedTicketIds = [],
+  rowCount = 0,
 }) {
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -98,7 +100,8 @@ export default function TicketGridToolbar({
         onClose={handleCloseExport}
         selectedTicketIds={selectedTicketIds}
         search={search}
-        activeFilters={{}}
+        filters={filters}
+        rowCount={rowCount}
       />
     </>
   );

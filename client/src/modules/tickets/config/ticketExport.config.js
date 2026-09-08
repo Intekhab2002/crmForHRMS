@@ -11,13 +11,23 @@ export const TICKET_EXPORT_CONFIG = Object.freeze({
   cancelLabel: "Cancel",
   submitLabel: "Export Tickets",
   submittingLabel: "Preparing download...",
-  presets: Object.freeze([
-    { key: "today", label: "Today" },
-    { key: "yesterday", label: "Yesterday" },
-    { key: "last7Days", label: "Last 7 days" },
-    { key: "thisMonth", label: "This month" },
-    { key: "previousMonth", label: "Previous month" },
-  ]),
+  modes: Object.freeze({
+    selected: Object.freeze({
+      label: "Selected tickets",
+      description: "Export only the tickets you selected.",
+    }),
+
+    filtered: Object.freeze({
+      label: "Current filtered tickets",
+      description:
+        "Export all tickets matching the current search and filters.",
+    }),
+
+    all: Object.freeze({
+      label: "All tickets",
+      description: "Export every ticket available to you.",
+    }),
+  }),
 });
 
 export default TICKET_EXPORT_CONFIG;
