@@ -95,6 +95,15 @@ router.post(
   ticketCommentController.createComment,
 );
 
+router.patch(
+  "/:ticketId/comments/:commentId",
+  authenticate,
+  requirePermission(TICKET_COMMENT),
+  validateParams(ticketCommentValidator.commentIdParamSchema),
+  validateBody(ticketCommentValidator.updateCommentSchema),
+  ticketCommentController.updateComment,
+);
+
 router.get(
   "/:ticketId/lifecycle",
   authenticate,

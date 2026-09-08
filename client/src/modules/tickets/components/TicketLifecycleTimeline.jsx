@@ -122,6 +122,45 @@ function getEventIcon(type, action) {
   return <EditOutlinedIcon fontSize="small" />;
 }
 
+function formatEventAction(action) {
+  if (!action) {
+    return "Activity";
+  }
+
+  return action
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/^./, (character) => character.toUpperCase());
+}
+
+function getActivityMetadataDetails(activity) {
+  const metadata = activity?.metadata;
+
+  if (!metadata || typeof metadata !== "object") {
+    return [];
+  }
+
+  return Object.entries(metadata)
+    .filter(([key, value]) => {
+      if (
+        key.toLowerCase().includes("id") ||
+        key.toLowerCase().includes("uuid")
+      ) {
+        return false;
+      }
+
+      return (
+        value !== null &&
+        value !== undefined &&
+        typeof value !== "object"
+      );
+    })
+    .map(([key, value]) => ({
+      label: formatEventAction(key),
+      value: String(value),
+    }));
+}
+
 function normalizeValue(value) {
   if (value === null || value === undefined || value === "") {
     return "Not available";
@@ -448,14 +487,8 @@ function ActivityDetailDialog({ open, onClose, activity, fields, fallback }) {
           {/* FALLBACK METADATA */}
           {!changes.length && !activity.comment && !files.length ? (
             <Paper variant="outlined" sx={{ p: 2 }}>
-              <Typography
-                color="text.secondary"
-                sx={{
-                  whiteSpace: "pre-wrap",
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {JSON.stringify(activity.metadata ?? {}, null, 2)}
+              <Typography variant="body2" color="text.secondary">
+                {formatEventAction(activity.eventAction ?? activity.action)}
               </Typography>
             </Paper>
           ) : null}
@@ -597,7 +630,15 @@ export default function TicketLifecycleTimeline({
         <Stack spacing={0}>
           {visibleEvents.map((event, index) => {
             const eventType =
-              eventTypes[event.action] ?? eventTypes[event.type] ?? {};
+              eventTypes[event.eventAction] ??
+              eventTypes[event.action] ??
+              eventTypes[event.eventType] ??
+              eventTypes[event.type] ??
+              {};
+
+            const eventActionLabel = formatEventAction(
+              event.eventAction ?? event.action,
+            );
 
             const actor = getActorName(event.actor);
 
@@ -714,12 +755,7 @@ export default function TicketLifecycleTimeline({
                         >
                           <Chip
                             size="small"
-                            label={
-                              eventType.label ??
-                              event.action ??
-                              event.type ??
-                              "Activity"
-                            }
+                            label={eventActionLabel}
                             color={eventType.color ?? "default"}
                           />
                         </Stack>
