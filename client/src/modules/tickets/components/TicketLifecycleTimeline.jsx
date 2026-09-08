@@ -133,34 +133,6 @@ function formatEventAction(action) {
     .replace(/^./, (character) => character.toUpperCase());
 }
 
-function getActivityMetadataDetails(activity) {
-  const metadata = activity?.metadata;
-
-  if (!metadata || typeof metadata !== "object") {
-    return [];
-  }
-
-  return Object.entries(metadata)
-    .filter(([key, value]) => {
-      if (
-        key.toLowerCase().includes("id") ||
-        key.toLowerCase().includes("uuid")
-      ) {
-        return false;
-      }
-
-      return (
-        value !== null &&
-        value !== undefined &&
-        typeof value !== "object"
-      );
-    })
-    .map(([key, value]) => ({
-      label: formatEventAction(key),
-      value: String(value),
-    }));
-}
-
 function normalizeValue(value) {
   if (value === null || value === undefined || value === "") {
     return "Not available";
@@ -486,11 +458,9 @@ function ActivityDetailDialog({ open, onClose, activity, fields, fallback }) {
 
           {/* FALLBACK METADATA */}
           {!changes.length && !activity.comment && !files.length ? (
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                {formatEventAction(activity.eventAction ?? activity.action)}
-              </Typography>
-            </Paper>
+            <Typography variant="body2" color="text.secondary">
+              No additional details are available for this activity.
+            </Typography>
           ) : null}
         </Stack>
       </DialogContent>
@@ -636,9 +606,9 @@ export default function TicketLifecycleTimeline({
               eventTypes[event.type] ??
               {};
 
-            const eventActionLabel = formatEventAction(
-              event.eventAction ?? event.action,
-            );
+            const eventActionLabel =
+              event.summary ??
+              formatEventAction(event.eventAction ?? event.action);
 
             const actor = getActorName(event.actor);
 

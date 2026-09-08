@@ -171,18 +171,9 @@ function formatLifecycleFieldName(fieldName) {
     .replace(/^./, (character) => character.toUpperCase());
 }
 
-function getLifecycleSummary(
-  eventType,
-  eventAction,
-  fieldName,
-  metadata,
-) {
-  if (
-    eventType === "TICKET" &&
-    eventAction === "CREATED"
-  ) {
-    const ticketNumber =
-      metadata?.ticketNumber;
+function getLifecycleSummary(eventType, eventAction, fieldName, metadata) {
+  if (eventType === "TICKET" && eventAction === "CREATED") {
+    const ticketNumber = metadata?.ticketNumber;
 
     return ticketNumber
       ? `Ticket ${ticketNumber} was created.`
@@ -190,25 +181,18 @@ function getLifecycleSummary(
   }
 
   if (fieldName) {
-    return `${formatLifecycleFieldName(
-      fieldName,
-    )} was updated.`;
+    return `${formatLifecycleFieldName(fieldName)} was updated.`;
   }
 
   if (eventAction) {
     return eventAction
       .replaceAll("_", " ")
       .toLowerCase()
-      .replace(
-        /^./,
-        (character) =>
-          character.toUpperCase(),
-      );
+      .replace(/^./, (character) => character.toUpperCase());
   }
 
   return "Ticket activity.";
 }
-
 
 function mapLifecycleEvent(event) {
   if (!event) {
@@ -216,103 +200,79 @@ function mapLifecycleEvent(event) {
   }
 
   const metadata =
-    event.metadata &&
-    typeof event.metadata === "object"
-      ? event.metadata
-      : {};
+    event.metadata && typeof event.metadata === "object" ? event.metadata : {};
 
-  const eventType =
-    event.event_type ??
-    event.eventType ??
-    null;
+  const eventType = event.event_type ?? event.eventType ?? null;
 
-  const eventAction =
-    event.event_action ??
-    event.eventAction ??
-    null;
+  const eventAction = event.event_action ?? event.eventAction ?? null;
 
-  const fieldName =
-    event.field_name ??
-    event.fieldName ??
-    null;
+  const fieldName = event.field_name ?? event.fieldName ?? null;
 
-  const oldValue =
-    event.old_value ??
-    event.oldValue ??
-    null;
+  const oldValue = event.old_value ?? event.oldValue ?? null;
 
-  const newValue =
-    event.new_value ??
-    event.newValue ??
-    null;
+  const newValue = event.new_value ?? event.newValue ?? null;
 
   const oldDisplayValue =
-    event.old_display_value ??
-    event.oldDisplayValue ??
-    oldValue;
+    event.old_display_value ?? event.oldDisplayValue ?? oldValue;
 
   const newDisplayValue =
-    event.new_display_value ??
-    event.newDisplayValue ??
-    newValue;
+    event.new_display_value ?? event.newDisplayValue ?? newValue;
 
   const change = fieldName
     ? {
         field: fieldName,
 
-        label:
-          metadata.fieldLabel ??
-          formatLifecycleFieldName(
-            fieldName,
-          ),
+        label: metadata.fieldLabel ?? formatLifecycleFieldName(fieldName),
 
         from: oldValue,
 
-        fromDisplayValue:
-          oldDisplayValue,
+        fromDisplayValue: oldDisplayValue,
 
         to: newValue,
 
-        toDisplayValue:
-          newDisplayValue,
+        toDisplayValue: newDisplayValue,
       }
     : null;
+
+  const comment =
+    eventType === "COMMENT" && typeof metadata.comment === "string"
+      ? metadata.comment
+      : null;
+
+  const commentChange =
+    eventType === "COMMENT" &&
+    eventAction === "COMMENT_UPDATED" &&
+    typeof metadata.previousComment === "string" &&
+    typeof metadata.comment === "string"
+      ? {
+          field: "comment",
+          label: "Comment",
+          from: metadata.previousComment,
+          fromDisplayValue: metadata.previousComment,
+          to: metadata.comment,
+          toDisplayValue: metadata.comment,
+        }
+      : null;
 
   return {
     id: event.id ?? null,
 
-    ticketId:
-      event.ticket_id ??
-      event.ticketId ??
-      null,
+    ticketId: event.ticket_id ?? event.ticketId ?? null,
 
-    actorUserId:
-      event.actor_user_id ??
-      event.actorUserId ??
-      null,
+    actorUserId: event.actor_user_id ?? event.actorUserId ?? null,
 
     actor: mapActor({
-      id:
-        event.actor_user_id ??
-        event.actorUserId ??
-        null,
+      id: event.actor_user_id ?? event.actorUserId ?? null,
 
-      username:
-        event.username ?? "",
+      username: event.username ?? "",
 
-      email:
-        event.email ?? "",
+      email: event.email ?? "",
 
-      name:
-        event.actor_name ??
-        event.name ??
-        "",
+      name: event.actor_name ?? event.name ?? "",
 
-      first_name:
-        event.first_name,
+      first_name: event.first_name,
 
-      last_name:
-        event.last_name,
+      last_name: event.last_name,
     }),
 
     eventType,
@@ -321,12 +281,8 @@ function mapLifecycleEvent(event) {
 
     fieldName,
 
-    summary: getLifecycleSummary(
-      eventType,
-      eventAction,
-      fieldName,
-      metadata,
-    ),
+    summary: getLifecycleSummary(eventType, eventAction, fieldName, metadata),
+    comment,
 
     oldValue,
 
@@ -338,20 +294,10 @@ function mapLifecycleEvent(event) {
 
     metadata,
 
-    changes:
-      change
-        ? [change]
-        : [],
+    changes: commentChange ? [commentChange] : change ? [change] : [],
+    createdAt: event.created_at ?? event.createdAt ?? null,
 
-    createdAt:
-      event.created_at ??
-      event.createdAt ??
-      null,
-
-    updatedAt:
-      event.updated_at ??
-      event.updatedAt ??
-      null,
+    updatedAt: event.updated_at ?? event.updatedAt ?? null,
   };
 }
 
@@ -745,9 +691,7 @@ export function mapLifecycleFromApi(events) {
     return [];
   }
 
-  return events
-    .map(mapLifecycleEvent)
-    .filter(Boolean);
+  return events.map(mapLifecycleEvent).filter(Boolean);
 }
 
 function mapCommentFromApi(comment) {

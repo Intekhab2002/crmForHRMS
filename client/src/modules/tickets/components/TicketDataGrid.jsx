@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Paper } from "@mui/material";
+import { Button, Paper } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import { GridActionsCellItem } from "@mui/x-data-grid";
 
@@ -90,13 +90,19 @@ export default function TicketDataGrid({
               disableColumnMenu: true,
 
               getActions: (params) => [
-                <GridActionsCellItem
-                  key="open"
-                  icon={<VisibilityOutlinedIcon />}
-                  label={column.actionLabel}
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<VisibilityOutlinedIcon />}
                   onClick={() => onOpenTicket(params.row)}
-                  showInMenu={false}
-                />,
+                  aria-label={`View ticket ${params.row.ticketNumber}`}
+                  sx={{
+                    minWidth: 0,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  View
+                </Button>,
               ],
             };
           }
