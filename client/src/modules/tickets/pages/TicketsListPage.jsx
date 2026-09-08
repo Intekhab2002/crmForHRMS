@@ -14,6 +14,10 @@ import {
 import { ticketService } from "../services/ticket.service";
 import TicketListFilters from "../components/TicketListFilters";
 import { getTicketListFilterCount } from "../../../config/ticketListFilter.config";
+import {
+  loadTicketListFilters,
+  saveTicketListFilters,
+} from "../utils/ticketListViewState";
 
 export default function TicketsListPage() {
   const navigate = useNavigate();
@@ -24,7 +28,8 @@ export default function TicketsListPage() {
   const [error, setError] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState(() =>
+  loadTicketListFilters(),);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [paginationModel, setPaginationModel] = useState({
@@ -104,6 +109,7 @@ export default function TicketsListPage() {
 
   const handleApplyFilters = (nextFilters) => {
     setFilters(nextFilters);
+    saveTicketListFilters(nextFilters);
 
     setPaginationModel((currentModel) => ({
       ...currentModel,

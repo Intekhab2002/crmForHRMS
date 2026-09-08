@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
   Alert,
   Autocomplete,
@@ -14,9 +14,7 @@ import {
 } from "@mui/material";
 import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
 
-import {
-  TICKET_LIST_FILTER_CONFIG,
-} from "../../../config/ticketListFilter.config";
+import { TICKET_LIST_FILTER_CONFIG } from "../../../config/ticketListFilter.config";
 import { apiOptionProvider } from "../../../components/forms/optionProviders/apiOption.provider";
 
 function createInitialValues(filters) {
@@ -41,6 +39,9 @@ export default function TicketListFilters({
   const [loadingKeys, setLoadingKeys] = useState({});
   const [loadError, setLoadError] = useState("");
 
+  const loadedKeysRef = useRef(new Set());
+  const loadingKeysRef = useRef(new Set());
+
   useEffect(() => {
     if (!open) return;
 
@@ -50,16 +51,19 @@ export default function TicketListFilters({
 
   const lookupFilters = useMemo(
     () =>
-      TICKET_LIST_FILTER_CONFIG.filter(
-        (filter) => filter.type === "lookup",
-      ),
+      TICKET_LIST_FILTER_CONFIG.filter((filter) => filter.type === "lookup"),
     [],
   );
 
-  const loadOptions = async (filter) => {
-    if (options[filter.key] || loadingKeys[filter.key]) {
+  const loadOptions = useCallback(async (filter) => {
+    if (
+      loadedKeysRef.current.has(filter.key) ||
+      loadingKeysRef.current.has(filter.key)
+    ) {
       return;
     }
+
+    loadingKeysRef.current.add(filter.key);
 
     setLoadingKeys((current) => ({
       ...current,
@@ -70,6 +74,8 @@ export default function TicketListFilters({
       const nextOptions = await apiOptionProvider({
         config: filter,
       });
+
+      loadedKeysRef.current.add(filter.key);
 
       setOptions((current) => ({
         ...current,
@@ -82,12 +88,24 @@ export default function TicketListFilters({
           `Unable to load ${filter.label}.`,
       );
     } finally {
+      loadingKeysRef.current.delete(filter.key);
+
       setLoadingKeys((current) => ({
         ...current,
         [filter.key]: false,
       }));
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    lookupFilters
+      .filter((filter) => Boolean(filters[filter.queryKey]))
+      .forEach((filter) => {
+        void loadOptions(filter);
+      });
+  }, [filters, loadOptions, lookupFilters, open]);
 
   const handleChange = (queryKey, value) => {
     setDraftFilters((current) => {
@@ -163,17 +181,12 @@ export default function TicketListFilters({
                   loading={Boolean(loadingKeys[filter.key])}
                   onOpen={() => loadOptions(filter)}
                   onChange={(_event, value) => {
-                    handleChange(
-                      filter.queryKey,
-                      value?.value ?? "",
-                    );
+                    handleChange(filter.queryKey, value?.value ?? "");
                   }}
                   isOptionEqualToValue={(option, value) =>
                     option.value === value.value
                   }
-                  getOptionLabel={(option) =>
-                    option?.label ?? ""
-                  }
+                  getOptionLabel={(option) => option?.label ?? ""}
                   clearOnEscape
                   autoHighlight
                   noOptionsText={
@@ -206,10 +219,7 @@ export default function TicketListFilters({
                 label={filter.label}
                 value={draftFilters[filter.queryKey] ?? ""}
                 onChange={(event) =>
-                  handleChange(
-                    filter.queryKey,
-                    event.target.value,
-                  )
+                  handleChange(filter.queryKey, event.target.value)
                 }
               />
             </Grid>
@@ -241,9 +251,7 @@ export default function TicketListFilters({
                       fullWidth
                       type="date"
                       label="From"
-                      value={
-                        draftFilters[filter.fromQueryKey] ?? ""
-                      }
+                      value={draftFilters[filter.fromQueryKey] ?? ""}
                       onChange={(event) =>
                         handleDateChange(
                           filter.fromQueryKey,
@@ -263,14 +271,9 @@ export default function TicketListFilters({
                       fullWidth
                       type="date"
                       label="To"
-                      value={
-                        draftFilters[filter.toQueryKey] ?? ""
-                      }
+                      value={draftFilters[filter.toQueryKey] ?? ""}
                       onChange={(event) =>
-                        handleDateChange(
-                          filter.toQueryKey,
-                          event.target.value,
-                        )
+                        handleDateChange(filter.toQueryKey, event.target.value)
                       }
                       slotProps={{
                         inputLabel: {
@@ -293,9 +296,7 @@ export default function TicketListFilters({
 
         <Box sx={{ flex: 1 }} />
 
-        <Button onClick={onClose}>
-          Cancel
-        </Button>
+        <Button onClick={onClose}>Cancel</Button>
 
         <Button
           variant="contained"
