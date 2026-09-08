@@ -118,6 +118,15 @@ export const ticketService = {
     return response.data?.data ?? null;
   },
 
+  async updateComment(ticketId, commentId, body) {
+  const response = await apiClient.patch(
+    `${API_CONFIG.endpoints.tickets}/${ticketId}/comments/${commentId}`,
+    { comment: body },
+  );
+
+  return response.data?.data ?? null;
+},
+
   async listComments(ticketId) {
     const response = await apiClient.get(
       `${API_CONFIG.endpoints.tickets}/${ticketId}/comments`,

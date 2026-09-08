@@ -197,7 +197,6 @@ export default function TicketLifecyclePage() {
 
     try {
       const result = await ticketService.listComments(ticketId);
-      console.log("Result Comment", result);
 
       const normalizedComments = Array.isArray(result) ? result : [];
 
@@ -396,6 +395,27 @@ export default function TicketLifecyclePage() {
     await Promise.all([loadComments(), loadLifecycle()]);
 
     setNotice(COMMENT_CONFIG.successMessage);
+  };
+
+  const handleUpdateComment = async (commentId, comment) => {
+    setError("");
+    setNotice("");
+
+    try {
+      await ticketService.updateComment(ticketId, commentId, comment);
+
+      await Promise.all([loadComments(), loadLifecycle()]);
+
+      setNotice("Comment updated successfully.");
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ??
+          requestError?.message ??
+          "Unable to update comment.",
+      );
+
+      throw requestError;
+    }
   };
 
   if (loading) {
@@ -657,6 +677,8 @@ export default function TicketLifecyclePage() {
                     <TicketComments
                       comments={comments}
                       loading={commentsLoading}
+                      currentUserId={user?.id}
+                      onUpdateComment={handleUpdateComment}
                     />
 
                     <TicketCommentComposer

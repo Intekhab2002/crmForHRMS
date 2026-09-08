@@ -48,7 +48,28 @@ async function createComment(req, res, next) {
     }
 }
 
+async function updateComment(req, res, next) {
+    try {
+        const comment =
+            await ticketCommentService.updateComment(
+                req.params.ticketId,
+                req.params.commentId,
+                req.auth.userId,
+                req.body.comment,
+            );
+
+        return ApiResponse.updated(
+            res,
+            mapTicketComment(comment),
+            TICKET_COMMENT_MESSAGES.UPDATE_SUCCESS,
+        );
+    } catch (error) {
+        return next(error);
+    }
+}
+
 export default Object.freeze({
     getComments,
     createComment,
+    updateComment,
 });

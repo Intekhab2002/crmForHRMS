@@ -71,7 +71,86 @@ async function createComment(ticketId, userId, comment) {
   return createdComment;
 }
 
+async function updateComment(
+    ticketId,
+    commentId,
+    userId,
+    comment,
+) {
+    await validateTicket(ticketId);
+    await validateUser(userId);
+
+    const existingComment =
+        await ticketCommentRepository.findCommentById(
+            commentId,
+            ticketId,
+        );
+
+    if (!existingComment) {
+        throw AppError.notFound(
+            "Ticket comment not found.",
+            {
+                code:
+                    TICKET_COMMENT_ERROR_CODES.NOT_FOUND,
+            },
+        );
+    }
+
+    if (existingComment.user_id !== userId) {
+        throw AppError.forbidden(
+            "You can only edit your own comments.",
+            {
+                code:
+                    TICKET_COMMENT_ERROR_CODES.EDIT_NOT_ALLOWED,
+            },
+        );
+    }
+
+    const trimmedComment = comment.trim();
+
+    if (trimmedComment === existingComment.comment) {
+        return existingComment;
+    }
+
+    const updatedComment =
+        await ticketCommentRepository.updateComment(
+            commentId,
+            ticketId,
+            trimmedComment,
+        );
+
+    if (!updatedComment) {
+        throw AppError.notFound(
+            "Ticket comment not found.",
+            {
+                code:
+                    TICKET_COMMENT_ERROR_CODES.NOT_FOUND,
+            },
+        );
+    }
+
+    await ticketLifecycleService.record({
+        ticketId,
+        actorUserId: userId,
+
+        eventType:
+            TICKET_LIFECYCLE_EVENT_TYPE.COMMENT,
+
+        eventAction:
+            TICKET_LIFECYCLE_EVENT_ACTION.COMMENT_UPDATED,
+
+        metadata: {
+            commentId: updatedComment.id,
+            previousComment: existingComment.comment,
+            comment: updatedComment.comment,
+        },
+    });
+
+    return updatedComment;
+}
+
 export default Object.freeze({
   listComments,
   createComment,
+  updateComment,
 });
