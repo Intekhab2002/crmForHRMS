@@ -36,6 +36,7 @@ export default function TicketsListPage() {
     page: 0,
     pageSize: TICKET_GRID_CONFIG.defaultPageSize,
   });
+  const [selectedTicketIds, setSelectedTicketIds] = useState([]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -154,6 +155,8 @@ export default function TicketsListPage() {
       <TicketDataGrid
         rows={rows}
         rowCount={rowCount}
+        selectedTicketIds={selectedTicketIds}
+        onSelectedTicketIdsChange={setSelectedTicketIds}
         paginationModel={paginationModel}
         onPaginationModelChange={handlePaginationModelChange}
         paginationMode="server"

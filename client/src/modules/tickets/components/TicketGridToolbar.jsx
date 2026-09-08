@@ -1,7 +1,5 @@
 import { useCallback, useState } from "react";
-import {
-  Toolbar,
-} from "@mui/x-data-grid";
+import { Toolbar } from "@mui/x-data-grid";
 import { IconButton, InputAdornment, TextField } from "@mui/material";
 import { Button, Stack } from "@mui/material";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
@@ -17,6 +15,7 @@ export default function TicketGridToolbar({
   onSearchChange,
   onOpenFilters,
   activeFilterCount = 0,
+  selectedTicketIds = [],
 }) {
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -94,7 +93,13 @@ export default function TicketGridToolbar({
         </Stack>
       </Toolbar>
 
-      <TicketExportDialog open={exportOpen} onClose={handleCloseExport} />
+      <TicketExportDialog
+        open={exportOpen}
+        onClose={handleCloseExport}
+        selectedTicketIds={selectedTicketIds}
+        search={search}
+        activeFilters={{}}
+      />
     </>
   );
 }

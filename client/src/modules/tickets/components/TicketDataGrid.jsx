@@ -74,6 +74,8 @@ export default function TicketDataGrid({
   onSearchChange,
   onOpenFilters,
   activeFilterCount = 0,
+  selectedTicketIds = [],
+  onSelectedTicketIdsChange,
 }) {
   const { hasPermission } = useAuth();
 
@@ -139,6 +141,10 @@ export default function TicketDataGrid({
         paginationModel={paginationModel}
         onPaginationModelChange={onPaginationModelChange}
         pageSizeOptions={pageSizeOptions}
+        rowSelectionModel={selectedTicketIds}
+        onRowSelectionModelChange={onSelectedTicketIdsChange}
+        checkboxSelection
+        keepNonExistentRowsSelected
         initialState={{
           pagination: {
             paginationModel: {

@@ -206,29 +206,29 @@ export const ticketService = {
     return response.data?.data ?? [];
   },
 
-  async exportTickets({ fromDate, toDate }) {
-    const response = await apiClient.post(
-      API_CONFIG.endpoints.ticketExport,
-      { fromDate, toDate },
-      {
-        responseType: "blob",
-        timeout: 0,
-        headers: {
-          Accept: "text/csv",
-        },
+async exportTickets(payload) {
+  const response = await apiClient.post(
+    API_CONFIG.endpoints.ticketExport,
+    payload,
+    {
+      responseType: "blob",
+      timeout: 0,
+      headers: {
+        Accept: "text/csv",
       },
-    );
+    },
+  );
 
-    const fallbackFilename = `tickets-${fromDate}-to-${toDate}.csv`;
+  const fallbackFilename = "tickets-export.csv";
 
-    return {
-      blob: response.data,
-      filename: getExportFilename(
-        response.headers["content-disposition"],
-        fallbackFilename,
-      ),
-    };
-  },
+  return {
+    blob: response.data,
+    filename: getExportFilename(
+      response.headers["content-disposition"],
+      fallbackFilename,
+    ),
+  };
+},
 
   getErrorMessage,
 };

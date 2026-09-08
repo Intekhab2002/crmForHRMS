@@ -139,7 +139,6 @@ function buildExportQuery({ mode, filters = {}, ticketIds = [] }) {
 
   if (mode === "selected") {
     values.push(ticketIds);
-
     const ticketIdsParameter = values.length;
 
     values.push(null);
@@ -160,31 +159,26 @@ function buildExportQuery({ mode, filters = {}, ticketIds = [] }) {
         AND t.created_at < $${upperBoundParameter}::TIMESTAMPTZ
         ${buildCursorCondition(cursorCreatedAtParameter)}
     `;
-  } else {
-    const filterResult =
-      mode === "filtered"
-        ? buildTicketListWhereClause(filters)
-        : {
-            whereClause: "",
-            values: [],
-            nextParameterIndex: 1,
-          };
+  } else if (mode === "filtered") {
+    const filterResult = buildTicketListWhereClause(filters);
 
     values.push(...filterResult.values);
 
-    upperBoundParameter = filterResult.nextParameterIndex;
+    upperBoundParameter = values.length + 1;
 
     values.push(null);
 
-    cursorCreatedAtParameter = values.length;
+    cursorCreatedAtParameter = values.length + 1;
 
     values.push(null);
 
-    cursorIdParameter = values.length;
+    cursorIdParameter = values.length + 1;
 
     values.push(null);
 
-    limitParameter = values.length;
+    limitParameter = values.length + 1;
+
+    values.push(null);
 
     whereClause = `
       ${filterResult.whereClause}
@@ -194,6 +188,26 @@ function buildExportQuery({ mode, filters = {}, ticketIds = [] }) {
 
       ${buildCursorCondition(cursorCreatedAtParameter)}
     `;
+  } else if (mode === "all") {
+    values.push(null);
+    upperBoundParameter = values.length;
+
+    values.push(null);
+    cursorCreatedAtParameter = values.length;
+
+    values.push(null);
+    cursorIdParameter = values.length;
+
+    values.push(null);
+    limitParameter = values.length;
+
+    whereClause = `
+      WHERE
+        t.created_at < $${upperBoundParameter}::TIMESTAMPTZ
+        ${buildCursorCondition(cursorCreatedAtParameter)}
+    `;
+  } else {
+    throw new Error(`Unsupported ticket export mode: ${mode}`);
   }
 
   const query = `
