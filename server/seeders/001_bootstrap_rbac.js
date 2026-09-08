@@ -265,6 +265,15 @@ const SYSTEM_PERMISSIONS = Object.freeze([
   }),
 
   Object.freeze({
+  code: "ticket:export",
+  name: "Export Tickets",
+  description:
+    "Export tickets accessible to the authenticated user.",
+  resource: "ticket",
+  action: "export",
+}),
+
+  Object.freeze({
     code: "ticket:create",
     name: "Create Tickets",
     description: "Create tickets.",

@@ -3,6 +3,14 @@ const MAX_BATCH_SIZE = 10000;
 const DEFAULT_TIMEZONE = "Asia/Kolkata";
 const DEFAULT_FILENAME_PREFIX = "tickets";
 
+const EXPORT_MODES = Object.freeze({
+  SELECTED: "selected",
+  FILTERED: "filtered",
+  ALL: "all",
+});
+
+const MAX_SELECTED_TICKETS = 10000;
+
 const TICKET_EXPORT_COLUMNS = Object.freeze([
   Object.freeze({ key: "ticketNumber", header: "Ticket Number" }),
   Object.freeze({ key: "subject", header: "Subject" }),
@@ -56,5 +64,7 @@ export default Object.freeze({
   MAX_BATCH_SIZE,
   DEFAULT_TIMEZONE,
   DEFAULT_FILENAME_PREFIX,
+  TICKET_EXPORT_COLUMNS,
+    MAX_SELECTED_TICKETS,
   TICKET_EXPORT_COLUMNS,
 });

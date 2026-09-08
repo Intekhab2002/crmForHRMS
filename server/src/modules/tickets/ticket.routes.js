@@ -32,6 +32,7 @@ const { requirePermission } = rbacMiddleware;
 const {
   TICKET_READ,
   TICKET_CREATE,
+  TICKET_EXPORT,
   TICKET_UPDATE,
   TICKET_COMMENT,
   TICKET_ATTACHMENT,
@@ -57,7 +58,7 @@ router.get(
 router.post(
   "/export",
   authenticate,
-  requirePermission(TICKET_READ),
+  requirePermission(TICKET_EXPORT),
   validateBody(ticketExportValidator.ticketExportSchema),
   ticketExportController.exportTickets,
 );

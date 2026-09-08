@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 
 import { getQueryExecutor } from "../../database/queryExecutor.js";
-import { getField, TICKET_CONFIG } from "./ticket.config.js";
+import { getField } from "./ticket.config.js";
+import { buildTicketListWhereClause } from "./ticketListQuery.js";
+
 
 const TICKET_COLUMNS = Object.freeze([
   "id",
@@ -230,77 +232,7 @@ function getColumnForField(fieldKey) {
   return field.column;
 }
 
-function buildTicketListWhereClause(filters = {}) {
-  const conditions = [];
-  const values = [];
 
-  const addValue = (value) => {
-    values.push(value);
-    return `$${values.length}`;
-  };
-
-  /*
-   * Global search intentionally remains separate from
-   * structured field filters.
-   */
-  if (filters.search) {
-    const parameter = addValue(filters.search);
-
-    conditions.push(`
-      (
-        t.ticket_number ILIKE '%' || ${parameter} || '%'
-        OR t.subject ILIKE '%' || ${parameter} || '%'
-        OR t.employee_id ILIKE '%' || ${parameter} || '%'
-      )
-    `);
-  }
-
-  for (const definition of Object.values(TICKET_CONFIG.listFilterDefinitions)) {
-    const value = filters[definition.queryKey];
-
-    if (value === undefined || value === null || value === "") {
-      continue;
-    }
-
-    const parameter = addValue(value);
-
-    switch (definition.type) {
-      case "uuid":
-        conditions.push(`t.${definition.column} = ${parameter}::UUID`);
-        break;
-
-      case "text":
-        if (definition.operator === "equals") {
-          conditions.push(`t.${definition.column} = ${parameter}`);
-        } else {
-          conditions.push(
-            `t.${definition.column} ILIKE '%' || ${parameter} || '%'`,
-          );
-        }
-        break;
-
-      case "date_from":
-        conditions.push(`t.${definition.column} >= ${parameter}::DATE`);
-        break;
-
-      case "date_to":
-        conditions.push(
-          `t.${definition.column} < (${parameter}::DATE + INTERVAL '1 day')`,
-        );
-        break;
-
-      default:
-        throw new Error(
-          `Unsupported ticket list filter type: ${definition.type}`,
-        );
-    }
-  }
-
-  return {
-    whereClause: conditions.length ? `WHERE ${conditions.join("\nAND ")}` : "",
-    values,
-  };
-}
 
 function buildUpdate(fields) {
   const assignments = fields.map((fieldKey, index) => {

@@ -1,8 +1,16 @@
 import AppError from "../../../helpers/AppError.js";
 
 import ticketExportRepository from "./ticketExport.repository.js";
-import { DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE, DEFAULT_TIMEZONE } from "./ticketExport.constants.js";
+
+import {
+  DEFAULT_BATCH_SIZE,
+  MAX_BATCH_SIZE,
+  DEFAULT_TIMEZONE,
+  DEFAULT_FILENAME_PREFIX,
+} from "./ticketExport.constants.js";
+
 import { mapTicketExportRow } from "./ticketExport.mapper.js";
+
 import {
   CSV_BOM,
   encodeCsvHeader,
@@ -11,7 +19,10 @@ import {
 
 const EXPORT_BATCH_SIZE = Math.min(
   Math.max(
-    Number(process.env.TICKET_EXPORT_BATCH_SIZE ?? DEFAULT_BATCH_SIZE),
+    Number(
+      process.env.TICKET_EXPORT_BATCH_SIZE ??
+        DEFAULT_BATCH_SIZE,
+    ),
     1,
   ),
   MAX_BATCH_SIZE,
@@ -21,15 +32,21 @@ const EXPORT_TIMEZONE =
   process.env.TICKET_EXPORT_TIMEZONE ||
   DEFAULT_TIMEZONE;
 
-function buildFilename(fromDate, toDate) {
-  return `tickets-${fromDate}-to-${toDate}.csv`;
+function buildFilename(mode, date) {
+  return `${DEFAULT_FILENAME_PREFIX}-${mode}-${date}.csv`;
 }
 
 function isResponseWritable(response) {
-  return !response.destroyed && !response.writableEnded;
+  return (
+    !response.destroyed &&
+    !response.writableEnded
+  );
 }
 
-async function writeResponse(response, chunk) {
+async function writeResponse(
+  response,
+  chunk,
+) {
   if (!isResponseWritable(response)) {
     return false;
   }
@@ -55,44 +72,158 @@ async function writeResponse(response, chunk) {
     };
 
     const cleanup = () => {
-      response.off("drain", onDrain);
-      response.off("close", onClose);
-      response.off("error", onError);
+      response.off(
+        "drain",
+        onDrain,
+      );
+
+      response.off(
+        "close",
+        onClose,
+      );
+
+      response.off(
+        "error",
+        onError,
+      );
     };
 
-    response.once("drain", onDrain);
-    response.once("close", onClose);
-    response.once("error", onError);
+    response.once(
+      "drain",
+      onDrain,
+    );
+
+    response.once(
+      "close",
+      onClose,
+    );
+
+    response.once(
+      "error",
+      onError,
+    );
   });
 
   return isResponseWritable(response);
 }
 
-async function exportTickets({ fromDate, toDate, response }) {
-  if (!response || response.destroyed) {
+async function exportTickets({
+  mode,
+  ticketIds = [],
+  filters = {},
+  response,
+}) {
+  if (
+    !response ||
+    response.destroyed
+  ) {
     return;
   }
+
+  if (
+    mode !== "selected" &&
+    mode !== "filtered" &&
+    mode !== "all"
+  ) {
+    throw AppError.validation(
+      "Invalid ticket export mode.",
+      [
+        {
+          path: "mode",
+          message:
+            "Mode must be selected, filtered, or all.",
+        },
+      ],
+      {
+        code: "TICKET_EXPORT_INVALID_MODE",
+      },
+    );
+  }
+
+  if (
+    mode === "selected" &&
+    !ticketIds.length
+  ) {
+    throw AppError.validation(
+      "No tickets were selected for export.",
+      [
+        {
+          path: "ticketIds",
+          message:
+            "At least one ticket must be selected.",
+        },
+      ],
+      {
+        code:
+          "TICKET_EXPORT_NO_TICKETS_SELECTED",
+      },
+    );
+  }
+
+  const exportDate =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone: EXPORT_TIMEZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      },
+    ).format(new Date());
+
+  const filename =
+    buildFilename(
+      mode,
+      exportDate,
+    );
 
   const upperBound = new Date();
 
   response.statusCode = 200;
-  response.setHeader("Content-Type", "text/csv; charset=utf-8");
+
+  response.setHeader(
+    "Content-Type",
+    "text/csv; charset=utf-8",
+  );
+
   response.setHeader(
     "Content-Disposition",
-    `attachment; filename="${buildFilename(fromDate, toDate)}"`,
+    `attachment; filename="${filename}"`,
   );
-  response.setHeader("Cache-Control", "no-store, max-age=0");
-  response.setHeader("Pragma", "no-cache");
-  response.setHeader("X-Content-Type-Options", "nosniff");
+
+  response.setHeader(
+    "Cache-Control",
+    "no-store, max-age=0",
+  );
+
+  response.setHeader(
+    "Pragma",
+    "no-cache",
+  );
+
+  response.setHeader(
+    "X-Content-Type-Options",
+    "nosniff",
+  );
 
   response.flushHeaders?.();
 
-  let writable = await writeResponse(response, CSV_BOM);
+  let writable =
+    await writeResponse(
+      response,
+      CSV_BOM,
+    );
+
   if (!writable) {
     return;
   }
 
-  writable = await writeResponse(response, encodeCsvHeader());
+  writable =
+    await writeResponse(
+      response,
+      encodeCsvHeader(),
+    );
+
   if (!writable) {
     return;
   }
@@ -101,25 +232,31 @@ async function exportTickets({ fromDate, toDate, response }) {
   let cursorId = null;
 
   while (writable) {
-    const rows = await ticketExportRepository.fetchTicketExportBatch({
-      fromDate,
-      toDate,
-      timezone: EXPORT_TIMEZONE,
-      upperBound,
-      cursorCreatedAt,
-      cursorId,
-      limit: EXPORT_BATCH_SIZE,
-    });
+    const rows =
+      await ticketExportRepository.fetchTicketExportBatch(
+        {
+          mode,
+          ticketIds,
+          filters,
+          upperBound,
+          cursorCreatedAt,
+          cursorId,
+          limit: EXPORT_BATCH_SIZE,
+        },
+      );
 
     if (!rows.length) {
       break;
     }
 
     for (const row of rows) {
-      writable = await writeResponse(
-        response,
-        encodeTicketExportRow(mapTicketExportRow(row)),
-      );
+      writable =
+        await writeResponse(
+          response,
+          encodeTicketExportRow(
+            mapTicketExportRow(row),
+          ),
+        );
 
       if (!writable) {
         break;
@@ -130,28 +267,36 @@ async function exportTickets({ fromDate, toDate, response }) {
       break;
     }
 
-    const lastRow = rows[rows.length - 1];
+    const lastRow =
+      rows[rows.length - 1];
 
-    cursorCreatedAt = lastRow.created_at;
-    cursorId = lastRow.id ?? null;
+    cursorCreatedAt =
+      lastRow.created_at;
 
-    /*
-     * The export projection deliberately omits ticket.id from the CSV.
-     * The repository still needs the UUID as the keyset tie-breaker.
-     */
+    cursorId =
+      lastRow.id ?? null;
+
     if (!cursorId) {
       throw AppError.internal(
         "Ticket export cursor could not be established.",
-        { code: "TICKET_EXPORT_CURSOR_ERROR" },
+        {
+          code:
+            "TICKET_EXPORT_CURSOR_ERROR",
+        },
       );
     }
 
-    if (rows.length < EXPORT_BATCH_SIZE) {
+    if (
+      rows.length <
+      EXPORT_BATCH_SIZE
+    ) {
       break;
     }
   }
 
-  if (isResponseWritable(response)) {
+  if (
+    isResponseWritable(response)
+  ) {
     response.end();
   }
 }

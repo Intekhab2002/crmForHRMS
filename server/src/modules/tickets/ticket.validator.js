@@ -110,12 +110,9 @@ const positiveIntegerQuery = z
     "Value must be a positive integer.",
   );
 
-const ticketListQuerySchema = z
+
+  const ticketListFilterSchema = z
   .object({
-    page: positiveIntegerQuery.optional().default("1"),
-
-    limit: positiveIntegerQuery.optional().default("20"),
-
     /*
      * Global search intentionally remains limited to the existing
      * high-value ticket fields. Structured filters below are used
@@ -150,14 +147,18 @@ const ticketListQuerySchema = z
 
     employeeId: z.string().trim().max(100).optional(),
 
-    employeeCurrentOfficeNameId: z.string().trim().max(100).optional(),
+    employeeCurrentOfficeNameId: z
+      .string()
+      .trim()
+      .max(100)
+      .optional(),
 
     billReferenceNo: z.string().trim().max(100).optional(),
 
     duplicateTicket: z.string().trim().max(255).optional(),
 
     letterNo: z.string().trim().max(100).optional(),
-    
+
     priority: z.string().trim().max(50).optional(),
 
     /*
@@ -174,6 +175,14 @@ const ticketListQuerySchema = z
     updatedFrom: dateSchema.optional(),
 
     updatedTo: dateSchema.optional(),
+  })
+  .strict();
+
+const ticketListQuerySchema = ticketListFilterSchema
+  .extend({
+    page: positiveIntegerQuery.optional().default("1"),
+
+    limit: positiveIntegerQuery.optional().default("20"),
   })
   .strict()
   .superRefine((value, context) => {
@@ -273,4 +282,5 @@ export default Object.freeze({
   createTicketSchema,
   updateTicketSchema,
   validateConfiguredOptions,
+  ticketListFilterSchema
 });

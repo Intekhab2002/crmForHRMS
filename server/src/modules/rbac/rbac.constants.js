@@ -61,6 +61,7 @@ export const RBAC_ACTIONS = Object.freeze({
   CLOSE: "close",
   COMMENT: "comment",
   ATTACHMENT: "attachment",
+  EXPORT: "export",
   RESTORE: "restore",
   ENABLE: "enable",
   DISABLE: "disable",
@@ -101,6 +102,7 @@ export const RBAC_PERMISSIONS = Object.freeze({
   TICKET_RESOLVE: "ticket:resolve",
   TICKET_CLOSE: "ticket:close",
   TICKET_ATTACHMENT: "ticket:attachment",
+  TICKET_EXPORT: "ticket:export",
 
   SLA_READ: "sla:read",
   SLA_CREATE: "sla:create",

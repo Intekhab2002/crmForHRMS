@@ -1,5 +1,7 @@
 import database from "../../../database/postgres.js";
 
+import { buildTicketListWhereClause } from "../ticketListQuery.js";
+
 const TICKET_EXPORT_SELECT = `
     t.id,
     t.ticket_number,
@@ -18,10 +20,10 @@ const TICKET_EXPORT_SELECT = `
     creator.email AS creator_email,
 
     assignee.id AS assigned_user_id,
-    assignee.first_name AS assignee_first_name,
-    assignee.last_name AS assignee_last_name,
-    assignee.username AS assignee_username,
-    assignee.email AS assignee_email,
+    assignee.first_name AS assigned_user_first_name,
+    assignee.last_name AS assigned_user_last_name,
+    assignee.username AS assigned_user_username,
+    assignee.email AS assigned_user_email,
 
     contact.name AS contact_name,
     contact.mobile_phone AS contact_mobile_phone,
@@ -113,53 +115,139 @@ const TICKET_EXPORT_FROM = `
         ON dependency_category.id = t.dependency_category_id
 `;
 
-const FETCH_EXPORT_BATCH = `
+function buildCursorCondition(parameterIndex) {
+  return `
+    AND (
+        $${parameterIndex}::TIMESTAMPTZ IS NULL
+        OR t.created_at > $${parameterIndex}::TIMESTAMPTZ
+        OR (
+            t.created_at = $${parameterIndex}::TIMESTAMPTZ
+            AND t.id > $${parameterIndex + 1}::UUID
+        )
+    )
+  `;
+}
+
+function buildExportQuery({ mode, filters = {}, ticketIds = [] }) {
+  const values = [];
+
+  let whereClause = "";
+  let upperBoundParameter;
+  let cursorCreatedAtParameter;
+  let cursorIdParameter;
+  let limitParameter;
+
+  if (mode === "selected") {
+    values.push(ticketIds);
+
+    const ticketIdsParameter = values.length;
+
+    values.push(null);
+    upperBoundParameter = values.length;
+
+    values.push(null);
+    cursorCreatedAtParameter = values.length;
+
+    values.push(null);
+    cursorIdParameter = values.length;
+
+    values.push(null);
+    limitParameter = values.length;
+
+    whereClause = `
+      WHERE
+        t.id = ANY($${ticketIdsParameter}::UUID[])
+        AND t.created_at < $${upperBoundParameter}::TIMESTAMPTZ
+        ${buildCursorCondition(cursorCreatedAtParameter)}
+    `;
+  } else {
+    const filterResult =
+      mode === "filtered"
+        ? buildTicketListWhereClause(filters)
+        : {
+            whereClause: "",
+            values: [],
+            nextParameterIndex: 1,
+          };
+
+    values.push(...filterResult.values);
+
+    upperBoundParameter = filterResult.nextParameterIndex;
+
+    values.push(null);
+
+    cursorCreatedAtParameter = values.length;
+
+    values.push(null);
+
+    cursorIdParameter = values.length;
+
+    values.push(null);
+
+    limitParameter = values.length;
+
+    whereClause = `
+      ${filterResult.whereClause}
+
+      ${filterResult.whereClause ? "AND" : "WHERE"}
+        t.created_at < $${upperBoundParameter}::TIMESTAMPTZ
+
+      ${buildCursorCondition(cursorCreatedAtParameter)}
+    `;
+  }
+
+  const query = `
     SELECT
         ${TICKET_EXPORT_SELECT}
     ${TICKET_EXPORT_FROM}
-    WHERE
-        t.created_at >= ($1::DATE AT TIME ZONE $3::TEXT)
-        AND t.created_at < (($2::DATE + INTERVAL '1 day') AT TIME ZONE $3::TEXT)
-        AND t.created_at < $4::TIMESTAMPTZ
-        AND (
-            $5::TIMESTAMPTZ IS NULL
-            OR t.created_at > $5::TIMESTAMPTZ
-            OR (
-                t.created_at = $5::TIMESTAMPTZ
-                AND t.id > $6::UUID
-            )
-        )
+    ${whereClause}
     ORDER BY
         t.created_at ASC,
         t.id ASC
-    LIMIT $7::INTEGER
-`;
+    LIMIT $${limitParameter}::INTEGER
+  `;
+
+  return {
+    query,
+    values,
+    parameterIndexes: {
+      upperBoundParameter,
+      cursorCreatedAtParameter,
+      cursorIdParameter,
+      limitParameter,
+    },
+  };
+}
 
 async function fetchTicketExportBatch({
-  fromDate,
-  toDate,
-  timezone,
+  mode,
+  filters = {},
+  ticketIds = [],
   upperBound,
   cursorCreatedAt = null,
   cursorId = null,
   limit,
 }) {
-  const result = await database.query(FETCH_EXPORT_BATCH, [
-    fromDate,
-    toDate,
-    timezone,
-    upperBound,
-    cursorCreatedAt,
-    cursorId,
-    limit,
-  ]);
+  const { query, values, parameterIndexes } = buildExportQuery({
+    mode,
+    filters,
+    ticketIds,
+  });
+
+  values[parameterIndexes.upperBoundParameter - 1] = upperBound;
+
+  values[parameterIndexes.cursorCreatedAtParameter - 1] = cursorCreatedAt;
+
+  values[parameterIndexes.cursorIdParameter - 1] = cursorId;
+
+  values[parameterIndexes.limitParameter - 1] = limit;
+
+  const result = await database.query(query, values);
 
   return result.rows;
 }
 
-export {
-  fetchTicketExportBatch,
-};
+export { fetchTicketExportBatch };
 
 export default Object.freeze({
   fetchTicketExportBatch,
