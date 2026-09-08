@@ -5,107 +5,50 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
+  Paper,
+  Radio,
   Stack,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
+import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
 
 import { useNotification } from "../../../components/feedback";
 import { ticketService } from "../services/ticket.service";
 import { TICKET_EXPORT_CONFIG } from "../config/ticketExport.config";
-import {
-  getTicketExportPresetRange,
-  parseDateInput,
-  toDateInputValue,
-  triggerBlobDownload,
-} from "../utils/ticketExport";
+import { buildTicketExportPayload } from "../utils/ticketExportPayload";
+import { triggerBlobDownload } from "../utils/ticketExport";
 
-function getInitialRange() {
-  const today = toDateInputValue();
+const DEFAULT_MODE = "all";
 
-  return {
-    fromDate: today,
-    toDate: today,
-  };
-}
-
-export default function TicketExportDialog({ open, onClose }) {
-  const [range, setRange] = useState(getInitialRange);
-  const [errors, setErrors] = useState({});
+export default function TicketExportDialog({
+  open,
+  onClose,
+  selectedTicketIds = [],
+  search = "",
+  filters = {},
+  rowCount = 0,
+}) {
+  const [mode, setMode] = useState(DEFAULT_MODE);
   const [isExporting, setIsExporting] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState("today");
 
   const { success, error: notifyError } = useNotification();
 
-  const today = useMemo(() => toDateInputValue(), []);
+  const hasSelection = selectedTicketIds.length > 0;
+
+  const currentFilteredCount = useMemo(
+    () => Number(rowCount ?? 0),
+    [rowCount],
+  );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
 
-    setRange(getInitialRange());
-    setErrors({});
-    setSelectedPreset("today");
+    setMode(hasSelection ? "selected" : DEFAULT_MODE);
     setIsExporting(false);
-  }, [open]);
-
-  const validate = () => {
-    const nextErrors = {};
-    const from = parseDateInput(range.fromDate);
-    const to = parseDateInput(range.toDate);
-
-    if (!from) {
-      nextErrors.fromDate = "Enter a valid date.";
-    }
-
-    if (!to) {
-      nextErrors.toDate = "Enter a valid date.";
-    }
-
-    if (from && to && from > to) {
-      nextErrors.toDate = "To date cannot be earlier than From date.";
-    }
-
-    if (range.fromDate > today) {
-      nextErrors.fromDate = "From date cannot be in the future.";
-    }
-
-    if (range.toDate > today) {
-      nextErrors.toDate = "To date cannot be in the future.";
-    }
-
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const handleDateChange = (field) => (event) => {
-    setSelectedPreset("custom");
-    setRange((current) => ({
-      ...current,
-      [field]: event.target.value,
-    }));
-
-    setErrors((current) => ({
-      ...current,
-      [field]: "",
-      ...(field === "fromDate" ? { toDate: "" } : {}),
-    }));
-  };
-
-  const handlePresetChange = (_event, preset) => {
-    if (!preset) return;
-
-    const nextRange = getTicketExportPresetRange(preset);
-
-    if (!nextRange) return;
-
-    setSelectedPreset(preset);
-    setRange(nextRange);
-    setErrors({});
-  };
+  }, [open, hasSelection]);
 
   const handleClose = () => {
     if (!isExporting) {
@@ -113,18 +56,35 @@ export default function TicketExportDialog({ open, onClose }) {
     }
   };
 
+  const handleModeChange = (nextMode) => {
+    if (nextMode === "selected" && !hasSelection) {
+      return;
+    }
+
+    setMode(nextMode);
+  };
+
   const handleExport = async () => {
-    if (!validate()) return;
+    if (mode === "selected" && !hasSelection) {
+      notifyError("Select at least one ticket to export.");
+      return;
+    }
 
     setIsExporting(true);
 
     try {
-      const result = await ticketService.exportTickets(range);
-      const fallbackFilename = `tickets-${range.fromDate}-to-${range.toDate}.csv`;
+      const payload = buildTicketExportPayload({
+        mode,
+        selectedTicketIds,
+        search,
+        filters,
+      });
+
+      const result = await ticketService.exportTickets(payload);
 
       triggerBlobDownload(
         result.blob,
-        result.filename || fallbackFilename,
+        result.filename || "tickets-export.csv",
       );
 
       success("Ticket export downloaded successfully.");
@@ -155,7 +115,7 @@ export default function TicketExportDialog({ open, onClose }) {
       </DialogTitle>
 
       <DialogContent dividers>
-        <Stack spacing={2.5}>
+        <Stack spacing={2}>
           <Typography
             id="ticket-export-dialog-description"
             variant="body2"
@@ -164,70 +124,39 @@ export default function TicketExportDialog({ open, onClose }) {
             {TICKET_EXPORT_CONFIG.description}
           </Typography>
 
-          <ToggleButtonGroup
-            value={selectedPreset}
-            exclusive
-            onChange={handlePresetChange}
-            aria-label="Ticket export date presets"
-            size="small"
-            sx={{
-              flexWrap: "wrap",
-              gap: 0.75,
-              "& .MuiToggleButtonGroup-grouped": {
-                borderRadius: 1,
-                border: 1,
-                borderColor: "divider",
-                "&:not(:first-of-type)": {
-                  borderLeft: 1,
-                  borderColor: "divider",
-                },
-              },
-            }}
-          >
-            {TICKET_EXPORT_CONFIG.presets.map((preset) => (
-              <ToggleButton key={preset.key} value={preset.key}>
-                {preset.label}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
+          <ExportOption
+            selected={mode === "selected"}
+            disabled={!hasSelection}
+            onClick={() => handleModeChange("selected")}
+            label={TICKET_EXPORT_CONFIG.modes.selected.label}
+            description={
+              hasSelection
+                ? `${selectedTicketIds.length.toLocaleString()} ticket${
+                    selectedTicketIds.length === 1 ? "" : "s"
+                  } selected`
+                : "No tickets selected"
+            }
+          />
 
-          <Divider />
+          <ExportOption
+            selected={mode === "filtered"}
+            onClick={() => handleModeChange("filtered")}
+            label={TICKET_EXPORT_CONFIG.modes.filtered.label}
+            description={
+              currentFilteredCount > 0
+                ? `${currentFilteredCount.toLocaleString()} ticket${
+                    currentFilteredCount === 1 ? "" : "s"
+                  } match the current search and filters`
+                : "No tickets match the current search and filters"
+            }
+          />
 
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
-              fullWidth
-              required
-              type="date"
-              label={TICKET_EXPORT_CONFIG.fromDateLabel}
-              value={range.fromDate}
-              onChange={handleDateChange("fromDate")}
-              error={Boolean(errors.fromDate)}
-              helperText={errors.fromDate}
-              slotProps={{
-                inputLabel: { shrink: true },
-                htmlInput: { max: today },
-              }}
-            />
-
-            <TextField
-              fullWidth
-              required
-              type="date"
-              label={TICKET_EXPORT_CONFIG.toDateLabel}
-              value={range.toDate}
-              onChange={handleDateChange("toDate")}
-              error={Boolean(errors.toDate)}
-              helperText={errors.toDate}
-              slotProps={{
-                inputLabel: { shrink: true },
-                htmlInput: { max: today },
-              }}
-            />
-          </Stack>
-
-          <Typography variant="caption" color="text.secondary">
-            {TICKET_EXPORT_CONFIG.helperText}
-          </Typography>
+          <ExportOption
+            selected={mode === "all"}
+            onClick={() => handleModeChange("all")}
+            label={TICKET_EXPORT_CONFIG.modes.all.label}
+            description={TICKET_EXPORT_CONFIG.modes.all.description}
+          />
         </Stack>
       </DialogContent>
 
@@ -238,7 +167,9 @@ export default function TicketExportDialog({ open, onClose }) {
 
         <Button
           variant="contained"
-          startIcon={<DownloadOutlinedIcon />}
+          startIcon={
+            isExporting ? undefined : <DownloadOutlinedIcon />
+          }
           onClick={handleExport}
           disabled={isExporting}
         >
@@ -248,5 +179,70 @@ export default function TicketExportDialog({ open, onClose }) {
         </Button>
       </DialogActions>
     </Dialog>
+  );
+}
+
+function ExportOption({
+  selected,
+  disabled = false,
+  onClick,
+  label,
+  description,
+}) {
+  return (
+    <Paper
+      variant="outlined"
+      component="button"
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-pressed={selected}
+      sx={{
+        width: "100%",
+        p: 2,
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 1.5,
+        textAlign: "left",
+        cursor: disabled ? "not-allowed" : "pointer",
+        borderColor: selected ? "primary.main" : "divider",
+        bgcolor: selected ? "action.selected" : "background.paper",
+        opacity: disabled ? 0.6 : 1,
+        transition: (theme) =>
+          theme.transitions.create(["border-color", "background-color"]),
+        "&:hover": {
+          borderColor: disabled ? "divider" : "primary.main",
+          bgcolor: disabled ? "background.paper" : "action.hover",
+        },
+        "&:focus-visible": {
+          outline: 2,
+          outlineOffset: 2,
+          outlineColor: "primary.main",
+        },
+      }}
+    >
+      {selected ? (
+        <CheckCircleOutlinedIcon
+          color="primary"
+          fontSize="small"
+          sx={{ mt: 0.25 }}
+        />
+      ) : (
+        <Radio
+          checked={false}
+          disabled={disabled}
+          size="small"
+          sx={{ p: 0.25, mt: 0.05 }}
+        />
+      )}
+
+      <Stack spacing={0.25}>
+        <Typography variant="subtitle2">{label}</Typography>
+
+        <Typography variant="body2" color="text.secondary">
+          {description}
+        </Typography>
+      </Stack>
+    </Paper>
   );
 }
