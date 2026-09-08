@@ -142,10 +142,15 @@ export default function TicketDataGrid({
         paginationModel={paginationModel}
         onPaginationModelChange={onPaginationModelChange}
         pageSizeOptions={pageSizeOptions}
-        rowSelectionModel={selectedTicketIds}
-        onRowSelectionModelChange={onSelectedTicketIdsChange}
         checkboxSelection
         keepNonExistentRowsSelected
+        rowSelectionModel={{
+          type: "include",
+          ids: new Set(selectedTicketIds),
+        }}
+        onRowSelectionModelChange={(nextSelection) => {
+          onSelectedTicketIdsChange?.(Array.from(nextSelection.ids ?? []));
+        }}
         initialState={{
           pagination: {
             paginationModel: {
