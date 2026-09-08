@@ -123,7 +123,7 @@ export default function TicketsListPage() {
   };
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} flex={1}>
       <PageHeader
         title={TICKET_MODULE_CONFIG.list.title}
         description={TICKET_MODULE_CONFIG.list.description}

@@ -17,12 +17,12 @@ export default function PageViewport({
         flexDirection: "column",
 
         px: {
-          xs: 2,
-          sm: 3,
+          xs: 1,
+          sm: 2,
         },
         py: {
-          xs: 2,
-          sm: 3,
+          xs: 1,
+          sm: 2,
         },
       }}
     >

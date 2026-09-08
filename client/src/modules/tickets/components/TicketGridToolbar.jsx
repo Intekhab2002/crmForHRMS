@@ -1,10 +1,8 @@
 import { useCallback, useState } from "react";
 import {
-  QuickFilter,
-  QuickFilterClear,
-  QuickFilterControl,
   Toolbar,
 } from "@mui/x-data-grid";
+import { IconButton, InputAdornment, TextField } from "@mui/material";
 import { Button, Stack } from "@mui/material";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 
@@ -12,6 +10,7 @@ import CanAccess from "../../../components/rbac/CanAccess";
 import TicketExportDialog from "./TicketExportDialog";
 import { TICKET_EXPORT_CONFIG } from "../config/ticketExport.config";
 import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
+import ClearOutlinedIcon from "@mui/icons-material/ClearOutlined";
 
 export default function TicketGridToolbar({
   search = "",
@@ -40,18 +39,35 @@ export default function TicketGridToolbar({
           justifyContent: "space-between",
         }}
       >
-        <QuickFilter
+        <TextField
+          size="small"
           value={search}
-          onValueChange={onSearchChange}
-          defaultExpanded
-        >
-          <QuickFilterControl
-            aria-label="Search tickets"
-            placeholder="Search..."
-            debounceMs={300}
-          />
-          <QuickFilterClear aria-label="Clear ticket search" />
-        </QuickFilter>
+          onChange={(event) => onSearchChange?.(event.target.value)}
+          placeholder="Search tickets..."
+          aria-label="Search tickets"
+          sx={{
+            width: {
+              xs: "100%",
+              sm: 320,
+            },
+          }}
+          slotProps={{
+            input: {
+              endAdornment: search ? (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    edge="end"
+                    onClick={() => onSearchChange?.("")}
+                    aria-label="Clear ticket search"
+                  >
+                    <ClearOutlinedIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            },
+          }}
+        />
 
         <Stack direction="row" spacing={1}>
           <Button

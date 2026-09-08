@@ -86,7 +86,7 @@ export default function AppDataGrid({
   slotProps,
 
   autoHeight = false,
-  height = "clamp(420px, calc(100vh - 300px), 720px)",
+  height = "100%",
 
   containerSx,
   gridSx,
@@ -138,6 +138,9 @@ export default function AppDataGrid({
         disableRowSelectionOnClick
         sx={{
           ...DEFAULT_GRID_SX,
+          flex: 1,
+          minHeight: 0,
+
           ...gridSx,
         }}
       />

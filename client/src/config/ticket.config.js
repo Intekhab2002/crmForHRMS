@@ -437,26 +437,6 @@ export const TICKET_GRID_CONFIG = Object.freeze({
       valueIsDisplay: grid.valueIsDisplay === true,
     };
   }),
-  // columns: TICKET_FIELD_CONFIG.filter((field) => field.grid?.visible).map(
-  //   (field) => {
-  //     const grid = field.grid ?? {};
-
-  //     return {
-  //       field: grid.valueField ?? field.key,
-  //       sourceField: field.key,
-  //       headerName: field.label,
-  //       width: grid.width,
-  //       flex: grid.flex,
-  //       presentation:
-  //         grid.presentation ??
-  //         (["select", "autocomplete"].includes(field.type)
-  //           ? "optionLabel"
-  //           : undefined),
-  //       valueIsDisplay: grid.valueIsDisplay === true,
-  //     };
-  //   },
-  // ),
-
   action: {
     field: "actions",
     type: "actions",
@@ -466,7 +446,7 @@ export const TICKET_GRID_CONFIG = Object.freeze({
   },
 
   pageSizeOptions: [10, 25, 50],
-  defaultPageSize: 15,
+  defaultPageSize: 10,
 });
 
 export const TICKET_MODULE_CONFIG = Object.freeze({

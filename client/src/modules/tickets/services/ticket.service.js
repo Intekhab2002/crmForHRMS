@@ -7,8 +7,7 @@ import {
   mapLifecycleFromApi,
   mapCommentsFromApi,
 } from "../utils/ticketMappers";
-    import { getExportFilename } from "../utils/ticketExport";
-
+import { getExportFilename } from "../utils/ticketExport";
 
 function getErrorMessage(error, fallback) {
   return error?.response?.data?.message ?? error?.message ?? fallback;
@@ -26,18 +25,52 @@ export const ticketService = {
       params,
     });
 
-    const payload = response.data?.data ?? response.data;
+    const responseData = response.data;
 
-    if (Array.isArray(payload)) {
+    // Current paginated API contract:
+    //
+    // {
+    //   data: [...],
+    //   meta: {
+    //     page,
+    //     limit,
+    //     total,
+    //     totalPages,
+    //     hasNextPage,
+    //     hasPreviousPage,
+    //   }
+    // }
+    if (Array.isArray(responseData?.data)) {
       return {
-        rows: mapTicketsFromApi(payload),
-        total: payload.length,
+        rows: mapTicketsFromApi(responseData.data),
+        total: Number(responseData.meta?.total ?? responseData.data.length),
       };
     }
 
-    const rows = payload?.data ?? payload?.rows ?? [];
+    // Backward compatibility for a direct array response.
+    if (Array.isArray(responseData)) {
+      return {
+        rows: mapTicketsFromApi(responseData),
+        total: responseData.length,
+      };
+    }
 
-    const total = payload?.total ?? payload?.totalCount ?? payload?.count ?? 0;
+    // Backward compatibility for older wrapped payloads.
+    const payload = responseData?.data ?? responseData;
+
+    const rows = Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.rows)
+        ? payload.rows
+        : [];
+
+    const total = Number(
+      payload?.meta?.total ??
+        payload?.total ??
+        payload?.totalCount ??
+        payload?.count ??
+        rows.length,
+    );
 
     return {
       rows: mapTicketsFromApi(rows),
@@ -164,29 +197,29 @@ export const ticketService = {
     return response.data?.data ?? [];
   },
 
-      async exportTickets({ fromDate, toDate }) {
-      const response = await apiClient.post(
-        API_CONFIG.endpoints.ticketExport,
-        { fromDate, toDate },
-        {
-          responseType: "blob",
-          timeout: 0,
-          headers: {
-            Accept: "text/csv",
-          },
+  async exportTickets({ fromDate, toDate }) {
+    const response = await apiClient.post(
+      API_CONFIG.endpoints.ticketExport,
+      { fromDate, toDate },
+      {
+        responseType: "blob",
+        timeout: 0,
+        headers: {
+          Accept: "text/csv",
         },
-      );
+      },
+    );
 
-      const fallbackFilename = `tickets-${fromDate}-to-${toDate}.csv`;
+    const fallbackFilename = `tickets-${fromDate}-to-${toDate}.csv`;
 
-      return {
-        blob: response.data,
-        filename: getExportFilename(
-          response.headers["content-disposition"],
-          fallbackFilename,
-        ),
-      };
-    },
+    return {
+      blob: response.data,
+      filename: getExportFilename(
+        response.headers["content-disposition"],
+        fallbackFilename,
+      ),
+    };
+  },
 
   getErrorMessage,
 };
