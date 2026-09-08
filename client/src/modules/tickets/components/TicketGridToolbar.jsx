@@ -11,8 +11,14 @@ import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import CanAccess from "../../../components/rbac/CanAccess";
 import TicketExportDialog from "./TicketExportDialog";
 import { TICKET_EXPORT_CONFIG } from "../config/ticketExport.config";
+import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
 
-export default function TicketGridToolbar() {
+export default function TicketGridToolbar({
+  search = "",
+  onSearchChange,
+  onOpenFilters,
+  activeFilterCount = 0,
+}) {
   const [exportOpen, setExportOpen] = useState(false);
 
   const handleOpenExport = useCallback(() => {
@@ -34,7 +40,11 @@ export default function TicketGridToolbar() {
           justifyContent: "space-between",
         }}
       >
-        <QuickFilter defaultExpanded>
+        <QuickFilter
+          value={search}
+          onValueChange={onSearchChange}
+          defaultExpanded
+        >
           <QuickFilterControl
             aria-label="Search tickets"
             placeholder="Search..."
@@ -44,6 +54,16 @@ export default function TicketGridToolbar() {
         </QuickFilter>
 
         <Stack direction="row" spacing={1}>
+          <Button
+            size="small"
+            variant={activeFilterCount > 0 ? "contained" : "outlined"}
+            startIcon={<FilterAltOutlinedIcon />}
+            onClick={onOpenFilters}
+            aria-label="Filter tickets"
+          >
+            Filters
+            {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+          </Button>
           <CanAccess permission={TICKET_EXPORT_CONFIG.permission}>
             <Button
               size="small"

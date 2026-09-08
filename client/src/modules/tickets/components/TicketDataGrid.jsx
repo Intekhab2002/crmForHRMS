@@ -70,6 +70,10 @@ export default function TicketDataGrid({
   fallback = "Not available",
   loading = false,
   onOpenTicket,
+  search = "",
+  onSearchChange,
+  onOpenFilters,
+  activeFilterCount = 0,
 }) {
   const { hasPermission } = useAuth();
 
@@ -136,6 +140,14 @@ export default function TicketDataGrid({
         showToolbar
         slots={{
           toolbar: TicketGridToolbar,
+        }}
+        slotProps={{
+          toolbar: {
+            search,
+            onSearchChange,
+            onOpenFilters,
+            activeFilterCount,
+          },
         }}
         aria-label={title}
       />

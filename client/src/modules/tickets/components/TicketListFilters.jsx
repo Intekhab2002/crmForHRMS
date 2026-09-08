@@ -1,0 +1,310 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  Autocomplete,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Grid,
+  TextField,
+} from "@mui/material";
+import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
+
+import {
+  TICKET_LIST_FILTER_CONFIG,
+} from "../../../config/ticketListFilter.config";
+import { apiOptionProvider } from "../../../components/forms/optionProviders/apiOption.provider";
+
+function createInitialValues(filters) {
+  return { ...filters };
+}
+
+function getLookupValue(options, value) {
+  return options.find((option) => option.value === value) ?? null;
+}
+
+export default function TicketListFilters({
+  open,
+  filters = {},
+  onApply,
+  onClose,
+}) {
+  const [draftFilters, setDraftFilters] = useState(() =>
+    createInitialValues(filters),
+  );
+
+  const [options, setOptions] = useState({});
+  const [loadingKeys, setLoadingKeys] = useState({});
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+
+    setDraftFilters(createInitialValues(filters));
+    setLoadError("");
+  }, [filters, open]);
+
+  const lookupFilters = useMemo(
+    () =>
+      TICKET_LIST_FILTER_CONFIG.filter(
+        (filter) => filter.type === "lookup",
+      ),
+    [],
+  );
+
+  const loadOptions = async (filter) => {
+    if (options[filter.key] || loadingKeys[filter.key]) {
+      return;
+    }
+
+    setLoadingKeys((current) => ({
+      ...current,
+      [filter.key]: true,
+    }));
+
+    try {
+      const nextOptions = await apiOptionProvider({
+        config: filter,
+      });
+
+      setOptions((current) => ({
+        ...current,
+        [filter.key]: nextOptions,
+      }));
+    } catch (error) {
+      setLoadError(
+        error?.response?.data?.message ??
+          error?.message ??
+          `Unable to load ${filter.label}.`,
+      );
+    } finally {
+      setLoadingKeys((current) => ({
+        ...current,
+        [filter.key]: false,
+      }));
+    }
+  };
+
+  const handleChange = (queryKey, value) => {
+    setDraftFilters((current) => {
+      const next = { ...current };
+
+      if (value === "" || value === null || value === undefined) {
+        delete next[queryKey];
+      } else {
+        next[queryKey] = value;
+      }
+
+      return next;
+    });
+  };
+
+  const handleDateChange = (queryKey, value) => {
+    handleChange(queryKey, value);
+  };
+
+  const handleClear = () => {
+    setDraftFilters({});
+  };
+
+  const handleApply = () => {
+    onApply(draftFilters);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="md"
+      aria-labelledby="ticket-list-filter-dialog-title"
+    >
+      <DialogTitle
+        id="ticket-list-filter-dialog-title"
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+        }}
+      >
+        <FilterAltOutlinedIcon fontSize="small" />
+        Filter Tickets
+      </DialogTitle>
+
+      <DialogContent dividers>
+        {loadError ? (
+          <Alert
+            severity="error"
+            sx={{ mb: 2 }}
+            onClose={() => setLoadError("")}
+          >
+            {loadError}
+          </Alert>
+        ) : null}
+
+        <Grid container spacing={2}>
+          {lookupFilters.map((filter) => {
+            const filterOptions = options[filter.key] ?? [];
+            const selectedValue = getLookupValue(
+              filterOptions,
+              draftFilters[filter.queryKey],
+            );
+
+            return (
+              <Grid key={filter.key} size={{ xs: 12, sm: 6 }}>
+                <Autocomplete
+                  fullWidth
+                  options={filterOptions}
+                  value={selectedValue}
+                  loading={Boolean(loadingKeys[filter.key])}
+                  onOpen={() => loadOptions(filter)}
+                  onChange={(_event, value) => {
+                    handleChange(
+                      filter.queryKey,
+                      value?.value ?? "",
+                    );
+                  }}
+                  isOptionEqualToValue={(option, value) =>
+                    option.value === value.value
+                  }
+                  getOptionLabel={(option) =>
+                    option?.label ?? ""
+                  }
+                  clearOnEscape
+                  autoHighlight
+                  noOptionsText={
+                    loadingKeys[filter.key]
+                      ? "Loading..."
+                      : "No matching options"
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label={filter.label}
+                      placeholder={`Select ${filter.label.toLowerCase()}`}
+                    />
+                  )}
+                />
+              </Grid>
+            );
+          })}
+
+          <Grid size={{ xs: 12 }}>
+            <Divider sx={{ my: 1 }} />
+          </Grid>
+
+          {TICKET_LIST_FILTER_CONFIG.filter(
+            (filter) => filter.type === "text",
+          ).map((filter) => (
+            <Grid key={filter.key} size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                label={filter.label}
+                value={draftFilters[filter.queryKey] ?? ""}
+                onChange={(event) =>
+                  handleChange(
+                    filter.queryKey,
+                    event.target.value,
+                  )
+                }
+              />
+            </Grid>
+          ))}
+
+          <Grid size={{ xs: 12 }}>
+            <Divider sx={{ my: 1 }} />
+          </Grid>
+
+          {TICKET_LIST_FILTER_CONFIG.filter(
+            (filter) => filter.type === "dateRange",
+          ).map((filter) => (
+            <Grid key={filter.key} size={{ xs: 12 }}>
+              <Box>
+                <Box
+                  sx={{
+                    mb: 1,
+                    typography: "body2",
+                    fontWeight: 600,
+                    color: "text.secondary",
+                  }}
+                >
+                  {filter.label}
+                </Box>
+
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth
+                      type="date"
+                      label="From"
+                      value={
+                        draftFilters[filter.fromQueryKey] ?? ""
+                      }
+                      onChange={(event) =>
+                        handleDateChange(
+                          filter.fromQueryKey,
+                          event.target.value,
+                        )
+                      }
+                      slotProps={{
+                        inputLabel: {
+                          shrink: true,
+                        },
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth
+                      type="date"
+                      label="To"
+                      value={
+                        draftFilters[filter.toQueryKey] ?? ""
+                      }
+                      onChange={(event) =>
+                        handleDateChange(
+                          filter.toQueryKey,
+                          event.target.value,
+                        )
+                      }
+                      slotProps={{
+                        inputLabel: {
+                          shrink: true,
+                        },
+                      }}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+            </Grid>
+          ))}
+        </Grid>
+      </DialogContent>
+
+      <DialogActions>
+        <Button onClick={handleClear} color="inherit">
+          Clear All
+        </Button>
+
+        <Box sx={{ flex: 1 }} />
+
+        <Button onClick={onClose}>
+          Cancel
+        </Button>
+
+        <Button
+          variant="contained"
+          onClick={handleApply}
+          startIcon={<FilterAltOutlinedIcon />}
+        >
+          Apply Filters
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}

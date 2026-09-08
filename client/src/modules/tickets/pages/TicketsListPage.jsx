@@ -12,6 +12,8 @@ import {
   TICKET_FIELD_CONFIG,
 } from "../../../config/ticket.config";
 import { ticketService } from "../services/ticket.service";
+import TicketListFilters from "../components/TicketListFilters";
+import { getTicketListFilterCount } from "../../../config/ticketListFilter.config";
 
 export default function TicketsListPage() {
   const navigate = useNavigate();
@@ -20,11 +22,30 @@ export default function TicketsListPage() {
   const [rowCount, setRowCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
     pageSize: TICKET_GRID_CONFIG.defaultPageSize,
   });
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchInput.trim());
+
+      setPaginationModel((currentModel) => ({
+        ...currentModel,
+        page: 0,
+      }));
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [searchInput]);
 
   useEffect(() => {
     let active = true;
@@ -36,6 +57,8 @@ export default function TicketsListPage() {
       .listTickets({
         page: paginationModel.page + 1,
         limit: paginationModel.pageSize,
+        ...(search ? { search } : {}),
+        ...filters,
       })
       .then(({ rows: ticketRows, total }) => {
         if (!active) return;
@@ -64,7 +87,7 @@ export default function TicketsListPage() {
     return () => {
       active = false;
     };
-  }, [paginationModel]);
+  }, [paginationModel, search, filters]);
 
   const handlePaginationModelChange = (nextModel) => {
     setPaginationModel((currentModel) => {
@@ -77,6 +100,26 @@ export default function TicketsListPage() {
 
       return nextModel;
     });
+  };
+
+  const handleApplyFilters = (nextFilters) => {
+    setFilters(nextFilters);
+
+    setPaginationModel((currentModel) => ({
+      ...currentModel,
+      page: 0,
+    }));
+
+    setFiltersOpen(false);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({});
+
+    setPaginationModel((currentModel) => ({
+      ...currentModel,
+      page: 0,
+    }));
   };
 
   return (
@@ -109,16 +152,24 @@ export default function TicketsListPage() {
         onPaginationModelChange={handlePaginationModelChange}
         paginationMode="server"
         fields={TICKET_FIELD_CONFIG}
-        columns={[
-          TICKET_GRID_CONFIG.action,
-          ...TICKET_GRID_CONFIG.columns,
-        ]}
+        columns={[TICKET_GRID_CONFIG.action, ...TICKET_GRID_CONFIG.columns]}
         pageSizeOptions={TICKET_GRID_CONFIG.pageSizeOptions}
         defaultPageSize={TICKET_GRID_CONFIG.defaultPageSize}
         title={TICKET_MODULE_CONFIG.list.title}
         fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
         loading={loading}
         onOpenTicket={(row) => navigate(`/tickets/${row.id}`)}
+        search={searchInput}
+        onSearchChange={setSearchInput}
+        onOpenFilters={() => setFiltersOpen(true)}
+        activeFilterCount={getTicketListFilterCount(filters)}
+      />
+
+      <TicketListFilters
+        open={filtersOpen}
+        filters={filters}
+        onApply={handleApplyFilters}
+        onClose={() => setFiltersOpen(false)}
       />
     </Stack>
   );
