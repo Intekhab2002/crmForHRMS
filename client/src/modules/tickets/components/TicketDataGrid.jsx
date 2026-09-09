@@ -79,6 +79,13 @@ export default function TicketDataGrid({
   onSelectedTicketIdsChange,
 }) {
   const { hasPermission } = useAuth();
+  const selectionModel = useMemo(
+  () => ({
+    type: "include",
+    ids: new Set(selectedTicketIds),
+  }),
+  [selectedTicketIds],
+);
 
   const gridColumns = useMemo(
     () =>
@@ -144,10 +151,7 @@ export default function TicketDataGrid({
         pageSizeOptions={pageSizeOptions}
         checkboxSelection
         keepNonExistentRowsSelected
-        rowSelectionModel={{
-          type: "include",
-          ids: new Set(selectedTicketIds),
-        }}
+        rowSelectionModel={selectionModel}
         onRowSelectionModelChange={(nextSelection) => {
           onSelectedTicketIdsChange?.(Array.from(nextSelection.ids ?? []));
         }}

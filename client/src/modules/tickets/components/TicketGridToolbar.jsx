@@ -1,14 +1,16 @@
 import { useCallback, useState } from "react";
-import { Toolbar } from "@mui/x-data-grid";
-import { IconButton, InputAdornment, TextField } from "@mui/material";
+import {
+  ColumnsPanelTrigger,
+  Toolbar,
+} from "@mui/x-data-grid";import { IconButton, InputAdornment, TextField } from "@mui/material";
 import { Button, Stack } from "@mui/material";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
-
 import CanAccess from "../../../components/rbac/CanAccess";
 import TicketExportDialog from "./TicketExportDialog";
 import { TICKET_EXPORT_CONFIG } from "../config/ticketExport.config";
 import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
 import ClearOutlinedIcon from "@mui/icons-material/ClearOutlined";
+import ViewColumnOutlinedIcon from "@mui/icons-material/ViewColumnOutlined";
 
 export default function TicketGridToolbar({
   search = "",
@@ -81,6 +83,16 @@ export default function TicketGridToolbar({
             Filters
             {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
           </Button>
+          <ColumnsPanelTrigger
+            render={
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<ViewColumnOutlinedIcon />}
+                aria-label="Choose columns"
+              />
+            }
+          />
           <CanAccess permission={TICKET_EXPORT_CONFIG.permission}>
             <Button
               size="small"
