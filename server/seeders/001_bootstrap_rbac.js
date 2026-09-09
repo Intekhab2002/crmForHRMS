@@ -265,13 +265,12 @@ const SYSTEM_PERMISSIONS = Object.freeze([
   }),
 
   Object.freeze({
-  code: "ticket:export",
-  name: "Export Tickets",
-  description:
-    "Export tickets accessible to the authenticated user.",
-  resource: "ticket",
-  action: "export",
-}),
+    code: "ticket:export",
+    name: "Export Tickets",
+    description: "Export tickets accessible to the authenticated user.",
+    resource: "ticket",
+    action: "export",
+  }),
 
   Object.freeze({
     code: "ticket:create",
@@ -403,6 +402,86 @@ const SYSTEM_PERMISSIONS = Object.freeze([
     description: "Delete SLA policies where permitted.",
     resource: "sla",
     action: "delete",
+  }),
+
+  Object.freeze({
+    code: "sla:activate",
+    name: "Activate SLA",
+    description: "Activate or deactivate SLA policies and calendars.",
+    resource: "sla",
+    action: "activate",
+  }),
+
+  Object.freeze({
+    code: "sla:calendar_read",
+    name: "Read SLA Calendars",
+    description: "View SLA business calendars and holidays.",
+    resource: "sla",
+    action: "calendar_read",
+  }),
+
+  Object.freeze({
+    code: "sla:calendar_create",
+    name: "Create SLA Calendar",
+    description: "Create SLA business calendars.",
+    resource: "sla",
+    action: "calendar_create",
+  }),
+
+  Object.freeze({
+    code: "sla:calendar_update",
+    name: "Update SLA Calendar",
+    description: "Update SLA business calendar settings.",
+    resource: "sla",
+    action: "calendar_update",
+  }),
+
+  Object.freeze({
+    code: "sla:calendar_delete",
+    name: "Delete SLA Calendar",
+    description: "Delete or safely deactivate SLA calendars.",
+    resource: "sla",
+    action: "calendar_delete",
+  }),
+
+  Object.freeze({
+    code: "sla:holiday_read",
+    name: "Read SLA Holidays",
+    description: "View SLA calendar holidays.",
+    resource: "sla",
+    action: "holiday_read",
+  }),
+
+  Object.freeze({
+    code: "sla:holiday_create",
+    name: "Create SLA Holiday",
+    description: "Create SLA calendar holidays.",
+    resource: "sla",
+    action: "holiday_create",
+  }),
+
+  Object.freeze({
+    code: "sla:holiday_update",
+    name: "Update SLA Holiday",
+    description: "Update SLA calendar holidays.",
+    resource: "sla",
+    action: "holiday_update",
+  }),
+
+  Object.freeze({
+    code: "sla:holiday_delete",
+    name: "Delete SLA Holiday",
+    description: "Delete SLA calendar holidays.",
+    resource: "sla",
+    action: "holiday_delete",
+  }),
+
+  Object.freeze({
+    code: "sla:recalculate",
+    name: "Recalculate Ticket SLA",
+    description: "Recalculate a ticket SLA for administrative diagnostics.",
+    resource: "sla",
+    action: "recalculate",
   }),
 
   // -------------------------------------------------------------------------

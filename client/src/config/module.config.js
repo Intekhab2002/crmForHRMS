@@ -187,6 +187,88 @@ export const APP_MODULE_CONFIG = Object.freeze({
           }),
         ]),
       }),
+      createRoute({
+        id: "sla",
+        path: "/sla",
+        label: "SLA",
+        component: "slaPolicies",
+
+        access: {
+          permissions: [PERMISSIONS.SLA_READ],
+        },
+
+        navigation: {
+          section: "app",
+          iconKey: "sla",
+          order: 35,
+        },
+      }),
+
+      createRoute({
+        id: "sla.policies",
+        path: "/sla/policies",
+        label: "SLA Policies",
+        component: "slaPolicies",
+
+        access: {
+          permissions: [PERMISSIONS.SLA_READ],
+        },
+      }),
+
+      createRoute({
+        id: "sla.policies.create",
+        path: "/sla/policies/new",
+        label: "Create SLA Policy",
+        component: "slaPolicyCreate",
+
+        access: {
+          permissions: [PERMISSIONS.SLA_CREATE],
+        },
+      }),
+
+      createRoute({
+        id: "sla.policies.detail",
+        path: "/sla/policies/:policyId",
+        label: "SLA Policy",
+        component: "slaPolicyDetail",
+
+        access: {
+          permissions: [PERMISSIONS.SLA_READ],
+        },
+      }),
+
+      createRoute({
+        id: "sla.calendars",
+        path: "/sla/calendars",
+        label: "SLA Calendars",
+        component: "slaCalendars",
+
+        access: {
+          permissions: [PERMISSIONS.SLA_CALENDAR_READ],
+        },
+      }),
+
+      createRoute({
+        id: "sla.calendars.detail",
+        path: "/sla/calendars/:calendarId",
+        label: "SLA Calendar",
+        component: "slaCalendarDetail",
+
+        access: {
+          permissions: [PERMISSIONS.SLA_CALENDAR_READ],
+        },
+      }),
+
+      createRoute({
+        id: "sla.calendars.new",
+        path: "/sla/calendars/new",
+        label: "Create SLA Calendar",
+        component: "slaCalendarDetail",
+
+        access: {
+          permissions: [PERMISSIONS.SLA_CALENDAR_CREATE],
+        },
+      }),
     ]),
   }),
 });

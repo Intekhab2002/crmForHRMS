@@ -66,8 +66,9 @@ import ticketDependencyCategoryRouter from "../modules/ticketDependencyCategorie
 
 import publicTicketStatusModule from "../modules/publicTicketStatus/index.js";
 
-import slaRouter from "../modules/sla/sla.routes.js"
+import slaRouter from "../modules/sla/sla.routes.js";
 
+import ticketSlaRouter from "../modules/sla/ticketSla.routes.js";
 
 const router = Router();
 
@@ -111,6 +112,8 @@ router.use(`/${apiVersion}/organizations`, organizationRouter);
 router.use(`/${apiVersion}/departments`, departmentRouter);
 
 router.use(`/${apiVersion}/tickets`, ticketRouter);
+
+router.use(`/${apiVersion}/tickets`, ticketSlaRouter);
 
 router.use(`/${apiVersion}/contacts`, contactRouter);
 
