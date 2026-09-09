@@ -21,8 +21,14 @@ function createInitialValues(filters) {
   return { ...filters };
 }
 
-function getLookupValue(options, value) {
-  return options.find((option) => option.value === value) ?? null;
+function getLookupValues(options, values) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return [];
+  }
+
+  const selectedValues = new Set(values);
+
+  return options.filter((option) => selectedValues.has(option.value));
 }
 
 export default function TicketListFilters({
@@ -107,19 +113,24 @@ export default function TicketListFilters({
       });
   }, [filters, loadOptions, lookupFilters, open]);
 
-  const handleChange = (queryKey, value) => {
-    setDraftFilters((current) => {
-      const next = { ...current };
+const handleChange = (queryKey, value) => {
+  setDraftFilters((current) => {
+    const next = { ...current };
 
-      if (value === "" || value === null || value === undefined) {
-        delete next[queryKey];
-      } else {
-        next[queryKey] = value;
-      }
+    if (
+      value === "" ||
+      value === null ||
+      value === undefined ||
+      (Array.isArray(value) && value.length === 0)
+    ) {
+      delete next[queryKey];
+    } else {
+      next[queryKey] = value;
+    }
 
-      return next;
-    });
-  };
+    return next;
+  });
+};
 
   const handleDateChange = (queryKey, value) => {
     handleChange(queryKey, value);
@@ -167,7 +178,7 @@ export default function TicketListFilters({
         <Grid container spacing={2}>
           {lookupFilters.map((filter) => {
             const filterOptions = options[filter.key] ?? [];
-            const selectedValue = getLookupValue(
+            const selectedValue = getLookupValues(
               filterOptions,
               draftFilters[filter.queryKey],
             );
@@ -180,8 +191,8 @@ export default function TicketListFilters({
                   value={selectedValue}
                   loading={Boolean(loadingKeys[filter.key])}
                   onOpen={() => loadOptions(filter)}
-                  onChange={(_event, value) => {
-                    handleChange(filter.queryKey, value?.value ?? "");
+                  onChange={(_event, values) => {
+                    handleChange(filter.queryKey, values.map((option) => option.value));
                   }}
                   isOptionEqualToValue={(option, value) =>
                     option.value === value.value
@@ -189,6 +200,7 @@ export default function TicketListFilters({
                   getOptionLabel={(option) => option?.label ?? ""}
                   clearOnEscape
                   autoHighlight
+                  disableCloseOnSelect
                   noOptionsText={
                     loadingKeys[filter.key]
                       ? "Loading..."

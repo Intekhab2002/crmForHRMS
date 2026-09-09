@@ -5,6 +5,7 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     type: "lookup",
     queryKey: "status",
     endpoint: "/ticket-statuses?isActive=true&limit=100",
+    multi: true,
   }),
 
   Object.freeze({
@@ -13,6 +14,7 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     type: "lookup",
     queryKey: "departmentId",
     endpoint: "/departments?isActive=true&limit=100",
+    multi: true,
   }),
 
   Object.freeze({
@@ -23,6 +25,7 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     endpoint: "/tickets/assignable-users",
     valueKey: "id",
     labelKey: "full_name",
+    multi: true,
   }),
 
 //   Object.freeze({
@@ -51,6 +54,7 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     endpoint: "/users?limit=100",
     valueKey: "id",
     labelKey: "full_name",
+    multi: true,
   }),
 
   Object.freeze({
@@ -59,6 +63,7 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     type: "lookup",
     queryKey: "serviceTypeId",
     endpoint: "/service-types?isActive=true&limit=100",
+    multi: true,
   }),
 
   Object.freeze({
@@ -67,6 +72,7 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     type: "lookup",
     queryKey: "categoryId",
     endpoint: "/ticket-categories?isActive=true&limit=100",
+    multi: true,
   }),
 
   Object.freeze({
@@ -75,6 +81,7 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     type: "lookup",
     queryKey: "problemStatementId",
     endpoint: "/problem-statements?isActive=true&limit=100",
+    multi: true,
   }),
 
   Object.freeze({
@@ -83,6 +90,7 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     type: "lookup",
     queryKey: "currentBillStatusId",
     endpoint: "/current-bill-statuses?isActive=true&limit=100",
+    multi: true,
   }),
 
   Object.freeze({
@@ -91,6 +99,7 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     type: "lookup",
     queryKey: "severityId",
     endpoint: "/ticket-severities?isActive=true&limit=100",
+    multi: true,
   }),
 
   Object.freeze({
@@ -99,6 +108,7 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     type: "lookup",
     queryKey: "issueCategoryId",
     endpoint: "/ticket-issue-categories?isActive=true&limit=100",
+    multi: true,
   }),
 
   Object.freeze({
@@ -107,6 +117,7 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     type: "lookup",
     queryKey: "dependencyCategoryId",
     endpoint: "/ticket-dependency-categories?isActive=true&limit=100",
+    multi: true,
   }),
 
   Object.freeze({

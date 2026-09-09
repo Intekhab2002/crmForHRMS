@@ -1,11 +1,7 @@
 const STORAGE_KEY = "crm:tickets:list-filters:v1";
 
 function isPlainObject(value) {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    !Array.isArray(value)
-  );
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function sanitizeFilters(filters) {
@@ -30,6 +26,20 @@ function sanitizeFilters(filters) {
       typeof value === "boolean"
     ) {
       result[key] = value;
+      return result;
+    }
+
+    if (
+      Array.isArray(value) &&
+      value.length > 0 &&
+      value.every(
+        (item) =>
+          typeof item === "string" ||
+          typeof item === "number" ||
+          typeof item === "boolean",
+      )
+    ) {
+      result[key] = [...new Set(value)];
     }
 
     return result;
