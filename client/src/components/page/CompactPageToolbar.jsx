@@ -67,7 +67,7 @@ export default function CompactPageToolbar({
           ) : null}
 
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography
+            {/* <Typography
               variant="subtitle1"
               fontWeight={700}
               noWrap
@@ -77,12 +77,12 @@ export default function CompactPageToolbar({
               }}
             >
               {title}
-            </Typography>
+            </Typography> */}
 
             {description ? (
               <Typography
-                variant="caption"
-                color="text.secondary"
+                variant="h6"
+                color="text.primary"
                 noWrap
                 sx={{
                   display: "block",

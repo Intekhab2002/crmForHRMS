@@ -12,7 +12,6 @@
     "build:migration": "node scripts/build-migration.js",
     "build:seeder": "node scripts/build-seeder.js",
     "build:database": "npm run build:migration && npm run build:seeder",
-
     "db:migrate": "node dist-database/migrate.mjs",
     "db:seed": "node dist-database/seed-rbac.mjs",
     "db:setup": "npm run db:migrate && npm run db:seed"
@@ -33,6 +32,7 @@
     "http-errors": "^2.0.1",
     "http-status-codes": "^2.3.0",
     "jsonwebtoken": "^9.0.3",
+    "luxon": "^3.7.2",
     "morgan": "^1.11.0",
     "multer": "^2.2.0",
     "p-retry": "^8.0.0",

@@ -4,6 +4,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -113,24 +114,24 @@ export default function TicketListFilters({
       });
   }, [filters, loadOptions, lookupFilters, open]);
 
-const handleChange = (queryKey, value) => {
-  setDraftFilters((current) => {
-    const next = { ...current };
+  const handleChange = (queryKey, value) => {
+    setDraftFilters((current) => {
+      const next = { ...current };
 
-    if (
-      value === "" ||
-      value === null ||
-      value === undefined ||
-      (Array.isArray(value) && value.length === 0)
-    ) {
-      delete next[queryKey];
-    } else {
-      next[queryKey] = value;
-    }
+      if (
+        value === "" ||
+        value === null ||
+        value === undefined ||
+        (Array.isArray(value) && value.length === 0)
+      ) {
+        delete next[queryKey];
+      } else {
+        next[queryKey] = value;
+      }
 
-    return next;
-  });
-};
+      return next;
+    });
+  };
 
   const handleDateChange = (queryKey, value) => {
     handleChange(queryKey, value);
@@ -186,13 +187,17 @@ const handleChange = (queryKey, value) => {
             return (
               <Grid key={filter.key} size={{ xs: 12, sm: 6 }}>
                 <Autocomplete
+                  multiple={filter.multi === true}
                   fullWidth
                   options={filterOptions}
                   value={selectedValue}
                   loading={Boolean(loadingKeys[filter.key])}
                   onOpen={() => loadOptions(filter)}
                   onChange={(_event, values) => {
-                    handleChange(filter.queryKey, values.map((option) => option.value));
+                    handleChange(
+                      filter.queryKey,
+                      values.map((option) => option.value),
+                    );
                   }}
                   isOptionEqualToValue={(option, value) =>
                     option.value === value.value
@@ -206,6 +211,54 @@ const handleChange = (queryKey, value) => {
                       ? "Loading..."
                       : "No matching options"
                   }
+                  renderTags={(tagValue, getTagProps) => {
+                    if (tagValue.length === 0) {
+                      return null;
+                    }
+
+                    const visibleTags = tagValue.slice(0, 1);
+                    const hiddenCount = tagValue.length - visibleTags.length;
+
+                    return (
+                      <>
+                        {visibleTags.map((option, index) => {
+                          const { key, ...tagProps } = getTagProps({ index });
+
+                          return (
+                            <Chip
+                              key={key}
+                              {...tagProps}
+                              label={option.label}
+                              size="small"
+                              sx={{
+                                maxWidth: "calc(100% - 8px)",
+                                height: 24,
+                                "& .MuiChip-label": {
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                },
+                              }}
+                            />
+                          );
+                        })}
+
+                        {hiddenCount > 0 && (
+                          <Chip
+                            label={`+${hiddenCount}`}
+                            size="small"
+                            sx={{
+                              height: 24,
+                              flexShrink: 0,
+                              "& .MuiChip-label": {
+                                px: 0.75,
+                              },
+                            }}
+                          />
+                        )}
+                      </>
+                    );
+                  }}
                   renderInput={(params) => (
                     <TextField
                       {...params}
@@ -213,6 +266,36 @@ const handleChange = (queryKey, value) => {
                       placeholder={`Select ${filter.label.toLowerCase()}`}
                     />
                   )}
+                  sx={{
+                    "& .MuiAutocomplete-inputRoot": {
+                      minHeight: 40,
+                      maxHeight: 40,
+                      overflow: "hidden",
+                      flexWrap: "nowrap",
+                      alignItems: "center",
+                      py: 0.25,
+                    },
+
+                    "& .MuiAutocomplete-input": {
+                      minWidth: "40px !important",
+                      py: "4px !important",
+                    },
+
+                    "& .MuiAutocomplete-tag": {
+                      flexShrink: 0,
+                    },
+
+                    "& .MuiAutocomplete-endAdornment": {
+                      right: 6,
+                    },
+
+                    "& .MuiInputLabel-root": {
+                      maxWidth: "calc(100% - 60px)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    },
+                  }}
                 />
               </Grid>
             );

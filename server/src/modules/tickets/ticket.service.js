@@ -11,6 +11,7 @@ import ticketNumberService from "./ticketNumber.service.js";
 import ticketRepository from "./ticket.repository.js";
 import { TICKET_ERROR_CODES } from "./ticket.constants.js";
 import ticketValidator from "./ticket.validator.js";
+import slaEngine from "../sla/slaEngine.service.js";
 
 function getContactValue(payload, key) {
   if (key === "name") {
@@ -90,65 +91,37 @@ function buildLifecycleSnapshot(ticket) {
 
     id: ticket.id ?? null,
 
-    ticketNumber:
-      ticket.ticketNumber ??
-      ticket.ticket_number ??
-      null,
+    ticketNumber: ticket.ticketNumber ?? ticket.ticket_number ?? null,
 
-    subject:
-      ticket.subject ??
-      null,
+    subject: ticket.subject ?? null,
 
-    description:
-      ticket.description ??
-      null,
+    description: ticket.description ?? null,
 
-    priority:
-      ticket.priority ??
-      null,
+    priority: ticket.priority ?? null,
 
     employee_current_office_name_id:
       ticket.employeeCurrentOfficeNameId ??
       ticket.employee_current_office_name_id ??
       null,
 
-    employee_id:
-      ticket.employeeId ??
-      ticket.employee_id ??
-      null,
+    employee_id: ticket.employeeId ?? ticket.employee_id ?? null,
 
     bill_reference_no:
-      ticket.billReferenceNo ??
-      ticket.bill_reference_no ??
-      null,
+      ticket.billReferenceNo ?? ticket.bill_reference_no ?? null,
 
     expected_resolution_date:
-      ticket.expectedResolutionDate ??
-      ticket.expected_resolution_date ??
-      null,
+      ticket.expectedResolutionDate ?? ticket.expected_resolution_date ?? null,
 
-    duplicate_ticket:
-      ticket.duplicateTicket ??
-      ticket.duplicate_ticket ??
-      null,
+    duplicate_ticket: ticket.duplicateTicket ?? ticket.duplicate_ticket ?? null,
 
-    letter_no:
-      ticket.letterNo ??
-      ticket.letter_no ??
-      null,
+    letter_no: ticket.letterNo ?? ticket.letter_no ?? null,
 
     initial_diagnosis:
-      ticket.initialDiagnosis ??
-      ticket.initial_diagnosis ??
-      null,
+      ticket.initialDiagnosis ?? ticket.initial_diagnosis ?? null,
 
-    solution:
-      ticket.solution ??
-      null,
+    solution: ticket.solution ?? null,
 
-    resolution:
-      ticket.resolution ??
-      null,
+    resolution: ticket.resolution ?? null,
 
     /*
      * ========================================================================
@@ -160,75 +133,37 @@ function buildLifecycleSnapshot(ticket) {
      * ========================================================================
      */
 
-    status:
-      ticket.status?.id ??
-      ticket.status_id ??
-      null,
+    status: ticket.status?.id ?? ticket.status_id ?? null,
 
-    service_type:
-      ticket.serviceType?.id ??
-      ticket.service_type_id ??
-      null,
+    service_type: ticket.serviceType?.id ?? ticket.service_type_id ?? null,
 
-    category:
-      ticket.category?.id ??
-      ticket.category_id ??
-      null,
+    category: ticket.category?.id ?? ticket.category_id ?? null,
 
     problem_statement:
-      ticket.problemStatement?.id ??
-      ticket.problem_statement_id ??
-      null,
+      ticket.problemStatement?.id ?? ticket.problem_statement_id ?? null,
 
     current_bill_status:
-      ticket.currentBillStatus?.id ??
-      ticket.current_bill_status_id ??
-      null,
+      ticket.currentBillStatus?.id ?? ticket.current_bill_status_id ?? null,
 
-    assigned_to:
-      ticket.assignedUser?.id ??
-      ticket.assigned_user_id ??
-      null,
+    assigned_to: ticket.assignedUser?.id ?? ticket.assigned_user_id ?? null,
 
-    severity:
-      ticket.severity?.id ??
-      ticket.severity_id ??
-      null,
+    severity: ticket.severity?.id ?? ticket.severity_id ?? null,
 
     issue_category:
-      ticket.issueCategory?.id ??
-      ticket.issue_category_id ??
-      null,
+      ticket.issueCategory?.id ?? ticket.issue_category_id ?? null,
 
     dependency_category:
-      ticket.dependencyCategory?.id ??
-      ticket.dependency_category_id ??
-      null,
+      ticket.dependencyCategory?.id ?? ticket.dependency_category_id ?? null,
 
-    department:
-      ticket.department?.id ??
-      ticket.department_id ??
-      null,
+    department: ticket.department?.id ?? ticket.department_id ?? null,
 
-    organization:
-      ticket.organization?.id ??
-      ticket.organization_id ??
-      null,
+    organization: ticket.organization?.id ?? ticket.organization_id ?? null,
 
-    requester_user_id:
-      ticket.requester?.id ??
-      ticket.requester_user_id ??
-      null,
+    requester_user_id: ticket.requester?.id ?? ticket.requester_user_id ?? null,
 
-    created_by:
-      ticket.createdBy?.id ??
-      ticket.created_by_user_id ??
-      null,
+    created_by: ticket.createdBy?.id ?? ticket.created_by_user_id ?? null,
 
-    contact:
-      ticket.contact?.id ??
-      ticket.contact_id ??
-      null,
+    contact: ticket.contact?.id ?? ticket.contact_id ?? null,
 
     /*
      * ========================================================================
@@ -238,22 +173,12 @@ function buildLifecycleSnapshot(ticket) {
      * ========================================================================
      */
 
-    name:
-      ticket.contact?.name ??
-      ticket.name ??
-      ticket.contact_name ??
-      null,
+    name: ticket.contact?.name ?? ticket.name ?? ticket.contact_name ?? null,
 
-    mobile_phone:
-      ticket.contact?.mobilePhone ??
-      ticket.mobile_phone ??
-      null,
+    mobile_phone: ticket.contact?.mobilePhone ?? ticket.mobile_phone ?? null,
 
     email_id:
-      ticket.contact?.email ??
-      ticket.email_id ??
-      ticket.contact_email ??
-      null,
+      ticket.contact?.email ?? ticket.email_id ?? ticket.contact_email ?? null,
 
     district:
       ticket.contact?.district?.id ??
@@ -482,6 +407,11 @@ async function createTicket(payload, authenticatedUserId) {
       tx,
     );
 
+    await slaEngine.syncTicket(ticket.id, {
+      now: new Date(),
+      tx,
+    });
+
     return createdTicket;
   });
 }
@@ -648,6 +578,10 @@ async function updateTicket(ticketId, payload, authenticatedUserId) {
       },
       tx,
     );
+    await slaEngine.syncTicket(ticket.id, {
+      now: new Date(),
+      tx,
+    });
 
     return ticketRepository.findTicketById(ticketId, tx);
   });

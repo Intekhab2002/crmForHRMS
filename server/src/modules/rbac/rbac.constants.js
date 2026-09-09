@@ -109,6 +109,20 @@ export const RBAC_PERMISSIONS = Object.freeze({
   SLA_UPDATE: "sla:update",
   SLA_DELETE: "sla:delete",
 
+  SLA_ACTIVATE: "sla:activate",
+
+  SLA_CALENDAR_READ: "sla:calendar_read",
+  SLA_CALENDAR_CREATE: "sla:calendar_create",
+  SLA_CALENDAR_UPDATE: "sla:calendar_update",
+  SLA_CALENDAR_DELETE: "sla:calendar_delete",
+
+  SLA_HOLIDAY_READ: "sla:holiday_read",
+  SLA_HOLIDAY_CREATE: "sla:holiday_create",
+  SLA_HOLIDAY_UPDATE: "sla:holiday_update",
+  SLA_HOLIDAY_DELETE: "sla:holiday_delete",
+
+  SLA_RECALCULATE: "sla:recalculate",
+
   DASHBOARD_READ: "dashboard:read",
 
   //options

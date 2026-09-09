@@ -6,7 +6,9 @@ import { getStoredValue } from "../../utils/storage";
 export const apiClient = axios.create({
   baseURL: API_CONFIG.baseURL,
   timeout: API_CONFIG.timeout,
-
+  paramsSerializer: {
+    indexes: null,
+  },
 });
 
 let refreshPromise = null;
@@ -50,7 +52,9 @@ async function refreshAccessToken() {
         const data = response.data?.data;
 
         if (!data?.accessToken || !data?.refreshToken) {
-          throw new Error("Refresh response did not contain authentication tokens.");
+          throw new Error(
+            "Refresh response did not contain authentication tokens.",
+          );
         }
 
         return data;

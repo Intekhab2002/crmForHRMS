@@ -30,6 +30,8 @@ import database from "./database/postgres.js";
 import registerGracefulShutdown from "./utils/gracefulShutdown.js";
 import registerProcessHandlers from "./utils/processHandlers.js";
 import logStartup from "./utils/startupLogger.js";
+    import slaMaintenanceJob
+        from "./modules/sla/slaMaintenance.job.js";
 
 /**
  * ============================================================================
@@ -44,6 +46,15 @@ async function bootstrap() {
          * --------------------------------------------------------------------
          */
         await database.initialize();
+
+
+               /**
+         * --------------------------------------------------------------------
+         * SLA maintenance job
+         * --------------------------------------------------------------------
+         */
+
+         slaMaintenanceJob.startSlaMaintenanceJob();
 
         /**
          * --------------------------------------------------------------------
