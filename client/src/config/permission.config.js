@@ -10,8 +10,6 @@
  * for client-side authorization decisions.
  */
 
-
-
 export const PERMISSIONS = Object.freeze({
   DASHBOARD_READ: "dashboard:read",
 
@@ -40,7 +38,7 @@ export const PERMISSIONS = Object.freeze({
   TICKET_DELETE: "ticket:delete",
 
   TICKET_ATTACHMENT: "ticket:attachment",
-  
+
   OPTION_READ: "option:read",
 
   OPTION_CREATE: "option:create",
@@ -48,6 +46,21 @@ export const PERMISSIONS = Object.freeze({
   OPTION_UPDATE: "option:update",
 
   OPTION_DELETE: "option:delete",
+
+  SLA_READ: "sla:read",
+  SLA_CREATE: "sla:create",
+  SLA_UPDATE: "sla:update",
+  SLA_DELETE: "sla:delete",
+  SLA_ACTIVATE: "sla:activate",
+  SLA_CALENDAR_READ: "sla:calendar_read",
+  SLA_CALENDAR_CREATE: "sla:calendar_create",
+  SLA_CALENDAR_UPDATE: "sla:calendar_update",
+  SLA_CALENDAR_DELETE: "sla:calendar_delete",
+  SLA_HOLIDAY_READ: "sla:holiday_read",
+  SLA_HOLIDAY_CREATE: "sla:holiday_create",
+  SLA_HOLIDAY_UPDATE: "sla:holiday_update",
+  SLA_HOLIDAY_DELETE: "sla:holiday_delete",
+  SLA_RECALCULATE: "sla:recalculate",
 });
 
 export default PERMISSIONS;

@@ -42,6 +42,7 @@ import {
   TICKET_FIELD_MAP,
 } from "../../../config/ticket.config";
 import ModulePage from "../../../components/layout/ModulePage";
+import TicketSlaCard from "../../sla/components/TicketSlaCard";
 
 const DETAIL_FIELDS = TICKET_FIELD_CONFIG.filter((field) => field.form?.detail)
   .map((field) => field.key)
@@ -86,14 +87,6 @@ function buildUpdateValues(ticket) {
   );
 }
 
-function getStatusLabel(ticket) {
-  return (
-    ticket.statusName ||
-    ticket.statusCode ||
-    ticket.status ||
-    TICKET_MODULE_CONFIG.labels.notAvailable
-  );
-}
 
 export default function TicketLifecyclePage() {
   const { ticketId } = useParams();
@@ -430,6 +423,7 @@ export default function TicketLifecyclePage() {
 
   return (
     <ModulePage scroll={false}>
+      <TicketSlaCard ticketId={ticketId} />
       <CompactPageToolbar
         title={ticket.subject || ticket.ticketNumber || ticket.reference}
         description={ticket.ticketNumber ?? ticket.reference}

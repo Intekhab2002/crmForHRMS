@@ -18,6 +18,7 @@ import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumb
 import DynamicFormOutlinedIcon from "@mui/icons-material/DynamicFormOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
+import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 
 import { Link, useLocation } from "react-router";
 
@@ -31,6 +32,7 @@ const ICONS = Object.freeze({
   formConfiguration: DynamicFormOutlinedIcon,
   roles: AdminPanelSettingsOutlinedIcon,
   options: TuneOutlinedIcon,
+  sla:TimerOutlinedIcon
 });
 
 export default function Sidebar({ onNavigate, collapsed = false, onToggle }) {

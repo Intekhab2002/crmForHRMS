@@ -27,6 +27,11 @@ import DefaultEntryPage from "../pages/common/DefaultEntryPage";
 import RoleManagementPage from "../modules/roles/pages/RoleManagementPage";
 
 import OptionManagementPage from "../modules/options/pages/OptionManagementPage";
+  import SlaPoliciesPage from "../modules/sla/pages/SlaPoliciesPage";
+  import SlaPolicyCreatePage from "../modules/sla/pages/SlaPolicyCreatePage";
+  import SlaPolicyDetailPage from "../modules/sla/pages/SlaPolicyDetailPage";
+  import SlaCalendarsPage from "../modules/sla/pages/SlaCalendarsPage";
+  import SlaCalendarDetailPage from "../modules/sla/pages/SlaCalendarDetailPage";
 
 import { APP_MODULE_CONFIG, SYSTEM_ROUTES } from "../config/module.config";
 import LandingPage from "../pages/public/LandingPage";
@@ -58,6 +63,11 @@ const COMPONENTS = Object.freeze({
   notFound: NotFoundPage,
   defaultEntry: DefaultEntryPage,
   options: OptionManagementPage,
+  slaPolicies: SlaPoliciesPage,
+  slaPolicyCreate: SlaPolicyCreatePage,
+  slaPolicyDetail: SlaPolicyDetailPage,
+  slaCalendars: SlaCalendarsPage,
+  slaCalendarDetail: SlaCalendarDetailPage,
 });
 
 function applyPermissionGuard(route, element) {
