@@ -25,6 +25,9 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
     return `$${parameterOffset + values.length}`;
   };
 
+  const addUuidValues = (items) =>
+    items.map((item) => `${addValue(item)}::UUID`);
+
   /*
    * Global search intentionally remains separate from
    * structured field filters.
@@ -48,14 +51,26 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
       continue;
     }
 
-    const parameter = addValue(value);
-
     switch (definition.type) {
-      case "uuid":
-        conditions.push(`t.${definition.column} = ${parameter}::UUID`);
-        break;
+      case "uuid": {
+        if (definition.multi && Array.isArray(value)) {
+          const parameters = addUuidValues(value);
 
-      case "text":
+          conditions.push(
+            `t.${definition.column} IN (${parameters.join(", ")})`,
+          );
+        } else {
+          const parameter = addValue(value);
+
+          conditions.push(`t.${definition.column} = ${parameter}::UUID`);
+        }
+
+        break;
+      }
+
+      case "text": {
+        const parameter = addValue(value);
+
         if (definition.operator === "equals") {
           conditions.push(`t.${definition.column} = ${parameter}`);
         } else {
@@ -63,17 +78,27 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
             `t.${definition.column} ILIKE '%' || ${parameter} || '%'`,
           );
         }
-        break;
 
-      case "date_from":
+        break;
+      }
+
+      case "date_from": {
+        const parameter = addValue(value);
+
         conditions.push(`t.${definition.column} >= ${parameter}::DATE`);
-        break;
 
-      case "date_to":
+        break;
+      }
+
+      case "date_to": {
+        const parameter = addValue(value);
+
         conditions.push(
           `t.${definition.column} < (${parameter}::DATE + INTERVAL '1 day')`,
         );
+
         break;
+      }
 
       default:
         throw new Error(

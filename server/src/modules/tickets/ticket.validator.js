@@ -3,6 +3,16 @@ import { z } from "zod";
 import { getField, TICKET_CONFIG } from "./ticket.config.js";
 
 const uuidSchema = z.string().uuid();
+const uuidArraySchema = z.preprocess(
+  (value) => {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    return Array.isArray(value) ? value : [value];
+  },
+  z.array(uuidSchema).min(1).max(100),
+);
 
 const stringSchema = (field) => {
   let schema = z.string().trim();
@@ -123,20 +133,20 @@ const positiveIntegerQuery = z
     /*
      * UUID lookup filters
      */
-    status: uuidSchema.optional(),
-    departmentId: uuidSchema.optional(),
-    assignedUserId: uuidSchema.optional(),
-    contactId: uuidSchema.optional(),
-    organizationId: uuidSchema.optional(),
-    requesterUserId: uuidSchema.optional(),
-    serviceTypeId: uuidSchema.optional(),
-    categoryId: uuidSchema.optional(),
-    problemStatementId: uuidSchema.optional(),
-    currentBillStatusId: uuidSchema.optional(),
-    severityId: uuidSchema.optional(),
-    issueCategoryId: uuidSchema.optional(),
-    dependencyCategoryId: uuidSchema.optional(),
-    createdByUserId: uuidSchema.optional(),
+    status: uuidArraySchema.optional(),
+    departmentId: uuidArraySchema.optional(),
+    assignedUserId: uuidArraySchema.optional(),
+    contactId: uuidArraySchema.optional(),
+    organizationId: uuidArraySchema.optional(),
+    requesterUserId: uuidArraySchema.optional(),
+    serviceTypeId: uuidArraySchema.optional(),
+    categoryId: uuidArraySchema.optional(),
+    problemStatementId: uuidArraySchema.optional(),
+    currentBillStatusId: uuidArraySchema.optional(),
+    severityId: uuidArraySchema.optional(),
+    issueCategoryId: uuidArraySchema.optional(),
+    dependencyCategoryId: uuidArraySchema.optional(),
+    createdByUserId: uuidArraySchema.optional(),
 
     /*
      * Text filters

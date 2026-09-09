@@ -493,6 +493,7 @@ const listFilterDefinitions = Object.freeze({
     column: "status_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   department: Object.freeze({
@@ -500,6 +501,7 @@ const listFilterDefinitions = Object.freeze({
     column: "department_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   assigned_to: Object.freeze({
@@ -507,6 +509,7 @@ const listFilterDefinitions = Object.freeze({
     column: "assigned_user_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   contact: Object.freeze({
@@ -514,6 +517,7 @@ const listFilterDefinitions = Object.freeze({
     column: "contact_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   organization: Object.freeze({
@@ -521,6 +525,7 @@ const listFilterDefinitions = Object.freeze({
     column: "organization_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   requester_user_id: Object.freeze({
@@ -528,6 +533,7 @@ const listFilterDefinitions = Object.freeze({
     column: "requester_user_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   service_type: Object.freeze({
@@ -535,6 +541,7 @@ const listFilterDefinitions = Object.freeze({
     column: "service_type_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   category: Object.freeze({
@@ -542,6 +549,7 @@ const listFilterDefinitions = Object.freeze({
     column: "category_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   problem_statement: Object.freeze({
@@ -549,6 +557,7 @@ const listFilterDefinitions = Object.freeze({
     column: "problem_statement_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   current_bill_status: Object.freeze({
@@ -556,6 +565,7 @@ const listFilterDefinitions = Object.freeze({
     column: "current_bill_status_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   severity: Object.freeze({
@@ -563,6 +573,7 @@ const listFilterDefinitions = Object.freeze({
     column: "severity_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   issue_category: Object.freeze({
@@ -570,6 +581,7 @@ const listFilterDefinitions = Object.freeze({
     column: "issue_category_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   dependency_category: Object.freeze({
@@ -577,6 +589,7 @@ const listFilterDefinitions = Object.freeze({
     column: "dependency_category_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   created_by: Object.freeze({
@@ -584,6 +597,7 @@ const listFilterDefinitions = Object.freeze({
     column: "created_by_user_id",
     type: "uuid",
     operator: "equals",
+    multi: true,
   }),
 
   ticket_number: Object.freeze({
@@ -691,7 +705,7 @@ export const TICKET_CONFIG = Object.freeze({
   fieldsByKey,
   ticketFields,
   contactFields,
-  listFilterDefinitions
+  listFilterDefinitions,
 });
 
 export function getField(fieldKey) {
