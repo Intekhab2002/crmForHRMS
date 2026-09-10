@@ -216,6 +216,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
 
             navigation: {
               section: "app",
+               iconKey: "slaPolicies",
               order: 10,
             },
           }),
@@ -254,6 +255,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
 
             navigation: {
               section: "app",
+              iconKey: "slaCalendars",
               order: 20,
             },
           }),

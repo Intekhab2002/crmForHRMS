@@ -27,26 +27,26 @@ function resolveNavigation(routes, section, parentPath = "") {
   return routes.flatMap((route) => {
     const path = resolvePath(parentPath, route);
 
-    const ownNavigation =
-      route.navigation?.section === section
-        ? [
-            {
-              id: route.id,
-              label: route.label,
-              path,
-              icon: route.navigation.icon,
-              iconKey: route.navigation.iconKey,
-              order: route.navigation.order ?? 0,
-              permissions: route.access?.permissions ?? [],
-            },
-          ]
-        : [];
-
     const children = route.children
       ? resolveNavigation(route.children, section, path)
       : [];
 
-    return [...ownNavigation, ...children];
+    if (route.navigation?.section !== section) {
+      return [];
+    }
+
+    return [
+      {
+        id: route.id,
+        label: route.label,
+        path,
+        icon: route.navigation.icon,
+        iconKey: route.navigation.iconKey,
+        order: route.navigation.order ?? 0,
+        permissions: route.access?.permissions ?? [],
+        children,
+      },
+    ];
   });
 }
 

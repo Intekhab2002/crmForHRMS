@@ -23,6 +23,8 @@ import DynamicFormOutlinedIcon from "@mui/icons-material/DynamicFormOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
+import PolicyOutlinedIcon from "@mui/icons-material/PolicyOutlined";
+import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 
 import { Link, useLocation } from "react-router";
 
@@ -37,6 +39,8 @@ const ICONS = Object.freeze({
   roles: AdminPanelSettingsOutlinedIcon,
   options: TuneOutlinedIcon,
   sla: TimerOutlinedIcon,
+  slaPolicies: PolicyOutlinedIcon,
+  slaCalendars: CalendarMonthOutlinedIcon,
 });
 
 function hasActiveDescendant(item, pathname) {
@@ -159,12 +163,13 @@ function NavigationItem({ item, pathname, collapsed, onNavigate, depth = 0 }) {
         {depth === 0 ? (
           <ListItemIcon
             sx={{
-              minWidth: 36,
-              mr: 0.5,
+              minWidth: depth === 0 ? 36 : 32,
+              mr: depth === 0 ? 0.5 : 0,
               justifyContent: "center",
+              color: "text.secondary",
             }}
           >
-            {Icon ? <Icon /> : null}
+            {Icon ? <Icon fontSize={depth === 0 ? "medium" : "small"} /> : null}
           </ListItemIcon>
         ) : null}
 
