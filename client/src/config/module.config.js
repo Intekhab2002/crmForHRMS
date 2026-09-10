@@ -216,7 +216,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
 
             navigation: {
               section: "app",
-               iconKey: "slaPolicies",
+              iconKey: "slaPolicies",
               order: 10,
             },
           }),
@@ -229,6 +229,27 @@ export const APP_MODULE_CONFIG = Object.freeze({
 
             access: {
               permissions: [PERMISSIONS.SLA_CREATE],
+            },
+          }),
+          createRoute({
+            id: "sla.calendars.detail",
+            path: "calendars/:calendarId",
+            label: "SLA Calendar",
+            component: "slaCalendarDetail",
+
+            access: {
+              permissions: [PERMISSIONS.SLA_CALENDAR_READ],
+            },
+          }),
+
+          createRoute({
+            id: "sla.calendars.new",
+            path: "calendars/new",
+            label: "Create SLA Calendar",
+            component: "slaCalendarDetail",
+
+            access: {
+              permissions: [PERMISSIONS.SLA_CALENDAR_CREATE],
             },
           }),
 
@@ -257,28 +278,6 @@ export const APP_MODULE_CONFIG = Object.freeze({
               section: "app",
               iconKey: "slaCalendars",
               order: 20,
-            },
-          }),
-
-          createRoute({
-            id: "sla.calendars.detail",
-            path: "calendars/:calendarId",
-            label: "SLA Calendar",
-            component: "slaCalendarDetail",
-
-            access: {
-              permissions: [PERMISSIONS.SLA_CALENDAR_READ],
-            },
-          }),
-
-          createRoute({
-            id: "sla.calendars.new",
-            path: "calendars/new",
-            label: "Create SLA Calendar",
-            component: "slaCalendarDetail",
-
-            access: {
-              permissions: [PERMISSIONS.SLA_CALENDAR_CREATE],
             },
           }),
         ]),

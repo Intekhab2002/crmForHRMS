@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 import CanAccess from "../../../components/rbac/CanAccess";
 import PageHeader from "../../../components/page/PageHeader";
 import SlaHolidayCalendar from "../components/SlaHolidayCalendar";
@@ -22,9 +22,13 @@ import { SLA_PERMISSIONS, SLA_ROUTES } from "../config/sla.config";
 
 export default function SlaCalendarDetailPage() {
   const { calendarId } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
 
-  const isNew = calendarId === "new";
+  const createCalendarPath = `${SLA_ROUTES.calendars}/new`;
+
+  const isNew = location.pathname === createCalendarPath;
+
   const hasCalendarId =
     typeof calendarId === "string" && calendarId.trim().length > 0;
   const [calendar, setCalendar] = useState({
@@ -47,34 +51,40 @@ export default function SlaCalendarDetailPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const load = async () => {
-    if (isNew) return;
-    setError("");
-    try {
-      const [item, list] = await Promise.all([
-        slaApi.getCalendar(calendarId),
-        slaApi.listHolidays(calendarId, year),
-      ]);
-      setCalendar({
-        code: item.code,
-        name: item.name,
-        timezone: item.timezone,
-        businessHoursPerDay: Number(item.business_hours_per_day),
-        workdayStartTime: item.workday_start_time?.slice(0, 5) ?? "09:00",
-        workdayEndTime: item.workday_end_time?.slice(0, 5) ?? "17:00",
-        includeSaturday: item.include_saturday,
-        includeSunday: item.include_sunday,
-        isActive: item.is_active,
-      });
-      setHolidays(list ?? []);
-    } catch (requestError) {
-      setError(
-        requestError.response?.data?.message ??
-          requestError.message ??
-          "Unable to load calendar.",
-      );
-    }
-  };
+const load = async () => {
+  if (isNew || !hasCalendarId) {
+    return;
+  }
+
+  setError("");
+
+  try {
+    const [item, list] = await Promise.all([
+      slaApi.getCalendar(calendarId),
+      slaApi.listHolidays(calendarId, year),
+    ]);
+
+    setCalendar({
+      code: item.code,
+      name: item.name,
+      timezone: item.timezone,
+      businessHoursPerDay: Number(item.business_hours_per_day),
+      workdayStartTime: item.workday_start_time?.slice(0, 5) ?? "09:00",
+      workdayEndTime: item.workday_end_time?.slice(0, 5) ?? "17:00",
+      includeSaturday: item.include_saturday,
+      includeSunday: item.include_sunday,
+      isActive: item.is_active,
+    });
+
+    setHolidays(list ?? []);
+  } catch (requestError) {
+    setError(
+      requestError.response?.data?.message ??
+      requestError.message ??
+      "Unable to load calendar.",
+    );
+  }
+};
 
   useEffect(() => {
     load();
@@ -112,28 +122,42 @@ export default function SlaCalendarDetailPage() {
     }
   };
 
-  const saveHoliday = async (payload) => {
-    setSaving(true);
-    try {
-      if (holidayDialog.holiday)
-        await slaApi.updateHoliday(
-          calendarId,
-          holidayDialog.holiday.id,
-          payload,
-        );
-      else await slaApi.createHoliday(calendarId, payload);
-      setHolidayDialog({ open: false, holiday: null });
-      await load();
-    } catch (requestError) {
-      setError(
-        requestError.response?.data?.message ??
-          requestError.message ??
-          "Unable to save holiday.",
+const saveHoliday = async (payload) => {
+  if (isNew || !hasCalendarId) {
+    setError("Save the calendar before adding holidays.");
+    return;
+  }
+
+  setSaving(true);
+  setError("");
+
+  try {
+    if (holidayDialog.holiday) {
+      await slaApi.updateHoliday(
+        calendarId,
+        holidayDialog.holiday.id,
+        payload,
       );
-    } finally {
-      setSaving(false);
+    } else {
+      await slaApi.createHoliday(calendarId, payload);
     }
-  };
+
+    setHolidayDialog({
+      open: false,
+      holiday: null,
+    });
+
+    await load();
+  } catch (requestError) {
+    setError(
+      requestError.response?.data?.message ??
+      requestError.message ??
+      "Unable to save holiday.",
+    );
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <Stack spacing={2.5}>
