@@ -76,6 +76,14 @@ router.post(
   params(v.uuidParamSchema),
   controller.deactivatePolicy,
 );
+router.get(
+  "/policies/:policyId/rules",
+  authenticate,
+  requirePermission(RBAC_PERMISSIONS.SLA_READ),
+  params(v.policyParamSchema),
+  controller.rules,
+);
+
 router.post(
   "/policies/:policyId/rules",
   authenticate,
@@ -84,14 +92,7 @@ router.post(
   body(v.createRuleSchema),
   controller.createRule,
 );
-router.post(
-  "/policies/:policyId/rules",
-  authenticate,
-  requirePermission(RBAC_PERMISSIONS.SLA_UPDATE),
-  params(v.uuidParamSchema),
-  body(v.createRuleSchema),
-  controller.createRule,
-);
+
 router.patch(
   "/policies/:policyId/rules/:ruleId",
   authenticate,
@@ -100,6 +101,7 @@ router.patch(
   body(v.updateRuleSchema),
   controller.updateRule,
 );
+
 router.delete(
   "/policies/:policyId/rules/:ruleId",
   authenticate,

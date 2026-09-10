@@ -84,10 +84,13 @@ async function deactivatePolicy(req, res, next) {
 }
 async function rules(req, res, next) {
   try {
-    await service.policy.requirePolicy(req.params.id);
+    const { policyId } = req.params;
+
+    await service.policy.requirePolicy(policyId);
+
     return ApiResponse.success(
       res,
-      await repository.listRules(req.params.id),
+      await repository.listRules(policyId),
       "SLA policy rules retrieved successfully.",
     );
   } catch (e) {
