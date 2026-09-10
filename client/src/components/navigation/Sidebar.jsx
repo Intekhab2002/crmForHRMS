@@ -1,5 +1,7 @@
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
+  Collapse,
   IconButton,
   List,
   ListItemButton,
@@ -12,13 +14,15 @@ import {
 
 import ChevronLeftOutlinedIcon from "@mui/icons-material/ChevronLeftOutlined";
 import ChevronRightOutlinedIcon from "@mui/icons-material/ChevronRightOutlined";
+import ExpandLessOutlinedIcon from "@mui/icons-material/ExpandLessOutlined";
+import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
 import DynamicFormOutlinedIcon from "@mui/icons-material/DynamicFormOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
-import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
+import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
 
 import { Link, useLocation } from "react-router";
 
@@ -32,16 +36,190 @@ const ICONS = Object.freeze({
   formConfiguration: DynamicFormOutlinedIcon,
   roles: AdminPanelSettingsOutlinedIcon,
   options: TuneOutlinedIcon,
-  sla:TimerOutlinedIcon
+  sla: TimerOutlinedIcon,
 });
+
+function hasActiveDescendant(item, pathname) {
+  return (item.children ?? []).some(
+    (child) =>
+      pathname === child.path ||
+      pathname.startsWith(`${child.path}/`) ||
+      hasActiveDescendant(child, pathname),
+  );
+}
+
+function filterNavigationItems(items, hasAllPermissions) {
+  return items
+    .filter((item) => hasAllPermissions(item.permissions ?? []))
+    .map((item) => ({
+      ...item,
+      children: filterNavigationItems(item.children ?? [], hasAllPermissions),
+    }));
+}
+
+function NavigationItem({ item, pathname, collapsed, onNavigate, depth = 0 }) {
+  const Icon = ICONS[item.iconKey ?? item.icon];
+  const children = item.children ?? [];
+  const hasChildren = children.length > 0;
+
+  const selected =
+    pathname === item.path || pathname.startsWith(`${item.path}/`);
+
+  const descendantActive = hasActiveDescendant(item, pathname);
+
+  const [open, setOpen] = useState(selected || descendantActive);
+
+  useEffect(() => {
+    if (selected || descendantActive) {
+      setOpen(true);
+    }
+  }, [selected, descendantActive]);
+
+  if (collapsed) {
+    if (hasChildren) {
+      return (
+        <Tooltip title={item.label} placement="right" arrow>
+          <ListItemButton
+            component={Link}
+            to={children[0]?.path ?? item.path}
+            selected={selected || descendantActive}
+            onClick={onNavigate}
+            sx={{
+              mx: 0.5,
+              mb: 0.5,
+              minHeight: 44,
+              borderRadius: 1.5,
+              justifyContent: "center",
+              px: 1,
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                justifyContent: "center",
+              }}
+            >
+              {Icon ? <Icon /> : null}
+            </ListItemIcon>
+          </ListItemButton>
+        </Tooltip>
+      );
+    }
+
+    return (
+      <Tooltip title={item.label} placement="right" arrow>
+        <ListItemButton
+          component={Link}
+          to={item.path}
+          selected={selected}
+          onClick={onNavigate}
+          sx={{
+            mx: 0.5,
+            mb: 0.5,
+            minHeight: 44,
+            borderRadius: 1.5,
+            justifyContent: "center",
+            px: 1,
+          }}
+        >
+          <ListItemIcon
+            sx={{
+              minWidth: 0,
+              justifyContent: "center",
+            }}
+          >
+            {Icon ? <Icon /> : null}
+          </ListItemIcon>
+        </ListItemButton>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <>
+      <ListItemButton
+        component={hasChildren ? "button" : Link}
+        to={hasChildren ? undefined : item.path}
+        selected={selected || descendantActive}
+        onClick={
+          hasChildren ? () => setOpen((current) => !current) : onNavigate
+        }
+        aria-expanded={hasChildren ? open : undefined}
+        aria-haspopup={hasChildren ? "true" : undefined}
+        sx={{
+          mx: depth === 0 ? 1 : 0,
+          mb: 0.5,
+          minHeight: 44,
+          borderRadius: 1.5,
+          px: 1.5,
+          justifyContent: "flex-start",
+          width: depth === 0 ? "auto" : "100%",
+        }}
+      >
+        {depth === 0 ? (
+          <ListItemIcon
+            sx={{
+              minWidth: 36,
+              mr: 0.5,
+              justifyContent: "center",
+            }}
+          >
+            {Icon ? <Icon /> : null}
+          </ListItemIcon>
+        ) : null}
+
+        <ListItemText
+          primary={item.label}
+          primaryTypographyProps={{ noWrap: true }}
+          sx={{
+            pl: depth > 0 ? 2.5 : 0,
+          }}
+        />
+
+        {hasChildren ? (
+          open ? (
+            <ExpandLessOutlinedIcon fontSize="small" />
+          ) : (
+            <ExpandMoreOutlinedIcon fontSize="small" />
+          )
+        ) : null}
+      </ListItemButton>
+
+      {hasChildren ? (
+        <Collapse in={open} timeout="auto" unmountOnExit>
+          <List
+            disablePadding
+            component="div"
+            sx={{
+              pl: 2.5,
+              pr: 1,
+            }}
+          >
+            {children.map((child) => (
+              <NavigationItem
+                key={child.id}
+                item={child}
+                pathname={pathname}
+                collapsed={false}
+                onNavigate={onNavigate}
+                depth={depth + 1}
+              />
+            ))}
+          </List>
+        </Collapse>
+      ) : null}
+    </>
+  );
+}
 
 export default function Sidebar({ onNavigate, collapsed = false, onToggle }) {
   const location = useLocation();
   const { hasAllPermissions } = useAuth();
   const { navigation } = useAppConfig();
 
-  const visibleItems = navigation.app.filter((item) =>
-    hasAllPermissions(item.permissions ?? []),
+  const visibleItems = useMemo(
+    () => filterNavigationItems(navigation.app, hasAllPermissions),
+    [navigation.app, hasAllPermissions],
   );
 
   return (
@@ -111,51 +289,15 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggle }) {
           minHeight: 0,
         }}
       >
-        {visibleItems.map((item) => {
-          const Icon = ICONS[item.iconKey ?? item.icon];
-
-          const selected =
-            location.pathname === item.path ||
-            location.pathname.startsWith(`${item.path}/`);
-
-          const button = (
-            <ListItemButton
-              key={item.id}
-              component={Link}
-              to={item.path}
-              selected={selected}
-              onClick={onNavigate}
-              sx={{
-                mx: collapsed ? 0.5 : 1,
-                mb: 0.5,
-                minHeight: 44,
-                borderRadius: 1.5,
-                justifyContent: collapsed ? "center" : "flex-start",
-                px: collapsed ? 1 : 1.5,
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: collapsed ? 0 : 36,
-                  mr: collapsed ? 0 : 0.5,
-                  justifyContent: "center",
-                }}
-              >
-                {Icon ? <Icon /> : null}
-              </ListItemIcon>
-
-              {!collapsed ? <ListItemText primary={item.label} /> : null}
-            </ListItemButton>
-          );
-
-          return collapsed ? (
-            <Tooltip key={item.id} title={item.label} placement="right" arrow>
-              {button}
-            </Tooltip>
-          ) : (
-            button
-          );
-        })}
+        {visibleItems.map((item) => (
+          <NavigationItem
+            key={item.id}
+            item={item}
+            pathname={location.pathname}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
+        ))}
       </List>
     </Box>
   );

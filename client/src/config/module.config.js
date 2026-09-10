@@ -191,7 +191,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
         id: "sla",
         path: "/sla",
         label: "SLA",
-        component: "slaPolicies",
+        component: null,
 
         access: {
           permissions: [PERMISSIONS.SLA_READ],
@@ -202,72 +202,84 @@ export const APP_MODULE_CONFIG = Object.freeze({
           iconKey: "sla",
           order: 35,
         },
-      }),
 
-      createRoute({
-        id: "sla.policies",
-        path: "/sla/policies",
-        label: "SLA Policies",
-        component: "slaPolicies",
+        children: Object.freeze([
+          createRoute({
+            id: "sla.policies",
+            path: "policies",
+            label: "Policies",
+            component: "slaPolicies",
 
-        access: {
-          permissions: [PERMISSIONS.SLA_READ],
-        },
-      }),
+            access: {
+              permissions: [PERMISSIONS.SLA_READ],
+            },
 
-      createRoute({
-        id: "sla.policies.create",
-        path: "/sla/policies/new",
-        label: "Create SLA Policy",
-        component: "slaPolicyCreate",
+            navigation: {
+              section: "app",
+              order: 10,
+            },
+          }),
 
-        access: {
-          permissions: [PERMISSIONS.SLA_CREATE],
-        },
-      }),
+          createRoute({
+            id: "sla.policies.create",
+            path: "policies/new",
+            label: "Create SLA Policy",
+            component: "slaPolicyCreate",
 
-      createRoute({
-        id: "sla.policies.detail",
-        path: "/sla/policies/:policyId",
-        label: "SLA Policy",
-        component: "slaPolicyDetail",
+            access: {
+              permissions: [PERMISSIONS.SLA_CREATE],
+            },
+          }),
 
-        access: {
-          permissions: [PERMISSIONS.SLA_READ],
-        },
-      }),
+          createRoute({
+            id: "sla.policies.detail",
+            path: "policies/:policyId",
+            label: "SLA Policy",
+            component: "slaPolicyDetail",
 
-      createRoute({
-        id: "sla.calendars",
-        path: "/sla/calendars",
-        label: "SLA Calendars",
-        component: "slaCalendars",
+            access: {
+              permissions: [PERMISSIONS.SLA_READ],
+            },
+          }),
 
-        access: {
-          permissions: [PERMISSIONS.SLA_CALENDAR_READ],
-        },
-      }),
+          createRoute({
+            id: "sla.calendars",
+            path: "calendars",
+            label: "Calendars",
+            component: "slaCalendars",
 
-      createRoute({
-        id: "sla.calendars.detail",
-        path: "/sla/calendars/:calendarId",
-        label: "SLA Calendar",
-        component: "slaCalendarDetail",
+            access: {
+              permissions: [PERMISSIONS.SLA_CALENDAR_READ],
+            },
 
-        access: {
-          permissions: [PERMISSIONS.SLA_CALENDAR_READ],
-        },
-      }),
+            navigation: {
+              section: "app",
+              order: 20,
+            },
+          }),
 
-      createRoute({
-        id: "sla.calendars.new",
-        path: "/sla/calendars/new",
-        label: "Create SLA Calendar",
-        component: "slaCalendarDetail",
+          createRoute({
+            id: "sla.calendars.detail",
+            path: "calendars/:calendarId",
+            label: "SLA Calendar",
+            component: "slaCalendarDetail",
 
-        access: {
-          permissions: [PERMISSIONS.SLA_CALENDAR_CREATE],
-        },
+            access: {
+              permissions: [PERMISSIONS.SLA_CALENDAR_READ],
+            },
+          }),
+
+          createRoute({
+            id: "sla.calendars.new",
+            path: "calendars/new",
+            label: "Create SLA Calendar",
+            component: "slaCalendarDetail",
+
+            access: {
+              permissions: [PERMISSIONS.SLA_CALENDAR_CREATE],
+            },
+          }),
+        ]),
       }),
     ]),
   }),

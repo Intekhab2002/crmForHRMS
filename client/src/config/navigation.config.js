@@ -14,13 +14,14 @@ function resolvePath(parentPath, route) {
 function collectNavigation(routes, section, parentPath = "") {
   return routes.flatMap((route) => {
     const path = resolvePath(parentPath, route);
+
+    if (route.navigation?.section !== section) {
+      return [];
+    }
+
     const children = route.children
       ? collectNavigation(route.children, section, path)
       : [];
-
-    if (route.navigation?.section !== section) {
-      return children;
-    }
 
     return [
       {
@@ -30,19 +31,27 @@ function collectNavigation(routes, section, parentPath = "") {
         permissions: route.access?.permissions ?? [],
         iconKey: route.navigation.iconKey,
         order: route.navigation.order ?? 0,
+        children,
       },
-      ...children,
     ];
   });
 }
 
+
 function sortNavigation(items) {
-  return [...items].sort((first, second) => first.order - second.order);
+  return [...items]
+    .sort((first, second) => first.order - second.order)
+    .map((item) => ({
+      ...item,
+      children: sortNavigation(item.children ?? []),
+    }));
 }
 
 export const NAVIGATION_CONFIG = Object.freeze({
   public: Object.freeze(
     sortNavigation(collectNavigation(ROUTES_CONFIG, "public")),
   ),
-  app: Object.freeze(sortNavigation(collectNavigation(ROUTES_CONFIG, "app"))),
+  app: Object.freeze(
+    sortNavigation(collectNavigation(ROUTES_CONFIG, "app")),
+  ),
 });
