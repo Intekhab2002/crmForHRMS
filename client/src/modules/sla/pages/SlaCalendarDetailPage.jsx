@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import {
-  Alert, Button, Divider, FormControlLabel, Paper, Stack, Switch, TextField, Typography,
+  Alert,
+  Button,
+  Divider,
+  FormControlLabel,
+  Paper,
+  Stack,
+  Switch,
+  TextField,
+  Typography,
 } from "@mui/material";
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
@@ -15,15 +23,27 @@ import { SLA_PERMISSIONS, SLA_ROUTES } from "../config/sla.config";
 export default function SlaCalendarDetailPage() {
   const { calendarId } = useParams();
   const navigate = useNavigate();
+
   const isNew = calendarId === "new";
+  const hasCalendarId =
+    typeof calendarId === "string" && calendarId.trim().length > 0;
   const [calendar, setCalendar] = useState({
-    code: "", name: "", timezone: "Asia/Kolkata", businessHoursPerDay: 8,
-    workdayStartTime: "09:00", workdayEndTime: "17:00", includeSaturday: false,
-    includeSunday: false, isActive: true,
+    code: "",
+    name: "",
+    timezone: "Asia/Kolkata",
+    businessHoursPerDay: 8,
+    workdayStartTime: "09:00",
+    workdayEndTime: "17:00",
+    includeSaturday: false,
+    includeSunday: false,
+    isActive: true,
   });
   const [year, setYear] = useState(new Date().getFullYear());
   const [holidays, setHolidays] = useState([]);
-  const [holidayDialog, setHolidayDialog] = useState({ open: false, holiday: null });
+  const [holidayDialog, setHolidayDialog] = useState({
+    open: false,
+    holiday: null,
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -31,9 +51,14 @@ export default function SlaCalendarDetailPage() {
     if (isNew) return;
     setError("");
     try {
-      const [item, list] = await Promise.all([slaApi.getCalendar(calendarId), slaApi.listHolidays(calendarId, year)]);
+      const [item, list] = await Promise.all([
+        slaApi.getCalendar(calendarId),
+        slaApi.listHolidays(calendarId, year),
+      ]);
       setCalendar({
-        code: item.code, name: item.name, timezone: item.timezone,
+        code: item.code,
+        name: item.name,
+        timezone: item.timezone,
         businessHoursPerDay: Number(item.business_hours_per_day),
         workdayStartTime: item.workday_start_time?.slice(0, 5) ?? "09:00",
         workdayEndTime: item.workday_end_time?.slice(0, 5) ?? "17:00",
@@ -43,11 +68,17 @@ export default function SlaCalendarDetailPage() {
       });
       setHolidays(list ?? []);
     } catch (requestError) {
-      setError(requestError.response?.data?.message ?? requestError.message ?? "Unable to load calendar.");
+      setError(
+        requestError.response?.data?.message ??
+          requestError.message ??
+          "Unable to load calendar.",
+      );
     }
   };
 
-  useEffect(() => { load(); }, [calendarId, year]);
+  useEffect(() => {
+    load();
+  }, [calendarId, year]);
 
   const saveCalendar = async () => {
     setSaving(true);
@@ -64,11 +95,18 @@ export default function SlaCalendarDetailPage() {
         includeSunday: calendar.includeSunday,
         isActive: calendar.isActive,
       };
-      const item = isNew ? await slaApi.createCalendar(payload) : await slaApi.updateCalendar(calendarId, payload);
-      if (isNew) navigate(SLA_ROUTES.calendarDetail(item.id), { replace: true });
+      const item = isNew
+        ? await slaApi.createCalendar(payload)
+        : await slaApi.updateCalendar(calendarId, payload);
+      if (isNew)
+        navigate(SLA_ROUTES.calendarDetail(item.id), { replace: true });
       else await load();
     } catch (requestError) {
-      setError(requestError.response?.data?.message ?? requestError.message ?? "Unable to save calendar.");
+      setError(
+        requestError.response?.data?.message ??
+          requestError.message ??
+          "Unable to save calendar.",
+      );
     } finally {
       setSaving(false);
     }
@@ -77,12 +115,21 @@ export default function SlaCalendarDetailPage() {
   const saveHoliday = async (payload) => {
     setSaving(true);
     try {
-      if (holidayDialog.holiday) await slaApi.updateHoliday(calendarId, holidayDialog.holiday.id, payload);
+      if (holidayDialog.holiday)
+        await slaApi.updateHoliday(
+          calendarId,
+          holidayDialog.holiday.id,
+          payload,
+        );
       else await slaApi.createHoliday(calendarId, payload);
       setHolidayDialog({ open: false, holiday: null });
       await load();
     } catch (requestError) {
-      setError(requestError.response?.data?.message ?? requestError.message ?? "Unable to save holiday.");
+      setError(
+        requestError.response?.data?.message ??
+          requestError.message ??
+          "Unable to save holiday.",
+      );
     } finally {
       setSaving(false);
     }
@@ -93,30 +140,132 @@ export default function SlaCalendarDetailPage() {
       <PageHeader
         title={isNew ? "Create SLA calendar" : calendar.name}
         description="Business time is authoritative on the server; this screen manages its configuration."
-        actions={<Button variant="outlined" startIcon={<ArrowBackOutlinedIcon />} onClick={() => navigate(SLA_ROUTES.calendars)}>Back</Button>}
+        actions={
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackOutlinedIcon />}
+            onClick={() => navigate(SLA_ROUTES.calendars)}
+          >
+            Back
+          </Button>
+        }
       />
       {error ? <Alert severity="error">{error}</Alert> : null}
       <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
         <Stack spacing={2.5}>
           <Typography variant="h6">Working calendar</Typography>
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-            <TextField fullWidth label="Code" value={calendar.code} onChange={(e) => setCalendar({ ...calendar, code: e.target.value })} />
-            <TextField fullWidth label="Name" value={calendar.name} onChange={(e) => setCalendar({ ...calendar, name: e.target.value })} />
-            <TextField fullWidth label="Timezone" value={calendar.timezone} onChange={(e) => setCalendar({ ...calendar, timezone: e.target.value })} />
+            <TextField
+              fullWidth
+              label="Code"
+              value={calendar.code}
+              onChange={(e) =>
+                setCalendar({ ...calendar, code: e.target.value })
+              }
+            />
+            <TextField
+              fullWidth
+              label="Name"
+              value={calendar.name}
+              onChange={(e) =>
+                setCalendar({ ...calendar, name: e.target.value })
+              }
+            />
+            <TextField
+              fullWidth
+              label="Timezone"
+              value={calendar.timezone}
+              onChange={(e) =>
+                setCalendar({ ...calendar, timezone: e.target.value })
+              }
+            />
           </Stack>
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-            <TextField fullWidth type="number" label="Business hours/day" value={calendar.businessHoursPerDay} onChange={(e) => setCalendar({ ...calendar, businessHoursPerDay: e.target.value })} inputProps={{ min: 0.01, max: 24, step: 0.5 }} />
-            <TextField fullWidth type="time" label="Workday start" value={calendar.workdayStartTime} onChange={(e) => setCalendar({ ...calendar, workdayStartTime: e.target.value })} InputLabelProps={{ shrink: true }} />
-            <TextField fullWidth type="time" label="Workday end" value={calendar.workdayEndTime} onChange={(e) => setCalendar({ ...calendar, workdayEndTime: e.target.value })} InputLabelProps={{ shrink: true }} />
+            <TextField
+              fullWidth
+              type="number"
+              label="Business hours/day"
+              value={calendar.businessHoursPerDay}
+              onChange={(e) =>
+                setCalendar({
+                  ...calendar,
+                  businessHoursPerDay: e.target.value,
+                })
+              }
+              inputProps={{ min: 0.01, max: 24, step: 0.5 }}
+            />
+            <TextField
+              fullWidth
+              type="time"
+              label="Workday start"
+              value={calendar.workdayStartTime}
+              onChange={(e) =>
+                setCalendar({ ...calendar, workdayStartTime: e.target.value })
+              }
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              fullWidth
+              type="time"
+              label="Workday end"
+              value={calendar.workdayEndTime}
+              onChange={(e) =>
+                setCalendar({ ...calendar, workdayEndTime: e.target.value })
+              }
+              InputLabelProps={{ shrink: true }}
+            />
           </Stack>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <FormControlLabel control={<Switch checked={calendar.includeSaturday} onChange={(e) => setCalendar({ ...calendar, includeSaturday: e.target.checked })} />} label="Include Saturday" />
-            <FormControlLabel control={<Switch checked={calendar.includeSunday} onChange={(e) => setCalendar({ ...calendar, includeSunday: e.target.checked })} />} label="Include Sunday" />
-            <FormControlLabel control={<Switch checked={calendar.isActive} onChange={(e) => setCalendar({ ...calendar, isActive: e.target.checked })} />} label={calendar.isActive ? "Active" : "Inactive"} />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={calendar.includeSaturday}
+                  onChange={(e) =>
+                    setCalendar({
+                      ...calendar,
+                      includeSaturday: e.target.checked,
+                    })
+                  }
+                />
+              }
+              label="Include Saturday"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={calendar.includeSunday}
+                  onChange={(e) =>
+                    setCalendar({
+                      ...calendar,
+                      includeSunday: e.target.checked,
+                    })
+                  }
+                />
+              }
+              label="Include Sunday"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={calendar.isActive}
+                  onChange={(e) =>
+                    setCalendar({ ...calendar, isActive: e.target.checked })
+                  }
+                />
+              }
+              label={calendar.isActive ? "Active" : "Inactive"}
+            />
           </Stack>
           <Divider />
           <CanAccess permission={SLA_PERMISSIONS.calendarUpdate}>
-            <Button variant="contained" startIcon={<SaveOutlinedIcon />} onClick={saveCalendar} disabled={saving || !calendar.code.trim() || !calendar.name.trim()}>
+            <Button
+              variant="contained"
+              startIcon={<SaveOutlinedIcon />}
+              onClick={saveCalendar}
+              disabled={
+                saving || !calendar.code.trim() || !calendar.name.trim()
+              }
+            >
               {saving ? "Saving…" : "Save calendar"}
             </Button>
           </CanAccess>

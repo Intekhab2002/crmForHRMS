@@ -160,7 +160,7 @@ function NavigationItem({ item, pathname, collapsed, onNavigate, depth = 0 }) {
           width: depth === 0 ? "auto" : "100%",
         }}
       >
-        {depth === 0 ? (
+        
           <ListItemIcon
             sx={{
               minWidth: depth === 0 ? 36 : 32,
@@ -171,13 +171,13 @@ function NavigationItem({ item, pathname, collapsed, onNavigate, depth = 0 }) {
           >
             {Icon ? <Icon fontSize={depth === 0 ? "medium" : "small"} /> : null}
           </ListItemIcon>
-        ) : null}
+       
 
         <ListItemText
           primary={item.label}
           primaryTypographyProps={{ noWrap: true }}
           sx={{
-            pl: depth > 0 ? 2.5 : 0,
+            pl: 0,
           }}
         />
 
