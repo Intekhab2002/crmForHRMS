@@ -151,7 +151,7 @@ export async function syncTicket(ticketId, { now = new Date(), tx = null } = {})
      */
     const resolvedPolicy = await resolver.resolve(ticket, now, tx);
     if (!resolvedPolicy) {
-        return ticketSla.setNotTracked(ticket, null, tx);
+        return null;
     }
 
     const { valueKey, rule } = await resolver.resolveRule(
