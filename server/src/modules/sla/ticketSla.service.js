@@ -51,7 +51,7 @@ async function history(id) {
     segments: sla ? await repository.listSegments(sla.id) : [],
   };
 }
-async function setNotTracked(ticket, policy = null, tx = null) {
+async function setNotTracked(ticket, policy = null, durationValueKey = null,tx = null) {
   if (!policy?.id) {
     return null;
   }
@@ -66,7 +66,7 @@ async function setNotTracked(ticket, policy = null, tx = null) {
       activationFieldKey: policy?.trigger_field_key ?? null,
       activationFieldValueKey: policy?.trigger_value_key ?? null,
       durationFieldKey: policy?.duration_field_key ?? null,
-      durationFieldValueKey: null,
+      durationFieldValueKey: durationValueKey ?? null,
       policySnapshot: policy ? snapshot(policy, null) : {},
     },
     tx,
