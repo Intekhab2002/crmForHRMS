@@ -2,6 +2,7 @@ import AppError from "../../helpers/AppError.js";
 import repository from "./sla.repository.js";
 import config from "./sla.config.js";
 import { SLA_ERROR_CODES } from "./sla.constants.js";
+import resolver from "./slaPolicyResolver.service.js";
 
 function assertField(key) {
   if (!config.supportedFields.includes(key)) {
@@ -33,8 +34,8 @@ async function create(data, actorUserId, tx = null) {
     {
       ...data,
       actorUserId,
-      code: data.code.toLowerCase(),
-      triggerValueKey: data.triggerValueKey.toLowerCase(),
+      code: resolver.normalizeValueKey(data.code),
+      triggerValueKey: resolver.normalizeValueKey(data.triggerValueKey),
     },
     tx,
   );
@@ -44,9 +45,9 @@ async function update(id, data, actorUserId, tx = null) {
   if (data.triggerFieldKey) assertField(data.triggerFieldKey);
   if (data.durationFieldKey) assertField(data.durationFieldKey);
   const normalized = { ...data, actorUserId };
-  if (normalized.code) normalized.code = normalized.code.toLowerCase();
+  if (normalized.code) normalized.code = resolver.normalizeValueKey(normalized.code);
   if (normalized.triggerValueKey)
-    normalized.triggerValueKey = normalized.triggerValueKey.toLowerCase();
+    normalized.triggerValueKey =  resolver.normalizeValueKey(normalized.triggerValueKey);
   return repository.updatePolicy(id, normalized, tx);
 }
 async function setActive(id, active, actorUserId, tx = null) {
@@ -54,20 +55,17 @@ async function setActive(id, active, actorUserId, tx = null) {
   return repository.setPolicyActive(id, active, actorUserId, tx);
 }
 async function resolve(field, value, at, tx = null) {
-    assertField(field);
+  assertField(field);
 
-    const normalizedValue = String(value ?? "").trim().toLowerCase();
+  const normalizedValue = String(value ?? "")
+    .trim()
+    .toLowerCase();
 
-    if (!normalizedValue) {
-        return null;
-    }
+  if (!normalizedValue) {
+    return null;
+  }
 
-    return repository.applicablePolicy(
-        field,
-        normalizedValue,
-        at,
-        tx,
-    );
+  return repository.applicablePolicy(field, normalizedValue, at, tx);
 }
 export default Object.freeze({
   list,

@@ -42,6 +42,10 @@ async function get(id) {
     return { ticketId: id, status: SLA_STATUS.NOT_TRACKED, segments: [] };
   return { ...sla, segments: await repository.listSegments(sla.id) };
 }
+function remaining(target, consumed) {
+  return Math.max(Number(target ?? 0) - Number(consumed ?? 0), 0);
+}
+
 async function history(id) {
   await requireTicket(id);
   const sla = await repository.oneTicketSla(id);
@@ -51,7 +55,12 @@ async function history(id) {
     segments: sla ? await repository.listSegments(sla.id) : [],
   };
 }
-async function setNotTracked(ticket, policy = null, durationValueKey = null,tx = null) {
+async function setNotTracked(
+  ticket,
+  policy = null,
+  durationValueKey = null,
+  tx = null,
+) {
   if (!policy?.id) {
     return null;
   }
@@ -110,24 +119,15 @@ async function activate(ticket, policy, rule, now, tx = null) {
     );
   return runtime;
 }
-async function pause(runtime, now, consumed, tx = null) {
-
-
-    /**
-   * Idempotency guard.
-   *
-   * A PAUSED SLA must not repeatedly close its segment or
-   * rewrite paused_at when maintenance/recalculation runs.
-   */
+async function pause(runtime, now, consumedResult, tx = null) {
   if (runtime.status === SLA_STATUS.PAUSED) {
     return repository.updateTicketSla(
       runtime.id,
       {
-        elapsedBusinessMinutes: consumed,
-        remainingBusinessMinutes: Math.max(
-          Number(runtime.target_resolution_minutes ?? 0) -
-            consumed,
-          0,
+        elapsedBusinessMinutes: consumedResult.totalConsumed,
+        remainingBusinessMinutes: remaining(
+          runtime.target_resolution_minutes,
+          consumedResult.totalConsumed,
         ),
         lastCalculatedAt: now,
       },
@@ -135,28 +135,79 @@ async function pause(runtime, now, consumed, tx = null) {
     );
   }
 
+  const segmentConsumed = Number(consumedResult.activeSegmentConsumed ?? 0);
+
   await repository.closeSegment(
     runtime.id,
     now,
-    consumed,
+    segmentConsumed,
     SLA_STATUS.PAUSED,
     tx,
   );
+
   return repository.updateTicketSla(
     runtime.id,
     {
       status: SLA_STATUS.PAUSED,
       pausedAt: now,
-      elapsedBusinessMinutes: consumed,
-      remainingBusinessMinutes: Math.max(
-        Number(runtime.target_resolution_minutes ?? 0) - consumed,
-        0,
+      elapsedBusinessMinutes: consumedResult.totalConsumed,
+      remainingBusinessMinutes: remaining(
+        runtime.target_resolution_minutes,
+        consumedResult.totalConsumed,
       ),
       lastCalculatedAt: now,
     },
     tx,
   );
 }
+async function changeDuration(
+  runtime,
+  { ticket, policy, rule, durationValueKey },
+  now,
+  currentSegmentConsumed,
+  totalConsumed,
+  tx = null,
+) {
+  await repository.closeSegment(
+    runtime.id,
+    now,
+    currentSegmentConsumed,
+    SLA_STATUS.PAUSED,
+    tx,
+  );
+
+  await repository.createSegment(
+    {
+      ticketSlaId: runtime.id,
+      startedAt: now,
+      triggerValueKey: policy.trigger_value_key,
+      durationValueKey,
+      targetMinutes: rule.resolution_minutes,
+      consumedMinutes: 0,
+      status: SLA_STATUS.RUNNING,
+    },
+    tx,
+  );
+
+  return repository.updateTicketSla(
+    runtime.id,
+    {
+      status: SLA_STATUS.RUNNING,
+      pausedAt: null,
+      targetResolutionMinutes: rule.resolution_minutes,
+      elapsedBusinessMinutes: totalConsumed,
+      remainingBusinessMinutes: Math.max(
+        rule.resolution_minutes - totalConsumed,
+        0,
+      ),
+      durationFieldValueKey: durationValueKey,
+      lastCalculatedAt: now,
+      policySnapshot: snapshot(policy, rule),
+    },
+    tx,
+  );
+}
+
 async function resume(ticket, policy, rule, now, consumed, tx = null) {
   const runtime = await repository.oneTicketSla(ticket.id, tx);
   await repository.createSegment(
@@ -185,8 +236,16 @@ async function resume(ticket, policy, rule, now, consumed, tx = null) {
     tx,
   );
 }
-async function terminal(runtime, now, consumed, status, tx = null) {
-  await repository.closeSegment(runtime.id, now, consumed, status, tx);
+async function terminal(
+  runtime,
+  now,
+  totalConsumed,
+  segmentConsumed,
+  status,
+  tx = null,
+) {
+  await repository.closeSegment(runtime.id, now, segmentConsumed, status, tx);
+
   return repository.updateTicketSla(
     runtime.id,
     {
@@ -194,10 +253,10 @@ async function terminal(runtime, now, consumed, status, tx = null) {
       completedAt: status === SLA_STATUS.COMPLETED ? now : undefined,
       stoppedAt: status === SLA_STATUS.STOPPED ? now : undefined,
       breachedAt: status === SLA_STATUS.BREACHED ? now : undefined,
-      elapsedBusinessMinutes: consumed,
-      remainingBusinessMinutes: Math.max(
-        Number(runtime.target_resolution_minutes ?? 0) - consumed,
-        0,
+      elapsedBusinessMinutes: totalConsumed,
+      remainingBusinessMinutes: remaining(
+        runtime.target_resolution_minutes,
+        totalConsumed,
       ),
       lastCalculatedAt: now,
     },
@@ -211,6 +270,7 @@ export default Object.freeze({
   activate,
   pause,
   resume,
+  changeDuration,
   complete: (r, n, c, t) => terminal(r, n, c, SLA_STATUS.COMPLETED, t),
   stop: (r, n, c, t) => terminal(r, n, c, SLA_STATUS.STOPPED, t),
   breach: (r, n, t) =>

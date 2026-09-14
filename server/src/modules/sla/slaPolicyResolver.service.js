@@ -26,13 +26,16 @@ export function getTicketFieldValue(ticket, key) {
     return null;
   }
 
-  const normalizedValue = normalizeValueKey(ticket?.[`${key}_code`]);
+  return normalizeValueKey(ticket?.[`${key}_code`]);
+}
 
-  if (normalizedValue === null || normalizedValue === undefined) {
-    return null;
-  }
+async function resolveRule(policy, ticket, tx = null) {
+  const valueKey = getTicketFieldValue(ticket, policy.duration_field_key);
 
-  return normalizedValue;
+  return {
+    valueKey,
+    rule: valueKey ? await repository.findRule(policy.id, valueKey, tx) : null,
+  };
 }
 
 export async function resolve(ticket, at = new Date(), tx = null) {
@@ -60,4 +63,9 @@ async function resolveRule(policy, ticket, tx = null) {
     rule: valueKey ? await repository.findRule(policy.id, valueKey, tx) : null,
   };
 }
-export default Object.freeze({ resolve, resolveRule, getTicketFieldValue,normalizeValueKey });
+export default Object.freeze({
+  resolve,
+  resolveRule,
+  getTicketFieldValue,
+  normalizeValueKey,
+});

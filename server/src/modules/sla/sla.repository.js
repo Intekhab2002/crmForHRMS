@@ -408,6 +408,20 @@ async function updateRule(id, d, tx = null) {
   return r.rows[0] ?? null;
 }
 
+async function oneOpenSegment(ticketSlaId, tx = null) {
+  const r = await ex(tx).query(
+    `SELECT *
+       FROM ticket_sla_segments
+      WHERE ticket_sla_id=$1
+        AND ended_at IS NULL
+      ORDER BY started_at DESC
+      LIMIT 1`,
+    [ticketSlaId],
+  );
+
+  return r.rows[0] ?? null;
+}
+
 export default Object.freeze({
   onePolicy,
   listPolicies,
@@ -436,4 +450,5 @@ export default Object.freeze({
   listRules,
   createRule,
   updateRule,
+  oneOpenSegment,
 });

@@ -47,10 +47,13 @@ async function createRule(policyId, data) {
 
 async function updateRule(ruleId, data) {
   const existing = await repository.findRule(ruleId);
-  if (!existing)
+
+  if (!existing) {
     throw AppError.notFound("SLA rule not found.", {
       code: SLA_ERROR_CODES.RULE_NOT_FOUND,
     });
+  }
+
   const normalized = {
     ...data,
   };
@@ -58,7 +61,8 @@ async function updateRule(ruleId, data) {
   if (Object.hasOwn(data, "fieldValueKey")) {
     normalized.fieldValueKey = String(data.fieldValueKey).trim().toLowerCase();
   }
-  return repository.updateRule(ruleId, data);
+
+  return repository.updateRule(ruleId, normalized);
 }
 async function deleteRule(ruleId) {
   return updateRule(ruleId, { isEnabled: false });
