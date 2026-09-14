@@ -30,7 +30,9 @@ export function getTicketFieldValue(ticket, key) {
 }
 
 async function resolveRule(policy, ticket, tx = null) {
-  const valueKey = getTicketFieldValue(ticket, policy.duration_field_key);
+  const rawValue = getTicketFieldValue(ticket, policy.duration_field_key);
+
+  const valueKey = rawValue ? String(rawValue).trim().toLowerCase() : null;
 
   return {
     valueKey,
@@ -53,16 +55,7 @@ export async function resolve(ticket, at = new Date(), tx = null) {
   );
   return matches[0] ?? null;
 }
-async function resolveRule(policy, ticket, tx = null) {
-  const rawValue = getTicketFieldValue(ticket, policy.duration_field_key);
 
-  const valueKey = rawValue ? String(rawValue).trim().toLowerCase() : null;
-
-  return {
-    valueKey,
-    rule: valueKey ? await repository.findRule(policy.id, valueKey, tx) : null,
-  };
-}
 export default Object.freeze({
   resolve,
   resolveRule,
