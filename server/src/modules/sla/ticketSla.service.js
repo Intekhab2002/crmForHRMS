@@ -111,6 +111,30 @@ async function activate(ticket, policy, rule, now, tx = null) {
   return runtime;
 }
 async function pause(runtime, now, consumed, tx = null) {
+
+
+    /**
+   * Idempotency guard.
+   *
+   * A PAUSED SLA must not repeatedly close its segment or
+   * rewrite paused_at when maintenance/recalculation runs.
+   */
+  if (runtime.status === SLA_STATUS.PAUSED) {
+    return repository.updateTicketSla(
+      runtime.id,
+      {
+        elapsedBusinessMinutes: consumed,
+        remainingBusinessMinutes: Math.max(
+          Number(runtime.target_resolution_minutes ?? 0) -
+            consumed,
+          0,
+        ),
+        lastCalculatedAt: now,
+      },
+      tx,
+    );
+  }
+
   await repository.closeSegment(
     runtime.id,
     now,

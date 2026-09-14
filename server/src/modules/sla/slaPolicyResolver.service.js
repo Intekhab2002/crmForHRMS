@@ -2,10 +2,39 @@ import repository from "./sla.repository.js";
 import policyService from "./slaPolicy.service.js";
 import { SLA_FIELD_REGISTRY } from "./sla.constants.js";
 
-export function getTicketFieldValue(ticket, key) {
-  if (!SLA_FIELD_REGISTRY[key]) return null;
-  return ticket[`${key}_code`] ?? null;
+/**
+ * Normalize all SLA machine keys to the canonical format used by
+ * SLA policies and runtime records.
+ *
+ * Canonical format:
+ * - string
+ * - trimmed
+ * - lowercase
+ */
+function normalizeValueKey(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+
+  return normalized || null;
 }
+
+export function getTicketFieldValue(ticket, key) {
+  if (!SLA_FIELD_REGISTRY[key]) {
+    return null;
+  }
+
+  const normalizedValue = normalizeValueKey(ticket?.[`${key}_code`]);
+
+  if (normalizedValue === null || normalizedValue === undefined) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
 export async function resolve(ticket, at = new Date(), tx = null) {
   const matches = [];
   for (const key of Object.keys(SLA_FIELD_REGISTRY)) {
@@ -31,4 +60,4 @@ async function resolveRule(policy, ticket, tx = null) {
     rule: valueKey ? await repository.findRule(policy.id, valueKey, tx) : null,
   };
 }
-export default Object.freeze({ resolve, resolveRule, getTicketFieldValue });
+export default Object.freeze({ resolve, resolveRule, getTicketFieldValue,normalizeValueKey });
