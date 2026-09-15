@@ -60,18 +60,43 @@ async function setNotTracked(
   policy = null,
   durationValueKey = null,
   tx = null,
+  options = {},
 ) {
   if (!policy?.id) {
     return null;
+  }
+
+  const existing = await repository.oneTicketSla(ticket.id, tx);
+
+  const elapsed = Number(
+    options.preserveElapsed ?? existing?.elapsed_business_minutes ?? 0,
+  );
+
+  if (existing && existing.status === SLA_STATUS.RUNNING) {
+    const segments = await repository.listSegments(existing.id, tx);
+
+    const activeSegment = segments
+      .filter((segment) => !segment.ended_at)
+      .sort((a, b) => new Date(b.started_at) - new Date(a.started_at))[0];
+
+    if (activeSegment) {
+      await repository.closeSegment(
+        existing.id,
+        options.now ?? new Date(),
+        options.activeSegmentConsumed ?? 0,
+        SLA_STATUS.PAUSED,
+        tx,
+      );
+    }
   }
   return repository.upsertTicketSla(
     {
       ticketId: ticket.id,
       slaPolicyId: policy?.id ?? null,
       status: SLA_STATUS.NOT_TRACKED,
-      elapsedBusinessMinutes: 0,
+      elapsedBusinessMinutes: elapsed,
       remainingBusinessMinutes: null,
-      lastCalculatedAt: new Date(),
+      lastCalculatedAt: options.now ?? new Date(),
       activationFieldKey: policy?.trigger_field_key ?? null,
       activationFieldValueKey: policy?.trigger_value_key ?? null,
       durationFieldKey: policy?.duration_field_key ?? null,
@@ -83,12 +108,15 @@ async function setNotTracked(
 }
 async function activate(ticket, policy, rule, now, tx = null) {
   const existing = await repository.oneTicketSla(ticket.id, tx);
+  const isNewRuntime = !existing || existing.status === SLA_STATUS.NOT_TRACKED;
+
+  const activationAt = isNewRuntime ? now : existing.activated_at;
   const runtime = await repository.upsertTicketSla(
     {
       ticketId: ticket.id,
       slaPolicyId: policy.id,
       status: SLA_STATUS.RUNNING,
-      activatedAt: existing?.activated_at ?? now,
+      activatedAt: activationAt,
       pausedAt: null,
       stoppedAt: null,
       completedAt: null,
@@ -109,7 +137,7 @@ async function activate(ticket, policy, rule, now, tx = null) {
     await repository.createSegment(
       {
         ticketSlaId: runtime.id,
-        startedAt: existing?.activated_at ?? now,
+        startedAt: activationAt,
         triggerValueKey: policy.trigger_value_key,
         durationValueKey: rule.field_value_key,
         targetMinutes: rule.resolution_minutes,
@@ -263,6 +291,34 @@ async function terminal(
     tx,
   );
 }
+
+async function complete(runtime, now, totalConsumed, tx = null) {
+  return terminal(
+    runtime,
+    now,
+    totalConsumed,
+    totalConsumed,
+    SLA_STATUS.COMPLETED,
+    tx,
+  );
+}
+
+async function stop(runtime, now, totalConsumed, tx = null) {
+  return terminal(
+    runtime,
+    now,
+    totalConsumed,
+    totalConsumed,
+    SLA_STATUS.STOPPED,
+    tx,
+  );
+}
+
+async function breach(runtime, now, tx = null) {
+  const target = Number(runtime.target_resolution_minutes ?? 0);
+
+  return terminal(runtime, now, target, target, SLA_STATUS.BREACHED, tx);
+}
 export default Object.freeze({
   get,
   history,
@@ -271,14 +327,7 @@ export default Object.freeze({
   pause,
   resume,
   changeDuration,
-  complete: (r, n, c, t) => terminal(r, n, c, SLA_STATUS.COMPLETED, t),
-  stop: (r, n, c, t) => terminal(r, n, c, SLA_STATUS.STOPPED, t),
-  breach: (r, n, t) =>
-    terminal(
-      r,
-      n,
-      Number(r.target_resolution_minutes ?? 0),
-      SLA_STATUS.BREACHED,
-      t,
-    ),
+  complete,
+  stop,
+  breach,
 });
