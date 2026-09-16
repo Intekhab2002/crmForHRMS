@@ -238,6 +238,9 @@ async function changeDuration(
 
 async function resume(ticket, policy, rule, now, consumed, tx = null) {
   const runtime = await repository.oneTicketSla(ticket.id, tx);
+  if (!runtime) {
+    throw AppError.conflict("Cannot resume SLA because no SLA runtime exists.");
+  }
   await repository.createSegment(
     {
       ticketSlaId: runtime.id,

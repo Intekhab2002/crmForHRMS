@@ -77,7 +77,7 @@ export function addBusinessMinutes({
         .toJSDate();
     }
 
-    remainingMinutes -= Math.floor(availableMinutes);
+   remainingMinutes -= availableMinutes;
 
     const nextDay = current
       .plus({
@@ -93,25 +93,5 @@ export function addBusinessMinutes({
   );
 }
 
-// export function addBusinessMinutes({ startAt, businessMinutes, calendar, holidays = [] }) {
-//     if (!Number.isInteger(businessMinutes) || businessMinutes < 0) {
-//         throw new TypeError("businessMinutes must be a non-negative integer.");
-//     }
-
-//     let current = nextBusinessInstant(startAt, calendar, holidays);
-//     let remaining = businessMinutes;
-
-//     if (remaining === 0) return current.toJSDate();
-
-//     for (let guard = 0; guard < 10000; guard += 1) {
-//         const { end } = getBusinessWindow(current, calendar);
-//         const available = Math.max(0, end.diff(current, "minutes").minutes);
-//         if (remaining <= available) return current.plus({ minutes: remaining }).toJSDate();
-
-//         remaining -= Math.floor(available);
-//         current = nextBusinessInstant(current.plus({ days: 1 }).startOf("day"), calendar, holidays);
-//     }
-//     throw new Error("Unable to calculate business target timestamp.");
-// }
 
 export default Object.freeze({ calculateBusinessMinutes, addBusinessMinutes });

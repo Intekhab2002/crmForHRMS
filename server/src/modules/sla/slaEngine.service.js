@@ -8,12 +8,18 @@ import ticketSla from "./ticketSla.service.js";
 import { SLA_STATUS } from "./sla.constants.js";
 
 function closed(ticket) {
-  const status = String(ticket.status_code ?? "").trim().toUpperCase();
+  const status = String(ticket.status_code ?? "")
+    .trim()
+    .toUpperCase();
   return status === "CLOSED" || status === "CLOSE";
 }
 
 function resolved(ticket) {
-  return String(ticket.status_code ?? "").trim().toUpperCase() === "RESOLVED";
+  return (
+    String(ticket.status_code ?? "")
+      .trim()
+      .toUpperCase() === "RESOLVED"
+  );
 }
 
 function normalize(value) {
@@ -81,8 +87,19 @@ async function calculateRuntimeConsumed(runtime, now, policy, tx) {
   const segments = await getSegments(runtime, tx);
   const holidayRows = await holidays(policy, tx);
 
+
+  const openSegments = segments.filter(
+  (segment) => !segment.ended_at,
+);
+
+if (openSegments.length > 1) {
+  throw new Error(
+    `Invalid SLA runtime ${runtime.id}: multiple open segments exist.`,
+  );
+}
+
   let total = 0;
-  let activeSegment = null;
+  let activeSegment =  openSegments[0] ?? null;
   let activeSegmentConsumed = 0;
 
   for (const segment of segments) {
@@ -173,11 +190,9 @@ export async function syncTicket(
    */
   if (
     runtime &&
-    [
-      SLA_STATUS.STOPPED,
-      SLA_STATUS.COMPLETED,
-      SLA_STATUS.BREACHED,
-    ].includes(runtime.status)
+    [SLA_STATUS.STOPPED, SLA_STATUS.COMPLETED, SLA_STATUS.BREACHED].includes(
+      runtime.status,
+    )
   ) {
     return runtime;
   }
@@ -199,12 +214,7 @@ export async function syncTicket(
           totalConsumed: Number(runtime.elapsed_business_minutes ?? 0),
         };
 
-    return ticketSla.stop(
-      runtime,
-      now,
-      consumedResult.totalConsumed,
-      tx,
-    );
+    return ticketSla.stop(runtime, now, consumedResult.totalConsumed, tx);
   }
 
   /*
@@ -228,70 +238,57 @@ export async function syncTicket(
       return ticketSla.breach(runtime, now, tx);
     }
 
+    /*
+     * RESOLVED is a terminal business outcome.
+     */
+    if (resolved(ticket)) {
+      return ticketSla.complete(runtime, now, consumed, tx);
+    }
+
     const currentTriggerValue = normalize(
-      resolver.getTicketFieldValue(
-        ticket,
-        activePolicy.trigger_field_key,
-      ),
+      resolver.getTicketFieldValue(ticket, activePolicy.trigger_field_key),
     );
 
-    const activatedTriggerValue = normalize(
-      runtime.activation_field_value_key,
-    );
+    const activatedTriggerValue = normalize(runtime.activation_field_value_key);
 
     /*
      * Dependency/trigger no longer qualifies.
      */
     if (!sameKey(currentTriggerValue, activatedTriggerValue)) {
-      return ticketSla.pause(
-        runtime,
-        now,
-        consumedResult,
-        tx,
-      );
+      return ticketSla.pause(runtime, now, consumedResult, tx);
     }
 
-    /*
-     * RESOLVED is a terminal business outcome.
-     */
-    if (resolved(ticket)) {
-      return ticketSla.complete(
-        runtime,
-        now,
-        consumed,
-        tx,
-      );
-    }
-
-    const { valueKey, rule } = await currentRule(
-      activePolicy,
-      ticket,
-      tx,
-    );
+    const { valueKey, rule } = await currentRule(activePolicy, ticket, tx);
 
     /*
      * No valid rule => SLA is not being tracked.
      */
-    if (
-      !rule ||
-      !rule.is_enabled ||
-      rule.resolution_minutes === null
-    ) {
-      return ticketSla.setNotTracked(
-        ticket,
-        activePolicy,
-        valueKey,
+    if (!rule || !rule.is_enabled || rule.resolution_minutes === null) {
+      return ticketSla.setNotTracked(ticket, activePolicy, valueKey, tx, {
+        preserveElapsed: consumed,
+        activeSegmentConsumed: consumedResult.activeSegmentConsumed ?? 0,
+        now,
+      });
+    }
+
+    const wasPaused = runtime.status === SLA_STATUS.PAUSED;
+
+    if (wasPaused) {
+      return ticketSla.resume(ticket, activePolicy, rule, now, consumed, tx);
+    }
+
+    if (sameKey(valueKey, runtime.duration_field_value_key)) {
+      return updateRunning(
+        runtime,
+        consumed,
+        Number(runtime.target_resolution_minutes ?? rule.resolution_minutes),
+        now,
         tx,
-        {
-          preserveElapsed: consumed,
-        },
       );
     }
 
     const currentDurationValue = normalize(valueKey);
-    const runtimeDurationValue = normalize(
-      runtime.duration_field_value_key,
-    );
+    const runtimeDurationValue = normalize(runtime.duration_field_value_key);
 
     /*
      * IMPORTANT:
@@ -315,8 +312,7 @@ export async function syncTicket(
      * The currently open segment receives ONLY its own
      * business-time consumption.
      */
-    const currentSegmentConsumed =
-      consumedResult.activeSegmentConsumed ?? 0;
+    const currentSegmentConsumed = consumedResult.activeSegmentConsumed ?? 0;
 
     await ticketSla.changeDuration(
       runtime,
@@ -350,17 +346,8 @@ export async function syncTicket(
     tx,
   );
 
-  if (
-    !rule ||
-    !rule.is_enabled ||
-    rule.resolution_minutes === null
-  ) {
-    return ticketSla.setNotTracked(
-      ticket,
-      resolvedPolicy,
-      valueKey,
-      tx,
-    );
+  if (!rule || !rule.is_enabled || rule.resolution_minutes === null) {
+    return ticketSla.setNotTracked(ticket, resolvedPolicy, valueKey, tx);
   }
 
   if (resolved(ticket)) {
@@ -372,21 +359,10 @@ export async function syncTicket(
       tx,
     );
 
-    return ticketSla.complete(
-      created,
-      now,
-      0,
-      tx,
-    );
+    return ticketSla.complete(created, now, 0, tx);
   }
 
-  return ticketSla.activate(
-    ticket,
-    resolvedPolicy,
-    rule,
-    now,
-    tx,
-  );
+  return ticketSla.activate(ticket, resolvedPolicy, rule, now, tx);
 }
 
 export async function preview({
