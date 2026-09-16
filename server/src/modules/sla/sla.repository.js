@@ -369,16 +369,16 @@ async function listSegments(id, tx = null) {
   return r.rows;
 }
 async function findRule(policyId, value, tx = null) {
-    const r = await ex(tx).query(
-        `SELECT *
+  const r = await ex(tx).query(
+    `SELECT *
          FROM sla_policy_rules
          WHERE sla_policy_id = $1
            AND LOWER(field_value_key) = LOWER($2)
          LIMIT 1`,
-        [policyId, value],
-    );
+    [policyId, value],
+  );
 
-    return r.rows[0] ?? null;
+  return r.rows[0] ?? null;
 }
 async function listRules(policyId, tx = null) {
   const r = await ex(tx).query(

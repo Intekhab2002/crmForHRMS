@@ -10,7 +10,8 @@ async function requireTicket(id, tx = null) {
     });
   return ticket;
 }
-function snapshot(policy, rule) {
+
+function snapshot(policy, rule, holidays = []) {
   return {
     policy: {
       id: policy.id,
@@ -27,6 +28,11 @@ function snapshot(policy, rule) {
       workdayEndTime: policy.workday_end_time,
       includeSaturday: policy.include_saturday,
       includeSunday: policy.include_sunday,
+      holidays: holidays.map((holiday) =>
+        typeof holiday === "string"
+          ? holiday
+          : (holiday.holiday_date ?? holiday.holidayDate),
+      ),
     },
     rule: {
       id: rule?.id ?? null,
@@ -240,6 +246,17 @@ async function resume(ticket, policy, rule, now, consumed, tx = null) {
   const runtime = await repository.oneTicketSla(ticket.id, tx);
   if (!runtime) {
     throw AppError.conflict("Cannot resume SLA because no SLA runtime exists.");
+  }
+
+  const existingOpenSegment = await repository.oneOpenSegment(runtime.id, tx);
+
+  if (existingOpenSegment) {
+    throw AppError.conflict(
+      "Cannot resume SLA because an active segment already exists.",
+      {
+        code: SLA_ERROR_CODES.MULTIPLE_OPEN_SEGMENTS,
+      },
+    );
   }
   await repository.createSegment(
     {

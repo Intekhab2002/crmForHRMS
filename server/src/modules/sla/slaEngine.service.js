@@ -87,19 +87,16 @@ async function calculateRuntimeConsumed(runtime, now, policy, tx) {
   const segments = await getSegments(runtime, tx);
   const holidayRows = await holidays(policy, tx);
 
+  const openSegments = segments.filter((segment) => !segment.ended_at);
 
-  const openSegments = segments.filter(
-  (segment) => !segment.ended_at,
-);
-
-if (openSegments.length > 1) {
-  throw new Error(
-    `Invalid SLA runtime ${runtime.id}: multiple open segments exist.`,
-  );
-}
+  if (openSegments.length > 1) {
+    throw new Error(
+      `Invalid SLA runtime ${runtime.id}: multiple open segments exist.`,
+    );
+  }
 
   let total = 0;
-  let activeSegment =  openSegments[0] ?? null;
+  let activeSegment = openSegments[0] ?? null;
   let activeSegmentConsumed = 0;
 
   for (const segment of segments) {
@@ -198,6 +195,11 @@ export async function syncTicket(
   }
 
   const activePolicy = runtime ? policyFromSnapshot(runtime) : null;
+  if (runtime && !activePolicy) {
+  throw new Error(
+    `Invalid SLA runtime ${runtime.id}: missing policy snapshot.`,
+  );
+}
 
   /*
    * Ticket closure must stop an existing SLA and must never
@@ -271,10 +273,12 @@ export async function syncTicket(
       });
     }
 
-    const wasPaused = runtime.status === SLA_STATUS.PAUSED;
-
-    if (wasPaused) {
+    if (runtime.status === SLA_STATUS.PAUSED) {
       return ticketSla.resume(ticket, activePolicy, rule, now, consumed, tx);
+    }
+
+    if (runtime.status === SLA_STATUS.NOT_TRACKED) {
+      return ticketSla.activate(ticket, activePolicy, rule, now, tx);
     }
 
     if (sameKey(valueKey, runtime.duration_field_value_key)) {
