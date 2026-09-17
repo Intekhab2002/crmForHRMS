@@ -578,7 +578,7 @@ async function updateTicket(ticketId, payload, authenticatedUserId) {
       },
       tx,
     );
-    await slaEngine.syncTicket(ticket.id, {
+    await slaEngine.syncTicket(ticketId, {
       now: new Date(),
       tx,
     });

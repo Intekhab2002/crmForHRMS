@@ -266,11 +266,50 @@ async function oneTicket(id, tx = null) {
   return r.rows[0] ?? null;
 }
 async function oneTicketSla(ticketId, tx = null) {
-  const r = await ex(tx).query(`${SLA_SELECT} WHERE ts.ticket_id=$1 LIMIT 1`, [
-    ticketId,
-  ]);
+  const r = await ex(tx).query(
+    `
+      ${SLA_SELECT}
+      WHERE ts.ticket_id=$1
+      ORDER BY ts.run_number DESC
+      LIMIT 1
+    `,
+    [ticketId],
+  );
+
   return r.rows[0] ?? null;
 }
+
+async function nextTicketSlaRunNumber(ticketId, tx = null) {
+  const r = await ex(tx).query(
+    `
+      SELECT COALESCE(
+        GREATEST(
+          COALESCE(
+            (
+              SELECT MAX(run_number)
+              FROM ticket_sla_run_history
+              WHERE ticket_id=$1
+            ),
+            0
+          ),
+          COALESCE(
+            (
+              SELECT MAX(run_number)
+              FROM ticket_sla
+              WHERE ticket_id=$1
+            ),
+            0
+          )
+        ),
+        0
+      ) + 1 AS next_run_number
+    `,
+    [ticketId],
+  );
+
+  return Number(r.rows[0]?.next_run_number ?? 1);
+}
+
 async function runningSlas(limit = 500, tx = null) {
   const r = await ex(tx).query(
     `${SLA_SELECT} WHERE ts.status='RUNNING' ORDER BY ts.last_calculated_at NULLS FIRST LIMIT $1`,
@@ -278,11 +317,104 @@ async function runningSlas(limit = 500, tx = null) {
   );
   return r.rows;
 }
+
+async function oneTicketSlaById(id, tx = null) {
+  const r = await ex(tx).query(`${SLA_SELECT} WHERE ts.id=$1 LIMIT 1`, [id]);
+
+  return r.rows[0] ?? null;
+}
+
+async function archiveTicketSlaRun(ticketSlaId, tx = null) {
+  const runtime = await oneTicketSlaById(ticketSlaId, tx);
+
+  if (!runtime) {
+    return null;
+  }
+
+  await ex(tx).query(
+    `
+      INSERT INTO ticket_sla_run_history (
+        ticket_id,
+        run_number,
+        sla_policy_id,
+        status,
+        activated_at,
+        paused_at,
+        stopped_at,
+        completed_at,
+        breached_at,
+        target_resolution_minutes,
+        elapsed_business_minutes,
+        remaining_business_minutes,
+        activation_field_key,
+        activation_field_value_key,
+        duration_field_key,
+        duration_field_value_key,
+        policy_snapshot
+      )
+      VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+        $11,$12,$13,$14,$15,$16,$17
+      )
+      ON CONFLICT (ticket_id, run_number)
+      DO NOTHING
+    `,
+    [
+      runtime.ticket_id,
+      runtime.run_number,
+      runtime.sla_policy_id,
+      runtime.status,
+      runtime.activated_at,
+      runtime.paused_at,
+      runtime.stopped_at,
+      runtime.completed_at,
+      runtime.breached_at,
+      runtime.target_resolution_minutes,
+      runtime.elapsed_business_minutes,
+      runtime.remaining_business_minutes,
+      runtime.activation_field_key,
+      runtime.activation_field_value_key,
+      runtime.duration_field_key,
+      runtime.duration_field_value_key,
+      runtime.policy_snapshot ?? {},
+    ],
+  );
+
+  return runtime;
+}
+
 async function upsertTicketSla(d, tx = null) {
   const r = await ex(tx).query(
-    `INSERT INTO ticket_sla(ticket_id,sla_policy_id,status,activated_at,paused_at,stopped_at,completed_at,breached_at,target_resolution_minutes,elapsed_business_minutes,remaining_business_minutes,last_calculated_at,activation_field_key,activation_field_value_key,duration_field_key,duration_field_value_key,policy_snapshot)
+    `INSERT INTO ticket_sla(
+    ticket_id,
+    run_number,
+    sla_policy_id,
+    status,
+    activated_at,
+    paused_at,stopped_at,
+    completed_at,
+    breached_at,
+    target_resolution_minutes,
+    elapsed_business_minutes,
+    remaining_business_minutes,
+    last_calculated_at,
+    activation_field_key,
+    activation_field_value_key,
+    duration_field_key,
+    duration_field_value_key,
+    policy_snapshot)
  VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
- ON CONFLICT(ticket_id) DO UPDATE SET sla_policy_id=EXCLUDED.sla_policy_id,status=EXCLUDED.status,activated_at=EXCLUDED.activated_at,paused_at=EXCLUDED.paused_at,stopped_at=EXCLUDED.stopped_at,completed_at=EXCLUDED.completed_at,breached_at=EXCLUDED.breached_at,target_resolution_minutes=EXCLUDED.target_resolution_minutes,elapsed_business_minutes=EXCLUDED.elapsed_business_minutes,remaining_business_minutes=EXCLUDED.remaining_business_minutes,last_calculated_at=EXCLUDED.last_calculated_at,activation_field_key=EXCLUDED.activation_field_key,activation_field_value_key=EXCLUDED.activation_field_value_key,duration_field_key=EXCLUDED.duration_field_key,duration_field_value_key=EXCLUDED.duration_field_value_key,policy_snapshot=EXCLUDED.policy_snapshot RETURNING id`,
+ ON CONFLICT(ticket_id) 
+ DO UPDATE SET
+ run_number=EXCLUDED.run_number, 
+ sla_policy_id=EXCLUDED.sla_policy_id,
+ status=EXCLUDED.status,
+ activated_at=EXCLUDED.activated_at,
+ paused_at=EXCLUDED.paused_at,
+ stopped_at=EXCLUDED.stopped_at,
+ completed_at=EXCLUDED.completed_at,
+ breached_at=EXCLUDED.breached_at,target_resolution_minutes=EXCLUDED.target_resolution_minutes,
+ elapsed_business_minutes=EXCLUDED.elapsed_business_minutes,remaining_business_minutes=EXCLUDED.remaining_business_minutes,last_calculated_at=EXCLUDED.last_calculated_at,activation_field_key=EXCLUDED.activation_field_key,activation_field_value_key=EXCLUDED.activation_field_value_key,duration_field_key=EXCLUDED.duration_field_key,duration_field_value_key=EXCLUDED.duration_field_value_key,policy_snapshot=EXCLUDED.policy_snapshot RETURNING id`,
     [
       d.ticketId,
       d.slaPolicyId ?? null,
@@ -340,9 +472,21 @@ async function updateTicketSla(id, d, tx = null) {
 }
 async function createSegment(d, tx = null) {
   const r = await ex(tx).query(
-    `INSERT INTO ticket_sla_segments(ticket_sla_id,started_at,ended_at,trigger_value_key,duration_value_key,target_minutes,consumed_minutes,status) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+    `INSERT INTO ticket_sla_segments(
+    ticket_sla_id,
+    run_number,
+    started_at,
+    ended_at,
+    trigger_value_key,
+    duration_value_key,
+    target_minutes,
+    consumed_minutes,
+    status,
+    end_reason
+    ) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
     [
       d.ticketSlaId,
+      d.runNumber,
       d.startedAt,
       d.endedAt ?? null,
       d.triggerValueKey,
@@ -350,24 +494,68 @@ async function createSegment(d, tx = null) {
       d.targetMinutes,
       d.consumedMinutes ?? 0,
       d.status ?? "RUNNING",
+      d.endReason ?? null,
     ],
   );
   return r.rows[0];
 }
-async function closeSegment(id, endedAt, consumed, status, tx = null) {
+async function closeSegment(
+  id,
+  endedAt,
+  consumed,
+  status,
+  tx = null,
+  endReason = null,
+) {
   const r = await ex(tx).query(
-    `UPDATE ticket_sla_segments SET ended_at=$2,consumed_minutes=LEAST(GREATEST($3,0),target_minutes),status=$4 WHERE id=(SELECT id FROM ticket_sla_segments WHERE ticket_sla_id=$1 AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1) RETURNING *`,
-    [id, endedAt, consumed, status],
+    `UPDATE ticket_sla_segments
+SET
+    ended_at=$2,
+    consumed_minutes=LEAST(GREATEST($3,0),target_minutes),
+    status=$4,
+    end_reason=$5
+WHERE id=(
+    SELECT id
+    FROM ticket_sla_segments
+    WHERE ticket_sla_id=$1
+      AND ended_at IS NULL
+    ORDER BY started_at DESC
+    LIMIT 1
+)
+RETURNING *`,
+    [id, endedAt, consumed, status, endReason],
   );
   return r.rows[0] ?? null;
 }
-async function listSegments(id, tx = null) {
+async function listSegments(id, runNumber = null, tx = null) {
+  if (runNumber === null) {
+    const r = await ex(tx).query(
+      `
+      SELECT *
+      FROM ticket_sla_segments
+      WHERE ticket_sla_id=$1
+      ORDER BY started_at DESC
+    `,
+      [id],
+    );
+
+    return r.rows;
+  }
+
   const r = await ex(tx).query(
-    `SELECT * FROM ticket_sla_segments WHERE ticket_sla_id=$1 ORDER BY started_at DESC`,
-    [id],
+    `
+    SELECT *
+    FROM ticket_sla_segments
+    WHERE ticket_sla_id=$1
+      AND run_number=$2
+    ORDER BY started_at DESC
+  `,
+    [id, runNumber],
   );
+
   return r.rows;
 }
+
 async function findRule(policyId, value, tx = null) {
   const r = await ex(tx).query(
     `SELECT *
@@ -408,15 +596,18 @@ async function updateRule(id, d, tx = null) {
   return r.rows[0] ?? null;
 }
 
-async function oneOpenSegment(ticketSlaId, tx = null) {
+async function oneOpenSegmentForRun(ticketSlaId, runNumber, tx = null) {
   const r = await ex(tx).query(
-    `SELECT *
-       FROM ticket_sla_segments
+    `
+      SELECT *
+      FROM ticket_sla_segments
       WHERE ticket_sla_id=$1
+        AND run_number=$2
         AND ended_at IS NULL
       ORDER BY started_at DESC
-      LIMIT 1`,
-    [ticketSlaId],
+      LIMIT 1
+    `,
+    [ticketSlaId, runNumber],
   );
 
   return r.rows[0] ?? null;
@@ -450,5 +641,8 @@ export default Object.freeze({
   listRules,
   createRule,
   updateRule,
-  oneOpenSegment,
+  archiveTicketSlaRun,
+  oneTicketSlaById,
+  nextTicketSlaRunNumber,
+  oneOpenSegmentForRun,
 });

@@ -196,10 +196,10 @@ export async function syncTicket(
 
   const activePolicy = runtime ? policyFromSnapshot(runtime) : null;
   if (runtime && !activePolicy) {
-  throw new Error(
-    `Invalid SLA runtime ${runtime.id}: missing policy snapshot.`,
-  );
-}
+    throw new Error(
+      `Invalid SLA runtime ${runtime.id}: missing policy snapshot.`,
+    );
+  }
 
   /*
    * Ticket closure must stop an existing SLA and must never
@@ -237,7 +237,7 @@ export async function syncTicket(
      * Breach is evaluated before ordinary RUNNING synchronization.
      */
     if (target > 0 && consumed >= target) {
-      return ticketSla.breach(runtime, now, tx);
+      return ticketSla.breach(runtime, now, consumed, tx);
     }
 
     /*
