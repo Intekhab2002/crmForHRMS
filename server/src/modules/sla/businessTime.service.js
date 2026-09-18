@@ -5,14 +5,34 @@ import {
   nextBusinessInstant,
 } from "./businessCalendar.service.js";
 
+// function dt(value, timezone) {
+//   const valueDt = DateTime.isDateTime(value)
+//     ? value.setZone(timezone)
+//     : DateTime.fromJSDate(value instanceof Date ? value : new Date(value), {
+//         zone: timezone,
+//       });
+//   if (!valueDt.isValid)
+//     throw new TypeError(`Invalid date/time: ${String(value)}`);
+//   return valueDt;
+// }
+
 function dt(value, timezone) {
-  const valueDt = DateTime.isDateTime(value)
-    ? value.setZone(timezone)
-    : DateTime.fromJSDate(value instanceof Date ? value : new Date(value), {
-        zone: timezone,
-      });
-  if (!valueDt.isValid)
+  let valueDt;
+
+  if (DateTime.isDateTime(value)) {
+    valueDt = value.setZone(timezone);
+  } else if (value instanceof Date) {
+    valueDt = DateTime.fromJSDate(value, { zone: "utc" }).setZone(timezone);
+  } else {
+    valueDt = DateTime.fromISO(String(value), { setZone: true }).setZone(
+      timezone,
+    );
+  }
+
+  if (!valueDt.isValid) {
     throw new TypeError(`Invalid date/time: ${String(value)}`);
+  }
+
   return valueDt;
 }
 
@@ -26,19 +46,20 @@ export function calculateBusinessMinutes({
   const end = dt(endAt, calendar.timezone);
   if (end <= start) return 0;
 
-  let day = start.startOf("day");
+  let day = start.setZone(calendar.timezone).startOf("day");
   let total = 0;
 
   while (day < end) {
     if (isBusinessDay(day, calendar, holidays)) {
       const { start: ws, end: we } = getBusinessWindow(day, calendar);
-      const effectiveStart = DateTime.max(start, ws);
-      const effectiveEnd = DateTime.min(end, we);
+      const effectiveStart = start > ws ? start : ws;
+
+      const effectiveEnd = end < we ? end : we;
       if (effectiveEnd > effectiveStart) {
         total += effectiveEnd.diff(effectiveStart, "minutes").minutes;
       }
     }
-    day = day.plus({ days: 1 });
+    day = day.plus({ days: 1 }).startOf("day");
   }
   return Math.max(0, Math.floor(total));
 }
@@ -66,7 +87,7 @@ export function addBusinessMinutes({
 
     const availableMinutes = Math.max(
       0,
-      businessWindowEnd.diff(current, "minutes").minutes,
+      Math.floor(businessWindowEnd.diff(current, "minutes").minutes),
     );
 
     if (remainingMinutes <= availableMinutes) {
@@ -77,7 +98,7 @@ export function addBusinessMinutes({
         .toJSDate();
     }
 
-   remainingMinutes -= availableMinutes;
+    remainingMinutes -= availableMinutes;
 
     const nextDay = current
       .plus({
@@ -92,6 +113,5 @@ export function addBusinessMinutes({
     "Unable to calculate business target timestamp within the supported calculation window.",
   );
 }
-
 
 export default Object.freeze({ calculateBusinessMinutes, addBusinessMinutes });
