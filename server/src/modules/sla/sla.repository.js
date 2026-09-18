@@ -236,14 +236,16 @@ async function listHolidays(calendarId, { year = null } = {}, tx = null) {
   }
   const r = await ex(tx).query(
     `SELECT
-  id,
-  calendar_id,
-  holiday_date::text AS holiday_date,
-  name,
-  is_active,
-  created_at,
-  updated_at
-FROM sla_calendar_holidays`,
+    id,
+    calendar_id,
+    holiday_date::text AS holiday_date,
+    name,
+    is_active,
+    created_at,
+    updated_at
+   FROM sla_calendar_holidays
+   WHERE ${where.join(" AND ")}
+   ORDER BY holiday_date`,
     params,
   );
   return r.rows;

@@ -67,7 +67,7 @@ function policyFromSnapshot(runtime) {
 }
 
 async function getSegments(runtime, tx) {
-  return repository.listSegments(runtime.id, tx);
+  return repository.listSegments(runtime.id, null, tx);
 }
 
 async function calculateSegmentConsumed(segment, now, policy, holidayRows) {

@@ -5,7 +5,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test tests/sla/*.test.js",
+    "test:sla": "node --test tests/sla/*.test.js",
+    "test:sla:unit": "node --test tests/sla/businessCalendar.test.js tests/sla/businessTime.test.js tests/sla/resolver.test.js tests/sla/slaInvariants.test.js tests/sla/slaSourceContracts.test.js",
+    "test:sla:api": "node --test tests/sla/apiSmoke.test.js",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "build": "node scripts/build.js",
