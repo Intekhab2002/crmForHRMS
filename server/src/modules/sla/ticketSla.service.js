@@ -74,6 +74,12 @@ async function setNotTracked(
 
   const existing = await repository.oneTicketSla(ticket.id, tx);
 
+  const holidayRows = await repository.listHolidays(
+  policy.calendar_id,
+  {},
+  tx,
+);
+
   const elapsed = Number(
     options.preserveElapsed ?? existing?.elapsed_business_minutes ?? 0,
   );
@@ -109,13 +115,18 @@ async function setNotTracked(
       activationFieldValueKey: policy?.trigger_value_key ?? null,
       durationFieldKey: policy?.duration_field_key ?? null,
       durationFieldValueKey: durationValueKey ?? null,
-      policySnapshot: policy ? snapshot(policy, null) : {},
+      policySnapshot: policy ? snapshot(policy, null,holidayRows) : {},
     },
     tx,
   );
 }
 async function activate(ticket, policy, rule, now, tx = null) {
   const existing = await repository.oneTicketSla(ticket.id, tx);
+  const holidayRows = await repository.listHolidays(
+  policy.calendar_id,
+  {},
+  tx,
+);
   const isNewRuntime = !existing || existing.status === SLA_STATUS.NOT_TRACKED;
   const isRestart =
     existing &&
@@ -151,7 +162,7 @@ async function activate(ticket, policy, rule, now, tx = null) {
       activationFieldValueKey: policy.trigger_value_key,
       durationFieldKey: policy.duration_field_key,
       durationFieldValueKey: rule.field_value_key,
-      policySnapshot: snapshot(policy, rule),
+      policySnapshot: snapshot(policy, rule,holidayRows),
     },
     tx,
   );
@@ -237,6 +248,12 @@ async function changeDuration(
     );
   }
 
+  const holidayRows = await repository.listHolidays(
+  policy.calendar_id,
+  {},
+  tx,
+);
+
   await repository.closeSegment(
     runtime.id,
     runtime.run_number,
@@ -273,7 +290,7 @@ async function changeDuration(
       ),
       durationFieldValueKey: durationValueKey,
       lastCalculatedAt: now,
-      policySnapshot: snapshot(policy, rule),
+      policySnapshot: snapshot(policy, rule,holidayRows),
     },
     tx,
   );

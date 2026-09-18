@@ -235,7 +235,15 @@ async function listHolidays(calendarId, { year = null } = {}, tx = null) {
     where.push("holiday_date >= $2::date", "holiday_date < $3::date");
   }
   const r = await ex(tx).query(
-    `SELECT * FROM sla_calendar_holidays WHERE ${where.join(" AND ")} ORDER BY holiday_date`,
+    `SELECT
+  id,
+  calendar_id,
+  holiday_date::text AS holiday_date,
+  name,
+  is_active,
+  created_at,
+  updated_at
+FROM sla_calendar_holidays`,
     params,
   );
   return r.rows;
@@ -484,7 +492,7 @@ async function createSegment(d, tx = null) {
     consumed_minutes,
     status,
     end_reason
-    ) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+    ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
     [
       d.ticketSlaId,
       d.runNumber,

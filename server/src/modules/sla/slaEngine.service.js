@@ -105,7 +105,11 @@ function qualifiesForPolicy(policy, ticket) {
 
 async function calculateRuntimeConsumed(runtime, now, policy, tx) {
   const segments = await getSegments(runtime, tx);
-  const holidayRows = await holidays(policy, tx);
+    const snapshotHolidays = holidaySnapshot(runtime);
+   const holidayRows =
+    snapshotHolidays !== null
+      ? snapshotHolidays
+      : await holidays(policy, tx);
 
   const openSegments = segments.filter((segment) => !segment.ended_at);
 
