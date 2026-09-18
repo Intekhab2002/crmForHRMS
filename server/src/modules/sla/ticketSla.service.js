@@ -1,7 +1,6 @@
 import AppError from "../../helpers/AppError.js";
 import repository from "./sla.repository.js";
 import { SLA_STATUS, SLA_ERROR_CODES } from "./sla.constants.js";
-import { calculateLiveState } from "./slaEngine.service.js";
 import runtimeCalculator from "./slaRuntimeCalculator.service.js";
 async function requireTicket(id, tx = null) {
   const ticket = await repository.oneTicket(id, tx);
@@ -176,7 +175,7 @@ async function activate(ticket, policy, rule, now, tx = null) {
       completedAt: null,
       breachedAt: null,
       targetResolutionMinutes: rule.resolution_minutes,
-      elapsedBusinessMinutes: 0,
+      elapsedBusinessMinutes: existing?.elapsed_business_minutes ?? 0,
       remainingBusinessMinutes: rule.resolution_minutes,
       lastCalculatedAt: now,
       activationFieldKey: policy.trigger_field_key,

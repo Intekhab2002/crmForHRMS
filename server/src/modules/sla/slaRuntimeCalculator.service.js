@@ -1,4 +1,5 @@
 import { calculateBusinessMinutes } from "./businessTime.service.js";
+import { SLA_STATUS } from "./sla.constants.js";
 
 function calendarFromPolicy(policy) {
   return {
@@ -40,11 +41,7 @@ function holidaySnapshot(runtime) {
   }));
 }
 
-export function calculateLiveRuntime(
-  runtime,
-  segments,
-  now = new Date(),
-) {
+export function calculateLiveRuntime(runtime, segments, now = new Date()) {
   if (!runtime) {
     return {
       status: "NOT_TRACKED",
@@ -53,17 +50,19 @@ export function calculateLiveRuntime(
     };
   }
 
-  if (
-    ["STOPPED", "COMPLETED", "BREACHED"].includes(runtime.status)
-  ) {
+  if (runtime.status === SLA_STATUS.NOT_TRACKED) {
+    return {
+      status: SLA_STATUS.NOT_TRACKED,
+      elapsedBusinessMinutes: Number(runtime.elapsed_business_minutes ?? 0),
+      remainingBusinessMinutes: null,
+    };
+  }
+
+  if (["STOPPED", "COMPLETED", "BREACHED"].includes(runtime.status)) {
     return {
       status: runtime.status,
-      elapsedBusinessMinutes: Number(
-        runtime.elapsed_business_minutes ?? 0,
-      ),
-      remainingBusinessMinutes: Number(
-        runtime.remaining_business_minutes ?? 0,
-      ),
+      elapsedBusinessMinutes: Number(runtime.elapsed_business_minutes ?? 0),
+      remainingBusinessMinutes: Number(runtime.remaining_business_minutes ?? 0),
     };
   }
 
@@ -95,15 +94,12 @@ export function calculateLiveRuntime(
 
   elapsed = Math.max(0, Math.floor(elapsed));
 
-  const target = Number(
-    runtime.target_resolution_minutes ?? 0,
-  );
+  const target = Number(runtime.target_resolution_minutes ?? 0);
 
   return {
     status: runtime.status,
     elapsedBusinessMinutes: elapsed,
-    remainingBusinessMinutes:
-      target > 0 ? Math.max(target - elapsed, 0) : null,
+    remainingBusinessMinutes: target > 0 ? Math.max(target - elapsed, 0) : null,
   };
 }
 

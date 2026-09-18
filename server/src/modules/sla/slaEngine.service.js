@@ -105,11 +105,9 @@ function qualifiesForPolicy(policy, ticket) {
 
 async function calculateRuntimeConsumed(runtime, now, policy, tx) {
   const segments = await getSegments(runtime, tx);
-    const snapshotHolidays = holidaySnapshot(runtime);
-   const holidayRows =
-    snapshotHolidays !== null
-      ? snapshotHolidays
-      : await holidays(policy, tx);
+  const snapshotHolidays = holidaySnapshot(runtime);
+  const holidayRows =
+    snapshotHolidays !== null ? snapshotHolidays : await holidays(policy, tx);
 
   const openSegments = segments.filter((segment) => !segment.ended_at);
 
@@ -383,77 +381,6 @@ export async function syncTicket(
   }
 
   return ticketSla.activate(ticket, resolvedPolicy, rule, now, tx);
-}
-
-
-export async function calculateLiveState(
-  runtime,
-  segments,
-  ticket,
-  now = new Date(),
-) {
-  if (!runtime) {
-    return {
-      status: SLA_STATUS.NOT_TRACKED,
-      elapsedBusinessMinutes: 0,
-      remainingBusinessMinutes: null,
-    };
-  }
-
-  if (
-    [
-      SLA_STATUS.STOPPED,
-      SLA_STATUS.COMPLETED,
-      SLA_STATUS.BREACHED,
-    ].includes(runtime.status)
-  ) {
-    return {
-      status: runtime.status,
-      elapsedBusinessMinutes: Number(
-        runtime.elapsed_business_minutes ?? 0,
-      ),
-      remainingBusinessMinutes: Number(
-        runtime.remaining_business_minutes ?? 0,
-      ),
-    };
-  }
-
-  const policy = policyFromSnapshot(runtime);
-
-  if (!policy) {
-    throw new Error(
-      `Invalid SLA runtime ${runtime.id}: missing policy snapshot.`,
-    );
-  }
-
-  const holidayRows = holidaySnapshot(runtime) ?? [];
-
-  let elapsed = 0;
-
-  for (const segment of segments) {
-    if (segment.ended_at) {
-      elapsed += Number(segment.consumed_minutes ?? 0);
-      continue;
-    }
-
-    elapsed += calculateBusinessMinutes({
-      startAt: segment.started_at,
-      endAt: now,
-      calendar: calendarFromPolicy(policy),
-      holidays: holidayRows,
-    });
-  }
-
-  const target = Number(runtime.target_resolution_minutes ?? 0);
-
-  return {
-    status: runtime.status,
-    elapsedBusinessMinutes: Math.max(0, Math.floor(elapsed)),
-    remainingBusinessMinutes:
-      target > 0
-        ? Math.max(target - Math.floor(elapsed), 0)
-        : null,
-  };
 }
 
 export async function preview({
