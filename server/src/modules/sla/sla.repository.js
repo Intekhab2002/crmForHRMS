@@ -403,7 +403,7 @@ async function upsertTicketSla(d, tx = null) {
     duration_field_key,
     duration_field_value_key,
     policy_snapshot)
- VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+ VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
  ON CONFLICT(ticket_id) 
  DO UPDATE SET
  run_number=EXCLUDED.run_number, 

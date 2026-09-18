@@ -285,7 +285,7 @@ async function resume(ticket, policy, rule, now, consumed, tx = null) {
     throw AppError.conflict("Cannot resume SLA because no SLA runtime exists.");
   }
 
-  const existingOpenSegment = await repository.oneOpenSegment(runtime.id, tx);
+  const existingOpenSegment = await repository.oneOpenSegmentForRun(runtime.id, tx);
 
   if (existingOpenSegment) {
     throw AppError.conflict(
@@ -389,7 +389,7 @@ async function stop(runtime, now, totalConsumed, tx = null) {
 }
 
 async function breach(runtime, now, totalConsumed, segmentConsumed, tx = null) {
-  const target = Number(runtime.target_resolution_minutes ?? 0);
+  // const target = Number(runtime.target_resolution_minutes ?? 0);
 
   return terminal(
     runtime,
