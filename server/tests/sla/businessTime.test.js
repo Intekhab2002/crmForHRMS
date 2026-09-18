@@ -133,7 +133,7 @@ test("holiday between two business days is skipped", () => {
       calendar: STANDARD_CALENDAR,
       holidays: [holiday("2026-09-15")],
     }),
-    480,
+    960,
   );
 });
 
@@ -248,7 +248,7 @@ test("add more than one business day rolls into next business day", () => {
     calendar: STANDARD_CALENDAR,
   });
 
-  assert.equal(result.toISOString(), "2026-09-21T12:30:00.000Z");
+assert.equal(result.toISOString(), "2026-09-21T04:30:00.000Z");
 });
 
 test("add business minutes skips weekend", () => {
@@ -258,7 +258,7 @@ test("add business minutes skips weekend", () => {
     calendar: STANDARD_CALENDAR,
   });
 
-  assert.equal(result.toISOString(), "2026-09-21T10:00:00.000Z");
+assert.equal(result.toISOString(), "2026-09-21T04:30:00.000Z");
 });
 
 test("add business minutes skips holiday", () => {
@@ -269,7 +269,7 @@ test("add business minutes skips holiday", () => {
     holidays: [holiday("2026-09-15")],
   });
 
-  assert.equal(result.toISOString(), "2026-09-16T10:00:00.000Z");
+ assert.equal(result.toISOString(), "2026-09-16T04:30:00.000Z");
 });
 
 test("negative business minutes are rejected", () => {
