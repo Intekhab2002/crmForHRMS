@@ -584,6 +584,20 @@ async function findRule(policyId, value, tx = null) {
 
   return r.rows[0] ?? null;
 }
+
+async function findRuleById(id, tx = null) {
+  const r = await ex(tx).query(
+    `
+      SELECT *
+      FROM sla_policy_rules
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [id],
+  );
+
+  return r.rows[0] ?? null;
+}
 async function listRules(policyId, tx = null) {
   const r = await ex(tx).query(
     `SELECT * FROM sla_policy_rules WHERE sla_policy_id=$1 ORDER BY field_value_key`,
@@ -654,6 +668,7 @@ export default Object.freeze({
   closeSegment,
   listSegments,
   findRule,
+  findRuleById,
   listRules,
   createRule,
   updateRule,

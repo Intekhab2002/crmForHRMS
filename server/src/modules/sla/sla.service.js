@@ -46,7 +46,7 @@ async function createRule(policyId, data) {
 }
 
 async function updateRule(ruleId, data) {
-  const existing = await repository.findRule(ruleId);
+  const existing = await repository.findRuleById(ruleId);
 
   if (!existing) {
     throw AppError.notFound("SLA rule not found.", {
