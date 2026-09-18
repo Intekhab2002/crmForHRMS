@@ -1,7 +1,8 @@
 import AppError from "../../helpers/AppError.js";
 import repository from "./sla.repository.js";
 import { SLA_STATUS, SLA_ERROR_CODES } from "./sla.constants.js";
-
+import { calculateLiveState } from "./slaEngine.service.js";
+import runtimeCalculator from "./slaRuntimeCalculator.service.js";
 async function requireTicket(id, tx = null) {
   const ticket = await repository.oneTicket(id, tx);
   if (!ticket)
@@ -43,10 +44,38 @@ function snapshot(policy, rule, holidays = []) {
 }
 async function get(id) {
   await requireTicket(id);
+
   const sla = await repository.oneTicketSla(id);
-  if (!sla)
-    return { ticketId: id, status: SLA_STATUS.NOT_TRACKED, segments: [] };
-  return { ...sla, segments: await repository.listSegments(sla.id) };
+
+  if (!sla) {
+    return {
+      ticketId: id,
+      status: SLA_STATUS.NOT_TRACKED,
+      segments: [],
+      elapsedBusinessMinutes: 0,
+      remainingBusinessMinutes: null,
+    };
+  }
+
+  const segments = await repository.listSegments(sla.id);
+
+  const live = runtimeCalculator.calculateLiveRuntime(
+    sla,
+    segments,
+    new Date(),
+  );
+
+  return {
+    ...sla,
+
+    elapsed_business_minutes: live.elapsedBusinessMinutes,
+
+    remaining_business_minutes: live.remainingBusinessMinutes,
+
+    status: live.status,
+
+    segments,
+  };
 }
 function remaining(target, consumed) {
   return Math.max(Number(target ?? 0) - Number(consumed ?? 0), 0);
@@ -93,7 +122,7 @@ async function setNotTracked(
         existing.run_number,
         options.now ?? new Date(),
         options.activeSegmentConsumed ?? 0,
-        SLA_STATUS.STOPPED,
+        SLA_STATUS.PAUSED,
         tx,
         options.endReason ?? "NO_VALID_RULE",
       );

@@ -16,8 +16,7 @@ async function ticket(id) {
   return x;
 }
 async function getTicketSla(id) {
-  await ticket(id);
-  return engine.syncTicket(id);
+  return ticketSla.get(id);
 }
 async function getHistory(id) {
   return ticketSla.history(id);
