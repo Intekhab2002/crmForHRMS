@@ -93,7 +93,7 @@ async function setNotTracked(
         existing.run_number,
         options.now ?? new Date(),
         options.activeSegmentConsumed ?? 0,
-        SLA_STATUS.PAUSED,
+        SLA_STATUS.STOPPED,
         tx,
         options.endReason ?? "NO_VALID_RULE",
       );
@@ -247,7 +247,7 @@ async function changeDuration(
     runtime.run_number,
     now,
     currentSegmentConsumed,
-    SLA_STATUS.RUNNING,
+    SLA_STATUS.STOPPED,
     tx,
     "SEVERITY_CHANGED",
   );
