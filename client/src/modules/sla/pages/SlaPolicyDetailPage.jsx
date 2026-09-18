@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Button, Divider, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
+import {
+  Alert,
+  Button,
+  Divider,
+  Paper,
+  Stack,
+  Tab,
+  Tabs,
+  Typography,
+} from "@mui/material";
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import PlayArrowOutlinedIcon from "@mui/icons-material/PlayArrowOutlined";
 import PauseOutlinedIcon from "@mui/icons-material/PauseOutlined";
@@ -32,35 +41,52 @@ export default function SlaPolicyDetailPage() {
         slaApi.listRules(policyId),
       ]);
       setPolicy(nextPolicy);
-      setRules((nextRules ?? []).map((rule) => ({
+      const mappedRules = (nextRules ?? []).map((rule) => ({
         fieldValueKey: rule.field_value_key,
         resolutionMinutes: rule.resolution_minutes,
         isEnabled: rule.is_enabled,
         id: rule.id,
-      })));
+      }));
+
+      console.log("SLA rules from API:", nextRules);
+      console.log("SLA mapped rules:", mappedRules);
+
+      setRules(mappedRules);
     } catch (requestError) {
-      setError(requestError.response?.data?.message ?? requestError.message ?? "Unable to load policy.");
+      setError(
+        requestError.response?.data?.message ??
+          requestError.message ??
+          "Unable to load policy.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, [policyId]);
+  useEffect(() => {
+    load();
+  }, [policyId]);
 
-  const initialValues = useMemo(() => policy ? ({
-    code: policy.code,
-    name: policy.name,
-    description: policy.description ?? "",
-    triggerFieldKey: policy.trigger_field_key,
-    triggerValueKey: policy.trigger_value_key,
-    durationFieldKey: policy.duration_field_key,
-    calendarId: policy.calendar_id,
-    priority: policy.priority,
-    effectiveFrom: policy.effective_from?.slice(0, 16) ?? "",
-    effectiveTo: policy.effective_to?.slice(0, 16) ?? "",
-    isActive: policy.is_active,
-    rules,
-  }) : undefined, [policy, rules]);
+  const initialValues = useMemo(
+    () =>
+      policy
+        ? {
+            code: policy.code,
+            name: policy.name,
+            description: policy.description ?? "",
+            triggerFieldKey: policy.trigger_field_key,
+            triggerValueKey: policy.trigger_value_key,
+            durationFieldKey: policy.duration_field_key,
+            calendarId: policy.calendar_id,
+            priority: policy.priority,
+            effectiveFrom: policy.effective_from?.slice(0, 16) ?? "",
+            effectiveTo: policy.effective_to?.slice(0, 16) ?? "",
+            isActive: policy.is_active,
+            rules,
+          }
+        : undefined,
+    [policy, rules],
+  );
 
   const save = async (values) => {
     await slaApi.updatePolicy(policyId, {
@@ -73,10 +99,21 @@ export default function SlaPolicyDetailPage() {
       calendarId: values.calendarId,
       priority: Number(values.priority),
       effectiveFrom: new Date(values.effectiveFrom).toISOString(),
-      effectiveTo: values.effectiveTo ? new Date(values.effectiveTo).toISOString() : null,
+      effectiveTo: values.effectiveTo
+        ? new Date(values.effectiveTo).toISOString()
+        : null,
       isActive: values.isActive,
     });
     const existing = new Map(rules.map((rule) => [rule.id, rule]));
+    console.table(
+      (values.rules ?? []).map((rule) => ({
+        id: rule.id,
+        fieldValueKey: rule.fieldValueKey,
+        resolutionMinutes: rule.resolutionMinutes,
+        isEnabled: rule.isEnabled,
+      })),
+    );
+
     for (const rule of values.rules ?? []) {
       if (rule.id) {
         await slaApi.updateRule(policyId, rule.id, {
@@ -100,7 +137,8 @@ export default function SlaPolicyDetailPage() {
   };
 
   if (loading) return <Typography>Loading SLA policy…</Typography>;
-  if (!policy) return <Alert severity="error">{error || "SLA policy not found."}</Alert>;
+  if (!policy)
+    return <Alert severity="error">{error || "SLA policy not found."}</Alert>;
 
   return (
     <Stack spacing={2.5}>
@@ -109,14 +147,32 @@ export default function SlaPolicyDetailPage() {
         description={`${policy.code} · ${policy.is_active ? "Active" : "Inactive"}`}
         actions={
           <Stack direction="row" spacing={1}>
-            <Button variant="outlined" startIcon={<ArrowBackOutlinedIcon />} onClick={() => navigate(SLA_ROUTES.policies)}>Back</Button>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackOutlinedIcon />}
+              onClick={() => navigate(SLA_ROUTES.policies)}
+            >
+              Back
+            </Button>
             <CanAccess permission={SLA_PERMISSIONS.read}>
-              <Button variant="outlined" startIcon={<ScienceOutlinedIcon />} onClick={() => setTestOpen(true)}>Test SLA</Button>
+              <Button
+                variant="outlined"
+                startIcon={<ScienceOutlinedIcon />}
+                onClick={() => setTestOpen(true)}
+              >
+                Test SLA
+              </Button>
             </CanAccess>
             <CanAccess permission={SLA_PERMISSIONS.activate}>
               <Button
                 variant="contained"
-                startIcon={policy.is_active ? <PauseOutlinedIcon /> : <PlayArrowOutlinedIcon />}
+                startIcon={
+                  policy.is_active ? (
+                    <PauseOutlinedIcon />
+                  ) : (
+                    <PlayArrowOutlinedIcon />
+                  )
+                }
                 onClick={async () => {
                   if (policy.is_active) await slaApi.deactivatePolicy(policyId);
                   else await slaApi.activatePolicy(policyId);
@@ -131,36 +187,76 @@ export default function SlaPolicyDetailPage() {
       />
       {error ? <Alert severity="error">{error}</Alert> : null}
       <Paper variant="outlined">
-        <Tabs value={tab} onChange={(_, value) => setTab(value)} aria-label="SLA policy sections">
+        <Tabs
+          value={tab}
+          onChange={(_, value) => setTab(value)}
+          aria-label="SLA policy sections"
+        >
           <Tab label="Configuration" />
           <Tab label="Resolution rules" />
           <Tab label="Calendar" />
         </Tabs>
         <Divider />
-        {tab === 0 ? <Stack sx={{ p: 2.5 }}><SlaPolicyForm initialValues={initialValues} onSubmit={save} submitLabel="Save policy" /></Stack> : null}
+        {tab === 0 ? (
+          <Stack sx={{ p: 2.5 }}>
+            <SlaPolicyForm
+              initialValues={initialValues}
+              onSubmit={save}
+              submitLabel="Save policy"
+            />
+          </Stack>
+        ) : null}
         {tab === 1 ? (
           <Stack spacing={1} sx={{ p: 2.5 }}>
-            {rules.length ? rules.map((rule) => (
-              <Stack key={rule.id} direction="row" justifyContent="space-between" sx={{ p: 1.5, border: 1, borderColor: "divider", borderRadius: 1.5 }}>
-                <Typography>{rule.fieldValueKey}</Typography>
-                <Typography fontWeight={700}>{rule.resolutionMinutes ? formatDurationMinutes(rule.resolutionMinutes) : "Not tracked"}</Typography>
-              </Stack>
-            )) : <Typography color="text.secondary">No resolution rules have been configured.</Typography>}
+            {rules.length ? (
+              rules.map((rule) => (
+                <Stack
+                  key={rule.id}
+                  direction="row"
+                  justifyContent="space-between"
+                  sx={{
+                    p: 1.5,
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 1.5,
+                  }}
+                >
+                  <Typography>{rule.fieldValueKey}</Typography>
+                  <Typography fontWeight={700}>
+                    {rule.resolutionMinutes
+                      ? formatDurationMinutes(rule.resolutionMinutes)
+                      : "Not tracked"}
+                  </Typography>
+                </Stack>
+              ))
+            ) : (
+              <Typography color="text.secondary">
+                No resolution rules have been configured.
+              </Typography>
+            )}
           </Stack>
         ) : null}
         {tab === 2 ? (
           <Stack spacing={1} sx={{ p: 2.5 }}>
-            <Typography variant="subtitle1" fontWeight={700}>{policy.calendar_name}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {policy.calendar_timezone} · {policy.business_hours_per_day} hours/day · {policy.workday_start_time}–{policy.workday_end_time}
+            <Typography variant="subtitle1" fontWeight={700}>
+              {policy.calendar_name}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Saturday: {policy.include_saturday ? "included" : "excluded"} · Sunday: {policy.include_sunday ? "included" : "excluded"}
+              {policy.calendar_timezone} · {policy.business_hours_per_day}{" "}
+              hours/day · {policy.workday_start_time}–{policy.workday_end_time}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Saturday: {policy.include_saturday ? "included" : "excluded"} ·
+              Sunday: {policy.include_sunday ? "included" : "excluded"}
             </Typography>
           </Stack>
         ) : null}
       </Paper>
-      <SlaTestDrawer open={testOpen} onClose={() => setTestOpen(false)} calendarId={policy.calendar_id} />
+      <SlaTestDrawer
+        open={testOpen}
+        onClose={() => setTestOpen(false)}
+        calendarId={policy.calendar_id}
+      />
     </Stack>
   );
 }

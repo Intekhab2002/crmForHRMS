@@ -19,26 +19,35 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { formatDurationMinutes } from "../utils/slaFormatters";
 
 export default function SlaDurationRuleTable({ values, options, onChange }) {
+  console.log("SlaDurationRuleTable values:", values);
+  console.log("SlaDurationRuleTable options:", options);
   const rows = useMemo(() => {
-    const existing = new Map(
-      (values ?? []).map((item) => [
-        String(item.fieldValueKey ?? "")
+    const optionMap = new Map(
+      (options ?? []).map((option) => {
+        const key = String(option.value ?? "")
           .trim()
-          .toLowerCase(),
-        item,
-      ]),
+          .toLowerCase();
+
+        return [
+          key,
+          {
+            value: String(option.value ?? "").trim(),
+            label: option.label,
+          },
+        ];
+      }),
     );
 
-    return (options ?? []).map((option) => {
-      const fieldValueKey = String(option.value ?? "").trim();
-      const existingRule = existing.get(fieldValueKey.toLowerCase());
+    return (values ?? []).map((rule) => {
+      const fieldValueKey = String(rule.fieldValueKey ?? "").trim();
+      const option = optionMap.get(fieldValueKey.toLowerCase());
 
       return {
-        id: existingRule?.id,
+        id: rule.id,
         fieldValueKey,
-        label: option.label,
-        resolutionMinutes: existingRule?.resolutionMinutes ?? null,
-        isEnabled: existingRule?.isEnabled ?? true,
+        label: option?.label ?? fieldValueKey,
+        resolutionMinutes: rule.resolutionMinutes ?? null,
+        isEnabled: rule.isEnabled ?? true,
       };
     });
   }, [values, options]);
