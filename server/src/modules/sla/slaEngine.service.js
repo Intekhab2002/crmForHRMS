@@ -83,6 +83,26 @@ async function calculateSegmentConsumed(segment, now, policy, holidayRows) {
   });
 }
 
+function terminalStatus(status) {
+  return [
+    SLA_STATUS.STOPPED,
+    SLA_STATUS.COMPLETED,
+    SLA_STATUS.BREACHED,
+  ].includes(status);
+}
+
+function qualifiesForPolicy(policy, ticket) {
+  if (!policy) {
+    return false;
+  }
+
+  const currentTriggerValue = normalize(
+    resolver.getTicketFieldValue(ticket, policy.trigger_field_key),
+  );
+
+  return sameKey(currentTriggerValue, policy.trigger_value_key);
+}
+
 async function calculateRuntimeConsumed(runtime, now, policy, tx) {
   const segments = await getSegments(runtime, tx);
   const holidayRows = await holidays(policy, tx);
@@ -95,27 +115,17 @@ async function calculateRuntimeConsumed(runtime, now, policy, tx) {
     );
   }
 
+  const activeSegment = openSegments[0] ?? null;
+
   let total = 0;
-  let activeSegment = openSegments[0] ?? null;
-  let activeSegmentConsumed = 0;
 
   for (const segment of segments) {
     if (segment.ended_at) {
       total += Math.max(0, Number(segment.consumed_minutes ?? 0));
-      continue;
-    }
-
-    /*
-     * There should be at most one open segment.
-     * Keep the latest open segment authoritative.
-     */
-    if (
-      !activeSegment ||
-      new Date(segment.started_at) > new Date(activeSegment.started_at)
-    ) {
-      activeSegment = segment;
     }
   }
+
+  let activeSegmentConsumed = 0;
 
   if (activeSegment) {
     activeSegmentConsumed = await calculateSegmentConsumed(
@@ -168,6 +178,18 @@ async function updateRunning(runtime, consumed, target, now, tx) {
     },
     tx,
   );
+}
+
+function holidaySnapshot(runtime) {
+  const values = runtime?.policy_snapshot?.policy?.holidays;
+
+  if (!Array.isArray(values)) {
+    return null;
+  }
+
+  return values.map((holiday) => ({
+    holiday_date: holiday,
+  }));
 }
 
 export async function syncTicket(
@@ -237,7 +259,13 @@ export async function syncTicket(
      * Breach is evaluated before ordinary RUNNING synchronization.
      */
     if (target > 0 && consumed >= target) {
-      return ticketSla.breach(runtime, now, consumed, tx);
+      return ticketSla.breach(
+        runtime,
+        now,
+        consumed,
+        consumedResult.activeSegmentConsumed ?? 0,
+        tx,
+      );
     }
 
     /*
@@ -273,6 +301,9 @@ export async function syncTicket(
       });
     }
 
+    const currentDurationValue = normalize(valueKey);
+    const runtimeDurationValue = normalize(runtime.duration_field_value_key);
+
     if (runtime.status === SLA_STATUS.PAUSED) {
       return ticketSla.resume(ticket, activePolicy, rule, now, consumed, tx);
     }
@@ -281,25 +312,6 @@ export async function syncTicket(
       return ticketSla.activate(ticket, activePolicy, rule, now, tx);
     }
 
-    if (sameKey(valueKey, runtime.duration_field_value_key)) {
-      return updateRunning(
-        runtime,
-        consumed,
-        Number(runtime.target_resolution_minutes ?? rule.resolution_minutes),
-        now,
-        tx,
-      );
-    }
-
-    const currentDurationValue = normalize(valueKey);
-    const runtimeDurationValue = normalize(runtime.duration_field_value_key);
-
-    /*
-     * IMPORTANT:
-     *
-     * Same normalized duration value means SAME segment.
-     * Maintenance must not close/reopen anything.
-     */
     if (sameKey(currentDurationValue, runtimeDurationValue)) {
       return updateRunning(
         runtime,

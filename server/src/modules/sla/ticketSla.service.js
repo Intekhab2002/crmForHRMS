@@ -88,6 +88,7 @@ async function setNotTracked(
     if (activeSegment) {
       await repository.closeSegment(
         existing.id,
+        existing.run_number,
         options.now ?? new Date(),
         options.activeSegmentConsumed ?? 0,
         SLA_STATUS.PAUSED,
@@ -159,7 +160,7 @@ async function activate(ticket, policy, rule, now, tx = null) {
       {
         ticketSlaId: runtime.id,
         runNumber: runtime.run_number,
-        startedAt: now,
+        startedAt: activationAt,
         triggerValueKey: policy.trigger_value_key,
         durationValueKey: rule.field_value_key,
         targetMinutes: rule.resolution_minutes,
@@ -190,6 +191,7 @@ async function pause(runtime, now, consumedResult, tx = null) {
 
   await repository.closeSegment(
     runtime.id,
+     runtime.run_number,
     now,
     segmentConsumed,
     SLA_STATUS.PAUSED,
@@ -220,8 +222,24 @@ async function changeDuration(
   totalConsumed,
   tx = null,
 ) {
+  const existingOpenSegment = await repository.oneOpenSegmentForRun(
+    runtime.id,
+    runtime.run_number,
+    tx,
+  );
+
+  if (!existingOpenSegment) {
+    throw AppError.conflict(
+      "Cannot change SLA duration because no active segment exists.",
+      {
+        code: SLA_ERROR_CODES.INVALID_RUNTIME,
+      },
+    );
+  }
+
   await repository.closeSegment(
     runtime.id,
+    runtime.run_number,
     now,
     currentSegmentConsumed,
     SLA_STATUS.RUNNING,
@@ -321,6 +339,7 @@ async function terminal(
 
   await repository.closeSegment(
     runtime.id,
+    runtime.run_number,
     now,
     segmentConsumed,
     status,
@@ -369,14 +388,14 @@ async function stop(runtime, now, totalConsumed, tx = null) {
   );
 }
 
-async function breach(runtime, now, totalConsumed, tx = null) {
+async function breach(runtime, now, totalConsumed, segmentConsumed, tx = null) {
   const target = Number(runtime.target_resolution_minutes ?? 0);
 
   return terminal(
     runtime,
     now,
     totalConsumed,
-    totalConsumed,
+    segmentConsumed,
     SLA_STATUS.BREACHED,
     tx,
   );

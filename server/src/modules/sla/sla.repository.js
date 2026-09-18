@@ -417,6 +417,7 @@ async function upsertTicketSla(d, tx = null) {
  elapsed_business_minutes=EXCLUDED.elapsed_business_minutes,remaining_business_minutes=EXCLUDED.remaining_business_minutes,last_calculated_at=EXCLUDED.last_calculated_at,activation_field_key=EXCLUDED.activation_field_key,activation_field_value_key=EXCLUDED.activation_field_value_key,duration_field_key=EXCLUDED.duration_field_key,duration_field_value_key=EXCLUDED.duration_field_value_key,policy_snapshot=EXCLUDED.policy_snapshot RETURNING id`,
     [
       d.ticketId,
+      d.runNumber ?? 1,
       d.slaPolicyId ?? null,
       d.status,
       d.activatedAt ?? null,
@@ -501,6 +502,7 @@ async function createSegment(d, tx = null) {
 }
 async function closeSegment(
   id,
+  runNumber,
   endedAt,
   consumed,
   status,
@@ -510,20 +512,24 @@ async function closeSegment(
   const r = await ex(tx).query(
     `UPDATE ticket_sla_segments
 SET
-    ended_at=$2,
-    consumed_minutes=LEAST(GREATEST($3,0),target_minutes),
-    status=$4,
-    end_reason=$5
+  ended_at=$3,
+  consumed_minutes=LEAST(
+    GREATEST($4,0),
+    target_minutes
+  ),
+  status=$5,
+  end_reason=$6
 WHERE id=(
-    SELECT id
-    FROM ticket_sla_segments
-    WHERE ticket_sla_id=$1
-      AND ended_at IS NULL
-    ORDER BY started_at DESC
-    LIMIT 1
+  SELECT id
+  FROM ticket_sla_segments
+  WHERE ticket_sla_id=$1
+    AND run_number=$2
+    AND ended_at IS NULL
+  ORDER BY started_at DESC
+  LIMIT 1
 )
 RETURNING *`,
-    [id, endedAt, consumed, status, endReason],
+    [id, runNumber, endedAt, consumed, status, endReason],
   );
   return r.rows[0] ?? null;
 }

@@ -58,5 +58,13 @@ CREATE INDEX IF NOT EXISTS idx_ticket_sla_segments_run
 
 ALTER TABLE ticket_sla_segments
     ADD COLUMN IF NOT EXISTS end_reason VARCHAR(50);
+    
+CREATE UNIQUE INDEX IF NOT EXISTS
+ux_ticket_sla_segments_one_open_per_run
+ON ticket_sla_segments (
+  ticket_sla_id,
+  run_number
+)
+WHERE ended_at IS NULL;
 
 COMMIT;
