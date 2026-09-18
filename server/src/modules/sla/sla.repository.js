@@ -271,6 +271,76 @@ async function updateHoliday(id, d, tx = null) {
   );
   return r.rows[0] ? oneHoliday(id, tx) : null;
 }
+async function importHolidays(calendarId, rows) {
+  const executor = ex();
+
+  return executor.transaction(async (tx) => {
+    let created = 0;
+    let updated = 0;
+
+    for (const row of rows) {
+      const existing = await tx.query(
+        `
+          SELECT id
+          FROM sla_calendar_holidays
+          WHERE calendar_id = $1
+            AND holiday_date = $2::date
+          LIMIT 1
+        `,
+        [
+          calendarId,
+          row.holidayDate,
+        ],
+      );
+
+      if (existing.rows[0]) {
+        await tx.query(
+          `
+            UPDATE sla_calendar_holidays
+            SET
+              name = $3,
+              is_active = TRUE,
+              updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+              AND calendar_id = $2
+          `,
+          [
+            existing.rows[0].id,
+            calendarId,
+            row.name,
+          ],
+        );
+
+        updated += 1;
+      } else {
+        await tx.query(
+          `
+            INSERT INTO sla_calendar_holidays (
+              calendar_id,
+              holiday_date,
+              name,
+              is_active
+            )
+            VALUES ($1, $2::date, $3, TRUE)
+          `,
+          [
+            calendarId,
+            row.holidayDate,
+            row.name,
+          ],
+        );
+
+        created += 1;
+      }
+    }
+
+    return {
+      created,
+      updated,
+      total: created + updated,
+    };
+  });
+}
 async function oneTicket(id, tx = null) {
   const r = await ex(tx).query(`${TICKET_SELECT} WHERE t.id=$1 LIMIT 1`, [id]);
   return r.rows[0] ?? null;

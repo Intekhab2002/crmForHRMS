@@ -1,72 +1,258 @@
 import { useMemo } from "react";
 import {
-  Box, Button, IconButton, Paper, Stack, Tooltip, Typography,
+  Box,
+  IconButton,
+  Paper,
+  Stack,
+  Tooltip,
+  Typography,
 } from "@mui/material";
 import ChevronLeftOutlinedIcon from "@mui/icons-material/ChevronLeftOutlined";
 import ChevronRightOutlinedIcon from "@mui/icons-material/ChevronRightOutlined";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import { formatDate } from "../utils/slaFormatters";
+
+import {
+  formatMonthYear,
+  getMonthCells,
+  isToday,
+} from "../utils/slaCalendar";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-export default function SlaHolidayCalendar({ year, holidays, onYearChange, onAdd, onEdit, onDelete, canCreate, canUpdate, canDelete }) {
-  const holidayMap = useMemo(() => new Map(
-    (holidays ?? []).map((holiday) => [holiday.holiday_date, holiday]),
-  ), [holidays]);
+export default function SlaHolidayCalendar({
+  year,
+  monthIndex,
+  holidays = [],
+  onMonthChange,
+  onDateClick,
+  onEdit,
+  onDelete,
+  canCreate,
+  canUpdate,
+  canDelete,
+}) {
+  const holidayMap = useMemo(
+    () =>
+      new Map(
+        holidays.map((holiday) => [
+          holiday.holiday_date,
+          holiday,
+        ]),
+      ),
+    [holidays],
+  );
 
-  const cells = useMemo(() => {
-    const first = new Date(year, 0, 1);
-    const start = (first.getDay() + 6) % 7;
-    const days = new Date(year, 11, 31).getDate() + 334;
-    const total = new Date(year, 11, 31).getDate() + start + (new Date(year, 11, 31).getDay() || 7) - 1;
-    const result = [];
-    for (let i = 0; i < start; i += 1) result.push(null);
-    for (let day = 1; day <= 365 + (new Date(year, 1, 29).getMonth() === 1 ? 1 : 0); day += 1) {
-      const date = new Date(year, 0, day);
-      if (date.getFullYear() !== year) break;
-      result.push(date);
-    }
-    while (result.length < total) result.push(null);
-    return result;
-  }, [year]);
+  const cells = useMemo(
+    () => getMonthCells(year, monthIndex),
+    [year, monthIndex],
+  );
 
   return (
-    <Paper variant="outlined" sx={{ p: { xs: 1.5, md: 2 } }}>
-      <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} spacing={1.5} sx={{ mb: 2 }}>
-        <Stack direction="row" alignItems="center" spacing={0.5}>
-          <IconButton onClick={() => onYearChange(year - 1)} aria-label={`Previous year, ${year - 1}`}><ChevronLeftOutlinedIcon /></IconButton>
-          <Typography variant="h6" component="h2" sx={{ minWidth: 110, textAlign: "center" }}>{year}</Typography>
-          <IconButton onClick={() => onYearChange(year + 1)} aria-label={`Next year, ${year + 1}`}><ChevronRightOutlinedIcon /></IconButton>
+    <Paper
+      variant="outlined"
+      sx={{
+        p: { xs: 1.5, md: 2 },
+      }}
+    >
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "stretch", sm: "center" }}
+        spacing={1.5}
+        sx={{ mb: 2 }}
+      >
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="center"
+          spacing={0.5}
+        >
+          <IconButton
+            onClick={() => onMonthChange(-1)}
+            aria-label="Previous month"
+          >
+            <ChevronLeftOutlinedIcon />
+          </IconButton>
+
+          <Typography
+            variant="h6"
+            component="h2"
+            sx={{
+              minWidth: { xs: 180, sm: 220 },
+              textAlign: "center",
+            }}
+          >
+            {formatMonthYear(year, monthIndex)}
+          </Typography>
+
+          <IconButton
+            onClick={() => onMonthChange(1)}
+            aria-label="Next month"
+          >
+            <ChevronRightOutlinedIcon />
+          </IconButton>
         </Stack>
-        {canCreate ? <Button size="small" variant="outlined" startIcon={<AddOutlinedIcon />} onClick={onAdd}>Add holiday</Button> : null}
       </Stack>
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 0.75 }}>
-        {WEEKDAYS.map((day) => <Typography key={day} variant="caption" fontWeight={700} color="text.secondary" sx={{ textAlign: "center", py: 0.5 }}>{day}</Typography>)}
-        {cells.map((date, index) => {
-          if (!date) return <Box key={`blank-${index}`} sx={{ minHeight: 70 }} />;
-          const key = `${year}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-          const holiday = holidayMap.get(key);
+
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+          gap: { xs: 0.5, sm: 0.75 },
+        }}
+      >
+        {WEEKDAYS.map((day) => (
+          <Typography
+            key={day}
+            variant="caption"
+            fontWeight={700}
+            color="text.secondary"
+            sx={{
+              textAlign: "center",
+              py: 0.75,
+            }}
+          >
+            {day}
+          </Typography>
+        ))}
+
+        {cells.map((cell, index) => {
+          if (!cell) {
+            return (
+              <Box
+                key={`blank-${index}`}
+                sx={{
+                  minHeight: { xs: 76, sm: 92 },
+                }}
+              />
+            );
+          }
+
+          const holiday = holidayMap.get(cell.dateKey);
+          const today = isToday(cell.dateKey);
+
           return (
-            <Box key={key} sx={{ minHeight: 70, p: 1, border: 1, borderColor: holiday ? "primary.main" : "divider", borderRadius: 1.5, bgcolor: holiday ? "action.selected" : "background.paper" }}>
-              <Typography variant="body2" fontWeight={700}>{date.getDate()}</Typography>
+            <Paper
+              key={cell.dateKey}
+              variant="outlined"
+              component="button"
+              type="button"
+              onClick={() => onDateClick(cell.dateKey)}
+              sx={{
+                minHeight: { xs: 76, sm: 92 },
+                p: { xs: 0.75, sm: 1 },
+                textAlign: "left",
+                cursor: "pointer",
+                borderColor: holiday
+                  ? "primary.main"
+                  : today
+                    ? "secondary.main"
+                    : "divider",
+                bgcolor: holiday
+                  ? "action.selected"
+                  : "background.paper",
+                position: "relative",
+                transition: "border-color 120ms ease, background-color 120ms ease",
+                "&:hover": {
+                  borderColor: "primary.main",
+                  bgcolor: "action.hover",
+                },
+                "&:focus-visible": {
+                  outline: 2,
+                  outlineOffset: 1,
+                  outlineColor: "primary.main",
+                },
+              }}
+            >
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+              >
+                <Typography
+                  variant="body2"
+                  fontWeight={today || holiday ? 700 : 500}
+                >
+                  {cell.day}
+                </Typography>
+
+                {today ? (
+                  <Typography
+                    variant="caption"
+                    color="primary"
+                    fontWeight={700}
+                  >
+                    Today
+                  </Typography>
+                ) : null}
+              </Stack>
+
               {holiday ? (
-                <Stack spacing={0.5} sx={{ mt: 0.5 }}>
-                  <Typography variant="caption" noWrap title={holiday.name}>{holiday.name}</Typography>
-                  <Stack direction="row" spacing={0.25}>
-                    {canUpdate ? <Tooltip title="Edit holiday"><IconButton size="small" aria-label={`Edit ${holiday.name}`} onClick={() => onEdit(holiday)}><EditOutlinedIcon fontSize="inherit" /></IconButton></Tooltip> : null}
-                    {canDelete ? <Tooltip title="Remove holiday"><IconButton size="small" aria-label={`Remove ${holiday.name}`} onClick={() => onDelete(holiday)}><DeleteOutlineIcon fontSize="inherit" /></IconButton></Tooltip> : null}
+                <Stack spacing={0.5} sx={{ mt: 0.75 }}>
+                  <Typography
+                    variant="caption"
+                    fontWeight={600}
+                    sx={{
+                      display: "block",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                    title={holiday.name}
+                  >
+                    {holiday.name}
+                  </Typography>
+
+                  <Stack
+                    direction="row"
+                    spacing={0.25}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {canUpdate ? (
+                      <Tooltip title="Edit holiday">
+                        <IconButton
+                          size="small"
+                          aria-label={`Edit ${holiday.name}`}
+                          onClick={() => onEdit(holiday)}
+                        >
+                          <EditOutlinedIcon fontSize="inherit" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : null}
+
+                    {canDelete ? (
+                      <Tooltip title="Remove holiday">
+                        <IconButton
+                          size="small"
+                          aria-label={`Remove ${holiday.name}`}
+                          onClick={() => onDelete(holiday)}
+                        >
+                          <DeleteOutlineIcon fontSize="inherit" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : null}
                   </Stack>
                 </Stack>
-              ) : null}
-            </Box>
+              ) : (
+                canCreate ? (
+                  <Stack
+                    direction="row"
+                    justifyContent="flex-end"
+                    sx={{
+                      mt: 1,
+                      opacity: 0.55,
+                    }}
+                  >
+                    <AddOutlinedIcon fontSize="small" />
+                  </Stack>
+                ) : null
+              )}
+            </Paper>
           );
         })}
       </Box>
-      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5 }}>
-        {holidays?.length ?? 0} active holiday{holidays?.length === 1 ? "" : "s"} in {year}.
-      </Typography>
     </Paper>
   );
 }

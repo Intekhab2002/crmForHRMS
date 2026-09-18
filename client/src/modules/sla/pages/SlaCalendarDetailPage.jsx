@@ -19,6 +19,9 @@ import SlaHolidayCalendar from "../components/SlaHolidayCalendar";
 import SlaHolidayDialog from "../components/SlaHolidayDialog";
 import slaApi from "../services/sla.api";
 import { SLA_PERMISSIONS, SLA_ROUTES } from "../config/sla.config";
+import SlaHolidayList from "../components/SlaHolidayList";
+import SlaHolidayExcelActions from "../components/SlaHolidayExcelActions";
+import { moveMonth } from "../utils/slaCalendar";
 
 export default function SlaCalendarDetailPage() {
   const { calendarId } = useParams();
@@ -42,27 +45,26 @@ export default function SlaCalendarDetailPage() {
     includeSunday: false,
     isActive: true,
   });
-  const [year, setYear] = useState(new Date().getFullYear());
+  const today = new Date();
+
+  const [year, setYear] = useState(today.getFullYear());
+  const [monthIndex, setMonthIndex] = useState(today.getMonth());
   const [holidays, setHolidays] = useState([]);
   const [holidayDialog, setHolidayDialog] = useState({
     open: false,
     holiday: null,
+    initialDate: "",
   });
+  const [deletingHoliday, setDeletingHoliday] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-const load = async () => {
-  if (isNew || !hasCalendarId) {
-    return;
-  }
+  const loadCalendar = async () => {
+    if (isNew || !hasCalendarId) {
+      return;
+    }
 
-  setError("");
-
-  try {
-    const [item, list] = await Promise.all([
-      slaApi.getCalendar(calendarId),
-      slaApi.listHolidays(calendarId, year),
-    ]);
+    const item = await slaApi.getCalendar(calendarId);
 
     setCalendar({
       code: item.code,
@@ -75,20 +77,74 @@ const load = async () => {
       includeSunday: item.include_sunday,
       isActive: item.is_active,
     });
+  };
+
+  const loadHolidays = async (targetYear = year) => {
+    if (isNew || !hasCalendarId) {
+      return;
+    }
+
+    const list = await slaApi.listHolidays(calendarId, targetYear);
 
     setHolidays(list ?? []);
-  } catch (requestError) {
-    setError(
-      requestError.response?.data?.message ??
-      requestError.message ??
-      "Unable to load calendar.",
-    );
-  }
-};
+  };
+
+  const load = async () => {
+    if (isNew || !hasCalendarId) {
+      return;
+    }
+
+    setError("");
+
+    try {
+      await Promise.all([loadCalendar(), loadHolidays(year)]);
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ??
+          requestError.message ??
+          "Unable to load calendar.",
+      );
+    }
+  };
 
   useEffect(() => {
     load();
-  }, [calendarId, year]);
+  }, [calendarId]);
+
+  useEffect(() => {
+    if (!isNew && hasCalendarId) {
+      loadHolidays(year).catch((requestError) => {
+        setError(
+          requestError.response?.data?.message ??
+            requestError.message ??
+            "Unable to load holidays.",
+        );
+      });
+    }
+  }, [year, calendarId]);
+
+  const handleMonthChange = (offset) => {
+    const next = moveMonth(year, monthIndex, offset);
+
+    setYear(next.year);
+    setMonthIndex(next.monthIndex);
+  };
+
+  const openHolidayForDate = (dateKey) => {
+    setHolidayDialog({
+      open: true,
+      holiday: null,
+      initialDate: dateKey,
+    });
+  };
+
+  const openHolidayForEdit = (holiday) => {
+    setHolidayDialog({
+      open: true,
+      holiday,
+      initialDate: holiday.holiday_date,
+    });
+  };
 
   const saveCalendar = async () => {
     setSaving(true);
@@ -122,42 +178,76 @@ const load = async () => {
     }
   };
 
-const saveHoliday = async (payload) => {
-  if (isNew || !hasCalendarId) {
-    setError("Save the calendar before adding holidays.");
-    return;
-  }
-
-  setSaving(true);
-  setError("");
-
-  try {
-    if (holidayDialog.holiday) {
-      await slaApi.updateHoliday(
-        calendarId,
-        holidayDialog.holiday.id,
-        payload,
-      );
-    } else {
-      await slaApi.createHoliday(calendarId, payload);
+  const saveHoliday = async (payload) => {
+    if (isNew || !hasCalendarId) {
+      setError("Save the calendar before adding holidays.");
+      return;
     }
 
-    setHolidayDialog({
-      open: false,
-      holiday: null,
-    });
+    setSaving(true);
+    setError("");
 
-    await load();
-  } catch (requestError) {
-    setError(
-      requestError.response?.data?.message ??
-      requestError.message ??
-      "Unable to save holiday.",
-    );
-  } finally {
-    setSaving(false);
-  }
-};
+    try {
+      if (holidayDialog.holiday) {
+        await slaApi.updateHoliday(
+          calendarId,
+          holidayDialog.holiday.id,
+          payload,
+        );
+      } else {
+        await slaApi.createHoliday(calendarId, payload);
+      }
+
+      setHolidayDialog({
+        open: false,
+        holiday: null,
+        initialDate: "",
+      });
+
+      await loadHolidays(year);
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ??
+          requestError.message ??
+          "Unable to save holiday.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteHoliday = async (holiday) => {
+    if (!holiday?.id) {
+      return;
+    }
+
+    if (!window.confirm(`Remove holiday “${holiday.name}”?`)) {
+      return;
+    }
+
+    setDeletingHoliday(true);
+    setError("");
+
+    try {
+      await slaApi.deleteHoliday(calendarId, holiday.id);
+
+      setHolidayDialog({
+        open: false,
+        holiday: null,
+        initialDate: "",
+      });
+
+      await loadHolidays(year);
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ??
+          requestError.message ??
+          "Unable to remove holiday.",
+      );
+    } finally {
+      setDeletingHoliday(false);
+    }
+  };
 
   return (
     <Stack spacing={2.5}>
@@ -296,30 +386,49 @@ const saveHoliday = async (payload) => {
         </Stack>
       </Paper>
       {!isNew ? (
-        <Paper variant="outlined" sx={{ p: { xs: 1, md: 2 } }}>
+        <Stack spacing={2}>
           <SlaHolidayCalendar
             year={year}
+            monthIndex={monthIndex}
             holidays={holidays}
-            onYearChange={setYear}
-            onAdd={() => setHolidayDialog({ open: true, holiday: null })}
-            onEdit={(holiday) => setHolidayDialog({ open: true, holiday })}
-            onDelete={async (holiday) => {
-              if (!window.confirm(`Remove holiday “${holiday.name}”?`)) return;
-              await slaApi.deleteHoliday(calendarId, holiday.id);
-              await load();
-            }}
-            canCreate={!isNew}
-            canUpdate={!isNew}
-            canDelete={!isNew}
+            onMonthChange={handleMonthChange}
+            onDateClick={openHolidayForDate}
+            onEdit={openHolidayForEdit}
+            onDelete={deleteHoliday}
+            canCreate
+            canUpdate
+            canDelete
           />
-        </Paper>
+
+          <SlaHolidayList
+            year={year}
+            holidays={holidays}
+            onHolidayClick={openHolidayForEdit}
+          />
+
+          <SlaHolidayExcelActions
+            calendarId={calendarId}
+            year={year}
+            onImported={() => loadHolidays(year)}
+          />
+        </Stack>
       ) : null}
       <SlaHolidayDialog
         open={holidayDialog.open}
         holiday={holidayDialog.holiday}
-        onClose={() => setHolidayDialog({ open: false, holiday: null })}
+        initialDate={holidayDialog.initialDate}
+        onClose={() =>
+          setHolidayDialog({
+            open: false,
+            holiday: null,
+            initialDate: "",
+          })
+        }
         onSave={saveHoliday}
+        onDelete={deleteHoliday}
         saving={saving}
+        deleting={deletingHoliday}
+        canDelete
       />
     </Stack>
   );

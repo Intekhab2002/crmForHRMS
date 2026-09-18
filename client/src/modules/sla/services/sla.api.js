@@ -88,6 +88,34 @@ export const slaApi = Object.freeze({
       `/sla/calendars/${encodeURIComponent(calendarId)}/holidays/${encodeURIComponent(holidayId)}`,
     ));
   },
+
+  async downloadHolidayTemplate(calendarId, year) {
+  return apiClient.get(
+    `/sla/calendars/${encodeURIComponent(calendarId)}/holidays/template`,
+    {
+      params: { year },
+      responseType: "blob",
+    },
+  );
+},
+
+async importHolidays(calendarId, file) {
+  const formData = new FormData();
+
+  formData.append("file", file);
+
+  const response = await apiClient.post(
+    `/sla/calendars/${encodeURIComponent(calendarId)}/holidays/import`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+
+  return unwrap(response);
+},
   async preview(payload) {
     return unwrap(await apiClient.post("/sla/preview", payload));
   },

@@ -4,6 +4,7 @@ import rbacMiddleware from "../rbac/rbac.middleware.js";
 import { RBAC_PERMISSIONS } from "../rbac/rbac.constants.js";
 import controller from "./sla.controller.js";
 import v from "./sla.validator.js";
+import { holidayExcelUpload } from "./slaHoliday.upload.js";
 
 const router = Router(),
   { authenticate } = authMiddleware,
@@ -152,6 +153,25 @@ router.post(
   requirePermission(RBAC_PERMISSIONS.SLA_CALENDAR_UPDATE),
   params(v.uuidParamSchema),
   controller.deactivateCalendar,
+);
+
+router.get(
+  "/calendars/:calendarId/holidays/template",
+  authenticate,
+  requirePermission(RBAC_PERMISSIONS.SLA_HOLIDAY_READ),
+  params(v.calendarParamSchema),
+  query(v.holidayImportQuerySchema),
+  controller.downloadHolidayTemplate,
+);
+
+router.post(
+  "/calendars/:calendarId/holidays/import",
+  authenticate,
+  requirePermission(RBAC_PERMISSIONS.SLA_HOLIDAY_CREATE),
+  params(v.calendarParamSchema),
+  query(v.holidayImportQuerySchema),
+  holidayExcelUpload.single("file"),
+  controller.importHolidays,
 );
 
 router.get(

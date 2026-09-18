@@ -91,6 +91,11 @@ export const previewSchema = z.object({
   durationMinutes: z.number().int().min(1),
   calendarId: uuid,
 });
+
+export const holidayImportQuerySchema = z.object({
+  year: z.coerce.number().int().min(2000).max(2200),
+});
+
 export default Object.freeze({
   uuidParamSchema,
   ticketSlaParamSchema,
@@ -109,4 +114,5 @@ export default Object.freeze({
   updateHolidaySchema,
   previewSchema,
   policyParamSchema,
+  holidayImportQuerySchema
 });

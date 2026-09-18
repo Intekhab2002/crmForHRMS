@@ -1,6 +1,7 @@
 import { ApiResponse } from "../../helpers/ApiResponse.js";
 import service from "./sla.service.js";
 import repository from "./sla.repository.js";
+import { createHolidayTemplate } from "./slaHoliday.excel.js";
 
 const pageMeta = (q, total) => {
   const totalPages = Math.ceil(total / q.limit);
@@ -287,6 +288,53 @@ async function preview(req, res, next) {
   }
 }
 
+async function downloadHolidayTemplate(req, res, next) {
+  try {
+    const { calendarId } = req.params;
+    const { year } = req.validatedQuery;
+
+    await service.calendar.requireCalendar(calendarId);
+
+    const buffer = await createHolidayTemplate(year);
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="sla-holidays-${year}-template.xlsx"`,
+    );
+
+    res.setHeader("Content-Length", buffer.length);
+
+    return res.status(200).send(buffer);
+  } catch (e) {
+    next(e);
+  }
+}
+
+async function importHolidays(req, res, next) {
+  try {
+    const { calendarId } = req.params;
+    const { year } = req.validatedQuery;
+
+    const result = await service.holiday.importExcel(
+      calendarId,
+      year,
+      req.file,
+    );
+
+    return ApiResponse.success(
+      res,
+      result,
+      "SLA holidays imported successfully.",
+    );
+  } catch (e) {
+    next(e);
+  }
+}
 export default Object.freeze({
   policies,
   policy,
@@ -312,4 +360,6 @@ export default Object.freeze({
   history,
   recalc,
   preview,
+  downloadHolidayTemplate,
+  importHolidays,
 });
