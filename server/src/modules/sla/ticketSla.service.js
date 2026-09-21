@@ -431,12 +431,15 @@ async function stop(runtime, now, totalConsumed, tx = null) {
 async function breach(runtime, now, totalConsumed, segmentConsumed, tx = null) {
   // const target = Number(runtime.target_resolution_minutes ?? 0);
 
-  return terminal(
-    runtime,
-    now,
-    totalConsumed,
-    segmentConsumed,
-    SLA_STATUS.BREACHED,
+return repository.updateTicketSla(
+    runtime.id,
+    {
+      status: SLA_STATUS.BREACHED,
+      breachedAt: runtime.breached_at ?? now,
+      elapsedBusinessMinutes: totalConsumed,
+      remainingBusinessMinutes: 0,
+      lastCalculatedAt: now,
+    },
     tx,
   );
 }

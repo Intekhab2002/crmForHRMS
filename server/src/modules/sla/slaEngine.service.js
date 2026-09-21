@@ -83,13 +83,6 @@ async function calculateSegmentConsumed(segment, now, policy, holidayRows) {
   });
 }
 
-function terminalStatus(status) {
-  return [
-    SLA_STATUS.STOPPED,
-    SLA_STATUS.COMPLETED,
-    SLA_STATUS.BREACHED,
-  ].includes(status);
-}
 
 function qualifiesForPolicy(policy, ticket) {
   if (!policy) {
@@ -211,9 +204,7 @@ export async function syncTicket(
    */
   if (
     runtime &&
-    [SLA_STATUS.STOPPED, SLA_STATUS.COMPLETED, SLA_STATUS.BREACHED].includes(
-      runtime.status,
-    )
+    [SLA_STATUS.STOPPED, SLA_STATUS.COMPLETED].includes(runtime.status)
   ) {
     return runtime;
   }
@@ -261,11 +252,16 @@ export async function syncTicket(
      * Breach is evaluated before ordinary RUNNING synchronization.
      */
     if (target > 0 && consumed >= target) {
-      return ticketSla.breach(
-        runtime,
-        now,
-        consumed,
-        consumedResult.activeSegmentConsumed ?? 0,
+      if (runtime.status !== SLA_STATUS.BREACHED) {
+        return ticketSla.breach(runtime, now, consumed, tx);
+      }
+      return repository.updateTicketSla(
+        runtime.id,
+        {
+          elapsedBusinessMinutes: consumed,
+          remainingBusinessMinutes: 0,
+          lastCalculatedAt: now,
+        },
         tx,
       );
     }

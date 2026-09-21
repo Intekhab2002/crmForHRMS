@@ -58,7 +58,7 @@ export function calculateLiveRuntime(runtime, segments, now = new Date()) {
     };
   }
 
-  if (["STOPPED", "COMPLETED", "BREACHED"].includes(runtime.status)) {
+  if ([SLA_STATUS.STOPPED, SLA_STATUS.COMPLETED].includes(runtime.status)) {
     return {
       status: runtime.status,
       elapsedBusinessMinutes: Number(runtime.elapsed_business_minutes ?? 0),

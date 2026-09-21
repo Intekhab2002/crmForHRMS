@@ -13,9 +13,7 @@ export default function SlaCountdown({ sla }) {
       <Typography component="span" variant="h6" fontWeight={700} sx={{ fontVariantNumeric: "tabular-nums" }}>
         {formatRemaining(countdown.minutes)}
       </Typography>
-      <Typography component="span" variant="body2" color="text.secondary">
-        business time remaining
-      </Typography>
+
     </Stack>
   );
 }

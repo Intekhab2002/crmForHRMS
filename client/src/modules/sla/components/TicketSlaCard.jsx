@@ -165,7 +165,7 @@ export default function TicketSlaCard({ ticketId }) {
             >
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="subtitle1" fontWeight={700}>
-                  SLA
+                  Policy
                 </Typography>
 
                 <Typography variant="caption" color="text.secondary" noWrap>
