@@ -250,8 +250,8 @@ export default function SlaCalendarDetailPage() {
   };
 
   return (
-    <Stack spacing={2.5}>
-      <PageHeader
+    <Stack spacing={1}>
+      {/* <PageHeader
         title={isNew ? "Create SLA calendar" : calendar.name}
         description="Business time is authoritative on the server; this screen manages its configuration."
         actions={
@@ -263,10 +263,10 @@ export default function SlaCalendarDetailPage() {
             Back
           </Button>
         }
-      />
+      /> */}
       {error ? <Alert severity="error">{error}</Alert> : null}
       <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
-        <Stack spacing={2.5}>
+        <Stack spacing={1}>
           <Typography variant="h6">Working calendar</Typography>
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
             <TextField

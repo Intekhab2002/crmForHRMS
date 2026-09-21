@@ -103,7 +103,7 @@ export default function SlaHolidayExcelActions({
     setMessage(null);
 
     try {
-      const result = await slaApi.importHolidays(calendarId, file);
+      const result = await slaApi.importHolidays(calendarId,  year,file);
       const data = result ?? {};
 
       setMessage({
@@ -190,12 +190,7 @@ export default function SlaHolidayExcelActions({
             </Button>
           </CanAccess>
 
-          <CanAccess
-            permission={[
-              SLA_PERMISSIONS.holidayCreate,
-              SLA_PERMISSIONS.holidayUpdate,
-            ]}
-          >
+          <CanAccess permission={SLA_PERMISSIONS.holidayCreate}>
             <Button
               variant="contained"
               onClick={handleImport}

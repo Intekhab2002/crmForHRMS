@@ -99,7 +99,7 @@ export const slaApi = Object.freeze({
   );
 },
 
-async importHolidays(calendarId, file) {
+async importHolidays(calendarId, year, file) {
   const formData = new FormData();
 
   formData.append("file", file);
@@ -108,6 +108,9 @@ async importHolidays(calendarId, file) {
     `/sla/calendars/${encodeURIComponent(calendarId)}/holidays/import`,
     formData,
     {
+       params: {
+        year,
+      },
       headers: {
         "Content-Type": "multipart/form-data",
       },

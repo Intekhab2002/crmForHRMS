@@ -33,4 +33,26 @@ async function remove(id) {
   await requireHoliday(id);
   return repository.updateHoliday(id, { isActive: false });
 }
-export default Object.freeze({ list, create, update, remove, requireHoliday });
+async function importExcel(calendarId, year, file) {
+  if (!file?.buffer) {
+    throw AppError.badRequest(
+      "An Excel file is required.",
+      {
+        code: "SLA_HOLIDAY_IMPORT_FILE_REQUIRED",
+      },
+    );
+  }
+
+  await calendarService.requireCalendar(calendarId);
+
+  const rows = await parseHolidayWorkbook(
+    file.buffer,
+    year,
+  );
+
+  return repository.importHolidays(
+    calendarId,
+    rows,
+  );
+}
+export default Object.freeze({ list, create, update, remove, requireHoliday,importExcel });
