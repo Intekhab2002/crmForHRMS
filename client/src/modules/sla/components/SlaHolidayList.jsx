@@ -27,7 +27,15 @@ export default function SlaHolidayList({
   );
 
   return (
-    <Paper variant="outlined">
+    <Paper
+      variant="outlined"
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        maxHeight: "85vh",
+        overflow: "hidden",
+      }}
+    >
       <Stack
         direction="row"
         alignItems="center"
@@ -60,7 +68,13 @@ export default function SlaHolidayList({
           </Typography>
         </Stack>
       ) : (
-        <List disablePadding>
+        <List
+          disablePadding
+          sx={{
+            overflowY: "auto",
+            minHeight: 0,
+          }}
+        >
           {items.map((holiday, index) => (
             <ListItemButton
               key={holiday.id}

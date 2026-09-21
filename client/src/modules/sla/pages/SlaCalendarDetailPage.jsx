@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import {
   Alert,
+  Box,
   Button,
   Divider,
   FormControlLabel,
+  Grid,
   Paper,
   Stack,
   Switch,
@@ -250,169 +252,182 @@ export default function SlaCalendarDetailPage() {
   };
 
   return (
-    <Stack spacing={1}>
-      {/* <PageHeader
-        title={isNew ? "Create SLA calendar" : calendar.name}
-        description="Business time is authoritative on the server; this screen manages its configuration."
-        actions={
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBackOutlinedIcon />}
-            onClick={() => navigate(SLA_ROUTES.calendars)}
-          >
-            Back
-          </Button>
-        }
-      /> */}
-      {error ? <Alert severity="error">{error}</Alert> : null}
-      <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
-        <Stack spacing={1}>
-          <Typography variant="h6">Working calendar</Typography>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-            <TextField
-              fullWidth
-              label="Code"
-              value={calendar.code}
-              onChange={(e) =>
-                setCalendar({ ...calendar, code: e.target.value })
-              }
-            />
-            <TextField
-              fullWidth
-              label="Name"
-              value={calendar.name}
-              onChange={(e) =>
-                setCalendar({ ...calendar, name: e.target.value })
-              }
-            />
-            <TextField
-              fullWidth
-              label="Timezone"
-              value={calendar.timezone}
-              onChange={(e) =>
-                setCalendar({ ...calendar, timezone: e.target.value })
-              }
-            />
-          </Stack>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-            <TextField
-              fullWidth
-              type="number"
-              label="Business hours/day"
-              value={calendar.businessHoursPerDay}
-              onChange={(e) =>
-                setCalendar({
-                  ...calendar,
-                  businessHoursPerDay: e.target.value,
-                })
-              }
-              inputProps={{ min: 0.01, max: 24, step: 0.5 }}
-            />
-            <TextField
-              fullWidth
-              type="time"
-              label="Workday start"
-              value={calendar.workdayStartTime}
-              onChange={(e) =>
-                setCalendar({ ...calendar, workdayStartTime: e.target.value })
-              }
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              fullWidth
-              type="time"
-              label="Workday end"
-              value={calendar.workdayEndTime}
-              onChange={(e) =>
-                setCalendar({ ...calendar, workdayEndTime: e.target.value })
-              }
-              InputLabelProps={{ shrink: true }}
-            />
-          </Stack>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={calendar.includeSaturday}
+    <>
+      <Grid container spacing={1}>
+        <Grid size={{ xs: 12 }}>
+          <PageHeader
+            title={isNew ? "Create SLA calendar" : calendar.name}
+            description="Business time is authoritative on the server; this screen manages its configuration."
+            actions={
+              <Button
+                variant="outlined"
+                startIcon={<ArrowBackOutlinedIcon />}
+                onClick={() => navigate(SLA_ROUTES.calendars)}
+              >
+                Back
+              </Button>
+            }
+          />
+        </Grid>
+        {error ? <Alert severity="error">{error}</Alert> : null}
+        <Grid size={{ xs: 12 }}>
+          <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+            <Stack spacing={1}>
+              <Typography variant="h6">Working calendar</Typography>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField
+                  fullWidth
+                  label="Code"
+                  value={calendar.code}
+                  onChange={(e) =>
+                    setCalendar({ ...calendar, code: e.target.value })
+                  }
+                />
+                <TextField
+                  fullWidth
+                  label="Name"
+                  value={calendar.name}
+                  onChange={(e) =>
+                    setCalendar({ ...calendar, name: e.target.value })
+                  }
+                />
+                <TextField
+                  fullWidth
+                  label="Timezone"
+                  value={calendar.timezone}
+                  onChange={(e) =>
+                    setCalendar({ ...calendar, timezone: e.target.value })
+                  }
+                />
+              </Stack>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Business hours/day"
+                  value={calendar.businessHoursPerDay}
                   onChange={(e) =>
                     setCalendar({
                       ...calendar,
-                      includeSaturday: e.target.checked,
+                      businessHoursPerDay: e.target.value,
                     })
                   }
+                  inputProps={{ min: 0.01, max: 24, step: 0.5 }}
                 />
-              }
-              label="Include Saturday"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={calendar.includeSunday}
+                <TextField
+                  fullWidth
+                  type="time"
+                  label="Workday start"
+                  value={calendar.workdayStartTime}
                   onChange={(e) =>
                     setCalendar({
                       ...calendar,
-                      includeSunday: e.target.checked,
+                      workdayStartTime: e.target.value,
                     })
                   }
+                  InputLabelProps={{ shrink: true }}
                 />
-              }
-              label="Include Sunday"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={calendar.isActive}
+                <TextField
+                  fullWidth
+                  type="time"
+                  label="Workday end"
+                  value={calendar.workdayEndTime}
                   onChange={(e) =>
-                    setCalendar({ ...calendar, isActive: e.target.checked })
+                    setCalendar({ ...calendar, workdayEndTime: e.target.value })
                   }
+                  InputLabelProps={{ shrink: true }}
                 />
-              }
-              label={calendar.isActive ? "Active" : "Inactive"}
-            />
-          </Stack>
-          <Divider />
-          <CanAccess permission={SLA_PERMISSIONS.calendarUpdate}>
-            <Button
-              variant="contained"
-              startIcon={<SaveOutlinedIcon />}
-              onClick={saveCalendar}
-              disabled={
-                saving || !calendar.code.trim() || !calendar.name.trim()
-              }
-            >
-              {saving ? "Saving…" : "Save calendar"}
-            </Button>
-          </CanAccess>
-        </Stack>
-      </Paper>
-      {!isNew ? (
-        <Stack spacing={2}>
-          <SlaHolidayCalendar
-            year={year}
-            monthIndex={monthIndex}
-            holidays={holidays}
-            onMonthChange={handleMonthChange}
-            onDateClick={openHolidayForDate}
-            onEdit={openHolidayForEdit}
-            onDelete={deleteHoliday}
-            canCreate
-            canUpdate
-            canDelete
-          />
-
-          <SlaHolidayList
-            year={year}
-            holidays={holidays}
-            onHolidayClick={openHolidayForEdit}
-          />
-
-          <SlaHolidayExcelActions
-            calendarId={calendarId}
-            year={year}
-            onImported={() => loadHolidays(year)}
-          />
-        </Stack>
-      ) : null}
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={calendar.includeSaturday}
+                      onChange={(e) =>
+                        setCalendar({
+                          ...calendar,
+                          includeSaturday: e.target.checked,
+                        })
+                      }
+                    />
+                  }
+                  label="Include Saturday"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={calendar.includeSunday}
+                      onChange={(e) =>
+                        setCalendar({
+                          ...calendar,
+                          includeSunday: e.target.checked,
+                        })
+                      }
+                    />
+                  }
+                  label="Include Sunday"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={calendar.isActive}
+                      onChange={(e) =>
+                        setCalendar({ ...calendar, isActive: e.target.checked })
+                      }
+                    />
+                  }
+                  label={calendar.isActive ? "Active" : "Inactive"}
+                />
+              </Stack>
+              <Divider />
+              <CanAccess permission={SLA_PERMISSIONS.calendarUpdate}>
+                <Button
+                  variant="contained"
+                  startIcon={<SaveOutlinedIcon />}
+                  onClick={saveCalendar}
+                  disabled={
+                    saving || !calendar.code.trim() || !calendar.name.trim()
+                  }
+                >
+                  {saving ? "Saving…" : "Save calendar"}
+                </Button>
+              </CanAccess>
+            </Stack>
+          </Paper>
+        </Grid>
+        {!isNew ? (
+          <>
+            <Grid size={{ xs: 12, md: 8 }}>
+              <SlaHolidayCalendar
+                year={year}
+                monthIndex={monthIndex}
+                holidays={holidays}
+                onMonthChange={handleMonthChange}
+                onDateClick={openHolidayForDate}
+                onEdit={openHolidayForEdit}
+                onDelete={deleteHoliday}
+                canCreate
+                canUpdate
+                canDelete
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <SlaHolidayList
+                year={year}
+                holidays={holidays}
+                onHolidayClick={openHolidayForEdit}
+              />
+            </Grid>
+            <Grid size={12}>
+              <SlaHolidayExcelActions
+                calendarId={calendarId}
+                year={year}
+                onImported={() => loadHolidays(year)}
+              />
+            </Grid>
+          </>
+        ) : null}
+      </Grid>
       <SlaHolidayDialog
         open={holidayDialog.open}
         holiday={holidayDialog.holiday}
@@ -430,6 +445,6 @@ export default function SlaCalendarDetailPage() {
         deleting={deletingHoliday}
         canDelete
       />
-    </Stack>
+    </>
   );
 }

@@ -87,7 +87,6 @@ function buildUpdateValues(ticket) {
   );
 }
 
-
 export default function TicketLifecyclePage() {
   const { ticketId } = useParams();
   const { user } = useAuth();
@@ -422,208 +421,182 @@ export default function TicketLifecyclePage() {
   }
 
   return (
-    <ModulePage scroll={false}>
-      <TicketSlaCard ticketId={ticketId} />
-      <CompactPageToolbar
-        title={ticket.subject || ticket.ticketNumber || ticket.reference}
-        description={ticket.ticketNumber ?? ticket.reference}
-        backAction={{ component: Link, to: "/tickets" }}
-        backLabel="Back"
-        backTooltip="Back to Tickets"
-        refreshAction={{
-          onClick: () => loadAll(false),
-          disabled: refreshing,
-          "aria-label": "Refresh ticket",
-        }}
-        actions={
-          <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
-            <Stack
-              direction="row"
-              spacing={0.75}
-              alignItems="center"
-              flexWrap="wrap"
-              useFlexGap
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.75,
-                  px: 0.75,
-                  py: 0.5,
-                  border: 1,
-                  borderColor: "divider",
-                  borderRadius: 1.5,
-                  bgcolor: "background.default",
-                }}
-              >
-                <Typography
-                  component="span"
-                  variant="caption"
-                  fontWeight={700}
-                  color="text.secondary"
-                >
-                  Status
-                </Typography>
-
-                <Select
-                  size="small"
-                  value={pendingStatus}
-                  onChange={handleStatusChange}
-                  disabled={saving || statusOptionsLoading}
-                  inputProps={{ "aria-label": "Ticket status" }}
-                  sx={{
-                    minWidth: { xs: 130, sm: 150 },
-                    "& .MuiSelect-select": {
-                      py: 0.75,
-                      fontWeight: 700,
-                    },
-                  }}
-                >
-                  {statusOptions.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </Box>
-
-              <Button
-                variant="outlined"
-                onClick={handleStatusUpdate}
-                disabled={
-                  saving || !pendingStatus || pendingStatus === ticket.status
-                }
-              >
-                Update Status
-              </Button>
-
-              <Button
-                variant="contained"
-                startIcon={<EditOutlinedIcon />}
-                onClick={() => setEditOpen(true)}
-                disabled={saving}
-              >
-                Edit
-              </Button>
-            </Stack>
-          </CanAccess>
-        }
-      />
-
-      {notice ? (
-        <Alert severity="success" onClose={() => setNotice("")}>
-          {notice}
-        </Alert>
-      ) : null}
-
-      {error ? <Alert severity="error">{error}</Alert> : null}
-      <Grid
-        container
-        spacing={1.5}
+    <Box
+      sx={{
+        minHeight: "100vh",
+        overflowY: "auto",
+      }}
+    >
+      <Stack
+        spacing={2}
         sx={{
-          flex: 1,
-          minWidth: 0,
+          height: "100%",
           minHeight: 0,
-          overflow: "hidden",
-          alignItems: "stretch",
+          overflowY: "auto",
+          overflowX: "hidden",
+          pr: 1,
+          pb: 2,
         }}
       >
+        <TicketSlaCard ticketId={ticketId} />
+        <CompactPageToolbar
+          title={ticket.subject || ticket.ticketNumber || ticket.reference}
+          description={ticket.ticketNumber ?? ticket.reference}
+          backAction={{ component: Link, to: "/tickets" }}
+          backLabel="Back"
+          backTooltip="Back to Tickets"
+          refreshAction={{
+            onClick: () => loadAll(false),
+            disabled: refreshing,
+            "aria-label": "Refresh ticket",
+          }}
+          actions={
+            <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
+              <Stack
+                direction="row"
+                spacing={0.75}
+                alignItems="center"
+                flexWrap="wrap"
+                useFlexGap
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.75,
+                    px: 0.75,
+                    py: 0.5,
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 1.5,
+                    bgcolor: "background.default",
+                  }}
+                >
+                  <Typography
+                    component="span"
+                    variant="caption"
+                    fontWeight={700}
+                    color="text.secondary"
+                  >
+                    Status
+                  </Typography>
+
+                  <Select
+                    size="small"
+                    value={pendingStatus}
+                    onChange={handleStatusChange}
+                    disabled={saving || statusOptionsLoading}
+                    inputProps={{ "aria-label": "Ticket status" }}
+                    sx={{
+                      minWidth: { xs: 130, sm: 150 },
+                      "& .MuiSelect-select": {
+                        py: 0.75,
+                        fontWeight: 700,
+                      },
+                    }}
+                  >
+                    {statusOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </Box>
+
+                <Button
+                  variant="outlined"
+                  onClick={handleStatusUpdate}
+                  disabled={
+                    saving || !pendingStatus || pendingStatus === ticket.status
+                  }
+                >
+                  Update Status
+                </Button>
+
+                <Button
+                  variant="contained"
+                  startIcon={<EditOutlinedIcon />}
+                  onClick={() => setEditOpen(true)}
+                  disabled={saving}
+                >
+                  Edit
+                </Button>
+              </Stack>
+            </CanAccess>
+          }
+        />
+
+        {notice ? (
+          <Alert severity="success" onClose={() => setNotice("")}>
+            {notice}
+          </Alert>
+        ) : null}
+
+        {error ? <Alert severity="error">{error}</Alert> : null}
         <Grid
-          size={{ xs: 12, md: 7 }}
+          container
+          spacing={1.5}
           sx={{
+            flex: 1,
             minWidth: 0,
             minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
+            overflow: "hidden",
+            alignItems: "stretch",
           }}
         >
-          <Paper
-            variant="outlined"
+          <Grid
+            size={{ xs: 12, md: 7 }}
             sx={{
-              flex: "1 1 0",
               minWidth: 0,
               minHeight: 0,
-              overflow: "hidden",
               display: "flex",
               flexDirection: "column",
             }}
           >
-            <Box
+            <Paper
+              variant="outlined"
               sx={{
                 flex: "1 1 0",
                 minWidth: 0,
-                minHeight: 0,
-                overflowY: "auto",
-                overflowX: "hidden",
-                p: 1,
+                minHeight: "0",
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
-              <TicketOverview
-                ticket={ticket}
-                fields={TICKET_FIELD_CONFIG}
-                fieldNames={DETAIL_FIELDS}
-                title="Ticket Information"
-                fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
-                enforcePermissions={false}
-              />
-            </Box>
-          </Paper>
-        </Grid>
+              <Box
+                sx={{
+                  flex: "1 1 0",
+                  minWidth: 0,
+                  minHeight: 0,
+                  overflowY: "auto",
+                  overflowX: "hidden",
+                  p: 1,
+                }}
+              >
+                <TicketOverview
+                  ticket={ticket}
+                  fields={TICKET_FIELD_CONFIG}
+                  fieldNames={DETAIL_FIELDS}
+                  title="Ticket Information"
+                  fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
+                  enforcePermissions={false}
+                />
+              </Box>
+            </Paper>
+          </Grid>
 
-        <Grid
-          size={{ xs: 12, md: 5 }}
-          sx={{
-            minWidth: 0,
-            minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <Paper
-            variant="outlined"
+          <Grid
+            size={{ xs: 12, md: 5 }}
             sx={{
-              flex: "1 1 0",
               minWidth: 0,
               minHeight: 0,
-              overflow: "hidden",
               display: "flex",
               flexDirection: "column",
             }}
           >
-            <Tabs
-              value={activeTab}
-              onChange={(_, value) => setActiveTab(value)}
-              variant="fullWidth"
-              sx={{
-                flexShrink: 0,
-              }}
-            >
-              <Tab
-                value="activity"
-                icon={<HistoryOutlinedIcon />}
-                iconPosition="start"
-                label="Activity"
-              />
-
-              <Tab
-                value="comments"
-                icon={<CommentOutlinedIcon />}
-                iconPosition="start"
-                label="Comments"
-              />
-
-              <Tab
-                value="attachments"
-                icon={<AttachFileOutlinedIcon />}
-                iconPosition="start"
-                label="Files"
-              />
-            </Tabs>
-
-            <Divider />
-
-            <Box
+            <Paper
+              variant="outlined"
               sx={{
                 flex: "1 1 0",
                 minWidth: 0,
@@ -633,100 +606,143 @@ export default function TicketLifecyclePage() {
                 flexDirection: "column",
               }}
             >
-              {activeTab === "activity" ? (
-                <Box
-                  sx={{
-                    flex: "1 1 0",
-                    minWidth: 0,
-                    minHeight: 0,
-                    overflowY: "auto",
-                    overflowX: "hidden",
-                    px: 1,
-                    py: 1,
-                  }}
-                >
-                  <TicketLifecycleTimeline
-                    events={lifecycle}
-                    fields={TICKET_FIELD_CONFIG}
-                    emptyMessage="No activity recorded yet."
-                    fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
-                    loading={lifecycleLoading}
-                  />
-                </Box>
-              ) : null}
+              <Tabs
+                value={activeTab}
+                onChange={(_, value) => setActiveTab(value)}
+                variant="fullWidth"
+                sx={{
+                  flexShrink: 0,
+                }}
+              >
+                <Tab
+                  value="activity"
+                  icon={<HistoryOutlinedIcon />}
+                  iconPosition="start"
+                  label="Activity"
+                />
 
-              {activeTab === "comments" ? (
-                <Box
-                  sx={{
-                    flex: "1 1 0",
-                    minWidth: 0,
-                    minHeight: 0,
-                    overflowY: "auto",
-                    overflowX: "hidden",
-                    px: 1,
-                    py: 1,
-                  }}
-                >
-                  <Stack spacing={1}>
-                    <TicketComments
-                      comments={comments}
-                      loading={commentsLoading}
-                      currentUserId={user?.id}
-                      onUpdateComment={handleUpdateComment}
+                <Tab
+                  value="comments"
+                  icon={<CommentOutlinedIcon />}
+                  iconPosition="start"
+                  label="Comments"
+                />
+
+                <Tab
+                  value="attachments"
+                  icon={<AttachFileOutlinedIcon />}
+                  iconPosition="start"
+                  label="Files"
+                />
+              </Tabs>
+
+              <Divider />
+
+              <Box
+                sx={{
+                  flex: "1 1 0",
+                  minWidth: 0,
+                  minHeight: 0,
+                  overflow: "hidden",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                {activeTab === "activity" ? (
+                  <Box
+                    sx={{
+                      flex: "1 1 0",
+                      minWidth: 0,
+                      minHeight: 0,
+                      overflowY: "auto",
+                      overflowX: "hidden",
+                      px: 1,
+                      py: 1,
+                    }}
+                  >
+                    <TicketLifecycleTimeline
+                      events={lifecycle}
+                      fields={TICKET_FIELD_CONFIG}
+                      emptyMessage="No activity recorded yet."
+                      fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
+                      loading={lifecycleLoading}
                     />
+                  </Box>
+                ) : null}
 
-                    <TicketCommentComposer
-                      config={COMMENT_CONFIG}
-                      onSubmit={handleComment}
-                    />
-                  </Stack>
-                </Box>
-              ) : null}
+                {activeTab === "comments" ? (
+                  <Box
+                    sx={{
+                      flex: "1 1 0",
+                      minWidth: 0,
+                      minHeight: 0,
+                      overflowY: "auto",
+                      overflowX: "hidden",
+                      px: 1,
+                      py: 1,
+                    }}
+                  >
+                    <Stack spacing={1}>
+                      <TicketComments
+                        comments={comments}
+                        loading={commentsLoading}
+                        currentUserId={user?.id}
+                        onUpdateComment={handleUpdateComment}
+                      />
 
-              {activeTab === "attachments" ? (
-                <Box
-                  sx={{
-                    flex: "1 1 0",
-                    minWidth: 0,
-                    minHeight: 0,
-                    overflowY: "auto",
-                    overflowX: "hidden",
-                    px: 1,
-                    py: 1,
-                  }}
-                >
-                  <TicketAttachmentList ticketId={ticket.id} />
-                </Box>
-              ) : null}
-            </Box>
-          </Paper>
+                      <TicketCommentComposer
+                        config={COMMENT_CONFIG}
+                        onSubmit={handleComment}
+                      />
+                    </Stack>
+                  </Box>
+                ) : null}
+
+                {activeTab === "attachments" ? (
+                  <Box
+                    sx={{
+                      flex: "1 1 0",
+                      minWidth: 0,
+                      minHeight: 0,
+                      overflowY: "auto",
+                      overflowX: "hidden",
+                      px: 1,
+                      py: 1,
+                    }}
+                  >
+                    <TicketAttachmentList ticketId={ticket.id} />
+                  </Box>
+                ) : null}
+              </Box>
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
 
-      {/* Controlled inline-edit dialog */}
-      <Dialog
-        open={editOpen}
-        onClose={() => {
-          if (!saving) setEditOpen(false);
-        }}
-        fullWidth
-        maxWidth="lg"
-      >
-        <DialogTitle>Edit Ticket</DialogTitle>
+        {/* Controlled inline-edit dialog */}
+        <Dialog
+          open={editOpen}
+          onClose={() => {
+            if (!saving) setEditOpen(false);
+          }}
+          fullWidth
+          maxWidth="lg"
+        >
+          <DialogTitle>Edit Ticket</DialogTitle>
 
-        <DialogContent dividers>
-          <TicketForm
-            mode="update"
-            initialValues={updateValues}
-            onSubmit={handleUpdate}
-            submitting={saving}
-            submitLabel="Save Changes"
-            onCancel={() => {
-              if (!saving) setEditOpen(false);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
-    </ModulePage>
+          <DialogContent dividers>
+            <TicketForm
+              mode="update"
+              initialValues={updateValues}
+              onSubmit={handleUpdate}
+              submitting={saving}
+              submitLabel="Save Changes"
+              onCancel={() => {
+                if (!saving) setEditOpen(false);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      </Stack>
+    </Box>
   );
 }

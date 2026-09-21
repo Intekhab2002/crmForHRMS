@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Divider, Paper, Stack } from "@mui/material";
+import { Box, Divider, Paper, Stack } from "@mui/material";
 
 import OptionChip from "../../../components/display/OptionChip";
 import DetailField from "../../../components/display/DetailField";
@@ -111,21 +111,21 @@ export default function TicketOverview({
   }, [enforcePermissions, fieldNames, fields, hasPermission]);
 
   return (
-    <Paper
-      variant="outlined"
+    <Box
+      // variant="outlined"
       sx={{
         p: { xs: 1.5, md: 2 },
         minWidth: 0,
       }}
     >
-      {title ? (
+      {/* {title ? (
         <>
           <Stack sx={{ mb: 1 }}>
             <DetailField label={title} value="" empty />
           </Stack>
           <Divider sx={{ mb: 1.25 }} />
         </>
-      ) : null}
+      ) : null} */}
 
       <DetailGrid spacing={1.25}>
         {visibleFields.map((field) => {
@@ -144,6 +144,6 @@ export default function TicketOverview({
           );
         })}
       </DetailGrid>
-    </Paper>
+    </Box>
   );
 }
