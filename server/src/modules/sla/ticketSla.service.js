@@ -387,7 +387,7 @@ async function terminal(
     endReason,
   );
 
-  return repository.updateTicketSla(
+  const updated = await repository.updateTicketSla(
     runtime.id,
     {
       status,
@@ -403,6 +403,9 @@ async function terminal(
     },
     tx,
   );
+  await repository.archiveTicketSlaRun(updated.id, tx);
+
+  return updated;
 }
 
 async function complete(runtime, now, totalConsumed, tx = null) {
@@ -431,15 +434,12 @@ async function stop(runtime, now, totalConsumed, tx = null) {
 async function breach(runtime, now, totalConsumed, segmentConsumed, tx = null) {
   // const target = Number(runtime.target_resolution_minutes ?? 0);
 
-return repository.updateTicketSla(
-    runtime.id,
-    {
-      status: SLA_STATUS.BREACHED,
-      breachedAt: runtime.breached_at ?? now,
-      elapsedBusinessMinutes: totalConsumed,
-      remainingBusinessMinutes: 0,
-      lastCalculatedAt: now,
-    },
+  return terminal(
+    runtime,
+    now,
+    totalConsumed,
+    Number(segmentConsumed ?? totalConsumed),
+    SLA_STATUS.BREACHED,
     tx,
   );
 }

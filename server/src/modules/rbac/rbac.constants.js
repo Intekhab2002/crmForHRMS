@@ -43,6 +43,7 @@ export const RBAC_RESOURCES = Object.freeze({
   SLA: "sla",
   DASHBOARD: "dashboard",
   OPTION: "option",
+  REPORTS: "reports",
 });
 
 /**
@@ -65,6 +66,9 @@ export const RBAC_ACTIONS = Object.freeze({
   RESTORE: "restore",
   ENABLE: "enable",
   DISABLE: "disable",
+  GENERATE: "generate",
+  DOWNLOAD: "download",
+  AUDIT: "audit",
 });
 
 /**
@@ -130,6 +134,10 @@ export const RBAC_PERMISSIONS = Object.freeze({
   OPTION_CREATE: "option:create",
   OPTION_UPDATE: "option:update",
   OPTION_DELETE: "option:delete",
+
+  REPORTS_READ: "reports:read",
+  REPORTS_GENERATE: "reports:generate",
+  REPORTS_DOWNLOAD: "reports:download",
 });
 
 /**

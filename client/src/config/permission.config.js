@@ -61,6 +61,10 @@ export const PERMISSIONS = Object.freeze({
   SLA_HOLIDAY_UPDATE: "sla:holiday_update",
   SLA_HOLIDAY_DELETE: "sla:holiday_delete",
   SLA_RECALCULATE: "sla:recalculate",
+      REPORTS_READ: "reports:read",
+    REPORTS_GENERATE: "reports:generate",
+    REPORTS_DOWNLOAD: "reports:download",
+
 });
 
 export default PERMISSIONS;

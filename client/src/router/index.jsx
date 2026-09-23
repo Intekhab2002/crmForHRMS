@@ -35,6 +35,8 @@ import OptionManagementPage from "../modules/options/pages/OptionManagementPage"
 
 import { APP_MODULE_CONFIG, SYSTEM_ROUTES } from "../config/module.config";
 import LandingPage from "../pages/public/LandingPage";
+    import ReportsPage from "../modules/reports/pages/ReportsPage";
+
 
 const LAYOUTS = Object.freeze({
   public: PublicLayout,
@@ -68,6 +70,7 @@ const COMPONENTS = Object.freeze({
   slaPolicyDetail: SlaPolicyDetailPage,
   slaCalendars: SlaCalendarsPage,
   slaCalendarDetail: SlaCalendarDetailPage,
+  reports: ReportsPage,
 });
 
 function applyPermissionGuard(route, element) {

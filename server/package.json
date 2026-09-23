@@ -45,7 +45,8 @@
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
     "xss": "^1.0.15",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "pdfkit": "^0.17.2"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",

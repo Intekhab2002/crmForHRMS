@@ -41,6 +41,8 @@ const ICONS = Object.freeze({
   sla: TimerOutlinedIcon,
   slaPolicies: PolicyOutlinedIcon,
   slaCalendars: CalendarMonthOutlinedIcon,
+  reports: "reports"
+
 });
 
 function hasActiveDescendant(item, pathname) {

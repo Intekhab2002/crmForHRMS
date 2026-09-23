@@ -32,6 +32,10 @@ export const PERMISSIONS = Object.freeze({
     PERMISSION_CREATE: "permission:create",
     PERMISSION_UPDATE: "permission:update",
     PERMISSION_DELETE: "permission:delete",
+
+    REPORTS_READ: "reports:read",
+    REPORTS_GENERATE: "reports:generate",
+    REPORTS_DOWNLOAD: "reports:download",
 });
 
 

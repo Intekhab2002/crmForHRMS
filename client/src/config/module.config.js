@@ -282,6 +282,22 @@ export const APP_MODULE_CONFIG = Object.freeze({
           }),
         ]),
       }),
+
+      createRoute({
+        id: "reports",
+        path: "/reports",
+        label: "Reports",
+        component: "reports",
+
+        access: {
+          permissions: [PERMISSIONS.REPORTS_READ],
+        },
+
+        navigation: {
+          section: "app",
+          order: 40,
+        },
+      }),
     ]),
   }),
 });

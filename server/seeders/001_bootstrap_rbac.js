@@ -495,6 +495,35 @@ const SYSTEM_PERMISSIONS = Object.freeze([
     resource: "dashboard",
     action: "read",
   }),
+
+  //--------------------------------------------------------------------------
+  //Report
+  //--------------------------------------------------------------------------
+  Object.freeze({
+    code: "report:read",
+    name: "View Reports",
+    description:
+      "View SLA reports, report history, report runs, and report artifacts.",
+    resource: "report",
+    action: "read",
+  }),
+
+  Object.freeze({
+    code: "report:generate",
+    name: "Create Reports",
+    description: "Create and execute SLA report requests.",
+    resource: "report",
+    action: "generate",
+  }),
+
+  Object.freeze({
+    code: "report:download",
+    name: "Export Reports",
+    description:
+      "Export SLA reports in supported formats such as PDF and Excel.",
+    resource: "report",
+    action: "download",
+  }),
 ]);
 
 /**

@@ -30,8 +30,11 @@ import database from "./database/postgres.js";
 import registerGracefulShutdown from "./utils/gracefulShutdown.js";
 import registerProcessHandlers from "./utils/processHandlers.js";
 import logStartup from "./utils/startupLogger.js";
-    import slaMaintenanceJob
-        from "./modules/sla/slaMaintenance.job.js";
+import slaMaintenanceJob from "./modules/sla/slaMaintenance.job.js";
+import {
+  startReportGenerationJob,
+  stopReportGenerationJob,
+} from "./modules/reports/jobs/reportGeneration.job.js";
 
 /**
  * ============================================================================
@@ -39,105 +42,106 @@ import logStartup from "./utils/startupLogger.js";
  * ============================================================================
  */
 async function bootstrap() {
-    try {
-        /**
-         * --------------------------------------------------------------------
-         * Initialize Database
-         * --------------------------------------------------------------------
-         */
-        await database.initialize();
+  try {
+    /**
+     * --------------------------------------------------------------------
+     * Initialize Database
+     * --------------------------------------------------------------------
+     */
+    await database.initialize();
 
+    /**
+     * --------------------------------------------------------------------
+     * SLA maintenance job
+     * --------------------------------------------------------------------
+     */
 
-               /**
-         * --------------------------------------------------------------------
-         * SLA maintenance job
-         * --------------------------------------------------------------------
-         */
+    slaMaintenanceJob.startSlaMaintenanceJob();
 
-         slaMaintenanceJob.startSlaMaintenanceJob();
+    startReportGenerationJob();
 
-        /**
-         * --------------------------------------------------------------------
-         * Create HTTP Server
-         * --------------------------------------------------------------------
-         */
-        const server = http.createServer(app);
+    /**
+     * --------------------------------------------------------------------
+     * Create HTTP Server
+     * --------------------------------------------------------------------
+     */
+    const server = http.createServer(app);
 
-        /**
-         * --------------------------------------------------------------------
-         * Register Graceful Shutdown
-         * --------------------------------------------------------------------
-         */
-        const shutdown = registerGracefulShutdown({
-            server,
-            logger,
-            cleanupTasks: [
-                {
-                    name: "PostgreSQL",
-                    handler: database.close,
-                },
-            ],
-        });
+    /**
+     * --------------------------------------------------------------------
+     * Register Graceful Shutdown
+     * --------------------------------------------------------------------
+     */
+    const shutdown = registerGracefulShutdown({
+      server,
+      logger,
+      cleanupTasks: [
+        {
+          name: "PostgreSQL",
+          handler: database.close,
+        },
+        {
+          name: "Report Generation Worker",
+          handler: stopReportGenerationJob,
+        },
+      ],
+    });
 
-        /**
-         * --------------------------------------------------------------------
-         * Register Process Error Handlers
-         * --------------------------------------------------------------------
-         */
-        registerProcessHandlers({
-            logger,
-            shutdown,
-        });
+    /**
+     * --------------------------------------------------------------------
+     * Register Process Error Handlers
+     * --------------------------------------------------------------------
+     */
+    registerProcessHandlers({
+      logger,
+      shutdown,
+    });
 
-        /**
-         * --------------------------------------------------------------------
-         * Handle Process Signals
-         * --------------------------------------------------------------------
-         */
-        process.once("SIGINT", async () => {
-            const exitCode = await shutdown("SIGINT", 0);
-            process.exit(exitCode);
-        });
+    /**
+     * --------------------------------------------------------------------
+     * Handle Process Signals
+     * --------------------------------------------------------------------
+     */
+    process.once("SIGINT", async () => {
+      const exitCode = await shutdown("SIGINT", 0);
+      process.exit(exitCode);
+    });
 
-        process.once("SIGTERM", async () => {
-            const exitCode = await shutdown("SIGTERM", 0);
-            process.exit(exitCode);
-        });
+    process.once("SIGTERM", async () => {
+      const exitCode = await shutdown("SIGTERM", 0);
+      process.exit(exitCode);
+    });
 
-        /**
-         * --------------------------------------------------------------------
-         * Start HTTP Server
-         * --------------------------------------------------------------------
-         */
-        server.listen(
-            appConfig.server.port,
-            appConfig.server.host,
-            () => {
-               logStartup();
-            },
-        );
+    /**
+     * --------------------------------------------------------------------
+     * Start HTTP Server
+     * --------------------------------------------------------------------
+     */
+    server.listen(appConfig.server.port, appConfig.server.host, () => {
+      logStartup();
+    });
 
-        /**
-         * --------------------------------------------------------------------
-         * HTTP Server Error
-         * --------------------------------------------------------------------
-         */
-        server.on("error", (error) => {
-            logger.error("HTTP server failed.", {
-                error: error.message,
-                stack: error.stack,
-            });
+    /**
+     * --------------------------------------------------------------------
+     * HTTP Server Error
+     * --------------------------------------------------------------------
+     */
+    server.on("error", (error) => {
+      logger.error("HTTP server failed.", {
+        error: error.message,
+        stack: error.stack,
+      });
 
-            process.exit(1);
-        });
-    } catch (error) {
-        logger.error("Application bootstrap failed.", {
-            error: error.message,
-            stack: error.stack,
-        });
+      process.exit(1);
+    });
+  } catch (error) {
+    logger.error("Application bootstrap failed.", {
+      error: error.message,
+      stack: error.stack,
+    });
 
-        process.exit(1);
-    }
+    process.exit(1);
+  }
 }
 
 /**
