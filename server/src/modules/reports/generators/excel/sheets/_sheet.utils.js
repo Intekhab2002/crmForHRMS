@@ -23,13 +23,24 @@ export function addRows(sheet, rows) {
 }
 
 export function formatDateColumns(sheet, keys) {
-  for (const row of sheet.eachRow({ includeEmpty: false })) {
-    for (const key of keys) {
-      const column = sheet.getColumn(key);
-      const cell = row.getCell(column.number);
-      if (cell.value) cell.numFmt = "yyyy-mm-dd hh:mm:ss";
-    }
+  if (!sheet || !Array.isArray(keys) || keys.length === 0) {
+    return;
   }
+
+  const columns = keys.map((key) => sheet.getColumn(key));
+
+  sheet.eachRow(
+    { includeEmpty: false },
+    (row) => {
+      for (const column of columns) {
+        const cell = row.getCell(column.number);
+
+        if (cell.value instanceof Date) {
+          cell.numFmt = "yyyy-mm-dd hh:mm:ss";
+        }
+      }
+    },
+  );
 }
 
 function columnLetter(number) {

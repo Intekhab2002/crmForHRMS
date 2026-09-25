@@ -420,4 +420,6 @@ export default Object.freeze({
   getDefinition,
   getRun,
   getArtifact,
+  listDefinitions,
+  getDefinition,
 });

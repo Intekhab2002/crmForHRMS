@@ -2,32 +2,48 @@ import { getQueryExecutor } from "../../../database/queryExecutor.js";
 
 const ex = (tx) => getQueryExecutor(tx);
 
-const buildRunScope = (input = {}) => {
-  const params = [input.periodStart, input.periodEnd, input.dataCutoff];
-  const where = [
-    "r.activated_at >= $1::timestamptz",
-    "r.activated_at < $2::timestamptz",
-    "r.activated_at <= $3::timestamptz",
+const buildRunScope = (input = {}, alias = "r") => {
+  const params = [
+    input.periodStart,
+    input.periodEnd,
+    input.dataCutoff,
   ];
+
+  const where = [
+    `${alias}.activated_at >= $1::timestamptz`,
+    `${alias}.activated_at < $2::timestamptz`,
+    `${alias}.activated_at <= $3::timestamptz`,
+  ];
+
   let i = 4;
 
   if (input.policyIds?.length) {
-    where.push(`r.sla_policy_id = ANY($${i}::uuid[])`);
+    where.push(
+      `${alias}.sla_policy_id = ANY($${i}::uuid[])`,
+    );
+
     params.push(input.policyIds);
     i += 1;
   }
 
   if (input.statuses?.length) {
-    where.push(`r.status = ANY($${i}::text[])`);
+    where.push(
+      `${alias}.status = ANY($${i}::text[])`,
+    );
+
     params.push(input.statuses);
     i += 1;
   }
 
-  return { where: where.join(" AND "), params, next: i };
+  return {
+    where: where.join(" AND "),
+    params,
+    next: i,
+  };
 };
 
 export async function listHistoricalRuns(input, tx = null) {
-  const { where, params, next } = buildRunScope(input);
+  const { where, params, next } = buildRunScope(input,"r");
 
   const query = `
     SELECT
@@ -79,7 +95,7 @@ export async function listHistoricalRuns(input, tx = null) {
  * when a corresponding history record already exists.
  */
 export async function listCurrentUnarchivedRuns(input, tx = null) {
-  const { where, params } = buildRunScope(input);
+  const { where, params } = buildRunScope(input,"ts");
 
   const query = `
     SELECT
