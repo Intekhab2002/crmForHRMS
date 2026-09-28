@@ -488,14 +488,6 @@ const SYSTEM_PERMISSIONS = Object.freeze([
   // Dashboard
   // -------------------------------------------------------------------------
 
-  Object.freeze({
-    code: "dashboard:read",
-    name: "Read Dashboard",
-    description: "View role-authorized dashboards.",
-    resource: "dashboard",
-    action: "read",
-  }),
-
 Object.freeze({
   code: "dashboard:read",
   name: "Read Dashboard",
