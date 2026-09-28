@@ -1,9 +1,9 @@
-export const DASHBOARD_PERMISSION = Object.freeze({
-  operational: "dashboard:operational:read",
-  management: "dashboard:management:read",
-  professional: "dashboard:professional:read",
-  executive: "dashboard:executive:read",
-  audit: "dashboard:audit:read",
-});
+import { DASHBOARD_PERMISSION } from "./dashboard.constants";
 
-export default DASHBOARD_PERMISSION;
+export const DASHBOARD_PERMISSION_BY_TYPE = Object.freeze({
+  [DASHBOARD_TYPE.OPERATIONAL]: DASHBOARD_PERMISSION.operational,
+  [DASHBOARD_TYPE.MANAGEMENT]: DASHBOARD_PERMISSION.management,
+  [DASHBOARD_TYPE.PROFESSIONAL]: DASHBOARD_PERMISSION.professional,
+  [DASHBOARD_TYPE.EXECUTIVE]: DASHBOARD_PERMISSION.executive,
+  [DASHBOARD_TYPE.AUDIT]: DASHBOARD_PERMISSION.audit,
+});

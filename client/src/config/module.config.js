@@ -65,7 +65,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
         component: "dashboardModule",
 
         access: {
-          permissions: [PERMISSIONS.DASHBOARD_OPERATIONAL_READ],
+          permissions: [PERMISSIONS.DASHBOARD_READ],
         },
 
         navigation: {
@@ -73,54 +73,53 @@ export const APP_MODULE_CONFIG = Object.freeze({
           icon: "dashboard",
           order: 10,
         },
-        children:Object.freeze([
+        children: Object.freeze([
           createRoute({
-      id: "dashboard.operational",
-      path: "operational",
-      label: "Operational",
-      component: "dashboardOperational",
-      access: {
-        permissions: ["dashboard:operational:read"],
-      },
-    }),
-    createRoute({
-      id: "dashboard.management",
-      path: "management",
-      label: "Management",
-      component: "dashboardManagement",
-      access: {
-        permissions: ["dashboard:management:read"],
-      },
-    }),
-    createRoute({
-      id: "dashboard.professional",
-      path: "professional",
-      label: "Professional",
-      component: "dashboardProfessional",
-      access: {
-        permissions: ["dashboard:professional:read"],
-      },
-    }),
-    createRoute({
-      id: "dashboard.executive",
-      path: "executive",
-      label: "Executive",
-      component: "dashboardExecutive",
-      access: {
-        permissions: ["dashboard:executive:read"],
-      },
-    }),
-    createRoute({
-      id: "dashboard.audit",
-      path: "audit",
-      label: "Audit",
-      component: "dashboardAudit",
-      access: {
-        permissions: ["dashboard:audit:read"],
-      },
-    }),
-
-        ])
+            id: "dashboard.operational",
+            path: "operational",
+            label: "Operational",
+            component: "dashboardOperational",
+            access: {
+              permissions: [PERMISSIONS.DASHBOARD_OPERATIONAL_READ],
+            },
+          }),
+          createRoute({
+            id: "dashboard.management",
+            path: "management",
+            label: "Management",
+            component: "dashboardManagement",
+            access: {
+              permissions: [PERMISSIONS.DASHBOARD_MANAGEMENT_READ],
+            },
+          }),
+          createRoute({
+            id: "dashboard.professional",
+            path: "professional",
+            label: "Professional",
+            component: "dashboardProfessional",
+            access: {
+              permissions: [PERMISSIONS.DASHBOARD_PROFESSIONAL_READ],
+            },
+          }),
+          createRoute({
+            id: "dashboard.executive",
+            path: "executive",
+            label: "Executive",
+            component: "dashboardExecutive",
+            access: {
+              permissions: [PERMISSIONS.DASHBOARD_EXECUTIVE_READ],
+            },
+          }),
+          createRoute({
+            id: "dashboard.audit",
+            path: "audit",
+            label: "Audit",
+            component: "dashboardAudit",
+            access: {
+              permissions: [PERMISSIONS.DASHBOARD_AUDIT_READ],
+            },
+          }),
+        ]),
       }),
 
       createRoute({

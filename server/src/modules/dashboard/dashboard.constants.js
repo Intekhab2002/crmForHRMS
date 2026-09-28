@@ -9,11 +9,12 @@ export const DASHBOARD_TYPE = Object.freeze({
 export const DASHBOARD_TYPES = Object.freeze(Object.values(DASHBOARD_TYPE));
 
 export const DASHBOARD_PERMISSION = Object.freeze({
-  [DASHBOARD_TYPE.OPERATIONAL]: "dashboard:operational:read",
-  [DASHBOARD_TYPE.MANAGEMENT]: "dashboard:management:read",
-  [DASHBOARD_TYPE.PROFESSIONAL]: "dashboard:professional:read",
-  [DASHBOARD_TYPE.EXECUTIVE]: "dashboard:executive:read",
-  [DASHBOARD_TYPE.AUDIT]: "dashboard:audit:read",
+  module: "dashboard:read",
+  operational: "dashboard_operational:read",
+  management: "dashboard_management:read",
+  professional: "dashboard_professional:read",
+  executive: "dashboard_executive:read",
+  audit: "dashboard_audit:read",
 });
 
 export const DASHBOARD_LAYOUT_VERSION = 1;

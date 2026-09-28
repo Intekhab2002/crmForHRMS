@@ -1,3 +1,4 @@
+import { PERMISSIONS } from "../../../config/permission.config";
 export const DASHBOARD_TYPES = Object.freeze({
   OPERATIONAL: "operational",
   MANAGEMENT: "management",
@@ -11,31 +12,31 @@ export const DASHBOARD_REGISTRY = Object.freeze([
     code: DASHBOARD_TYPES.OPERATIONAL,
     name: "Operational",
     path: "/dashboard/operational",
-    permission: "dashboard:operational:read",
+    permission: PERMISSIONS.DASHBOARD_OPERATIONAL_READ,
   }),
   Object.freeze({
     code: DASHBOARD_TYPES.MANAGEMENT,
     name: "Management",
     path: "/dashboard/management",
-    permission: "dashboard:management:read",
+    permission: PERMISSIONS.DASHBOARD_MANAGEMENT_READ,
   }),
   Object.freeze({
     code: DASHBOARD_TYPES.PROFESSIONAL,
     name: "Professional",
     path: "/dashboard/professional",
-    permission: "dashboard:professional:read",
+    permission: PERMISSIONS.DASHBOARD_PROFESSIONAL_READ,
   }),
   Object.freeze({
     code: DASHBOARD_TYPES.EXECUTIVE,
     name: "Executive",
     path: "/dashboard/executive",
-    permission: "dashboard:executive:read",
+    permission: PERMISSIONS.DASHBOARD_EXECUTIVE_READ,
   }),
   Object.freeze({
     code: DASHBOARD_TYPES.AUDIT,
     name: "Audit",
     path: "/dashboard/audit",
-    permission: "dashboard:audit:read",
+    permission: PERMISSIONS.DASHBOARD_AUDIT_READ,
   }),
 ]);
 

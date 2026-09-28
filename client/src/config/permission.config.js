@@ -12,11 +12,12 @@
 
 export const PERMISSIONS = Object.freeze({
   DASHBOARD_READ: "dashboard:read",
-  DASHBOARD_OPERATIONAL_READ: "dashboard:operational:read",
-  DASHBOARD_MANAGEMENT_READ: "dashboard:management:read",
-  DASHBOARD_PROFESSIONAL_READ: "dashboard:professional:read",
-  DASHBOARD_EXECUTIVE_READ: "dashboard:executive:read",
-  DASHBOARD_AUDIT_READ: "dashboard:audit:read",
+
+  DASHBOARD_OPERATIONAL_READ: "dashboard_operational:read",
+  DASHBOARD_MANAGEMENT_READ: "dashboard_management:read",
+  DASHBOARD_PROFESSIONAL_READ: "dashboard_professional:read",
+  DASHBOARD_EXECUTIVE_READ: "dashboard_executive:read",
+  DASHBOARD_AUDIT_READ: "dashboard_audit:read",
 
   USER_READ: "user:read",
 

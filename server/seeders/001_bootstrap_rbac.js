@@ -496,45 +496,53 @@ const SYSTEM_PERMISSIONS = Object.freeze([
     action: "read",
   }),
 
-  Object.freeze({
-    code: "dashboard:operational:read",
-    name: "Read Operational Dashboard",
-    description: "View operational dashboard metrics and insights.",
-    resource: "dashboard",
-    action: "read",
-  }),
+Object.freeze({
+  code: "dashboard:read",
+  name: "Read Dashboard",
+  description: "Access the dashboard module.",
+  resource: "dashboard",
+  action: "read",
+}),
 
-  Object.freeze({
-    code: "dashboard:management:read",
-    name: "Read Management Dashboard",
-    description: "Access management-level dashboard data and reports.",
-    resource: "dashboard",
-    action: "read",
-  }),
+Object.freeze({
+  code: "dashboard_operational:read",
+  name: "Read Operational Dashboard",
+  description: "View the operational dashboard.",
+  resource: "dashboard_operational",
+  action: "read",
+}),
 
-  Object.freeze({
-    code: "dashboard:professional:read",
-    name: "Read Professional Dashboard",
-    description: "View professional dashboard information and analytics.",
-    resource: "dashboard",
-    action: "read",
-  }),
+Object.freeze({
+  code: "dashboard_management:read",
+  name: "Read Management Dashboard",
+  description: "View the management dashboard.",
+  resource: "dashboard_management",
+  action: "read",
+}),
 
-  Object.freeze({
-    code: "dashboard:executive:read",
-    name: "Read Executive Dashboard",
-    description: "Access executive dashboard for strategic insights.",
-    resource: "dashboard",
-    action: "read",
-  }),
+Object.freeze({
+  code: "dashboard_professional:read",
+  name: "Read Professional Dashboard",
+  description: "View the professional dashboard.",
+  resource: "dashboard_professional",
+  action: "read",
+}),
 
-  Object.freeze({
-    code: "dashboard:audit:read",
-    name: "Read Audit Dashboard",
-    description: "View audit dashboard for compliance and review purposes.",
-    resource: "dashboard",
-    action: "read",
-  }),
+Object.freeze({
+  code: "dashboard_executive:read",
+  name: "Read Executive Dashboard",
+  description: "View the executive dashboard.",
+  resource: "dashboard_executive",
+  action: "read",
+}),
+
+Object.freeze({
+  code: "dashboard_audit:read",
+  name: "Read Audit Dashboard",
+  description: "View the audit dashboard.",
+  resource: "dashboard_audit",
+  action: "read",
+}),
 
   //--------------------------------------------------------------------------
   //Report
