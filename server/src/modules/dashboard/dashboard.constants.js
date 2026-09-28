@@ -1,3 +1,9 @@
+import rbacConstants from "../rbac/rbac.constants.js";
+
+const {
+  RBAC_PERMISSIONS,
+} = rbacConstants;
+
 export const DASHBOARD_TYPE = Object.freeze({
   OPERATIONAL: "operational",
   MANAGEMENT: "management",
@@ -6,15 +12,33 @@ export const DASHBOARD_TYPE = Object.freeze({
   AUDIT: "audit",
 });
 
-export const DASHBOARD_TYPES = Object.freeze(Object.values(DASHBOARD_TYPE));
+export const DASHBOARD_TYPES = Object.freeze(
+  Object.values(DASHBOARD_TYPE),
+);
 
+/**
+ * Dashboard permissions are references to the centralized RBAC
+ * permission catalog.
+ *
+ * Do not define permission strings directly in the dashboard module.
+ */
 export const DASHBOARD_PERMISSION = Object.freeze({
-  module: "dashboard:read",
-  operational: "dashboard_operational:read",
-  management: "dashboard_management:read",
-  professional: "dashboard_professional:read",
-  executive: "dashboard_executive:read",
-  audit: "dashboard_audit:read",
+  module: RBAC_PERMISSIONS.DASHBOARD_READ,
+
+  [DASHBOARD_TYPE.OPERATIONAL]:
+    RBAC_PERMISSIONS.DASHBOARD_OPERATIONAL_READ,
+
+  [DASHBOARD_TYPE.MANAGEMENT]:
+    RBAC_PERMISSIONS.DASHBOARD_MANAGEMENT_READ,
+
+  [DASHBOARD_TYPE.PROFESSIONAL]:
+    RBAC_PERMISSIONS.DASHBOARD_PROFESSIONAL_READ,
+
+  [DASHBOARD_TYPE.EXECUTIVE]:
+    RBAC_PERMISSIONS.DASHBOARD_EXECUTIVE_READ,
+
+  [DASHBOARD_TYPE.AUDIT]:
+    RBAC_PERMISSIONS.DASHBOARD_AUDIT_READ,
 });
 
 export const DASHBOARD_LAYOUT_VERSION = 1;
