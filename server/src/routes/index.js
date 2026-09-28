@@ -72,6 +72,9 @@ import ticketSlaRouter from "../modules/sla/ticketSla.routes.js";
 
 import reportsRouter from "../modules/reports/reports.routes.js";
 
+ import dashboardRouter from "../modules/dashboard/dashboard.routes.js";
+
+
 
 const router = Router();
 
@@ -146,6 +149,6 @@ router.use(`/${apiVersion}/sla`, slaRouter);
  router.use(`/${apiVersion}/reports`, reportsRouter);
 
 
-// router.use(`/${apiVersion}/dashboard`, dashboardRouter);
+router.use(`/${apiVersion}/dashboard`, dashboardRouter);
 
 export default router;

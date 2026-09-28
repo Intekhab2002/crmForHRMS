@@ -31,7 +31,18 @@ export const API_CONFIG = Object.freeze({
     employees: "/employees",
     tickets: "/tickets",
     ticketExport: "/tickets/export",
-    dashboard: "/dashboard",
+    dashboard: {
+      available: "/dashboard/available",
+      byType: (dashboardType) =>
+        `/dashboard/${encodeURIComponent(dashboardType)}`,
+      metric: (dashboardType, metricCode) =>
+        `/dashboard/${encodeURIComponent(dashboardType)}/metrics/${encodeURIComponent(metricCode)}`,
+      layout: (dashboardType) =>
+        `/dashboard/${encodeURIComponent(dashboardType)}/layout`,
+      resetLayout: (dashboardType) =>
+        `/dashboard/${encodeURIComponent(dashboardType)}/layout/reset`,
+    },
+
     formConfiguration: Object.freeze({
       forms: "/forms",
       formFields: "/form-fields",

@@ -1,0 +1,309 @@
+import AppError from "../../helpers/AppError.js";
+import logger from "../../config/logger.js";
+import { DASHBOARD_CONFIG } from "./dashboard.config.js";
+import {
+  DASHBOARD_TYPES,
+  DASHBOARD_LAYOUT_VERSION,
+} from "./dashboard.constants.js";
+import metrics from "./dashboard.metrics.js";
+import layoutRepository from "./dashboard.layout.repository.js";
+
+function assertDashboardType(dashboardType) {
+  if (!DASHBOARD_TYPES.includes(dashboardType)) {
+    throw AppError.notFound(`Dashboard '${dashboardType}' was not found.`);
+  }
+  return DASHBOARD_CONFIG[dashboardType];
+}
+
+function normalizeFilters(input = {}) {
+  return Object.freeze({
+    periodStart: input.periodStart || null,
+    periodEnd: input.periodEnd || null,
+    departmentId: input.departmentId || [],
+    organizationId: input.organizationId || [],
+    assignedUserId: input.assignedUserId || [],
+    priority: input.priority || [],
+    severity: input.severity || [],
+    category: input.category || [],
+    status: input.status || [],
+    slaPolicyId: input.slaPolicyId || [],
+    slaStatus: input.slaStatus || [],
+  });
+}
+
+function defaultLayout(config) {
+  return {
+    version: DASHBOARD_LAYOUT_VERSION,
+    widgets: config.defaultWidgets.map((widget, index) => ({
+      x: (index % 4) * 3,
+      y: Math.floor(index / 4) * 2,
+      ...widget,
+    })),
+  };
+}
+
+function validateSavedLayout(saved, config) {
+  if (!saved?.layout_json) return null;
+
+  const parsed = typeof saved.layout_json === "string"
+    ? JSON.parse(saved.layout_json)
+    : saved.layout_json;
+
+  if (
+    !parsed ||
+    parsed.version !== config.layoutVersion ||
+    !Array.isArray(parsed.widgets)
+  ) {
+    return null;
+  }
+
+  const knownIds = new Set(config.defaultWidgets.map((widget) => widget.id));
+  const widgets = parsed.widgets.filter(
+    (widget) =>
+      knownIds.has(widget.id) &&
+      Number.isInteger(widget.w) &&
+      Number.isInteger(widget.h) &&
+      Number.isInteger(widget.x) &&
+      Number.isInteger(widget.y),
+  );
+
+  return {
+    version: config.layoutVersion,
+    widgets,
+  };
+}
+
+async function buildMetricContext({ filters, actorUserId, tx }) {
+  return {
+    filters,
+    actorUserId,
+    tx,
+  };
+}
+
+export async function getAvailableDashboards({ permissions = [] }) {
+  return Object.values(DASHBOARD_CONFIG)
+    .filter((dashboard) => permissions.includes(dashboard.permission))
+    .map((dashboard) => ({
+      code: dashboard.code,
+      name: dashboard.name,
+      permission: dashboard.permission,
+    }));
+}
+
+export async function getDashboard({
+  dashboardType,
+  filters: inputFilters,
+  permissions,
+  actorUserId,
+  tx = null,
+}) {
+  const config = assertDashboardType(dashboardType);
+
+  if (!permissions.includes(config.permission)) {
+    throw AppError.forbidden("You do not have access to this dashboard.");
+  }
+
+  const filters = normalizeFilters(inputFilters);
+  const definitions = metrics.getMetricsForDashboard(dashboardType)
+    .filter((definition) => permissions.includes(definition.permission));
+
+  const metricContext = await buildMetricContext({
+    filters,
+    actorUserId,
+    tx,
+  });
+
+  const startedAt = Date.now();
+
+  const results = await Promise.all(
+    definitions.map(async (definition) => {
+      const metricStarted = Date.now();
+
+      try {
+        const data = await metrics.executeMetric(definition.code, metricContext);
+        logger.info("dashboard_metric_executed", {
+          dashboardType,
+          metricCode: definition.code,
+          durationMs: Date.now() - metricStarted,
+          actorUserId,
+        });
+        return data;
+      } catch (error) {
+        logger.error("dashboard_metric_failed", {
+          dashboardType,
+          metricCode: definition.code,
+          durationMs: Date.now() - metricStarted,
+          actorUserId,
+          error: error.message,
+          stack: error.stack,
+        });
+
+        return {
+          code: definition.code,
+          label: definition.name,
+          value: null,
+          unit: null,
+          trend: null,
+          visualization: definition.visualization,
+          data: null,
+          drillDown: null,
+          metadata: {
+            error: {
+              code: "METRIC_QUERY_FAILED",
+              message: "Metric data is temporarily unavailable.",
+            },
+          },
+        };
+      }
+    }),
+  );
+
+  logger.info("dashboard_requested", {
+    dashboardType,
+    actorUserId,
+    durationMs: Date.now() - startedAt,
+  });
+
+  return {
+    dashboard: {
+      code: config.code,
+      name: config.name,
+      permissions: [config.permission],
+    },
+    filters,
+    generatedAt: new Date().toISOString(),
+    metrics: results.filter(Boolean),
+    layout: defaultLayout(config),
+  };
+}
+
+export async function getMetric({
+  dashboardType,
+  metricCode,
+  filters: inputFilters,
+  permissions,
+  actorUserId,
+  tx = null,
+}) {
+  const config = assertDashboardType(dashboardType);
+
+  if (!permissions.includes(config.permission)) {
+    throw AppError.forbidden("You do not have access to this dashboard.");
+  }
+
+  const definition = metrics.getMetric(metricCode);
+
+  if (!definition || !definition.dashboardTypes.includes(dashboardType)) {
+    throw AppError.notFound(`Metric '${metricCode}' was not found for this dashboard.`);
+  }
+
+  if (!permissions.includes(definition.permission)) {
+    throw AppError.forbidden("You do not have access to this metric.");
+  }
+
+  const filters = normalizeFilters(inputFilters);
+  const data = await metrics.executeMetric(metricCode, {
+    filters,
+    actorUserId,
+    tx,
+  });
+
+  return {
+    dashboard: {
+      code: config.code,
+      name: config.name,
+      permissions: [config.permission],
+    },
+    filters,
+    generatedAt: new Date().toISOString(),
+    metric: data,
+  };
+}
+
+export async function getLayout({ dashboardType, userId, permissions, tx = null }) {
+  const config = assertDashboardType(dashboardType);
+
+  if (!permissions.includes(config.permission)) {
+    throw AppError.forbidden("You do not have access to this dashboard.");
+  }
+
+  const saved = await layoutRepository.findByUserAndType(userId, dashboardType, tx);
+  const layout = validateSavedLayout(saved, config) || defaultLayout(config);
+
+  return {
+    version: config.layoutVersion,
+    dashboardType,
+    source: saved ? "user" : "default",
+    layout,
+  };
+}
+
+export async function saveLayout({
+  dashboardType,
+  userId,
+  permissions,
+  layout,
+  tx = null,
+}) {
+  const config = assertDashboardType(dashboardType);
+
+  if (!permissions.includes(config.permission)) {
+    throw AppError.forbidden("You do not have access to this dashboard.");
+  }
+
+  const normalized = {
+    version: config.layoutVersion,
+    widgets: layout.widgets
+      .filter((widget) => config.defaultWidgets.some((item) => item.id === widget.id))
+      .map((widget) => ({ ...widget })),
+  };
+
+  const saved = await layoutRepository.upsert({
+    userId,
+    dashboardType,
+    layoutVersion: config.layoutVersion,
+    layoutJson: normalized,
+  }, tx);
+
+  return {
+    version: config.layoutVersion,
+    dashboardType,
+    source: "user",
+    layout: {
+      version: saved.layout_version,
+      widgets: saved.layout_json.widgets ?? saved.layout_json,
+    },
+  };
+}
+
+export async function resetLayout({
+  dashboardType,
+  userId,
+  permissions,
+  tx = null,
+}) {
+  const config = assertDashboardType(dashboardType);
+
+  if (!permissions.includes(config.permission)) {
+    throw AppError.forbidden("You do not have access to this dashboard.");
+  }
+
+  await layoutRepository.remove(userId, dashboardType, tx);
+
+  return {
+    version: config.layoutVersion,
+    dashboardType,
+    source: "default",
+    layout: defaultLayout(config),
+  };
+}
+
+export default Object.freeze({
+  getAvailableDashboards,
+  getDashboard,
+  getMetric,
+  getLayout,
+  saveLayout,
+  resetLayout,
+});

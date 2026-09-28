@@ -1,0 +1,13 @@
+.crm-dashboard {
+  min-width: 0;
+}
+
+.crm-dashboard__metric-clickable {
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .crm-dashboard__metric-clickable {
+    cursor: default;
+  }
+}

@@ -12,6 +12,11 @@
 
 export const PERMISSIONS = Object.freeze({
   DASHBOARD_READ: "dashboard:read",
+  DASHBOARD_OPERATIONAL_READ: "dashboard:operational:read",
+  DASHBOARD_MANAGEMENT_READ: "dashboard:management:read",
+  DASHBOARD_PROFESSIONAL_READ: "dashboard:professional:read",
+  DASHBOARD_EXECUTIVE_READ: "dashboard:executive:read",
+  DASHBOARD_AUDIT_READ: "dashboard:audit:read",
 
   USER_READ: "user:read",
 
@@ -61,10 +66,9 @@ export const PERMISSIONS = Object.freeze({
   SLA_HOLIDAY_UPDATE: "sla:holiday_update",
   SLA_HOLIDAY_DELETE: "sla:holiday_delete",
   SLA_RECALCULATE: "sla:recalculate",
-      REPORTS_READ: "reports:read",
-    REPORTS_GENERATE: "reports:generate",
-    REPORTS_DOWNLOAD: "reports:download",
-
+  REPORTS_READ: "reports:read",
+  REPORTS_GENERATE: "reports:generate",
+  REPORTS_DOWNLOAD: "reports:download",
 });
 
 export default PERMISSIONS;
