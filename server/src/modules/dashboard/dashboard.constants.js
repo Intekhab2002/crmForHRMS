@@ -41,7 +41,7 @@ export const DASHBOARD_PERMISSION = Object.freeze({
     RBAC_PERMISSIONS.DASHBOARD_AUDIT_READ,
 });
 
-export const DASHBOARD_LAYOUT_VERSION = 1;
+export const DASHBOARD_LAYOUT_VERSION = 3;
 
 export const VISUALIZATION = Object.freeze({
   KPI: "kpi",

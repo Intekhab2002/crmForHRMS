@@ -264,6 +264,46 @@ export async function countAssignedToUser(
   );
 }
 
+export async function countCreatedByUser(
+  input,
+  userId,
+  tx = null,
+) {
+  const built = buildTicketWhere(input);
+
+  const whereParts = [];
+
+  if (built.where) {
+    whereParts.push(
+      built.where.replace(/^WHERE\s+/i, ""),
+    );
+  }
+
+  whereParts.push(
+    `t.created_by = $${built.nextIndex}::uuid`,
+  );
+
+  const params = [
+    ...built.params,
+    userId,
+  ];
+
+  const query = `
+    SELECT COUNT(*)::int AS count
+    FROM tickets t
+    WHERE ${whereParts.join(" AND ")}
+  `;
+
+  const result = await ex(tx).query(
+    query,
+    params,
+  );
+
+  return Number(
+    result.rows[0]?.count || 0,
+  );
+}
+
 export async function fetchStatusDistribution(
   input,
   tx = null,
@@ -296,7 +336,7 @@ export async function fetchStatusDistribution(
   }));
 }
 
-export async function fetchPriorityDistribution(
+export async function fetchSeverityDistribution(
   input,
   tx = null,
 ) {
@@ -304,15 +344,23 @@ export async function fetchPriorityDistribution(
 
   const query = `
     SELECT
-      t.priority AS key,
+      ticket_severity.code AS key,
+      ticket_severity.name AS label,
       COUNT(*)::int AS value
     FROM tickets t
+
+    INNER JOIN ticket_severities ticket_severity
+      ON ticket_severity.id = t.severity_id
+
     ${built.where}
+
     GROUP BY
-      t.priority
+      ticket_severity.code,
+      ticket_severity.name
+
     ORDER BY
       value DESC,
-      key ASC
+      label ASC
   `;
 
   const result = await ex(tx).query(
@@ -322,6 +370,7 @@ export async function fetchPriorityDistribution(
 
   return result.rows.map((row) => ({
     key: row.key,
+    label: row.label,
     value: Number(row.value),
   }));
 }
@@ -448,37 +497,13 @@ export async function fetchMyTickets(
   }));
 }
 
-function buildStatusCodeCondition(
-  statusCodes,
-  parameterIndex,
-) {
-  if (
-    !Array.isArray(statusCodes) ||
-    statusCodes.length === 0
-  ) {
-    return null;
-  }
 
-  return {
-    sql: `
-      EXISTS (
-        SELECT 1
-        FROM ticket_statuses dashboard_status
-        WHERE dashboard_status.id = t.status_id
-          AND dashboard_status.code = ANY(
-            $${parameterIndex}::text[]
-          )
-      )
-    `,
-    values: [statusCodes],
-  };
-}
 
 export default Object.freeze({
   countTickets,
   countAssignedToUser,
   fetchStatusDistribution,
-  fetchPriorityDistribution,
+  fetchSeverityDistribution,
   fetchCreatedClosedTrend,
   fetchMyTickets,
 });

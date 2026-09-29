@@ -43,7 +43,7 @@ export async function compliance(context) {
   };
 }
 
-export async function statusDistribution(context) {
+export async function slaStatusDistribution(context) {
   const data = await slaQuery.fetchCurrentStatusDistribution(context.tx);
   return {
     code: "sla.status_distribution",
@@ -77,6 +77,6 @@ export default Object.freeze({
   running,
   breached,
   compliance,
-  statusDistribution,
+  slaStatusDistribution,
   breachDistribution,
 });

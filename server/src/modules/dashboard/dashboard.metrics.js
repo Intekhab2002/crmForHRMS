@@ -111,15 +111,15 @@ const METRIC_REGISTRY = Object.freeze([
     drillDown: true,
   },
   {
-    code: "tickets.priority_workload",
-    name: "Priority Workload",
+    code: "tickets.severity_distribution",
+    name: "Ticket Severity",
     dashboardTypes: ["operational", "management"],
     permission: "ticket:read",
-    description: "Ticket distribution by priority.",
+    description: "Ticket distribution by severity.",
     timePeriod: "created_at",
     filters: COMMON_TICKET_FILTERS,
     visualization: "bar",
-    queryKey: "priorityWorkload",
+    queryKey: "severityDistribution",
     drillDown: true,
   },
   {
@@ -173,9 +173,16 @@ const METRIC_REGISTRY = Object.freeze([
   {
     code: "sla.compliance",
     name: "SLA Compliance",
-    dashboardTypes: ["operational", "management", "professional", "executive", "audit"],
+    dashboardTypes: [
+      "operational",
+      "management",
+      "professional",
+      "executive",
+      "audit",
+    ],
     permission: "sla:read",
-    description: "Historical SLA compliance calculated from met and breached run history.",
+    description:
+      "Historical SLA compliance calculated from met and breached run history.",
     timePeriod: "activated_at",
     filters: ["periodStart", "periodEnd", "slaPolicyId", "slaStatus"],
     visualization: "kpi",
@@ -206,6 +213,68 @@ const METRIC_REGISTRY = Object.freeze([
     queryKey: "breachDistribution",
     drillDown: false,
   },
+  {
+    code: "tickets.my_created",
+    name: "Created by Me",
+    dashboardTypes: ["operational"],
+    permission: "ticket:read",
+    description: "Tickets created by the authenticated user.",
+    timePeriod: "created_at",
+    filters: COMMON_TICKET_FILTERS,
+    visualization: "kpi",
+    queryKey: "ticketsCreatedByMe",
+    drillDown: true,
+  },
+  {
+    code: "tickets.my_assigned",
+    name: "Assigned to Me",
+    dashboardTypes: ["operational"],
+    permission: "ticket:read",
+    description: "Tickets currently assigned to the authenticated user.",
+    timePeriod: "created_at",
+    filters: COMMON_TICKET_FILTERS,
+    visualization: "kpi",
+    queryKey: "ticketsAssignedToMe",
+    drillDown: true,
+  },
+  {
+    code: "tickets.my_in_progress",
+    name: "My In Progress",
+    dashboardTypes: ["operational"],
+    permission: "ticket:read",
+    description:
+      "In-progress tickets currently assigned to the authenticated user.",
+    timePeriod: "created_at",
+    filters: COMMON_TICKET_FILTERS,
+    visualization: "kpi",
+    queryKey: "myInProgressTickets",
+    drillDown: true,
+  },
+  {
+    code: "tickets.my_waiting",
+    name: "My Waiting",
+    dashboardTypes: ["operational"],
+    permission: "ticket:read",
+    description:
+      "Tickets waiting for response and currently assigned to the authenticated user.",
+    timePeriod: "created_at",
+    filters: COMMON_TICKET_FILTERS,
+    visualization: "kpi",
+    queryKey: "myWaitingTickets",
+    drillDown: true,
+  },
+  {
+    code: "tickets.my_closed",
+    name: "My Closed Tickets",
+    dashboardTypes: ["operational"],
+    permission: "ticket:read",
+    description: "Closed tickets currently assigned to the authenticated user.",
+    timePeriod: "created_at",
+    filters: COMMON_TICKET_FILTERS,
+    visualization: "kpi",
+    queryKey: "myClosedTickets",
+    drillDown: true,
+  },
 ]);
 
 const HANDLERS = Object.freeze({
@@ -235,7 +304,9 @@ export async function executeMetric(metricCode, context) {
 
   const handler = HANDLERS[definition.queryKey];
   if (!handler) {
-    throw new Error(`Metric handler '${definition.queryKey}' is not registered.`);
+    throw new Error(
+      `Metric handler '${definition.queryKey}' is not registered.`,
+    );
   }
 
   const result = await handler(context);

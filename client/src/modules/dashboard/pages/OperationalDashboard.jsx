@@ -30,7 +30,7 @@ const DEFAULTS = [
     order: 110,
   },
   {
-    id: "tickets.priority_workload",
+    id: "tickets.severity_distribution",
     w: 6,
     h: 5,
     minW: 4,

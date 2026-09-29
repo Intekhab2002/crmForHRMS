@@ -4,6 +4,7 @@ import {
   Bar,
   BarChart as RechartsBarChart,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
