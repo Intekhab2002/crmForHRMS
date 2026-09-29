@@ -216,7 +216,7 @@ export async function myTickets(context) {
   };
 }
 
-export async function statusDistribution(context) {
+export async function ticketStatusDistribution(context) {
   const data =
     await ticketQuery.fetchStatusDistribution(
       context.filters,
@@ -297,7 +297,7 @@ export default Object.freeze({
   ticketsUnassigned,
   myOpenTickets,
   myTickets,
-  statusDistribution,
+  ticketStatusDistribution,
   priorityWorkload,
   createdClosedTrend,
 });

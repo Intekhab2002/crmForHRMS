@@ -1,8 +1,11 @@
 import { Card, CardContent, Stack, Typography } from "@mui/material";
 import EmptyMetricState from "./EmptyMetricState";
+import MetricErrorState from "./MetricErrorState";
+import DashboardChart from "../charts/DashboardChart";
 
 export default function ChartCard({ metric }) {
   const data = Array.isArray(metric?.data) ? metric.data : [];
+  const error = metric?.metadata?.error;
 
   return (
     <Card variant="outlined" sx={{ height: "100%" }}>
@@ -11,21 +14,13 @@ export default function ChartCard({ metric }) {
           <Typography variant="subtitle1" fontWeight={700}>
             {metric.label}
           </Typography>
-          {!data.length ? (
+
+          {error ? (
+            <MetricErrorState message={error.message} />
+          ) : !data.length ? (
             <EmptyMetricState />
           ) : (
-            <Stack spacing={0.75}>
-              {data.slice(0, 10).map((item) => (
-                <Stack key={String(item.key ?? item.date)} direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">
-                    {item.key ?? item.date}
-                  </Typography>
-                  <Typography variant="body2" fontWeight={700}>
-                    {item.value ?? `${item.created} / ${item.closed}`}
-                  </Typography>
-                </Stack>
-              ))}
-            </Stack>
+            <DashboardChart metric={metric} />
           )}
         </Stack>
       </CardContent>

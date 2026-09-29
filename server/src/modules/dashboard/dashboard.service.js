@@ -31,16 +31,59 @@ function normalizeFilters(input = {}) {
   });
 }
 
+const DASHBOARD_GRID_COLUMNS = 12;
+
 function defaultLayout(config) {
+  const widgets = [];
+  let cursorX = 0;
+  let cursorY = 0;
+  let rowHeight = 0;
+
+  for (const widget of config.defaultWidgets) {
+    const width = Math.min(
+      Math.max(Number(widget.w) || 1, Number(widget.minW) || 1),
+      DASHBOARD_GRID_COLUMNS,
+    );
+
+    const height = Math.max(
+      Number(widget.h) || 1,
+      Number(widget.minH) || 1,
+    );
+
+    if (
+      cursorX > 0 &&
+      cursorX + width > DASHBOARD_GRID_COLUMNS
+    ) {
+      cursorX = 0;
+      cursorY += rowHeight;
+      rowHeight = 0;
+    }
+
+    widgets.push({
+      ...widget,
+      x: cursorX,
+      y: cursorY,
+      w: width,
+      h: height,
+    });
+
+    cursorX += width;
+    rowHeight = Math.max(rowHeight, height);
+
+    if (cursorX >= DASHBOARD_GRID_COLUMNS) {
+      cursorX = 0;
+      cursorY += rowHeight;
+      rowHeight = 0;
+    }
+  }
+
   return {
     version: DASHBOARD_LAYOUT_VERSION,
-    widgets: config.defaultWidgets.map((widget, index) => ({
-      x: (index % 4) * 3,
-      y: Math.floor(index / 4) * 2,
-      ...widget,
-    })),
+    widgets,
   };
 }
+
+
 
 function validateSavedLayout(saved, config) {
   if (!saved?.layout_json) return null;

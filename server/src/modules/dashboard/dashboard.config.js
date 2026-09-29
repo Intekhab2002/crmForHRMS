@@ -24,9 +24,10 @@ export const DASHBOARD_CONFIG = freeze({
       { id: "sla.breached", w: 3, h: 2, minW: 2, minH: 2, visible: true, order: 80 },
       { id: "sla.compliance", w: 3, h: 2, minW: 2, minH: 2, visible: true, order: 90 },
       { id: "tickets.status_distribution", w: 6, h: 5, minW: 4, minH: 4, visible: true, order: 100 },
-      { id: "tickets.priority_workload", w: 6, h: 5, minW: 4, minH: 4, visible: true, order: 110 },
-      { id: "tickets.created_closed_trend", w: 12, h: 5, minW: 6, minH: 4, visible: true, order: 120 },
-      { id: "tickets.my_tickets", w: 12, h: 6, minW: 6, minH: 4, visible: true, order: 130 },
+      { id: "sla.status_distribution", w: 6, h: 5, minW: 4, minH: 4, visible: true, order: 110 },
+      { id: "tickets.priority_workload", w: 6, h: 5, minW: 4, minH: 4, visible: true, order: 120 },
+      { id: "tickets.created_closed_trend", w: 12, h: 5, minW: 6, minH: 4, visible: true, order: 130 },
+      { id: "tickets.my_tickets", w: 12, h: 6, minW: 6, minH: 4, visible: true, order: 140 },
     ]),
   }),
   [DASHBOARD_TYPE.MANAGEMENT]: freeze({
