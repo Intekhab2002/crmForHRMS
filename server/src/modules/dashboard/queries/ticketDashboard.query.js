@@ -18,95 +18,7 @@ const ex = (tx) => getQueryExecutor(tx);
  * table contains human-readable codes.
  */
 
-function buildFilters(input = {}, alias = "t", parameterOffset = 0) {
-  const params = [];
-  const where = [];
-  let index = parameterOffset + 1;
 
-  const addUuidArrayFilter = (column, values) => {
-    if (!Array.isArray(values) || values.length === 0) {
-      return;
-    }
-
-    where.push(
-      `${alias}.${column} = ANY($${index}::uuid[])`,
-    );
-
-    params.push(values);
-    index += 1;
-  };
-
-  const addTextArrayFilter = (column, values) => {
-    if (!Array.isArray(values) || values.length === 0) {
-      return;
-    }
-
-    where.push(
-      `${alias}.${column} = ANY($${index}::text[])`,
-    );
-
-    params.push(values);
-    index += 1;
-  };
-
-  if (input.periodStart) {
-    where.push(
-      `${alias}.created_at >= $${index}::timestamptz`,
-    );
-
-    params.push(input.periodStart);
-    index += 1;
-  }
-
-  if (input.periodEnd) {
-    where.push(
-      `${alias}.created_at < $${index}::timestamptz`,
-    );
-
-    params.push(input.periodEnd);
-    index += 1;
-  }
-
-  addUuidArrayFilter(
-    "department_id",
-    input.departmentId,
-  );
-
-  addUuidArrayFilter(
-    "organization_id",
-    input.organizationId,
-  );
-
-  addUuidArrayFilter(
-    "assigned_user_id",
-    input.assignedUserId,
-  );
-
-  addTextArrayFilter(
-    "priority",
-    input.priority,
-  );
-
-  addUuidArrayFilter(
-    "severity_id",
-    input.severityId,
-  );
-
-  addUuidArrayFilter(
-    "category_id",
-    input.categoryId,
-  );
-
-  return {
-    where: where.length
-      ? `WHERE ${where.join(" AND ")}`
-      : "",
-
-    params,
-
-    nextIndex: index,
-  };
-}
 
 /**
  * Resolve status codes such as:
@@ -249,6 +161,7 @@ export async function countTickets(
   input = {},
   {
     tx = null,
+    statusCodes = [],
     extraWhere = [],
     extraParams = [],
   } = {},
@@ -263,14 +176,33 @@ export async function countTickets(
     );
   }
 
-  if (extraWhere.length) {
-    whereParts.push(...extraWhere);
+  const params = [...built.params];
+
+  if (
+    Array.isArray(statusCodes) &&
+    statusCodes.length > 0
+  ) {
+    const statusParameterIndex =
+      params.length + 1;
+
+    whereParts.push(`
+      EXISTS (
+        SELECT 1
+        FROM ticket_statuses dashboard_status
+        WHERE dashboard_status.id = t.status_id
+          AND dashboard_status.code = ANY(
+            $${statusParameterIndex}::text[]
+          )
+      )
+    `);
+
+    params.push(statusCodes);
   }
 
-  const params = [
-    ...built.params,
-    ...extraParams,
-  ];
+  if (extraWhere.length) {
+    whereParts.push(...extraWhere);
+    params.push(...extraParams);
+  }
 
   const query = `
     SELECT COUNT(*)::int AS count
