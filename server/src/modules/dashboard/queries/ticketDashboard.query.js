@@ -496,7 +496,47 @@ export async function fetchMyTickets(
     updated_at: row.updated_at,
   }));
 }
+export async function countClosedByUser(
+  input,
+  userId,
+  tx = null,
+) {
+  const built = buildTicketWhere(input);
 
+  const whereParts = [];
+
+  if (built.where) {
+    whereParts.push(
+      built.where.replace(/^WHERE\s+/i, ""),
+    );
+  }
+
+  const userParamIndex = built.nextIndex;
+
+  whereParts.push(`
+    t.status = 'CLOSED'
+    AND (
+      t.created_by = $${userParamIndex}::uuid
+      OR t.assigned_user_id = $${userParamIndex}::uuid
+    )
+  `);
+
+  const query = `
+    SELECT COUNT(*)::int AS count
+    FROM tickets t
+    WHERE ${whereParts.join(" AND ")}
+  `;
+
+  const result = await ex(tx).query(
+    query,
+    [
+      ...built.params,
+      userId,
+    ],
+  );
+
+  return Number(result.rows[0]?.count || 0);
+}
 
 
 export default Object.freeze({
@@ -506,4 +546,5 @@ export default Object.freeze({
   fetchSeverityDistribution,
   fetchCreatedClosedTrend,
   fetchMyTickets,
+  countClosedByUser
 });

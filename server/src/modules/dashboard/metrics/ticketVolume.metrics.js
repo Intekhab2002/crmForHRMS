@@ -156,6 +156,7 @@ export async function myOpenTickets(context) {
     },
   });
 }
+
 export async function myInProgressTickets(context) {
   const value = await ticketQuery.countAssignedToUser(
     {
@@ -197,37 +198,31 @@ export async function myWaitingTickets(context) {
 }
 
 export async function myClosedTickets(context) {
-  const value = await ticketQuery.countAssignedToUser(
-    {
-      ...context.filters,
-      status: ["CLOSED"],
-    },
-    context.actorUserId,
-    context.tx,
-  );
+  const value =
+    await ticketQuery.countClosedByUser(
+      context.filters,
+      context.actorUserId,
+      context.tx,
+    );
 
-  return metric("tickets.my_closed", "My Closed Tickets", value, "count", {
-    route: "/tickets",
-    query: {
-      ...context.filters,
-      assignedUserId: [context.actorUserId],
-      status: ["CLOSED"],
+  return metric(
+    "tickets.my_closed",
+    "Closed by Me",
+    value,
+    "count",
+    {
+      route: "/tickets",
+      query: {
+        ...context.filters,
+        status: ["CLOSED"],
+        createdBy: [context.actorUserId],
+        assignedUserId: [context.actorUserId],
+      },
     },
-  });
+  );
 }
 
-export async function myOpenTickets(context) {
-  const value = await ticketQuery.countAssignedToUser(
-    {
-      ...context.filters,
-      status: ["OPEN"],
-    },
-    context.actorUserId,
-    context.tx,
-  );
 
-  return metric("tickets.my_open", "My Open Tickets", value);
-}
 
 export async function myTickets(context) {
   const data = await ticketQuery.fetchMyTickets(
