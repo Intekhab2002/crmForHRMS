@@ -198,6 +198,12 @@ export async function myWaitingTickets(context) {
 }
 
 export async function myClosedTickets(context) {
+  const closedFilters = {
+    ...context.filters,
+    status: ["CLOSED"],
+    relatedToUserId: [context.actorUserId],
+  };
+
   const value =
     await ticketQuery.countClosedByUser(
       context.filters,
@@ -212,12 +218,7 @@ export async function myClosedTickets(context) {
     "count",
     {
       route: "/tickets",
-      query: {
-        ...context.filters,
-        status: ["CLOSED"],
-        createdBy: [context.actorUserId],
-        assignedUserId: [context.actorUserId],
-      },
+      query: closedFilters,
     },
   );
 }

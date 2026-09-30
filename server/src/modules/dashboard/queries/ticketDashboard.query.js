@@ -18,8 +18,6 @@ const ex = (tx) => getQueryExecutor(tx);
  * table contains human-readable codes.
  */
 
-
-
 /**
  * Resolve status codes such as:
  *
@@ -30,13 +28,7 @@ const ex = (tx) => getQueryExecutor(tx);
  *
  * to the UUID values stored in tickets.status_id.
  */
-function addStatusFilter(
-  input,
-  where,
-  params,
-  indexRef,
-  alias = "t",
-) {
+function addStatusFilter(input, where, params, indexRef, alias = "t") {
   if (!Array.isArray(input.status) || input.status.length === 0) {
     return;
   }
@@ -54,10 +46,7 @@ function addStatusFilter(
   indexRef.value += 1;
 }
 
-function buildTicketWhere(
-  input = {},
-  alias = "t",
-) {
+function buildTicketWhere(input = {}, alias = "t") {
   const params = [];
   const where = [];
   const indexRef = {
@@ -65,18 +54,14 @@ function buildTicketWhere(
   };
 
   if (input.periodStart) {
-    where.push(
-      `${alias}.created_at >= $${indexRef.value}::timestamptz`,
-    );
+    where.push(`${alias}.created_at >= $${indexRef.value}::timestamptz`);
 
     params.push(input.periodStart);
     indexRef.value += 1;
   }
 
   if (input.periodEnd) {
-    where.push(
-      `${alias}.created_at < $${indexRef.value}::timestamptz`,
-    );
+    where.push(`${alias}.created_at < $${indexRef.value}::timestamptz`);
 
     params.push(input.periodEnd);
     indexRef.value += 1;
@@ -87,9 +72,7 @@ function buildTicketWhere(
       return;
     }
 
-    where.push(
-      `${alias}.${column} = ANY($${indexRef.value}::uuid[])`,
-    );
+    where.push(`${alias}.${column} = ANY($${indexRef.value}::uuid[])`);
 
     params.push(values);
     indexRef.value += 1;
@@ -100,56 +83,50 @@ function buildTicketWhere(
       return;
     }
 
-    where.push(
-      `${alias}.${column} = ANY($${indexRef.value}::text[])`,
-    );
+    where.push(`${alias}.${column} = ANY($${indexRef.value}::text[])`);
 
     params.push(values);
     indexRef.value += 1;
   };
 
-  addUuidArrayFilter(
-    "department_id",
-    input.departmentId,
-  );
+  addUuidArrayFilter("department_id", input.departmentId);
 
-  addUuidArrayFilter(
-    "organization_id",
-    input.organizationId,
-  );
+  addUuidArrayFilter("organization_id", input.organizationId);
 
-  addUuidArrayFilter(
-    "assigned_user_id",
-    input.assignedUserId,
-  );
+  addUuidArrayFilter("assigned_user_id", input.assignedUserId);
 
-  addTextArrayFilter(
-    "priority",
-    input.priority,
-  );
+  addUuidArrayFilter("created_by_user_id", input.createdBy);
 
-  addUuidArrayFilter(
-    "severity_id",
-    input.severityId,
-  );
+  if (
+    Array.isArray(input.relatedToUserId) &&
+    input.relatedToUserId.length > 0
+  ) {
+    where.push(`
+    (
+      ${alias}.created_by_user_id = ANY(
+        $${indexRef.value}::uuid[]
+      )
+      OR
+      ${alias}.assigned_user_id = ANY(
+        $${indexRef.value}::uuid[]
+      )
+    )
+  `);
 
-  addUuidArrayFilter(
-    "category_id",
-    input.categoryId,
-  );
+    params.push(input.relatedToUserId);
+    indexRef.value += 1;
+  }
 
-  addStatusFilter(
-    input,
-    where,
-    params,
-    indexRef,
-    alias,
-  );
+  addTextArrayFilter("priority", input.priority);
+
+  addUuidArrayFilter("severity_id", input.severityId);
+
+  addUuidArrayFilter("category_id", input.categoryId);
+
+  addStatusFilter(input, where, params, indexRef, alias);
 
   return {
-    where: where.length
-      ? `WHERE ${where.join(" AND ")}`
-      : "",
+    where: where.length ? `WHERE ${where.join(" AND ")}` : "",
 
     params,
 
@@ -159,31 +136,20 @@ function buildTicketWhere(
 
 export async function countTickets(
   input = {},
-  {
-    tx = null,
-    statusCodes = [],
-    extraWhere = [],
-    extraParams = [],
-  } = {},
+  { tx = null, statusCodes = [], extraWhere = [], extraParams = [] } = {},
 ) {
   const built = buildTicketWhere(input);
 
   const whereParts = [];
 
   if (built.where) {
-    whereParts.push(
-      built.where.replace(/^WHERE\s+/i, ""),
-    );
+    whereParts.push(built.where.replace(/^WHERE\s+/i, ""));
   }
 
   const params = [...built.params];
 
-  if (
-    Array.isArray(statusCodes) &&
-    statusCodes.length > 0
-  ) {
-    const statusParameterIndex =
-      params.length + 1;
+  if (Array.isArray(statusCodes) && statusCodes.length > 0) {
+    const statusParameterIndex = params.length + 1;
 
     whereParts.push(`
       EXISTS (
@@ -207,46 +173,26 @@ export async function countTickets(
   const query = `
     SELECT COUNT(*)::int AS count
     FROM tickets t
-    ${
-      whereParts.length
-        ? `WHERE ${whereParts.join(" AND ")}`
-        : ""
-    }
+    ${whereParts.length ? `WHERE ${whereParts.join(" AND ")}` : ""}
   `;
 
-  const result = await ex(tx).query(
-    query,
-    params,
-  );
+  const result = await ex(tx).query(query, params);
 
-  return Number(
-    result.rows[0]?.count || 0,
-  );
+  return Number(result.rows[0]?.count || 0);
 }
 
-export async function countAssignedToUser(
-  input,
-  userId,
-  tx = null,
-) {
+export async function countAssignedToUser(input, userId, tx = null) {
   const built = buildTicketWhere(input);
 
   const whereParts = [];
 
   if (built.where) {
-    whereParts.push(
-      built.where.replace(/^WHERE\s+/i, ""),
-    );
+    whereParts.push(built.where.replace(/^WHERE\s+/i, ""));
   }
 
-  whereParts.push(
-    `t.assigned_user_id = $${built.nextIndex}::uuid`,
-  );
+  whereParts.push(`t.assigned_user_id = $${built.nextIndex}::uuid`);
 
-  const params = [
-    ...built.params,
-    userId,
-  ];
+  const params = [...built.params, userId];
 
   const query = `
     SELECT COUNT(*)::int AS count
@@ -254,39 +200,23 @@ export async function countAssignedToUser(
     WHERE ${whereParts.join(" AND ")}
   `;
 
-  const result = await ex(tx).query(
-    query,
-    params,
-  );
+  const result = await ex(tx).query(query, params);
 
-  return Number(
-    result.rows[0]?.count || 0,
-  );
+  return Number(result.rows[0]?.count || 0);
 }
 
-export async function countCreatedByUser(
-  input,
-  userId,
-  tx = null,
-) {
+export async function countCreatedByUser(input, userId, tx = null) {
   const built = buildTicketWhere(input);
 
   const whereParts = [];
 
   if (built.where) {
-    whereParts.push(
-      built.where.replace(/^WHERE\s+/i, ""),
-    );
+    whereParts.push(built.where.replace(/^WHERE\s+/i, ""));
   }
 
-  whereParts.push(
-    `t.created_by = $${built.nextIndex}::uuid`,
-  );
+  whereParts.push(`t.created_by_user_id = $${built.nextIndex}::uuid`);
 
-  const params = [
-    ...built.params,
-    userId,
-  ];
+  const params = [...built.params, userId];
 
   const query = `
     SELECT COUNT(*)::int AS count
@@ -294,20 +224,12 @@ export async function countCreatedByUser(
     WHERE ${whereParts.join(" AND ")}
   `;
 
-  const result = await ex(tx).query(
-    query,
-    params,
-  );
+  const result = await ex(tx).query(query, params);
 
-  return Number(
-    result.rows[0]?.count || 0,
-  );
+  return Number(result.rows[0]?.count || 0);
 }
 
-export async function fetchStatusDistribution(
-  input,
-  tx = null,
-) {
+export async function fetchStatusDistribution(input, tx = null) {
   const built = buildTicketWhere(input);
 
   const query = `
@@ -325,10 +247,7 @@ export async function fetchStatusDistribution(
       key ASC
   `;
 
-  const result = await ex(tx).query(
-    query,
-    built.params,
-  );
+  const result = await ex(tx).query(query, built.params);
 
   return result.rows.map((row) => ({
     key: row.key,
@@ -336,10 +255,7 @@ export async function fetchStatusDistribution(
   }));
 }
 
-export async function fetchSeverityDistribution(
-  input,
-  tx = null,
-) {
+export async function fetchSeverityDistribution(input, tx = null) {
   const built = buildTicketWhere(input);
 
   const query = `
@@ -363,10 +279,7 @@ export async function fetchSeverityDistribution(
       label ASC
   `;
 
-  const result = await ex(tx).query(
-    query,
-    built.params,
-  );
+  const result = await ex(tx).query(query, built.params);
 
   return result.rows.map((row) => ({
     key: row.key,
@@ -375,10 +288,7 @@ export async function fetchSeverityDistribution(
   }));
 }
 
-export async function fetchCreatedClosedTrend(
-  input,
-  tx = null,
-) {
+export async function fetchCreatedClosedTrend(input, tx = null) {
   const built = buildTicketWhere(input);
 
   const query = `
@@ -411,10 +321,7 @@ export async function fetchCreatedClosedTrend(
       date ASC
   `;
 
-  const result = await ex(tx).query(
-    query,
-    built.params,
-  );
+  const result = await ex(tx).query(query, built.params);
 
   return result.rows.map((row) => ({
     date: row.date,
@@ -423,31 +330,20 @@ export async function fetchCreatedClosedTrend(
   }));
 }
 
-export async function fetchMyTickets(
-  input,
-  userId,
-  tx = null,
-  limit = 10,
-) {
+export async function fetchMyTickets(input, userId, tx = null, limit = 10) {
   const built = buildTicketWhere(input);
 
   const whereParts = [];
 
   if (built.where) {
-    whereParts.push(
-      built.where.replace(/^WHERE\s+/i, ""),
-    );
+    whereParts.push(built.where.replace(/^WHERE\s+/i, ""));
   }
 
-  whereParts.push(
-    `t.assigned_user_id = $${built.nextIndex}::uuid`,
-  );
+  whereParts.push(`t.assigned_user_id = $${built.nextIndex}::uuid`);
 
-  const userParameterIndex =
-    built.nextIndex;
+  const userParameterIndex = built.nextIndex;
 
-  const limitParameterIndex =
-    userParameterIndex + 1;
+  const limitParameterIndex = userParameterIndex + 1;
 
   const query = `
     SELECT
@@ -476,14 +372,7 @@ export async function fetchMyTickets(
     LIMIT $${limitParameterIndex}::int
   `;
 
-  const result = await ex(tx).query(
-    query,
-    [
-      ...built.params,
-      userId,
-      limit,
-    ],
-  );
+  const result = await ex(tx).query(query, [...built.params, userId, limit]);
 
   return result.rows.map((row) => ({
     id: row.id,
@@ -496,27 +385,29 @@ export async function fetchMyTickets(
     updated_at: row.updated_at,
   }));
 }
-export async function countClosedByUser(
-  input,
-  userId,
-  tx = null,
-) {
+export async function countClosedByUser(input, userId, tx = null) {
   const built = buildTicketWhere(input);
 
   const whereParts = [];
 
   if (built.where) {
-    whereParts.push(
-      built.where.replace(/^WHERE\s+/i, ""),
-    );
+    whereParts.push(built.where.replace(/^WHERE\s+/i, ""));
   }
 
   const userParamIndex = built.nextIndex;
 
   whereParts.push(`
-    t.status = 'CLOSED'
-    AND (
-      t.created_by = $${userParamIndex}::uuid
+    EXISTS (
+      SELECT 1
+      FROM ticket_statuses dashboard_status
+      WHERE dashboard_status.id = t.status_id
+        AND dashboard_status.code = 'CLOSED'
+    )
+  `);
+
+  whereParts.push(`
+    (
+      t.created_by_user_id = $${userParamIndex}::uuid
       OR t.assigned_user_id = $${userParamIndex}::uuid
     )
   `);
@@ -527,17 +418,10 @@ export async function countClosedByUser(
     WHERE ${whereParts.join(" AND ")}
   `;
 
-  const result = await ex(tx).query(
-    query,
-    [
-      ...built.params,
-      userId,
-    ],
-  );
+  const result = await ex(tx).query(query, [...built.params, userId]);
 
   return Number(result.rows[0]?.count || 0);
 }
-
 
 export default Object.freeze({
   countTickets,
@@ -546,5 +430,6 @@ export default Object.freeze({
   fetchSeverityDistribution,
   fetchCreatedClosedTrend,
   fetchMyTickets,
-  countClosedByUser
+  countClosedByUser,
+  countCreatedByUser,
 });
