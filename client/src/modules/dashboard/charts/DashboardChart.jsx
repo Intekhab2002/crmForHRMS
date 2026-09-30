@@ -1,13 +1,18 @@
 import { Alert } from "@mui/material";
+
 import BarChart from "./BarChart";
 import DonutChart from "./DonutChart";
 import LineChart from "./LineChart";
+import HistogramChart from "./HistogramChart";
+import TreemapChart from "./TreemapChart";
 import { getChartData } from "./chart.utils";
 
 const CHART_COMPONENTS = Object.freeze({
   donut: DonutChart,
   bar: BarChart,
   line: LineChart,
+  histogram: HistogramChart,
+  treemap: TreemapChart,
 });
 
 export default function DashboardChart({ metric }) {
