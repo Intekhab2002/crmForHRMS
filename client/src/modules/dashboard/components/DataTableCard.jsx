@@ -13,6 +13,15 @@ function inferColumns(rows) {
     }));
 }
 
+function getRowId(row) {
+  if (row?.id != null) return row.id;
+  if (row?.key != null) return row.key;
+
+  throw new Error(
+    "Dashboard table row must contain either an id or key field.",
+  );
+}
+
 export default function DataTableCard({ metric }) {
   const rows = Array.isArray(metric.data) ? metric.data : [];
   const columns = inferColumns(rows);
@@ -27,6 +36,7 @@ export default function DataTableCard({ metric }) {
           <DataGrid
             rows={rows}
             columns={columns}
+            getRowId={getRowId}
             disableRowSelectionOnClick
             hideFooterSelectedRowCount
             pageSizeOptions={[5, 10]}
