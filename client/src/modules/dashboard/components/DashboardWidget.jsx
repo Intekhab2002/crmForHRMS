@@ -1,28 +1,62 @@
-import { Grid } from "@mui/material";
+import { useState } from "react";
+import {
+  Grid,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+} from "@mui/material";
+
 import MetricCard from "./MetricCard";
 import ChartCard from "./ChartCard";
 import DataTableCard from "./DataTableCard";
 
 export default function DashboardWidget({ metric, onDrillDown, size }) {
+  const [viewMode, setViewMode] = useState(
+    metric?.visualization === "kpi" ? "graph" : "graph",
+  );
+
+  const isVisualMetric = metric?.visualization !== "kpi";
+
   const content = (() => {
-    switch (metric.visualization) {
-      case "table":
-        return <DataTableCard metric={metric} />;
-      case "donut":
-      case "bar":
-      case "line":
-      case "histogram":
-      case "scatter":
-      case "treemap":
-        return <ChartCard metric={metric} />;
-      default:
-        return <MetricCard metric={metric} onClick={onDrillDown} />;
+    if (metric?.visualization === "kpi") {
+      return <MetricCard metric={metric} onClick={onDrillDown} />;
     }
+
+    return viewMode === "table" ? (
+      <DataTableCard metric={metric} />
+    ) : (
+      <ChartCard metric={metric} />
+    );
   })();
 
   return (
     <Grid size={size}>
-      {content}
+      <Stack spacing={1} sx={{ height: "100%" }}>
+        {isVisualMetric && (
+          <Stack direction="row" justifyContent="flex-end">
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={viewMode}
+              onChange={(_, next) => {
+                if (next) {
+                  setViewMode(next);
+                }
+              }}
+              aria-label={`${metric.label} view mode`}
+            >
+              <ToggleButton value="graph" aria-label="Graph view">
+                Graph
+              </ToggleButton>
+              <ToggleButton value="table" aria-label="Table view">
+                Table
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Stack>
+        )}
+
+        {content}
+      </Stack>
     </Grid>
   );
 }

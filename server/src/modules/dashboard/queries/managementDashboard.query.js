@@ -4,6 +4,8 @@ const ex = (tx) => getQueryExecutor(tx);
 
 const RUN_TERMINAL_STATUSES = ["COMPLETED", "STOPPED", "BREACHED"];
 const SLA_ELIGIBLE_STATUSES = ["COMPLETED", "STOPPED", "BREACHED"];
+const BACKLOG_AT_RISK_DAYS = 7;
+const LONG_RUNNING_TICKET_DAYS = 14;
 
 function buildTicketWhere(input = {}, alias = "t") {
   const params = [];
@@ -581,21 +583,30 @@ export async function fetchTicketBacklogAging(input = {}, tx = null) {
 
 export async function fetchBacklogRisk(input = {}, tx = null) {
   const built = buildTicketWhere(input);
+
   const result = await ex(tx).query(
     `
     SELECT
       COUNT(*)::int AS backlog,
+
       COUNT(*) FILTER (
-        WHERE EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - t.created_at)) / 86400 >= 7
+        WHERE CURRENT_TIMESTAMP - t.created_at >=
+          make_interval(days => ${BACKLOG_AT_RISK_DAYS})
       )::int AS at_risk,
+
       COUNT(*) FILTER (
-        WHERE EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - t.created_at)) / 86400 >= 30
+        WHERE CURRENT_TIMESTAMP - t.created_at >=
+          make_interval(days => ${LONG_RUNNING_TICKET_DAYS})
       )::int AS long_running
+
     FROM tickets t
-    INNER JOIN ticket_statuses s ON s.id = t.status_id
+
+    INNER JOIN ticket_statuses s
+      ON s.id = t.status_id
+
     ${built.where ? `${built.where} AND` : "WHERE"}
       s.code <> 'CLOSED'
-  `,
+    `,
     built.params,
   );
 
@@ -807,34 +818,90 @@ export async function fetchThroughput(input = {}, tx = null) {
 
 export async function fetchBacklogTrend(input = {}, tx = null) {
   const built = buildTicketWhere(input);
+
+  const periodStart =
+    input.periodStart ||
+    new Date(
+      Date.UTC(
+        new Date().getUTCFullYear(),
+        new Date().getUTCMonth() - 5,
+        1,
+      ),
+    ).toISOString();
+
+  const periodEnd =
+    input.periodEnd ||
+    new Date().toISOString();
+
   const result = await ex(tx).query(
     `
     WITH periods AS (
       SELECT generate_series(
-        DATE_TRUNC('month', COALESCE($1::timestamptz, CURRENT_TIMESTAMP - INTERVAL '5 months')),
-        DATE_TRUNC('month', COALESCE($2::timestamptz, CURRENT_TIMESTAMP)),
+        DATE_TRUNC('month', $1::timestamptz),
+        DATE_TRUNC('month', $2::timestamptz),
         INTERVAL '1 month'
       ) AS period
+    ),
+
+    ticket_population AS (
+      SELECT
+        t.id,
+        t.created_at
+      FROM tickets t
+      ${built.where}
+    ),
+
+    backlog AS (
+      SELECT
+        p.period,
+
+        COUNT(tp.id) FILTER (
+          WHERE
+            tp.created_at < p.period + INTERVAL '1 month'
+
+            AND NOT EXISTS (
+              SELECT 1
+              FROM ticket_lifecycle_events e
+              WHERE e.ticket_id = tp.id
+                AND e.event_type = 'STATUS'
+                AND e.event_action IN ('RESOLVED', 'CLOSED')
+                AND e.created_at < p.period + INTERVAL '1 month'
+
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM ticket_lifecycle_events reopen
+                  WHERE reopen.ticket_id = tp.id
+                    AND reopen.event_type = 'STATUS'
+                    AND reopen.event_action IN (
+                      'REOPENED',
+                      'OPENED',
+                      'IN_PROGRESS',
+                      'WAIT_FOR_RESPONSE'
+                    )
+                    AND reopen.created_at >
+                        e.created_at
+                    AND reopen.created_at <
+                        p.period + INTERVAL '1 month'
+                )
+            )
+        ) AS backlog
+
+      FROM periods p
+      CROSS JOIN ticket_population tp
+      GROUP BY p.period
     )
+
     SELECT
-      p.period::date AS period,
-      COUNT(t.id)::int AS backlog
-    FROM periods p
-    LEFT JOIN tickets t
-      ON t.created_at < p.period + INTERVAL '1 month'
-      AND NOT EXISTS (
-        SELECT 1
-        FROM ticket_statuses closed_status
-        WHERE closed_status.id = t.status_id
-          AND closed_status.code = 'CLOSED'
-      )
-      AND (
-        t.closed_at IS NULL OR t.closed_at >= p.period + INTERVAL '1 month'
-      )
-    GROUP BY p.period
-    ORDER BY p.period
-  `,
-    [input.periodStart || null, input.periodEnd || null],
+      period::date AS period,
+      backlog::int AS backlog
+    FROM backlog
+    ORDER BY period
+    `,
+    [
+      periodStart,
+      periodEnd,
+      ...built.params,
+    ],
   );
 
   return result.rows.map((row) => ({
@@ -887,23 +954,29 @@ export async function fetchWorkloadConcentration(input = {}, tx = null) {
 
 export async function fetchRiskExposure(input = {}, tx = null) {
   const built = buildTicketWhere(input);
+
   const result = await ex(tx).query(
     `
     SELECT
       COUNT(*) FILTER (
-        WHERE t.priority = 'CRITICAL' OR t.priority = 'HIGH'
+        WHERE sev.code IN ('SEVERITY1', 'SEVERITY2')
       )::int AS high_risk,
+
       COUNT(*) FILTER (
-        WHERE t.priority = 'CRITICAL'
-      )::int AS critical,
-      COUNT(*) FILTER (
-        WHERE t.priority IN ('CRITICAL', 'HIGH')
-      )::int AS open_critical_exposure
+        WHERE sev.code = 'SEVERITY1'
+      )::int AS critical
+
     FROM tickets t
-    INNER JOIN ticket_statuses s ON s.id = t.status_id
+
+    INNER JOIN ticket_statuses s
+      ON s.id = t.status_id
+
+    LEFT JOIN ticket_severities sev
+      ON sev.id = t.severity_id
+
     ${built.where ? `${built.where} AND` : "WHERE"}
       s.code <> 'CLOSED'
-  `,
+    `,
     built.params,
   );
 

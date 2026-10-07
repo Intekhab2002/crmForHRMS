@@ -1,6 +1,8 @@
 import ticketMetrics from "./metrics/ticketVolume.metrics.js";
 import slaMetrics from "./metrics/sla.metrics.js";
 import managementMetrics from "./metrics/management.metrics.js";
+import professionalMetrics from "./metrics/professional.metrics.js";
+
 
 const COMMON_TICKET_FILTERS = Object.freeze([
   "periodStart",
@@ -622,6 +624,16 @@ const HANDLERS = Object.freeze({
   ...ticketMetrics,
   ...slaMetrics,
   ...managementMetrics,
+  ...Object.fromEntries(
+    professionalMetrics.professionalMetricDefinitions.map((definition) => [
+      definition.queryKey,
+      (context) =>
+        professionalMetrics.executeProfessionalMetric(
+          definition.code,
+          context,
+        ),
+    ]),
+  ),
 });
 
 export function getMetricRegistry() {
