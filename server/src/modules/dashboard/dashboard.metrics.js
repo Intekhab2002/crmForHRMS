@@ -70,7 +70,7 @@ const METRIC_REGISTRY = Object.freeze([
     permission: "ticket:read",
     description: "Tickets currently in Closed status.",
     timePeriod: "created_at",
-    filters: [...COMMON_TICKET_FILTERS, "status"],
+    filters: COMMON_TICKET_FILTERS,
     visualization: "kpi",
     queryKey: "ticketsClosed",
     drillDown: true,

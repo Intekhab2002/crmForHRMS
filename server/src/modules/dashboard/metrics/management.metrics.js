@@ -15,7 +15,15 @@ function kpi(code, label, value, unit = "count", metadata = {}, drillDown = null
   };
 }
 
-function chart(code, label, visualization, data, metadata = {}, drillDown = null) {
+function chart(
+  code,
+  label,
+  visualization,
+  data,
+  metadata = {},
+  drillDown = null,
+  chartConfig = null,
+) {
   return {
     code,
     label,
@@ -25,7 +33,10 @@ function chart(code, label, visualization, data, metadata = {}, drillDown = null
     visualization,
     data,
     drillDown,
-    metadata,
+    metadata: {
+      ...metadata,
+      ...(chartConfig ? { chart: chartConfig } : {}),
+    },
   };
 }
 
@@ -49,7 +60,24 @@ export async function slaCompliance(ctx) {
 }
 
 export async function slaComplianceTrend(ctx) {
-  return chart("M003", "SLA Compliance Trend", "line", await query.fetchSlaTrend(ctx.filters, ctx.tx));
+  return chart(
+    "M003",
+    "SLA Compliance Trend",
+    "line",
+    await query.fetchSlaTrend(ctx.filters, ctx.tx),
+    {},
+    null,
+    {
+      xAxisKey: "period",
+      series: [
+        {
+          dataKey: "complianceRate",
+          name: "Compliance %",
+          unit: "percent",
+        },
+      ],
+    },
+  );
 }
 
 export async function slaBreachRate(ctx) {
@@ -59,7 +87,24 @@ export async function slaBreachRate(ctx) {
 }
 
 export async function slaBreachTrend(ctx) {
-  return chart("M005", "SLA Breach Trend", "line", await query.fetchSlaTrend(ctx.filters, ctx.tx));
+  return chart(
+    "M005",
+    "SLA Breach Trend",
+    "line",
+    await query.fetchSlaTrend(ctx.filters, ctx.tx),
+    {},
+    null,
+    {
+      xAxisKey: "period",
+      series: [
+        {
+          dataKey: "breachRate",
+          name: "Breach %",
+          unit: "percent",
+        },
+      ],
+    },
+  );
 }
 
 export async function averageResolutionTime(ctx) {
@@ -102,7 +147,29 @@ export async function maximumBreachDuration(ctx) {
 }
 
 export async function slaPerformanceBySeverity(ctx) {
-  return chart("M014", "SLA Performance by Severity", "bar", await query.fetchSlaBySeverity(ctx.filters, ctx.tx));
+  return chart(
+    "M014",
+    "SLA Performance by Severity",
+    "bar",
+    await query.fetchSlaBySeverity(ctx.filters, ctx.tx),
+    {},
+    null,
+    {
+      xAxisKey: "label",
+      series: [
+        {
+          dataKey: "met",
+          name: "Met",
+          unit: "count",
+        },
+        {
+          dataKey: "breached",
+          name: "Breached",
+          unit: "count",
+        },
+      ],
+    },
+  );
 }
 
 export async function slaPerformanceByAgent(ctx) {
@@ -133,7 +200,24 @@ export async function serviceDemandByCategory(ctx) {
 }
 
 export async function serviceDemandTrend(ctx) {
-  return chart("M030", "Service Demand Trend", "line", await query.fetchDemandTrend(ctx.filters, ctx.tx));
+  return chart(
+    "M030",
+    "Service Demand Trend",
+    "line",
+    await query.fetchDemandTrend(ctx.filters, ctx.tx),
+    {},
+    null,
+    {
+      xAxisKey: "period",
+      series: [
+        {
+          dataKey: "created",
+          name: "Tickets Created",
+          unit: "count",
+        },
+      ],
+    },
+  );
 }
 
 export async function severityMix(ctx) {
@@ -147,7 +231,29 @@ export async function departmentServicePerformance(ctx) {
 }
 
 export async function throughputVsDemand(ctx) {
-  return chart("M037", "Throughput vs Demand", "line", await query.fetchThroughput(ctx.filters, ctx.tx));
+  return chart(
+    "M037",
+    "Throughput vs Demand",
+    "line",
+    await query.fetchThroughput(ctx.filters, ctx.tx),
+    {},
+    null,
+    {
+      xAxisKey: "period",
+      series: [
+        {
+          dataKey: "created",
+          name: "Demand",
+          unit: "count",
+        },
+        {
+          dataKey: "resolved",
+          name: "Resolved",
+          unit: "count",
+        },
+      ],
+    },
+  );
 }
 
 export async function backlogGrowthRate(ctx) {
