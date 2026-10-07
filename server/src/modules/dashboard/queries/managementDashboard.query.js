@@ -202,18 +202,19 @@ export async function fetchBreachMetrics(input = {}, tx = null) {
 }
 
 export async function fetchSlaBySeverity(input = {}, tx = null) {
-  const built = buildRunWhere(input);
+  const built = buildHistoricalRunWhere(input);
 
   const result = await ex(tx).query(
     `
       SELECT
         COALESCE(
-          NULLIF(BTRIM(r.duration_field_value_key), ''),
+          NULLIF(r.policy_snapshot->'rule'->>'fieldValueKey', ''),
           'UNKNOWN'
         ) AS key,
 
         COALESCE(
-          NULLIF(BTRIM(r.duration_field_value_key), ''),
+          NULLIF(sev.name, ''),
+          NULLIF(r.policy_snapshot->'rule'->>'fieldValueKey', ''),
           'Unknown'
         ) AS label,
 
@@ -242,24 +243,32 @@ export async function fetchSlaBySeverity(input = {}, tx = null) {
         AVG(r.elapsed_business_minutes)
           FILTER (
             WHERE r.status IN ('COMPLETED', 'STOPPED')
-              AND r.target_resolution_minutes IS NOT NULL
+            AND r.target_resolution_minutes IS NOT NULL
           )::numeric AS avg_consumed
 
       FROM ticket_sla_run_history r
+
+      LEFT JOIN ticket_severities sev
+        ON sev.code = r.policy_snapshot->'rule'->>'fieldValueKey'
+
       ${built.where}
+
+      AND r.policy_snapshot->'policy'->>'durationFieldKey' = 'severity'
 
       GROUP BY
         COALESCE(
-          NULLIF(BTRIM(r.duration_field_value_key), ''),
+          NULLIF(r.policy_snapshot->'rule'->>'fieldValueKey', ''),
           'UNKNOWN'
+        ),
+        COALESCE(
+          NULLIF(sev.name, ''),
+          NULLIF(r.policy_snapshot->'rule'->>'fieldValueKey', ''),
+          'Unknown'
         )
 
       ORDER BY
-        COUNT(*) DESC,
-        COALESCE(
-          NULLIF(BTRIM(r.duration_field_value_key), ''),
-          'Unknown'
-        ) ASC
+        runs DESC,
+        label ASC
     `,
     built.params,
   );
@@ -279,14 +288,9 @@ export async function fetchSlaBySeverity(input = {}, tx = null) {
         ? Number(((met / eligible) * 100).toFixed(2))
         : null,
       avgTargetMinutes:
-        row.avg_target == null
-          ? null
-          : Number(row.avg_target),
-
+        row.avg_target == null ? null : Number(row.avg_target),
       avgConsumedMinutes:
-        row.avg_consumed == null
-          ? null
-          : Number(row.avg_consumed),
+        row.avg_consumed == null ? null : Number(row.avg_consumed),
     };
   });
 }
@@ -783,19 +787,34 @@ export async function fetchRiskExposure(input = {}, tx = null) {
 }
 
 export async function fetchSlaRiskExposure(input = {}, tx = null) {
-  const built = buildRunWhere(input);
-  const result = await ex(tx).query(`
-    SELECT
-      COUNT(*) FILTER (
-        WHERE r.status = 'RUNNING'
-          AND r.target_resolution_minutes IS NOT NULL
-          AND r.remaining_business_minutes IS NOT NULL
-          AND r.remaining_business_minutes <= GREATEST(60, ROUND(r.target_resolution_minutes * 0.2))
-      )::int AS risk,
-      COUNT(*) FILTER (WHERE r.status = 'RUNNING')::int AS running
-    FROM ticket_sla_run_history r
-    ${built.where}
-  `, built.params);
+  const built = buildCurrentTicketSlaWhere(input);
+
+  const result = await ex(tx).query(
+    `
+      SELECT
+        COUNT(*) FILTER (
+          WHERE ts.status = 'RUNNING'
+            AND ts.target_resolution_minutes IS NOT NULL
+            AND ts.remaining_business_minutes IS NOT NULL
+            AND ts.remaining_business_minutes <=
+              GREATEST(
+                60,
+                ROUND(ts.target_resolution_minutes * 0.20)
+              )
+        )::int AS risk,
+
+        COUNT(*) FILTER (
+          WHERE ts.status = 'RUNNING'
+        )::int AS running
+
+      FROM ticket_sla ts
+      INNER JOIN tickets t
+        ON t.id = ts.ticket_id
+
+      ${built.where}
+    `,
+    built.params,
+  );
 
   return result.rows[0] || {};
 }
@@ -837,6 +856,115 @@ export async function fetchServicePerformanceIndex(input = {}, tx = null) {
   };
 }
 
+
+function buildHistoricalRunWhere(input = {}, aliases = {}) {
+  const {
+    run = "r",
+    ticket = "t",
+  } = aliases;
+
+  const params = [];
+  const where = [];
+  let index = 1;
+
+  const add = (sql, value) => {
+    where.push(sql.replaceAll("?", `$${index}`));
+    params.push(value);
+    index += 1;
+  };
+
+  if (input.periodStart) {
+    add(
+      `${run}.activated_at >= ?::timestamptz`,
+      input.periodStart,
+    );
+  }
+
+  if (input.periodEnd) {
+    add(
+      `${run}.activated_at < ?::timestamptz`,
+      input.periodEnd,
+    );
+  }
+
+  if (input.slaPolicyId?.length) {
+    add(
+      `${run}.sla_policy_id = ANY(?::uuid[])`,
+      input.slaPolicyId,
+    );
+  }
+
+  if (input.slaStatus?.length) {
+    add(
+      `${run}.status = ANY(?::text[])`,
+      input.slaStatus,
+    );
+  }
+
+  if (input.departmentId?.length) {
+    add(
+      `${ticket}.department_id = ANY(?::uuid[])`,
+      input.departmentId,
+    );
+  }
+
+  if (input.organizationId?.length) {
+    add(
+      `${ticket}.organization_id = ANY(?::uuid[])`,
+      input.organizationId,
+    );
+  }
+
+  if (input.assignedUserId?.length) {
+    add(
+      `${ticket}.assigned_user_id = ANY(?::uuid[])`,
+      input.assignedUserId,
+    );
+  }
+
+  if (input.priority?.length) {
+    add(
+      `${ticket}.priority = ANY(?::text[])`,
+      input.priority,
+    );
+  }
+
+  if (input.severity?.length) {
+    add(
+      `${ticket}.severity_id = ANY(?::uuid[])`,
+      input.severity,
+    );
+  }
+
+  if (input.category?.length) {
+    add(
+      `${ticket}.category_id = ANY(?::uuid[])`,
+      input.category,
+    );
+  }
+
+  if (input.status?.length) {
+    where.push(`
+      EXISTS (
+        SELECT 1
+        FROM ticket_statuses ts_filter
+        WHERE ts_filter.id = ${ticket}.status_id
+          AND ts_filter.code = ANY($${index}::text[])
+      )
+    `);
+
+    params.push(input.status);
+    index += 1;
+  }
+
+  return {
+    where: where.length
+      ? `WHERE ${where.join(" AND ")}`
+      : "",
+    params,
+  };
+}
+
 export default Object.freeze({
   fetchSlaOverview,
   fetchSlaTrend,
@@ -856,4 +984,5 @@ export default Object.freeze({
   fetchRiskExposure,
   fetchSlaRiskExposure,
   fetchServicePerformanceIndex,
+  buildHistoricalRunWhere,
 });
