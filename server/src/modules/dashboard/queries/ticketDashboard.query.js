@@ -119,9 +119,19 @@ function buildTicketWhere(input = {}, alias = "t") {
 
   addTextArrayFilter("priority", input.priority);
 
-  addUuidArrayFilter("severity_id", input.severityId);
+  const severityValues =
+    Array.isArray(input.severity) && input.severity.length
+      ? input.severity
+      : input.severityId;
 
-  addUuidArrayFilter("category_id", input.categoryId);
+  const categoryValues =
+    Array.isArray(input.category) && input.category.length
+      ? input.category
+      : input.categoryId;
+
+  addUuidArrayFilter("severity_id", severityValues);
+
+  addUuidArrayFilter("category_id", categoryValues);
 
   addStatusFilter(input, where, params, indexRef, alias);
 

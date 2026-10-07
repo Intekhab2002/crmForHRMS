@@ -16,15 +16,39 @@ function buildTicketWhere(input = {}, alias = "t") {
     index += 1;
   };
 
-  if (input.periodStart) add(`${alias}.created_at >= ?::timestamptz`, input.periodStart);
-  if (input.periodEnd) add(`${alias}.created_at < ?::timestamptz`, input.periodEnd);
+  if (input.periodStart)
+    add(`${alias}.created_at >= ?::timestamptz`, input.periodStart);
+  if (input.periodEnd)
+    add(`${alias}.created_at < ?::timestamptz`, input.periodEnd);
 
-  if (input.departmentId?.length) add(`${alias}.department_id = ANY(?::uuid[])`, input.departmentId);
-  if (input.organizationId?.length) add(`${alias}.organization_id = ANY(?::uuid[])`, input.organizationId);
-  if (input.assignedUserId?.length) add(`${alias}.assigned_user_id = ANY(?::uuid[])`, input.assignedUserId);
-  if (input.priority?.length) add(`${alias}.priority = ANY(?::text[])`, input.priority);
-  if (input.severityId?.length) add(`${alias}.severity_id = ANY(?::uuid[])`, input.severityId);
-  if (input.categoryId?.length) add(`${alias}.category_id = ANY(?::uuid[])`, input.categoryId);
+  if (input.departmentId?.length)
+    add(`${alias}.department_id = ANY(?::uuid[])`, input.departmentId);
+  if (input.organizationId?.length)
+    add(`${alias}.organization_id = ANY(?::uuid[])`, input.organizationId);
+  if (input.assignedUserId?.length)
+    add(`${alias}.assigned_user_id = ANY(?::uuid[])`, input.assignedUserId);
+  if (input.priority?.length)
+    add(`${alias}.priority = ANY(?::text[])`, input.priority);
+  // if (input.severityId?.length) add(`${alias}.severity_id = ANY(?::uuid[])`, input.severityId);
+  // if (input.categoryId?.length) add(`${alias}.category_id = ANY(?::uuid[])`, input.categoryId);
+
+  const severityValues =
+    Array.isArray(input.severity) && input.severity.length
+      ? input.severity
+      : input.severityId;
+
+  const categoryValues =
+    Array.isArray(input.category) && input.category.length
+      ? input.category
+      : input.categoryId;
+
+  if (severityValues?.length) {
+    add(`${alias}.severity_id = ANY(?::uuid[])`, severityValues);
+  }
+
+  if (categoryValues?.length) {
+    add(`${alias}.category_id = ANY(?::uuid[])`, categoryValues);
+  }
 
   if (input.status?.length) {
     where.push(`
@@ -57,10 +81,14 @@ function buildRunWhere(input = {}, alias = "r") {
     index += 1;
   };
 
-  if (input.periodStart) add(`${alias}.activated_at >= ?::timestamptz`, input.periodStart);
-  if (input.periodEnd) add(`${alias}.activated_at < ?::timestamptz`, input.periodEnd);
-  if (input.slaPolicyId?.length) add(`${alias}.sla_policy_id = ANY(?::uuid[])`, input.slaPolicyId);
-  if (input.slaStatus?.length) add(`${alias}.status = ANY(?::text[])`, input.slaStatus);
+  if (input.periodStart)
+    add(`${alias}.activated_at >= ?::timestamptz`, input.periodStart);
+  if (input.periodEnd)
+    add(`${alias}.activated_at < ?::timestamptz`, input.periodEnd);
+  if (input.slaPolicyId?.length)
+    add(`${alias}.sla_policy_id = ANY(?::uuid[])`, input.slaPolicyId);
+  if (input.slaStatus?.length)
+    add(`${alias}.status = ANY(?::text[])`, input.slaStatus);
 
   return {
     where: where.length ? `WHERE ${where.join(" AND ")}` : "",
@@ -78,8 +106,12 @@ function percentileAggregate(column) {
 }
 
 export async function fetchSlaOverview(input = {}, tx = null) {
-  const built = buildRunWhere(input);
-  const result = await ex(tx).query(`
+  const built = buildHistoricalRunWhere(input, {
+    run: "r",
+    ticket: "t",
+  });
+  const result = await ex(tx).query(
+    `
     SELECT
       COUNT(*)::int AS total,
       COUNT(*) FILTER (
@@ -124,14 +156,20 @@ export async function fetchSlaOverview(input = {}, tx = null) {
       )::numeric AS avg_target
     FROM ticket_sla_run_history r
     ${built.where}
-  `, built.params);
+  `,
+    built.params,
+  );
 
   return result.rows[0] || {};
 }
 
 export async function fetchSlaTrend(input = {}, tx = null) {
-  const built = buildRunWhere(input);
-  const result = await ex(tx).query(`
+  const built = buildHistoricalRunWhere(input, {
+    run: "r",
+    ticket: "t",
+  });
+  const result = await ex(tx).query(
+    `
     SELECT
       DATE_TRUNC('month', r.activated_at)::date AS period,
       COUNT(*) FILTER (
@@ -155,25 +193,35 @@ export async function fetchSlaTrend(input = {}, tx = null) {
     ${built.where}
     GROUP BY DATE_TRUNC('month', r.activated_at)::date
     ORDER BY period ASC
-  `, built.params);
+  `,
+    built.params,
+  );
 
   return result.rows.map((row) => ({
     period: row.period,
     met: Number(row.met),
     breached: Number(row.breached),
     eligible: Number(row.eligible),
-    complianceRate: Number(row.eligible) > 0
-      ? Number(((Number(row.met) / Number(row.eligible)) * 100).toFixed(2))
-      : null,
-    breachRate: Number(row.eligible) > 0
-      ? Number(((Number(row.breached) / Number(row.eligible)) * 100).toFixed(2))
-      : null,
+    complianceRate:
+      Number(row.eligible) > 0
+        ? Number(((Number(row.met) / Number(row.eligible)) * 100).toFixed(2))
+        : null,
+    breachRate:
+      Number(row.eligible) > 0
+        ? Number(
+            ((Number(row.breached) / Number(row.eligible)) * 100).toFixed(2),
+          )
+        : null,
   }));
 }
 
 export async function fetchBreachMetrics(input = {}, tx = null) {
-  const built = buildRunWhere(input);
-  const result = await ex(tx).query(`
+  const built = buildHistoricalRunWhere(input, {
+    run: "r",
+    ticket: "t",
+  });
+  const result = await ex(tx).query(
+    `
     SELECT
       COUNT(*) FILTER (WHERE r.status = 'BREACHED')::int AS breaches,
       AVG(
@@ -183,7 +231,7 @@ export async function fetchBreachMetrics(input = {}, tx = null) {
           AND r.target_resolution_minutes IS NOT NULL
       )::numeric AS avg_breach_minutes,
       ${percentileAggregate(
-        "GREATEST(r.elapsed_business_minutes - r.target_resolution_minutes, 0)"
+        "GREATEST(r.elapsed_business_minutes - r.target_resolution_minutes, 0)",
       )} FILTER (
         WHERE r.status = 'BREACHED'
           AND r.target_resolution_minutes IS NOT NULL
@@ -196,13 +244,18 @@ export async function fetchBreachMetrics(input = {}, tx = null) {
       )::numeric AS max_breach_minutes
     FROM ticket_sla_run_history r
     ${built.where}
-  `, built.params);
+  `,
+    built.params,
+  );
 
   return result.rows[0] || {};
 }
 
 export async function fetchSlaBySeverity(input = {}, tx = null) {
-  const built = buildHistoricalRunWhere(input);
+  const built = buildHistoricalRunWhere(input, {
+    run: "r",
+    ticket: "t",
+  });
 
   const result = await ex(tx).query(
     `
@@ -243,17 +296,19 @@ export async function fetchSlaBySeverity(input = {}, tx = null) {
         AVG(r.elapsed_business_minutes)
           FILTER (
             WHERE r.status IN ('COMPLETED', 'STOPPED')
-            AND r.target_resolution_minutes IS NOT NULL
+              AND r.target_resolution_minutes IS NOT NULL
           )::numeric AS avg_consumed
 
       FROM ticket_sla_run_history r
 
+      INNER JOIN tickets t
+        ON t.id = r.ticket_id
+
       LEFT JOIN ticket_severities sev
         ON sev.code = r.policy_snapshot->'rule'->>'fieldValueKey'
 
-      ${built.where}
-
-      AND r.policy_snapshot->'policy'->>'durationFieldKey' = 'severity'
+      ${built.where ? `${built.where} AND` : "WHERE"}
+        r.policy_snapshot->'policy'->>'durationFieldKey' = 'severity'
 
       GROUP BY
         COALESCE(
@@ -287,8 +342,7 @@ export async function fetchSlaBySeverity(input = {}, tx = null) {
       complianceRate: eligible
         ? Number(((met / eligible) * 100).toFixed(2))
         : null,
-      avgTargetMinutes:
-        row.avg_target == null ? null : Number(row.avg_target),
+      avgTargetMinutes: row.avg_target == null ? null : Number(row.avg_target),
       avgConsumedMinutes:
         row.avg_consumed == null ? null : Number(row.avg_consumed),
     };
@@ -296,8 +350,12 @@ export async function fetchSlaBySeverity(input = {}, tx = null) {
 }
 
 export async function fetchSlaByPolicy(input = {}, tx = null) {
-  const built = buildRunWhere(input);
-  const result = await ex(tx).query(`
+  const built = buildHistoricalRunWhere(input, {
+    run: "r",
+    ticket: "t",
+  });
+  const result = await ex(tx).query(
+    `
     SELECT
       r.sla_policy_id::text AS key,
       COALESCE(p.name, r.sla_policy_id::text) AS label,
@@ -331,7 +389,9 @@ export async function fetchSlaByPolicy(input = {}, tx = null) {
     ${built.where}
     GROUP BY r.sla_policy_id, p.name
     ORDER BY runs DESC, label ASC
-  `, built.params);
+  `,
+    built.params,
+  );
 
   return result.rows.map((row) => {
     const met = Number(row.met);
@@ -344,17 +404,25 @@ export async function fetchSlaByPolicy(input = {}, tx = null) {
       runs: Number(row.runs),
       met,
       breached,
-      complianceRate: eligible ? Number(((met / eligible) * 100).toFixed(2)) : null,
-      avgResolutionMinutes: row.avg_resolution == null ? null : Number(row.avg_resolution),
-      medianResolutionMinutes: row.median_resolution == null ? null : Number(row.median_resolution),
+      complianceRate: eligible
+        ? Number(((met / eligible) * 100).toFixed(2))
+        : null,
+      avgResolutionMinutes:
+        row.avg_resolution == null ? null : Number(row.avg_resolution),
+      medianResolutionMinutes:
+        row.median_resolution == null ? null : Number(row.median_resolution),
       avgTargetMinutes: row.avg_target == null ? null : Number(row.avg_target),
     };
   });
 }
 
 export async function fetchSlaByAgent(input = {}, tx = null) {
-  const built = buildRunWhere(input);
-  const result = await ex(tx).query(`
+  const built = buildHistoricalRunWhere(input, {
+    run: "r",
+    ticket: "t",
+  });
+  const result = await ex(tx).query(
+    `
     SELECT
       t.assigned_user_id::text AS key,
       COALESCE(
@@ -387,7 +455,9 @@ export async function fetchSlaByAgent(input = {}, tx = null) {
     GROUP BY t.assigned_user_id, u.first_name, u.last_name, u.username
     ORDER BY runs DESC, label ASC
     LIMIT 25
-  `, built.params);
+  `,
+    built.params,
+  );
 
   return rowListWithCompliance(result.rows, {
     averageField: "avg_resolution",
@@ -407,15 +477,22 @@ function rowListWithCompliance(rows, { averageField, outputAverageField }) {
       runs: Number(row.runs),
       met,
       breached,
-      complianceRate: eligible ? Number(((met / eligible) * 100).toFixed(2)) : null,
-      [outputAverageField]: row[averageField] == null ? null : Number(row[averageField]),
+      complianceRate: eligible
+        ? Number(((met / eligible) * 100).toFixed(2))
+        : null,
+      [outputAverageField]:
+        row[averageField] == null ? null : Number(row[averageField]),
     };
   });
 }
 
 export async function fetchResolutionDistribution(input = {}, tx = null) {
-  const built = buildRunWhere(input);
-  const result = await ex(tx).query(`
+  const built = buildHistoricalRunWhere(input, {
+    run: "r",
+    ticket: "t",
+  });
+  const result = await ex(tx).query(
+    `
     WITH buckets AS (
       SELECT * FROM (VALUES
         (1, '<60m', 0, 60),
@@ -439,7 +516,9 @@ export async function fetchResolutionDistribution(input = {}, tx = null) {
       ${built.where ? built.where.replace(/^WHERE\\s+/i, "AND ") : ""}
     GROUP BY b.bucket, b.label
     ORDER BY b.bucket
-  `, built.params);
+  `,
+    built.params,
+  );
 
   return result.rows.map((row) => ({
     key: String(row.bucket),
@@ -502,7 +581,8 @@ export async function fetchTicketBacklogAging(input = {}, tx = null) {
 
 export async function fetchBacklogRisk(input = {}, tx = null) {
   const built = buildTicketWhere(input);
-  const result = await ex(tx).query(`
+  const result = await ex(tx).query(
+    `
     SELECT
       COUNT(*)::int AS backlog,
       COUNT(*) FILTER (
@@ -515,14 +595,17 @@ export async function fetchBacklogRisk(input = {}, tx = null) {
     INNER JOIN ticket_statuses s ON s.id = t.status_id
     ${built.where ? `${built.where} AND` : "WHERE"}
       s.code <> 'CLOSED'
-  `, built.params);
+  `,
+    built.params,
+  );
 
   return result.rows[0] || {};
 }
 
 export async function fetchDemandByCategory(input = {}, tx = null) {
   const built = buildTicketWhere(input);
-  const result = await ex(tx).query(`
+  const result = await ex(tx).query(
+    `
     SELECT
       COALESCE(c.code, 'UNCLASSIFIED') AS key,
       COALESCE(c.name, 'Unclassified') AS label,
@@ -533,7 +616,9 @@ export async function fetchDemandByCategory(input = {}, tx = null) {
     GROUP BY c.code, c.name
     ORDER BY value DESC, label ASC
     LIMIT 20
-  `, built.params);
+  `,
+    built.params,
+  );
 
   return result.rows.map((row) => ({
     key: row.key,
@@ -544,7 +629,8 @@ export async function fetchDemandByCategory(input = {}, tx = null) {
 
 export async function fetchDemandTrend(input = {}, tx = null) {
   const built = buildTicketWhere(input);
-  const result = await ex(tx).query(`
+  const result = await ex(tx).query(
+    `
     SELECT
       DATE_TRUNC('month', t.created_at)::date AS period,
       COUNT(*)::int AS created
@@ -552,7 +638,9 @@ export async function fetchDemandTrend(input = {}, tx = null) {
     ${built.where}
     GROUP BY 1
     ORDER BY 1
-  `, built.params);
+  `,
+    built.params,
+  );
 
   return result.rows.map((row) => ({
     period: row.period,
@@ -595,12 +683,10 @@ export async function fetchDepartmentPerformance(input = {}, tx = null) {
     ? ticket.where.replace(/^WHERE\s+/i, "")
     : null;
 
-  const slaFilter = [
-    ticketFilter,
-    ...slaWhere,
-  ].filter(Boolean);
+  const slaFilter = [ticketFilter, ...slaWhere].filter(Boolean);
 
-  const result = await ex(tx).query(`
+  const result = await ex(tx).query(
+    `
     WITH ticket_volume AS (
       SELECT
         t.department_id,
@@ -648,7 +734,9 @@ export async function fetchDepartmentPerformance(input = {}, tx = null) {
     LEFT JOIN sla s ON s.department_id = d.id
     WHERE COALESCE(tv.tickets, 0) > 0 OR COALESCE(s.runs, 0) > 0
     ORDER BY tickets DESC, label ASC
-  `, params);
+  `,
+    params,
+  );
 
   return result.rows.map((row) => {
     const met = Number(row.met);
@@ -662,26 +750,53 @@ export async function fetchDepartmentPerformance(input = {}, tx = null) {
       runs: Number(row.runs),
       met,
       breached,
-      complianceRate: eligible ? Number(((met / eligible) * 100).toFixed(2)) : null,
-      avgResolutionMinutes: row.avg_resolution == null ? null : Number(row.avg_resolution),
+      complianceRate: eligible
+        ? Number(((met / eligible) * 100).toFixed(2))
+        : null,
+      avgResolutionMinutes:
+        row.avg_resolution == null ? null : Number(row.avg_resolution),
     };
   });
 }
 
 export async function fetchThroughput(input = {}, tx = null) {
   const built = buildTicketWhere(input);
-  const result = await ex(tx).query(`
-    SELECT
-      DATE_TRUNC('month', t.created_at)::date AS period,
-      COUNT(*)::int AS created,
-      COUNT(*) FILTER (
-        WHERE t.resolved_at IS NOT NULL OR t.closed_at IS NOT NULL
-      )::int AS resolved
-    FROM tickets t
-    ${built.where}
-    GROUP BY 1
-    ORDER BY 1
-  `, built.params);
+
+  const result = await ex(tx).query(
+    `
+      WITH created AS (
+        SELECT
+          DATE_TRUNC('month', t.created_at)::date AS period,
+          COUNT(*)::int AS created
+        FROM tickets t
+        ${built.where}
+        GROUP BY 1
+      ),
+
+      resolved AS (
+        SELECT
+          DATE_TRUNC('month', tle.created_at)::date AS period,
+          COUNT(DISTINCT tle.ticket_id)::int AS resolved
+        FROM ticket_lifecycle_events tle
+        INNER JOIN tickets t
+          ON t.id = tle.ticket_id
+        WHERE
+          tle.event_type = 'STATUS'
+          AND tle.event_action IN ('RESOLVED', 'CLOSED')
+        GROUP BY 1
+      )
+
+      SELECT
+        COALESCE(c.period, r.period) AS period,
+        COALESCE(c.created, 0)::int AS created,
+        COALESCE(r.resolved, 0)::int AS resolved
+      FROM created c
+      FULL OUTER JOIN resolved r
+        ON r.period = c.period
+      ORDER BY period
+    `,
+    built.params,
+  );
 
   return result.rows.map((row) => ({
     period: row.period,
@@ -692,7 +807,8 @@ export async function fetchThroughput(input = {}, tx = null) {
 
 export async function fetchBacklogTrend(input = {}, tx = null) {
   const built = buildTicketWhere(input);
-  const result = await ex(tx).query(`
+  const result = await ex(tx).query(
+    `
     WITH periods AS (
       SELECT generate_series(
         DATE_TRUNC('month', COALESCE($1::timestamptz, CURRENT_TIMESTAMP - INTERVAL '5 months')),
@@ -717,7 +833,9 @@ export async function fetchBacklogTrend(input = {}, tx = null) {
       )
     GROUP BY p.period
     ORDER BY p.period
-  `, [input.periodStart || null, input.periodEnd || null]);
+  `,
+    [input.periodStart || null, input.periodEnd || null],
+  );
 
   return result.rows.map((row) => ({
     period: row.period,
@@ -727,7 +845,8 @@ export async function fetchBacklogTrend(input = {}, tx = null) {
 
 export async function fetchWorkloadConcentration(input = {}, tx = null) {
   const built = buildTicketWhere(input);
-  const result = await ex(tx).query(`
+  const result = await ex(tx).query(
+    `
     WITH workload AS (
       SELECT
         t.assigned_user_id,
@@ -751,7 +870,9 @@ export async function fetchWorkloadConcentration(input = {}, tx = null) {
       COALESCE(MAX(w.tickets), 0)::int AS max_workload,
       COALESCE((SELECT total FROM totals), 0)::numeric AS total_workload
     FROM workload w
-  `, built.params);
+  `,
+    built.params,
+  );
 
   const row = result.rows[0] || {};
   const total = Number(row.total_workload || 0);
@@ -766,7 +887,8 @@ export async function fetchWorkloadConcentration(input = {}, tx = null) {
 
 export async function fetchRiskExposure(input = {}, tx = null) {
   const built = buildTicketWhere(input);
-  const result = await ex(tx).query(`
+  const result = await ex(tx).query(
+    `
     SELECT
       COUNT(*) FILTER (
         WHERE t.priority = 'CRITICAL' OR t.priority = 'HIGH'
@@ -781,9 +903,41 @@ export async function fetchRiskExposure(input = {}, tx = null) {
     INNER JOIN ticket_statuses s ON s.id = t.status_id
     ${built.where ? `${built.where} AND` : "WHERE"}
       s.code <> 'CLOSED'
-  `, built.params);
+  `,
+    built.params,
+  );
 
   return result.rows[0] || {};
+}
+
+function buildCurrentTicketSlaWhere(input = {}) {
+  const ticket = buildTicketWhere(input, "t");
+
+  const params = [...ticket.params];
+  const where = [];
+
+  if (ticket.where) {
+    where.push(ticket.where.replace(/^WHERE\s+/i, ""));
+  }
+
+  let index = params.length + 1;
+
+  if (input.slaPolicyId?.length) {
+    where.push(`ts.sla_policy_id = ANY($${index}::uuid[])`);
+    params.push(input.slaPolicyId);
+    index += 1;
+  }
+
+  if (input.slaStatus?.length) {
+    where.push(`ts.status = ANY($${index}::text[])`);
+    params.push(input.slaStatus);
+    index += 1;
+  }
+
+  return {
+    where: where.length ? `WHERE ${where.join(" AND ")}` : "",
+    params,
+  };
 }
 
 export async function fetchSlaRiskExposure(input = {}, tx = null) {
@@ -827,20 +981,30 @@ export async function fetchServicePerformanceIndex(input = {}, tx = null) {
   const compliance = Number(
     overview.met || overview.breached
       ? (Number(overview.met || 0) /
-          (Number(overview.met || 0) + Number(overview.breached || 0))) * 100
+          (Number(overview.met || 0) + Number(overview.breached || 0))) *
+          100
       : 0,
   );
 
   const backlogBase = Number(backlog.backlog || 0);
   const risk = Number(backlog.at_risk || 0);
-  const backlogHealth = backlogBase ? Math.max(0, 100 - (risk / backlogBase) * 100) : 100;
+  const backlogHealth = backlogBase
+    ? Math.max(0, 100 - (risk / backlogBase) * 100)
+    : 100;
 
   const latest = throughput.at(-1);
   const throughputHealth = latest?.created
-    ? Math.min(100, (Number(latest.resolved || 0) / Number(latest.created)) * 100)
+    ? Math.min(
+        100,
+        (Number(latest.resolved || 0) / Number(latest.created)) * 100,
+      )
     : 100;
 
-  const value = Number(((compliance * 0.5) + (backlogHealth * 0.25) + (throughputHealth * 0.25)).toFixed(2));
+  const value = Number(
+    (compliance * 0.5 + backlogHealth * 0.25 + throughputHealth * 0.25).toFixed(
+      2,
+    ),
+  );
 
   return {
     value,
@@ -856,12 +1020,8 @@ export async function fetchServicePerformanceIndex(input = {}, tx = null) {
   };
 }
 
-
 function buildHistoricalRunWhere(input = {}, aliases = {}) {
-  const {
-    run = "r",
-    ticket = "t",
-  } = aliases;
+  const { run = "r", ticket = "t" } = aliases;
 
   const params = [];
   const where = [];
@@ -874,73 +1034,43 @@ function buildHistoricalRunWhere(input = {}, aliases = {}) {
   };
 
   if (input.periodStart) {
-    add(
-      `${run}.activated_at >= ?::timestamptz`,
-      input.periodStart,
-    );
+    add(`${run}.activated_at >= ?::timestamptz`, input.periodStart);
   }
 
   if (input.periodEnd) {
-    add(
-      `${run}.activated_at < ?::timestamptz`,
-      input.periodEnd,
-    );
+    add(`${run}.activated_at < ?::timestamptz`, input.periodEnd);
   }
 
   if (input.slaPolicyId?.length) {
-    add(
-      `${run}.sla_policy_id = ANY(?::uuid[])`,
-      input.slaPolicyId,
-    );
+    add(`${run}.sla_policy_id = ANY(?::uuid[])`, input.slaPolicyId);
   }
 
   if (input.slaStatus?.length) {
-    add(
-      `${run}.status = ANY(?::text[])`,
-      input.slaStatus,
-    );
+    add(`${run}.status = ANY(?::text[])`, input.slaStatus);
   }
 
   if (input.departmentId?.length) {
-    add(
-      `${ticket}.department_id = ANY(?::uuid[])`,
-      input.departmentId,
-    );
+    add(`${ticket}.department_id = ANY(?::uuid[])`, input.departmentId);
   }
 
   if (input.organizationId?.length) {
-    add(
-      `${ticket}.organization_id = ANY(?::uuid[])`,
-      input.organizationId,
-    );
+    add(`${ticket}.organization_id = ANY(?::uuid[])`, input.organizationId);
   }
 
   if (input.assignedUserId?.length) {
-    add(
-      `${ticket}.assigned_user_id = ANY(?::uuid[])`,
-      input.assignedUserId,
-    );
+    add(`${ticket}.assigned_user_id = ANY(?::uuid[])`, input.assignedUserId);
   }
 
   if (input.priority?.length) {
-    add(
-      `${ticket}.priority = ANY(?::text[])`,
-      input.priority,
-    );
+    add(`${ticket}.priority = ANY(?::text[])`, input.priority);
   }
 
   if (input.severity?.length) {
-    add(
-      `${ticket}.severity_id = ANY(?::uuid[])`,
-      input.severity,
-    );
+    add(`${ticket}.severity_id = ANY(?::uuid[])`, input.severity);
   }
 
   if (input.category?.length) {
-    add(
-      `${ticket}.category_id = ANY(?::uuid[])`,
-      input.category,
-    );
+    add(`${ticket}.category_id = ANY(?::uuid[])`, input.category);
   }
 
   if (input.status?.length) {
@@ -958,9 +1088,7 @@ function buildHistoricalRunWhere(input = {}, aliases = {}) {
   }
 
   return {
-    where: where.length
-      ? `WHERE ${where.join(" AND ")}`
-      : "",
+    where: where.length ? `WHERE ${where.join(" AND ")}` : "",
     params,
   };
 }
