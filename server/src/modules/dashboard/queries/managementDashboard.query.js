@@ -203,51 +203,90 @@ export async function fetchBreachMetrics(input = {}, tx = null) {
 
 export async function fetchSlaBySeverity(input = {}, tx = null) {
   const built = buildRunWhere(input);
-  const result = await ex(tx).query(`
-    SELECT
-      COALESCE(NULLIF(r.duration_field_value_key, ''), 'UNKNOWN') AS key,
-      COALESCE(NULLIF(r.duration_field_value_key, ''), 'Unknown') AS label,
-      COUNT(*)::int AS runs,
-      COUNT(*) FILTER (
-        WHERE r.status IN ('COMPLETED', 'STOPPED')
-          AND r.target_resolution_minutes IS NOT NULL
-          AND r.elapsed_business_minutes <= r.target_resolution_minutes
-      )::int AS met,
-      COUNT(*) FILTER (
-        WHERE r.status = 'BREACHED'
-          OR (
-            r.status IN ('COMPLETED', 'STOPPED')
+
+  const result = await ex(tx).query(
+    `
+      SELECT
+        COALESCE(
+          NULLIF(BTRIM(r.duration_field_value_key), ''),
+          'UNKNOWN'
+        ) AS key,
+
+        COALESCE(
+          NULLIF(BTRIM(r.duration_field_value_key), ''),
+          'Unknown'
+        ) AS label,
+
+        COUNT(*)::int AS runs,
+
+        COUNT(*) FILTER (
+          WHERE r.status IN ('COMPLETED', 'STOPPED')
             AND r.target_resolution_minutes IS NOT NULL
-            AND r.elapsed_business_minutes > r.target_resolution_minutes
-          )
-      )::int AS breached,
-      AVG(r.target_resolution_minutes) FILTER (
-        WHERE r.target_resolution_minutes IS NOT NULL
-      )::numeric AS avg_target,
-      AVG(r.elapsed_business_minutes) FILTER (
-        WHERE r.status IN ('COMPLETED', 'STOPPED')
-          AND r.target_resolution_minutes IS NOT NULL
-      )::numeric AS avg_consumed
-    FROM ticket_sla_run_history r
-    ${built.where}
-    GROUP BY COALESCE(NULLIF(r.duration_field_value_key, ''), 'UNKNOWN')
-    ORDER BY runs DESC, label ASC
-  `, built.params);
+            AND r.elapsed_business_minutes <= r.target_resolution_minutes
+        )::int AS met,
+
+        COUNT(*) FILTER (
+          WHERE r.status = 'BREACHED'
+            OR (
+              r.status IN ('COMPLETED', 'STOPPED')
+              AND r.target_resolution_minutes IS NOT NULL
+              AND r.elapsed_business_minutes > r.target_resolution_minutes
+            )
+        )::int AS breached,
+
+        AVG(r.target_resolution_minutes)
+          FILTER (
+            WHERE r.target_resolution_minutes IS NOT NULL
+          )::numeric AS avg_target,
+
+        AVG(r.elapsed_business_minutes)
+          FILTER (
+            WHERE r.status IN ('COMPLETED', 'STOPPED')
+              AND r.target_resolution_minutes IS NOT NULL
+          )::numeric AS avg_consumed
+
+      FROM ticket_sla_run_history r
+      ${built.where}
+
+      GROUP BY
+        COALESCE(
+          NULLIF(BTRIM(r.duration_field_value_key), ''),
+          'UNKNOWN'
+        )
+
+      ORDER BY
+        COUNT(*) DESC,
+        COALESCE(
+          NULLIF(BTRIM(r.duration_field_value_key), ''),
+          'Unknown'
+        ) ASC
+    `,
+    built.params,
+  );
 
   return result.rows.map((row) => {
-    const met = Number(row.met);
-    const breached = Number(row.breached);
+    const met = Number(row.met || 0);
+    const breached = Number(row.breached || 0);
     const eligible = met + breached;
 
     return {
       key: row.key,
       label: row.label,
-      runs: Number(row.runs),
+      runs: Number(row.runs || 0),
       met,
       breached,
-      complianceRate: eligible ? Number(((met / eligible) * 100).toFixed(2)) : null,
-      avgTargetMinutes: row.avg_target == null ? null : Number(row.avg_target),
-      avgConsumedMinutes: row.avg_consumed == null ? null : Number(row.avg_consumed),
+      complianceRate: eligible
+        ? Number(((met / eligible) * 100).toFixed(2))
+        : null,
+      avgTargetMinutes:
+        row.avg_target == null
+          ? null
+          : Number(row.avg_target),
+
+      avgConsumedMinutes:
+        row.avg_consumed == null
+          ? null
+          : Number(row.avg_consumed),
     };
   });
 }
@@ -407,36 +446,52 @@ export async function fetchResolutionDistribution(input = {}, tx = null) {
 
 export async function fetchTicketBacklogAging(input = {}, tx = null) {
   const built = buildTicketWhere(input);
-  const result = await ex(tx).query(`
-    SELECT
-      CASE
-        WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - t.created_at)) / 86400 < 1 THEN '<1d'
-        WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - t.created_at)) / 86400 < 3 THEN '1–3d'
-        WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - t.created_at)) / 86400 < 7 THEN '3–7d'
-        WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - t.created_at)) / 86400 < 14 THEN '7–14d'
-        WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - t.created_at)) / 86400 < 30 THEN '14–30d'
-        ELSE '30d+'
-      END AS key,
-      COUNT(*)::int AS value
-    FROM tickets t
-    INNER JOIN ticket_statuses s ON s.id = t.status_id
-    ${built.where ? `${built.where} AND` : "WHERE"}
-      s.code <> 'CLOSED'
-    GROUP BY 1
-    ORDER BY
-      CASE key
-        WHEN '<1d' THEN 1
-        WHEN '1–3d' THEN 2
-        WHEN '3–7d' THEN 3
-        WHEN '7–14d' THEN 4
-        WHEN '14–30d' THEN 5
-        ELSE 6
-      END
-  `, built.params);
+
+  const result = await ex(tx).query(
+    `
+      WITH aged_tickets AS (
+        SELECT
+          CASE
+            WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - t.created_at)) / 86400 < 1
+              THEN '<1d'
+            WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - t.created_at)) / 86400 < 3
+              THEN '1–3d'
+            WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - t.created_at)) / 86400 < 7
+              THEN '3–7d'
+            WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - t.created_at)) / 86400 < 14
+              THEN '7–14d'
+            WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - t.created_at)) / 86400 < 30
+              THEN '14–30d'
+            ELSE '30d+'
+          END AS bucket
+        FROM tickets t
+        INNER JOIN ticket_statuses s
+          ON s.id = t.status_id
+        ${built.where ? `${built.where} AND` : "WHERE"}
+          s.code <> 'CLOSED'
+      )
+      SELECT
+        bucket AS key,
+        bucket AS label,
+        COUNT(*)::int AS value
+      FROM aged_tickets
+      GROUP BY bucket
+      ORDER BY
+        CASE bucket
+          WHEN '<1d' THEN 1
+          WHEN '1–3d' THEN 2
+          WHEN '3–7d' THEN 3
+          WHEN '7–14d' THEN 4
+          WHEN '14–30d' THEN 5
+          ELSE 6
+        END
+    `,
+    built.params,
+  );
 
   return result.rows.map((row) => ({
     key: row.key,
-    label: row.key,
+    label: row.label,
     value: Number(row.value),
   }));
 }
