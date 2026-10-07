@@ -1,106 +1,107 @@
-import professionalDashboardQuery from "../queries/professionalDashboard.query.js";
+import ticketQuery from "../queries/ticketDashboard.query.js";
 
-const PROFESSIONAL_PERMISSION = "ticket:read";
-
-const DIMENSIONS = Object.freeze([
-  {
+const DIMENSION_DEFINITIONS = Object.freeze({
+  serviceType: {
     code: "P001",
-    queryKey: "serviceType",
-    name: "Service Type Wise",
+    label: "Service Type Wise",
+    queryField: "serviceTypeId",
   },
-  {
-    code: "P002",
-    queryKey: "district",
-    name: "District Wise",
-  },
-  {
-    code: "P003",
-    queryKey: "department",
-    name: "Department Wise",
-  },
-  {
-    code: "P004",
-    queryKey: "category",
-    name: "Category Wise",
-  },
-  {
-    code: "P005",
-    queryKey: "problemStatement",
-    name: "Problem Statement Wise",
-  },
-  {
-    code: "P006",
-    queryKey: "currentBillStatus",
-    name: "Current Bill Status Wise",
-  },
-  {
-    code: "P007",
-    queryKey: "status",
-    name: "Status Wise",
-  },
-  {
-    code: "P008",
-    queryKey: "assignedTo",
-    name: "Assigned To Wise",
-  },
-  {
-    code: "P009",
-    queryKey: "severity",
-    name: "Severity Wise",
-  },
-  {
-    code: "P010",
-    queryKey: "dependencyCategory",
-    name: "Dependency Category Wise",
-  },
-  {
-    code: "P011",
-    queryKey: "issueCategory",
-    name: "Issue Category Wise",
-  },
-  {
-    code: "P012",
-    queryKey: "createdBy",
-    name: "Created By Wise",
-  },
-]);
 
-async function execute(dimension, context) {
-  const data = await professionalDashboardQuery.fetchDimensionDistribution(
-    dimension.queryKey,
-    context.filters,
-    context.tx,
-  );
+  district: {
+    code: "P002",
+    label: "District Wise",
+    queryField: "districtId",
+  },
+
+  department: {
+    code: "P003",
+    label: "Department Wise",
+    queryField: "departmentId",
+  },
+
+  category: {
+    code: "P004",
+    label: "Category Wise",
+    queryField: "categoryId",
+  },
+
+  problemStatement: {
+    code: "P005",
+    label: "Problem Statement Wise",
+    queryField: "problemStatementId",
+  },
+
+  currentBillStatus: {
+    code: "P006",
+    label: "Current Bill Status Wise",
+    queryField: "currentBillStatusId",
+  },
+
+  status: {
+    code: "P007",
+    label: "Status Wise",
+    queryField: "status",
+  },
+
+  assignedTo: {
+    code: "P008",
+    label: "Assigned To Wise",
+    queryField: "assignedUserId",
+  },
+
+  severity: {
+    code: "P009",
+    label: "Severity Wise",
+    queryField: "severityId",
+  },
+
+  dependencyCategory: {
+    code: "P010",
+    label: "Dependency Category Wise",
+    queryField: "dependencyCategoryId",
+  },
+
+  issueCategory: {
+    code: "P011",
+    label: "Issue Category Wise",
+    queryField: "issueCategoryId",
+  },
+
+  createdBy: {
+    code: "P012",
+    label: "Created By Wise",
+    queryField: "createdByUserId",
+  },
+});
+
+async function executeDimension(dimensionKey, context) {
+  const definition = DIMENSION_DEFINITIONS[dimensionKey];
+
+  const data =
+    await ticketQuery.fetchTicketDimensionDistribution(
+      dimensionKey,
+      context.filters,
+      context.tx,
+    );
 
   return {
-    code: dimension.code,
-    label: dimension.name,
-    value: data.reduce((total, row) => total + row.value, 0),
-    unit: "count",
+    code: definition.code,
+    label: definition.label,
+    value: null,
+    unit: null,
     trend: null,
 
-    /*
-     * Every Professional Dashboard dimension is graphical by default.
-     * The client can independently switch the widget to a table.
-     */
     visualization: "bar",
 
     data,
 
-    /*
-     * filterValue is the canonical UUID used by the ticket list.
-     * Null buckets intentionally have no drill-down value.
-     */
     drillDown: {
       route: "/tickets",
-      queryField: professionalDashboardQuery
-        .getProfessionalDimension(dimension.queryKey)
-        ?.filterKey ?? null,
+      queryField: definition.queryField,
     },
 
     metadata: {
-      dimension: dimension.queryKey,
-      total: data.reduce((total, row) => total + row.value, 0),
+      dimension: dimensionKey,
       chart: {
         xAxisKey: "label",
         series: [
@@ -115,64 +116,65 @@ async function execute(dimension, context) {
   };
 }
 
-const HANDLERS = Object.freeze(
-  Object.fromEntries(
-    DIMENSIONS.map((dimension) => [
-      dimension.queryKey,
-      (context) => execute(dimension, context),
-    ]),
-  ),
-);
+export async function serviceType(context) {
+  return executeDimension("serviceType", context);
+}
 
-export const professionalMetricDefinitions = Object.freeze(
-  DIMENSIONS.map((dimension) => ({
-    code: dimension.code,
-    name: dimension.name,
-    dashboardTypes: ["professional"],
-    permission: PROFESSIONAL_PERMISSION,
-    description: `${dimension.name} ticket distribution.`,
-    timePeriod: "created_at",
-    filters: [
-      "periodStart",
-      "periodEnd",
-      "departmentId",
-      "organizationId",
-      "assignedUserId",
-      "priority",
-      "severity",
-      "category",
-      "status",
-    ],
-    visualization: "bar",
-    queryKey: dimension.queryKey,
-    drillDown: true,
-  })),
-);
+export async function district(context) {
+  return executeDimension("district", context);
+}
 
-export async function executeProfessionalMetric(
-  metricCode,
-  context,
-) {
-  const definition = professionalMetricDefinitions.find(
-    (item) => item.code === metricCode,
-  );
+export async function department(context) {
+  return executeDimension("department", context);
+}
 
-  if (!definition) {
-    return null;
-  }
+export async function category(context) {
+  return executeDimension("category", context);
+}
 
-  const handler = HANDLERS[definition.queryKey];
+export async function problemStatement(context) {
+  return executeDimension("problemStatement", context);
+}
 
-  if (!handler) {
-    throw new Error(
-      `Professional Dashboard metric handler '${definition.queryKey}' is not registered.`,
-    );
-  }
+export async function currentBillStatus(context) {
+  return executeDimension("currentBillStatus", context);
+}
 
-  return handler(context);
+export async function status(context) {
+  return executeDimension("status", context);
+}
+
+export async function assignedTo(context) {
+  return executeDimension("assignedTo", context);
+}
+
+export async function severity(context) {
+  return executeDimension("severity", context);
+}
+
+export async function dependencyCategory(context) {
+  return executeDimension("dependencyCategory", context);
+}
+
+export async function issueCategory(context) {
+  return executeDimension("issueCategory", context);
+}
+
+export async function createdBy(context) {
+  return executeDimension("createdBy", context);
 }
 
 export default Object.freeze({
-  professionalMetricDefinitions,
-  executeProfessionalMetric,
+  serviceType,
+  district,
+  department,
+  category,
+  problemStatement,
+  currentBillStatus,
+  status,
+  assignedTo,
+  severity,
+  dependencyCategory,
+  issueCategory,
+  createdBy,
 });
