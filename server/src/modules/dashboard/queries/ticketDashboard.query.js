@@ -432,7 +432,95 @@ export async function countClosedByUser(input, userId, tx = null) {
 
   return Number(result.rows[0]?.count || 0);
 }
+const PROFESSIONAL_DIMENSIONS = Object.freeze({
+  serviceType: {
+    join: `LEFT JOIN service_types dashboard_dimension ON dashboard_dimension.id = t.service_type_id`,
+    key: "dashboard_dimension.id::text",
+    label: "dashboard_dimension.name",
+  },
+  district: {
+    join: `LEFT JOIN contacts dashboard_contact ON dashboard_contact.id = t.contact_id
+            LEFT JOIN districts dashboard_dimension ON dashboard_dimension.id = dashboard_contact.district_id`,
+    key: "dashboard_dimension.id::text",
+    label: "dashboard_dimension.name",
+  },
+  department: {
+    join: `LEFT JOIN departments dashboard_dimension ON dashboard_dimension.id = t.department_id`,
+    key: "dashboard_dimension.id::text",
+    label: "dashboard_dimension.name",
+  },
+  category: {
+    join: `LEFT JOIN ticket_categories dashboard_dimension ON dashboard_dimension.id = t.category_id`,
+    key: "dashboard_dimension.id::text",
+    label: "dashboard_dimension.name",
+  },
+  problemStatement: {
+    join: `LEFT JOIN problem_statements dashboard_dimension ON dashboard_dimension.id = t.problem_statement_id`,
+    key: "dashboard_dimension.id::text",
+    label: "dashboard_dimension.name",
+  },
+  currentBillStatus: {
+    join: `LEFT JOIN current_bill_statuses dashboard_dimension ON dashboard_dimension.id = t.current_bill_status_id`,
+    key: "dashboard_dimension.id::text",
+    label: "dashboard_dimension.name",
+  },
+  status: {
+    join: `LEFT JOIN ticket_statuses dashboard_dimension ON dashboard_dimension.id = t.status_id`,
+    key: "dashboard_dimension.code",
+    label: "dashboard_dimension.name",
+  },
+  assignedTo: {
+    join: `LEFT JOIN users dashboard_dimension ON dashboard_dimension.id = t.assigned_user_id`,
+    key: "dashboard_dimension.id::text",
+    label: `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', dashboard_dimension.first_name, dashboard_dimension.last_name)), ''), dashboard_dimension.username, dashboard_dimension.email)`,
+  },
+  severity: {
+    join: `LEFT JOIN ticket_severities dashboard_dimension ON dashboard_dimension.id = t.severity_id`,
+    key: "dashboard_dimension.id::text",
+    label: "dashboard_dimension.name",
+  },
+  dependencyCategory: {
+    join: `LEFT JOIN ticket_dependency_categories dashboard_dimension ON dashboard_dimension.id = t.dependency_category_id`,
+    key: "dashboard_dimension.id::text",
+    label: "dashboard_dimension.name",
+  },
+  issueCategory: {
+    join: `LEFT JOIN ticket_issue_categories dashboard_dimension ON dashboard_dimension.id = t.issue_category_id`,
+    key: "dashboard_dimension.id::text",
+    label: "dashboard_dimension.name",
+  },
+  createdBy: {
+    join: `LEFT JOIN users dashboard_dimension ON dashboard_dimension.id = t.created_by_user_id`,
+    key: "dashboard_dimension.id::text",
+    label: `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', dashboard_dimension.first_name, dashboard_dimension.last_name)), ''), dashboard_dimension.username, dashboard_dimension.email)`,
+  },
+})
 
+export async function fetchTicketDimensionDistribution(dimensionKey, input = {}, tx = null) {
+  const dimension = PROFESSIONAL_DIMENSIONS[dimensionKey];
+  if (!dimension) {
+    throw new Error(`Unsupported ticket dashboard dimension: ${dimensionKey}`);
+  }
+
+  const built = buildTicketWhere(input);
+  const result = await ex(tx).query(`
+    SELECT
+      ${dimension.key} AS key,
+      COALESCE(NULLIF(TRIM(${dimension.label}), ''), 'Not specified') AS label,
+      COUNT(*)::int AS value
+    FROM tickets t
+    ${dimension.join}
+    ${built.where}
+    GROUP BY ${dimension.key}, ${dimension.label}
+    ORDER BY value DESC, label ASC
+  `, built.params);
+
+  return result.rows.map((row) => ({
+    key: row.key ?? "__NULL__",
+    label: row.label ?? "Not specified",
+    value: Number(row.value ?? 0),
+  }));
+}
 export default Object.freeze({
   countTickets,
   countAssignedToUser,
@@ -442,4 +530,5 @@ export default Object.freeze({
   fetchMyTickets,
   countClosedByUser,
   countCreatedByUser,
+  fetchTicketDimensionDistribution
 });

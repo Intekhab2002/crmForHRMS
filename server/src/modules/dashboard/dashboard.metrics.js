@@ -617,23 +617,38 @@ const METRIC_REGISTRY = Object.freeze([
   drillDown: false,
 },
 
-
+[
+  ["P001","Service Type Wise","serviceType"],
+  ["P002","District Wise","district"],
+  ["P003","Department Wise","department"],
+  ["P004","Category Wise","category"],
+  ["P005","Problem Statement Wise","problemStatement"],
+  ["P006","Current Bill Status Wise","currentBillStatus"],
+  ["P007","Status Wise","status"],
+  ["P008","Assigned To Wise","assignedTo"],
+  ["P009","Severity Wise","severity"],
+  ["P010","Dependency Category Wise","dependencyCategory"],
+  ["P011","Issue Category Wise","issueCategory"],
+  ["P012","Created By Wise","createdBy"],
+].map(([code,name,queryKey]) => ({
+  code,
+  name,
+  dashboardTypes: ["professional"],
+  permission: "ticket:read",
+  description: `${name} ticket distribution.`,
+  timePeriod: "created_at",
+  filters: COMMON_TICKET_FILTERS,
+  visualization: "bar",
+  queryKey,
+  drillDown: true,
+})),
 ]);
 
 const HANDLERS = Object.freeze({
   ...ticketMetrics,
   ...slaMetrics,
   ...managementMetrics,
-  ...Object.fromEntries(
-    professionalMetrics.professionalMetricDefinitions.map((definition) => [
-      definition.queryKey,
-      (context) =>
-        professionalMetrics.executeProfessionalMetric(
-          definition.code,
-          context,
-        ),
-    ]),
-  ),
+ ...professionalMetrics,
 });
 
 export function getMetricRegistry() {
