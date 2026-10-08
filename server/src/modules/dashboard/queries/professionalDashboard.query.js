@@ -201,9 +201,16 @@ function toTicketListFilters(filters = {}, dimensionFilterKey) {
   )) {
     const value = filters[sourceKey];
 
-    if (value !== undefined && value !== null && value !== "") {
-      result[targetKey] = value;
+    if (
+      value === undefined ||
+      value === null ||
+      value === "" ||
+      (Array.isArray(value) && value.length === 0)
+    ) {
+      continue;
     }
+
+    result[targetKey] = value;
   }
 
   if (Array.isArray(filters.severity) && filters.severity.length > 0) {
@@ -243,10 +250,7 @@ export async function fetchDimensionDistribution(
     );
   }
 
-  const ticketFilters = toTicketListFilters(
-    filters,
-    dimension.filterKey,
-  );
+  const ticketFilters = toTicketListFilters(filters, dimension.filterKey);
 
   const built = buildTicketListWhereClause(ticketFilters);
 
