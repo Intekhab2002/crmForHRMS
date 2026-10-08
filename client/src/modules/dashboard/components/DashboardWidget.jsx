@@ -10,36 +10,64 @@ import MetricCard from "./MetricCard";
 import ChartCard from "./ChartCard";
 import DataTableCard from "./DataTableCard";
 
+function getViewModes(metric) {
+  if (Array.isArray(metric?.viewModes) && metric.viewModes.length) {
+    return metric.viewModes;
+  }
+
+  if (metric?.visualization === "kpi") {
+    return ["kpi"];
+  }
+
+  return ["graph", "table"];
+}
+
+function getDefaultView(metric, viewModes) {
+  if (metric?.defaultView && viewModes.includes(metric.defaultView)) {
+    return metric.defaultView;
+  }
+
+  if (metric?.visualization === "kpi") {
+    return "kpi";
+  }
+
+  return viewModes.includes("graph") ? "graph" : viewModes[0];
+}
+
 export default function DashboardWidget({ metric, onDrillDown, size }) {
-  const [viewMode, setViewMode] = useState(
-    metric?.visualization === "kpi" ? "graph" : "graph",
+  const viewModes = getViewModes(metric);
+
+  const [viewMode, setViewMode] = useState(() =>
+    getDefaultView(metric, viewModes),
   );
 
-  const isVisualMetric = metric?.visualization !== "kpi";
+  const isToggleVisible =
+    viewModes.includes("graph") &&
+    viewModes.includes("table");
 
   const content = (() => {
-    if (metric?.visualization === "kpi") {
+    if (viewMode === "kpi") {
       return <MetricCard metric={metric} onClick={onDrillDown} />;
     }
 
-    return viewMode === "table" ? (
-      <DataTableCard metric={metric} />
-    ) : (
-      <ChartCard metric={metric} />
-    );
+    if (viewMode === "table") {
+      return <DataTableCard metric={metric} />;
+    }
+
+    return <ChartCard metric={metric} />;
   })();
 
   return (
     <Grid size={size}>
       <Stack spacing={1} sx={{ height: "100%" }}>
-        {isVisualMetric && (
+        {isToggleVisible && (
           <Stack direction="row" justifyContent="flex-end">
             <ToggleButtonGroup
               size="small"
               exclusive
               value={viewMode}
               onChange={(_, next) => {
-                if (next) {
+                if (next && viewModes.includes(next)) {
                   setViewMode(next);
                 }
               }}
@@ -48,6 +76,7 @@ export default function DashboardWidget({ metric, onDrillDown, size }) {
               <ToggleButton value="graph" aria-label="Graph view">
                 Graph
               </ToggleButton>
+
               <ToggleButton value="table" aria-label="Table view">
                 Table
               </ToggleButton>

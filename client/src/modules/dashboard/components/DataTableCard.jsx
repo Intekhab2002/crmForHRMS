@@ -3,27 +3,34 @@ import { DataGrid } from "@mui/x-data-grid";
 
 function inferColumns(rows) {
   if (!rows.length) return [];
+
   return Object.keys(rows[0])
-    .filter((field) => field !== "id")
+    .filter((field) => field !== "__dashboardRowId")
     .map((field) => ({
       field,
-      headerName: field.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      headerName: field
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase()),
       flex: 1,
       minWidth: 120,
     }));
 }
 
-function getRowId(row) {
-  if (row?.id != null) return row.id;
-  if (row?.key != null) return row.key;
+function buildRows(metric) {
+  const sourceRows = Array.isArray(metric?.data) ? metric.data : [];
 
-  throw new Error(
-    "Dashboard table row must contain either an id or key field.",
-  );
+  return sourceRows.map((row, index) => ({
+    ...row,
+    __dashboardRowId:
+      row?.id ??
+      row?.key ??
+      row?.code ??
+      `${metric.code}:${index}`,
+  }));
 }
 
 export default function DataTableCard({ metric }) {
-  const rows = Array.isArray(metric.data) ? metric.data : [];
+  const rows = buildRows(metric);
   const columns = inferColumns(rows);
 
   return (
@@ -33,14 +40,22 @@ export default function DataTableCard({ metric }) {
           <Typography variant="subtitle1" fontWeight={700}>
             {metric.label}
           </Typography>
+
           <DataGrid
             rows={rows}
             columns={columns}
-            getRowId={getRowId}
+            getRowId={(row) => row.__dashboardRowId}
             disableRowSelectionOnClick
             hideFooterSelectedRowCount
             pageSizeOptions={[5, 10]}
-            initialState={{ pagination: { paginationModel: { pageSize: 5, page: 0 } } }}
+            initialState={{
+              pagination: {
+                paginationModel: {
+                  pageSize: 5,
+                  page: 0,
+                },
+              },
+            }}
           />
         </Stack>
       </CardContent>
