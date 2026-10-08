@@ -1,4 +1,4 @@
-import ticketQuery from "../queries/ticketDashboard.query.js";
+import professionalQuery from "../queries/professionalDashboard.query.js";
 
 const DIMENSION_DEFINITIONS = Object.freeze({
   serviceType: {
@@ -77,12 +77,17 @@ const DIMENSION_DEFINITIONS = Object.freeze({
 async function executeDimension(dimensionKey, context) {
   const definition = DIMENSION_DEFINITIONS[dimensionKey];
 
-  const data =
-    await ticketQuery.fetchTicketDimensionDistribution(
-      dimensionKey,
-      context.filters,
-      context.tx,
+  if (!definition) {
+    throw new Error(
+      `Unsupported Professional Dashboard dimension: ${dimensionKey}`,
     );
+  }
+
+  const data = await professionalQuery.fetchDimensionDistribution(
+    dimensionKey,
+    context.filters,
+    context.tx,
+  );
 
   return {
     code: definition.code,
@@ -90,16 +95,12 @@ async function executeDimension(dimensionKey, context) {
     value: null,
     unit: null,
     trend: null,
-
     visualization: "bar",
-
     data,
-
     drillDown: {
       route: "/tickets",
       queryField: definition.queryField,
     },
-
     metadata: {
       dimension: dimensionKey,
       chart: {
