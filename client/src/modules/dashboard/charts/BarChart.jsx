@@ -1,10 +1,10 @@
 import { useMemo } from "react";
+import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
   Bar,
   BarChart as RechartsBarChart,
   CartesianGrid,
-  Cell,
   Legend,
   ResponsiveContainer,
   Tooltip,
@@ -12,10 +12,7 @@ import {
   YAxis,
 } from "recharts";
 
-import {
-  getChartPalette,
-  getChartData,
-} from "./chart.utils";
+import { getChartPalette, getChartData } from "./chart.utils";
 
 function getSeries(metric, data) {
   const configuredSeries = metric?.metadata?.chart?.series;
@@ -24,9 +21,7 @@ function getSeries(metric, data) {
     return configuredSeries;
   }
 
-  if (!data.length) {
-    return [];
-  }
+  if (!data.length) return [];
 
   const excludedKeys = new Set([
     metric?.metadata?.chart?.xAxisKey,
@@ -34,9 +29,7 @@ function getSeries(metric, data) {
     "label",
   ]);
 
-  const firstRow = data[0];
-
-  return Object.keys(firstRow)
+  return Object.keys(data[0])
     .filter((key) => !excludedKeys.has(key))
     .filter((key) =>
       data.some(
@@ -52,9 +45,15 @@ function getSeries(metric, data) {
     }));
 }
 
+function truncateLabel(value, maxLength = 18) {
+  const text = String(value ?? "");
+  return text.length > maxLength
+    ? `${text.slice(0, maxLength - 1)}…`
+    : text;
+}
+
 export default function BarChart({ metric }) {
   const theme = useTheme();
-
   const data = getChartData(metric);
 
   const palette = useMemo(
@@ -66,70 +65,100 @@ export default function BarChart({ metric }) {
     metric?.metadata?.chart?.xAxisKey || "label";
 
   const series = getSeries(metric, data);
+  const dense = data.length >= 12;
+
+  /*
+   * Keep vertical columns for large categorical datasets.
+   * Instead of switching to horizontal bars, make the plotting surface
+   * horizontally scrollable so every category remains represented.
+   */
+  const chartWidth = dense
+    ? Math.max(720, data.length * 72)
+    : "100%";
+
+  const chartHeight = dense ? 380 : 280;
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <RechartsBarChart
-        data={data}
-        margin={{
-          top: 8,
-          right: 16,
-          left: 0,
-          bottom: 8,
-        }}
-      >
-        <CartesianGrid
-          stroke={theme.palette.divider}
-          strokeDasharray="3 3"
-          vertical={false}
-        />
+    <Box
+      sx={{
+        width: "100%",
+        overflowX: dense ? "auto" : "hidden",
+        overflowY: "hidden",
+      }}
+    >
+      <Box sx={{ width: chartWidth, minWidth: dense ? 720 : "100%" }}>
+        <ResponsiveContainer width="100%" height={chartHeight}>
+          <RechartsBarChart
+            data={data}
+            margin={{
+              top: 8,
+              right: 20,
+              left: 0,
+              bottom: dense ? 68 : 8,
+            }}
+          >
+            <CartesianGrid
+              stroke={theme.palette.divider}
+              strokeDasharray="3 3"
+              vertical={false}
+            />
 
-        <XAxis
-          dataKey={xAxisKey}
-          tick={{
-            fill: theme.palette.text.secondary,
-            fontSize: 12,
-          }}
-          axisLine={{
-            stroke: theme.palette.divider,
-          }}
-          tickLine={false}
-        />
+            <XAxis
+              dataKey={xAxisKey}
+              interval={0}
+              height={dense ? 72 : 30}
+              angle={dense ? -35 : 0}
+              textAnchor={dense ? "end" : "middle"}
+              tickFormatter={(value) =>
+                dense ? truncateLabel(value) : value
+              }
+              tick={{
+                fill: theme.palette.text.secondary,
+                fontSize: 11,
+              }}
+              axisLine={{
+                stroke: theme.palette.divider,
+              }}
+              tickLine={false}
+            />
 
-        <YAxis
-          allowDecimals={false}
-          width={48}
-          tick={{
-            fill: theme.palette.text.secondary,
-            fontSize: 12,
-          }}
-          axisLine={false}
-          tickLine={false}
-        />
+            <YAxis
+              allowDecimals={false}
+              width={48}
+              tick={{
+                fill: theme.palette.text.secondary,
+                fontSize: 12,
+              }}
+              axisLine={false}
+              tickLine={false}
+            />
 
-        <Tooltip
-          contentStyle={{
-            borderRadius: theme.shape.borderRadius,
-            border: `1px solid ${theme.palette.divider}`,
-          }}
-        />
+            <Tooltip
+              labelFormatter={(label) => String(label ?? "")}
+              formatter={(value, name) => [value, name]}
+              contentStyle={{
+                borderRadius: theme.shape.borderRadius,
+                border: `1px solid ${theme.palette.divider}`,
+              }}
+            />
 
-        <Legend
-          verticalAlign="bottom"
-          height={36}
-        />
+            {series.length > 1 && (
+              <Legend verticalAlign="bottom" height={36} />
+            )}
 
-        {series.map((item, index) => (
-          <Bar
-            key={item.dataKey}
-            dataKey={item.dataKey}
-            name={item.name || item.dataKey}
-            fill={palette[index % palette.length]}
-            radius={[4, 4, 0, 0]}
-            isAnimationActive
-          />
-        ))}
-      </RechartsBarChart>
-    </ResponsiveContainer>
+            {series.map((item, index) => (
+              <Bar
+                key={item.dataKey}
+                dataKey={item.dataKey}
+                name={item.name || item.dataKey}
+                fill={palette[index % palette.length]}
+                radius={[4, 4, 0, 0]}
+                isAnimationActive
+              />
+            ))}
+          </RechartsBarChart>
+        </ResponsiveContainer>
+      </Box>
+    </Box>
   );
 }

@@ -1,5 +1,6 @@
 import { Grid, Paper, Stack, Typography } from "@mui/material";
 import DashboardWidget from "./DashboardWidget";
+import { normalizeMetric } from "../config/metricRegistry";
 
 const sizeByWidth = (widget) => {
   if (widget.w >= 12) return { xs: 12 };
@@ -8,7 +9,13 @@ const sizeByWidth = (widget) => {
 };
 
 export default function DashboardGrid({ metrics, layout, onDrillDown }) {
-  const metricMap = new Map(metrics.map((metric) => [metric.code, metric]));
+  const metricMap = new Map(
+    metrics.map((metric) => {
+      const normalized = normalizeMetric(metric);
+      return [normalized.id, normalized];
+    }),
+  );
+
   const widgets = [...layout.widgets]
     .filter((widget) => widget.visible !== false)
     .sort((a, b) => a.order - b.order);
@@ -17,7 +24,9 @@ export default function DashboardGrid({ metrics, layout, onDrillDown }) {
     return (
       <Paper variant="outlined" sx={{ p: 4 }}>
         <Stack alignItems="center">
-          <Typography color="text.secondary">No widgets are configured for this dashboard.</Typography>
+          <Typography color="text.secondary">
+            No widgets are configured for this dashboard.
+          </Typography>
         </Stack>
       </Paper>
     );

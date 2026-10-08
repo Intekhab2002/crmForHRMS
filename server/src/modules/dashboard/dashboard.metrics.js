@@ -700,10 +700,17 @@ export async function executeMetric(metricCode, context) {
   const isKpi = definition.visualization === "kpi";
 
   const viewModes =
-    definition.viewModes ?? (isKpi ? ["kpi"] : ["graph", "table"]);
+    definition.viewModes ??
+    (isKpi
+      ? ["kpi"]
+      : definition.visualization === "table"
+        ? ["table"]
+        : ["graph", "table"]);
 
-  const defaultView = definition.defaultView ?? (isKpi ? "kpi" : "graph");
-
+  const defaultView =
+    definition.defaultView ??
+    (isKpi ? "kpi" : definition.visualization === "table" ? "table" : "graph");
+  const explanation = getMetricExplanation(definition);
   return {
     ...result,
     viewModes,
@@ -718,6 +725,9 @@ export async function executeMetric(metricCode, context) {
         visualization: definition.visualization,
         viewModes,
         defaultView,
+        calculation: explanation.calculation,
+        interpretation: explanation.interpretation,
+        dataSource: explanation.dataSource,
       },
     },
   };

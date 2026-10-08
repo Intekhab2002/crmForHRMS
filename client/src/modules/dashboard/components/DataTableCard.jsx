@@ -1,5 +1,6 @@
-import { Card, CardContent, Stack, Typography } from "@mui/material";
+import { Card, CardContent, Stack } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
+import MetricHeader from "./MetricHeader";
 
 function inferColumns(rows) {
   if (!rows.length) return [];
@@ -29,17 +30,32 @@ function buildRows(metric) {
   }));
 }
 
-export default function DataTableCard({ metric }) {
+export default function DataTableCard({
+  metric,
+  viewMode,
+  viewModes,
+  onViewChange,
+}) {
   const rows = buildRows(metric);
   const columns = inferColumns(rows);
 
   return (
-    <Card variant="outlined" sx={{ height: "100%" }}>
+    <Card
+      variant="outlined"
+      sx={{
+        height: "100%",
+        borderTop: 3,
+        borderTopColor: "secondary.main",
+      }}
+    >
       <CardContent>
-        <Stack spacing={1.5} sx={{ height: 360 }}>
-          <Typography variant="subtitle1" fontWeight={700}>
-            {metric.label}
-          </Typography>
+        <Stack spacing={1.5} sx={{ height: 360, minWidth: 0 }}>
+          <MetricHeader
+            metric={metric}
+            viewMode={viewMode}
+            viewModes={viewModes}
+            onViewChange={onViewChange}
+          />
 
           <DataGrid
             rows={rows}
@@ -47,13 +63,19 @@ export default function DataTableCard({ metric }) {
             getRowId={(row) => row.__dashboardRowId}
             disableRowSelectionOnClick
             hideFooterSelectedRowCount
-            pageSizeOptions={[5, 10]}
+            pageSizeOptions={[5, 10, 25, 50]}
             initialState={{
               pagination: {
                 paginationModel: {
-                  pageSize: 5,
+                  pageSize: 10,
                   page: 0,
                 },
+              },
+            }}
+            sx={{
+              border: 0,
+              "& .MuiDataGrid-columnHeaders": {
+                backgroundColor: "action.hover",
               },
             }}
           />
