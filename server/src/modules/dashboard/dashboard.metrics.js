@@ -682,6 +682,14 @@ export function getMetricsForDashboard(dashboardType) {
   );
 }
 
+function getMetricExplanation(definition) {
+  return {
+    calculation: definition?.calculation ?? null,
+    interpretation: definition?.interpretation ?? null,
+    dataSource: definition?.dataSource ?? null,
+  };
+}
+
 export async function executeMetric(metricCode, context) {
   const definition = getMetric(metricCode);
   if (!definition) {
