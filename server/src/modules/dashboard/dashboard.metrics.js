@@ -841,27 +841,49 @@ export function getMetricsForDashboard(dashboardType) {
   );
 }
 
+
 function getMetricExplanation(definition) {
+  const thresholds =
+    definition?.thresholds ??
+    KPI_THRESHOLDS[definition?.code] ??
+    null;
+
   return {
     calculation: definition?.calculation ?? null,
     interpretation: definition?.interpretation ?? null,
     dataSource: definition?.dataSource ?? null,
 
-    idealValue: definition?.idealValue ?? null,
-    minimum: definition?.minimum ?? null,
-    maximum: definition?.maximum ?? null,
-    target: definition?.target ?? null,
-    direction: definition?.direction ?? null,
+    idealValue:
+      thresholds?.idealValue ??
+      definition?.idealValue ??
+      null,
+
+    minimum:
+      thresholds?.minimum ??
+      definition?.minimum ??
+      null,
+
+    maximum:
+      thresholds?.maximum ??
+      definition?.maximum ??
+      null,
+
+    target:
+      thresholds?.target ??
+      definition?.target ??
+      null,
+
+    direction:
+      thresholds?.direction ??
+      definition?.direction ??
+      null,
 
     belowTarget: definition?.belowTarget ?? null,
     aboveTarget: definition?.aboveTarget ?? null,
-
-     thresholds:
-      definition?.thresholds ??
-      KPI_THRESHOLDS[definition?.code] ??
-      null,
+    thresholds,
   };
 }
+
 
 export async function executeMetric(metricCode, context) {
   const definition = getMetric(metricCode);

@@ -1,4 +1,3 @@
-
 import {
   Box,
   ButtonBase,
@@ -10,10 +9,7 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 
 import MetricInfo from "./MetricInfo";
-import {
-  getMetricStatus,
-  getMetricStatusColor,
-} from "../utils/metricStatus";
+import { getMetricStatus, getMetricStatusColor } from "../utils/metricStatus";
 
 export default function MetricCard({ metric, onClick }) {
   const theme = useTheme();
@@ -23,21 +19,18 @@ export default function MetricCard({ metric, onClick }) {
   const tone = getMetricStatusColor(status, theme);
 
   const value =
-    metric?.value == null || metric.value === ""
-      ? "—"
-      : metric.value;
+    metric?.value == null || metric.value === "" ? "—" : metric.value;
 
   const displayValue =
-    metric?.unit === "percent" && metric?.value != null
-      ? `${value}%`
-      : value;
+    metric?.unit === "percent" && metric?.value != null ? `${value}%` : value;
 
-  const statusLabel = {
-    good: "Healthy",
-    warning: "Needs attention",
-    critical: "Critical",
-    neutral: "No status threshold configured",
-  }[status] ?? "Unknown";
+  const statusLabel =
+    {
+      good: "Healthy",
+      warning: "Needs attention",
+      critical: "Critical",
+      neutral: "No status threshold configured",
+    }[status] ?? "Unknown";
 
   const handleDrillDown = () => {
     if (clickable) {
@@ -176,15 +169,12 @@ export default function MetricCard({ metric, onClick }) {
             </Typography>
           )}
 
-          {status === "neutral" && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ lineHeight: 1.4 }}
-            >
-              Threshold not configured
-            </Typography>
-          )}
+          {status === "neutral" &&
+            metric?.metadata?.status === "UNAVAILABLE" && (
+              <Typography variant="caption" color="text.secondary">
+                Metric unavailable
+              </Typography>
+            )}
         </Stack>
       </CardContent>
     </Card>
