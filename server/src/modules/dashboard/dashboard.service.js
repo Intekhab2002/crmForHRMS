@@ -45,15 +45,9 @@ function defaultLayout(config) {
       DASHBOARD_GRID_COLUMNS,
     );
 
-    const height = Math.max(
-      Number(widget.h) || 1,
-      Number(widget.minH) || 1,
-    );
+    const height = Math.max(Number(widget.h) || 1, Number(widget.minH) || 1);
 
-    if (
-      cursorX > 0 &&
-      cursorX + width > DASHBOARD_GRID_COLUMNS
-    ) {
+    if (cursorX > 0 && cursorX + width > DASHBOARD_GRID_COLUMNS) {
       cursorX = 0;
       cursorY += rowHeight;
       rowHeight = 0;
@@ -83,14 +77,13 @@ function defaultLayout(config) {
   };
 }
 
-
-
 function validateSavedLayout(saved, config) {
   if (!saved?.layout_json) return null;
 
-  const parsed = typeof saved.layout_json === "string"
-    ? JSON.parse(saved.layout_json)
-    : saved.layout_json;
+  const parsed =
+    typeof saved.layout_json === "string"
+      ? JSON.parse(saved.layout_json)
+      : saved.layout_json;
 
   if (
     !parsed ||
@@ -148,7 +141,8 @@ export async function getDashboard({
   }
 
   const filters = normalizeFilters(inputFilters);
-  const definitions = metrics.getMetricsForDashboard(dashboardType)
+  const definitions = metrics
+    .getMetricsForDashboard(dashboardType)
     .filter((definition) => permissions.includes(definition.permission));
 
   const metricContext = await buildMetricContext({
@@ -164,7 +158,10 @@ export async function getDashboard({
       const metricStarted = Date.now();
 
       try {
-        const data = await metrics.executeMetric(definition.code, metricContext);
+        const data = await metrics.executeMetric(
+          definition.code,
+          metricContext,
+        );
         logger.info("dashboard_metric_executed", {
           dashboardType,
           metricCode: definition.code,
@@ -185,6 +182,7 @@ export async function getDashboard({
         return {
           code: definition.code,
           label: definition.name,
+          description: definition.description ?? null,
           value: null,
           unit: null,
           trend: null,
@@ -195,6 +193,20 @@ export async function getDashboard({
             error: {
               code: "METRIC_QUERY_FAILED",
               message: "Metric data is temporarily unavailable.",
+            },
+            definition: {
+              code: definition.code,
+              description: definition.description ?? null,
+              filters: definition.filters ?? [],
+              timePeriod: definition.timePeriod ?? null,
+              visualization: definition.visualization,
+              calculation: definition.calculation ?? null,
+              interpretation: definition.interpretation ?? null,
+              dataSource: definition.dataSource ?? null,
+              idealValue: definition.idealValue ?? null,
+              target: definition.target ?? null,
+              belowTarget: definition.belowTarget ?? null,
+              aboveTarget: definition.aboveTarget ?? null,
             },
           },
         };
@@ -238,7 +250,9 @@ export async function getMetric({
   const definition = metrics.getMetric(metricCode);
 
   if (!definition || !definition.dashboardTypes.includes(dashboardType)) {
-    throw AppError.notFound(`Metric '${metricCode}' was not found for this dashboard.`);
+    throw AppError.notFound(
+      `Metric '${metricCode}' was not found for this dashboard.`,
+    );
   }
 
   if (!permissions.includes(definition.permission)) {
@@ -264,14 +278,23 @@ export async function getMetric({
   };
 }
 
-export async function getLayout({ dashboardType, userId, permissions, tx = null }) {
+export async function getLayout({
+  dashboardType,
+  userId,
+  permissions,
+  tx = null,
+}) {
   const config = assertDashboardType(dashboardType);
 
   if (!permissions.includes(config.permission)) {
     throw AppError.forbidden("You do not have access to this dashboard.");
   }
 
-  const saved = await layoutRepository.findByUserAndType(userId, dashboardType, tx);
+  const saved = await layoutRepository.findByUserAndType(
+    userId,
+    dashboardType,
+    tx,
+  );
   const layout = validateSavedLayout(saved, config) || defaultLayout(config);
 
   return {
@@ -298,16 +321,21 @@ export async function saveLayout({
   const normalized = {
     version: config.layoutVersion,
     widgets: layout.widgets
-      .filter((widget) => config.defaultWidgets.some((item) => item.id === widget.id))
+      .filter((widget) =>
+        config.defaultWidgets.some((item) => item.id === widget.id),
+      )
       .map((widget) => ({ ...widget })),
   };
 
-  const saved = await layoutRepository.upsert({
-    userId,
-    dashboardType,
-    layoutVersion: config.layoutVersion,
-    layoutJson: normalized,
-  }, tx);
+  const saved = await layoutRepository.upsert(
+    {
+      userId,
+      dashboardType,
+      layoutVersion: config.layoutVersion,
+      layoutJson: normalized,
+    },
+    tx,
+  );
 
   return {
     version: config.layoutVersion,

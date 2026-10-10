@@ -18,6 +18,10 @@ export default function MetricInfo({ metric }) {
   const calculation = definition.calculation;
   const interpretation = definition.interpretation;
   const dataSource = definition.dataSource;
+  const idealValue = definition.idealValue;
+  const target = definition.target;
+  const belowTarget = definition.belowTarget;
+  const aboveTarget = definition.aboveTarget;
 
   const handleOpen = (event) => {
     event.stopPropagation();
@@ -26,8 +30,16 @@ export default function MetricInfo({ metric }) {
 
   const handleClose = () => setAnchorEl(null);
 
-  const hasDetails =
-    Boolean(description || calculation || interpretation || dataSource);
+  const hasDetails = Boolean(
+    description ||
+    calculation ||
+    interpretation ||
+    dataSource ||
+    idealValue ||
+    target ||
+    belowTarget ||
+    aboveTarget,
+  );
 
   if (!hasDetails) return null;
 
@@ -72,7 +84,11 @@ export default function MetricInfo({ metric }) {
 
           {description && (
             <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={700}
+              >
                 What is this?
               </Typography>
               <Typography variant="body2">{description}</Typography>
@@ -81,7 +97,11 @@ export default function MetricInfo({ metric }) {
 
           {calculation && (
             <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={700}
+              >
                 How is it calculated?
               </Typography>
               <Typography variant="body2">{calculation}</Typography>
@@ -90,7 +110,11 @@ export default function MetricInfo({ metric }) {
 
           {interpretation && (
             <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={700}
+              >
                 How should I read it?
               </Typography>
               <Typography variant="body2">{interpretation}</Typography>
