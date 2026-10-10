@@ -3,7 +3,6 @@ import { useMemo } from "react";
 import DashboardToolbar from "../components/DashboardToolbar";
 import DashboardFilterBar from "../components/DashboardFilterBar";
 import DashboardGrid from "../components/DashboardGrid";
-import DashboardCustomizeMenu from "../components/DashboardCustomizeMenu";
 import MetricCardSkeleton from "../components/MetricCardSkeleton";
 import { useDashboard } from "../hooks/useDashboard";
 import { useDashboardLayout } from "../hooks/useDashboardLayout";
@@ -11,7 +10,7 @@ import { useDashboardFilters } from "../hooks/useDashboardFilters";
 import { useMetricDrillDown } from "../hooks/useMetricDrillDown";
 
 const DEFAULTS = [
-  // Main KPI cards
+  // Main KPI cards remain configurable here when enabled.
   // { id: "tickets.total", w: 3, h: 2, minW: 2, minH: 2, visible: true, order: 10 },
   // { id: "tickets.open", w: 3, h: 2, minW: 2, minH: 2, visible: true, order: 20 },
   // { id: "tickets.in_progress", w: 3, h: 2, minW: 2, minH: 2, visible: true, order: 30 },
@@ -22,7 +21,6 @@ const DEFAULTS = [
   // { id: "sla.breached", w: 3, h: 2, minW: 2, minH: 2, visible: true, order: 80 },
   // { id: "sla.compliance", w: 3, h: 2, minW: 2, minH: 2, visible: true, order: 90 },
 
-  // Personal KPI cards
   { id: "tickets.my_created", w: 3, h: 2, minW: 2, minH: 2, visible: true, order: 91 },
   { id: "tickets.my_assigned", w: 3, h: 2, minW: 2, minH: 2, visible: true, order: 92 },
   { id: "tickets.my_open", w: 3, h: 2, minW: 2, minH: 2, visible: true, order: 93 },
@@ -30,7 +28,6 @@ const DEFAULTS = [
   { id: "tickets.my_waiting", w: 3, h: 2, minW: 2, minH: 2, visible: true, order: 95 },
   { id: "tickets.my_closed", w: 3, h: 2, minW: 2, minH: 2, visible: true, order: 96 },
 
-  // Charts
   { id: "tickets.status_distribution", w: 6, h: 5, minW: 4, minH: 4, visible: true, order: 100 },
   { id: "sla.status_distribution", w: 6, h: 5, minW: 4, minH: 4, visible: true, order: 110 },
   { id: "tickets.severity_distribution", w: 6, h: 5, minW: 4, minH: 4, visible: true, order: 120 },
@@ -43,9 +40,20 @@ export default function OperationalDashboard() {
     "operational",
     filters,
   );
-  const { layout, saving, reset } = useDashboardLayout("operational", DEFAULTS);
-  const onDrillDown = useMetricDrillDown();
 
+  const {
+    layout,
+    saving,
+    saveError,
+    isCustomizing,
+    setLayout,
+    toggleWidgetVisibility,
+    startCustomization,
+    finishCustomization,
+    reset,
+  } = useDashboardLayout("operational", DEFAULTS);
+
+  const onDrillDown = useMetricDrillDown();
   const visibleMetrics = useMemo(() => data?.metrics ?? [], [data]);
 
   return (
@@ -57,6 +65,12 @@ export default function OperationalDashboard() {
         onReset={reset}
         refreshing={refreshing}
         saving={saving}
+        isCustomizing={isCustomizing}
+        onStartCustomization={startCustomization}
+        onFinishCustomization={finishCustomization}
+        widgets={layout.widgets}
+        onToggleWidget={toggleWidgetVisibility}
+        saveError={saveError}
       />
 
       <Paper variant="outlined" sx={{ p: 2 }}>
@@ -70,21 +84,17 @@ export default function OperationalDashboard() {
       )}
 
       {loading ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-            gap: 16,
-          }}
-        >
+        <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
           {Array.from({ length: 8 }).map((_, index) => (
             <MetricCardSkeleton key={index} />
           ))}
-        </div>
+        </Stack>
       ) : (
         <DashboardGrid
           metrics={visibleMetrics}
           layout={layout}
+          onLayoutChange={setLayout}
+          isCustomizing={isCustomizing}
           onDrillDown={onDrillDown}
         />
       )}

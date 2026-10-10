@@ -77,13 +77,62 @@ function defaultLayout(config) {
   };
 }
 
+function rectanglesOverlap(a, b) {
+  return (
+    a.x < b.x + b.w &&
+    a.x + a.w > b.x &&
+    a.y < b.y + b.h &&
+    a.y + a.h > b.y
+  );
+}
+
+function isValidLayoutGeometry(widgets) {
+  const seen = new Set();
+
+  for (const widget of widgets) {
+    if (seen.has(widget.id)) return false;
+    seen.add(widget.id);
+
+    if (
+      !Number.isInteger(widget.x) ||
+      !Number.isInteger(widget.y) ||
+      !Number.isInteger(widget.w) ||
+      !Number.isInteger(widget.h) ||
+      widget.x < 0 ||
+      widget.y < 0 ||
+      widget.w < 1 ||
+      widget.w > 12 ||
+      widget.h < 1 ||
+      widget.h > 100 ||
+      widget.x + widget.w > 12 ||
+      (widget.minW !== undefined && widget.minW > widget.w) ||
+      (widget.minH !== undefined && widget.minH > widget.h)
+    ) {
+      return false;
+    }
+  }
+
+  const visible = widgets.filter((widget) => widget.visible !== false);
+  for (let i = 0; i < visible.length; i += 1) {
+    for (let j = i + 1; j < visible.length; j += 1) {
+      if (rectanglesOverlap(visible[i], visible[j])) return false;
+    }
+  }
+
+  return true;
+}
+
 function validateSavedLayout(saved, config) {
   if (!saved?.layout_json) return null;
 
-  const parsed =
-    typeof saved.layout_json === "string"
+  let parsed;
+  try {
+    parsed = typeof saved.layout_json === "string"
       ? JSON.parse(saved.layout_json)
       : saved.layout_json;
+  } catch {
+    return null;
+  }
 
   if (
     !parsed ||
@@ -93,19 +142,44 @@ function validateSavedLayout(saved, config) {
     return null;
   }
 
-  const knownIds = new Set(config.defaultWidgets.map((widget) => widget.id));
-  const widgets = parsed.widgets.filter(
-    (widget) =>
-      knownIds.has(widget.id) &&
-      Number.isInteger(widget.w) &&
-      Number.isInteger(widget.h) &&
-      Number.isInteger(widget.x) &&
-      Number.isInteger(widget.y),
+  const defaults = defaultLayout(config).widgets;
+  const defaultsById = new Map(
+    defaults.map((widget) => [widget.id, widget]),
   );
 
+  const savedWidgets = [];
+  const seen = new Set();
+
+  for (const widget of parsed.widgets) {
+    if (
+      !widget ||
+      typeof widget.id !== "string" ||
+      !defaultsById.has(widget.id) ||
+      seen.has(widget.id)
+    ) {
+      return null;
+    }
+
+    seen.add(widget.id);
+    savedWidgets.push({
+      ...defaultsById.get(widget.id),
+      ...widget,
+    });
+  }
+
+  if (!isValidLayoutGeometry(savedWidgets)) return null;
+
+  for (const defaultWidget of defaults) {
+    if (!seen.has(defaultWidget.id)) {
+      savedWidgets.push(defaultWidget);
+    }
+  }
+
+  // Existing saved widget positions were validated. New defaults are laid out
+  // by defaultLayout(config), so they retain a valid configured position.
   return {
     version: config.layoutVersion,
-    widgets,
+    widgets: savedWidgets,
   };
 }
 
@@ -318,13 +392,43 @@ export async function saveLayout({
     throw AppError.forbidden("You do not have access to this dashboard.");
   }
 
+  const parsed = layoutSchema.safeParse(layout);
+  if (!parsed.success) {
+    throw AppError.badRequest("The dashboard layout is invalid.", {
+      errors: parsed.error.issues.map((issue) => ({
+        path: issue.path.join("."),
+        message: issue.message,
+      })),
+      code: "INVALID_DASHBOARD_LAYOUT",
+    });
+  }
+
+  if (parsed.data.version !== config.layoutVersion) {
+    throw AppError.badRequest("The dashboard layout version is not supported.", {
+      code: "INVALID_DASHBOARD_LAYOUT_VERSION",
+    });
+  }
+
+  const allowedIds = new Set(config.defaultWidgets.map((widget) => widget.id));
+  for (const widget of parsed.data.widgets) {
+    if (!allowedIds.has(widget.id)) {
+      throw AppError.badRequest(
+        `Widget '${widget.id}' is not configured for this dashboard.`,
+        { code: "UNKNOWN_DASHBOARD_WIDGET" },
+      );
+    }
+  }
+
+  if (!isValidLayoutGeometry(parsed.data.widgets)) {
+    throw AppError.badRequest(
+      "The dashboard layout contains invalid dimensions or overlapping visible widgets.",
+      { code: "INVALID_DASHBOARD_LAYOUT_GEOMETRY" },
+    );
+  }
+
   const normalized = {
     version: config.layoutVersion,
-    widgets: layout.widgets
-      .filter((widget) =>
-        config.defaultWidgets.some((item) => item.id === widget.id),
-      )
-      .map((widget) => ({ ...widget })),
+    widgets: parsed.data.widgets.map((widget) => ({ ...widget })),
   };
 
   const saved = await layoutRepository.upsert(
@@ -347,6 +451,7 @@ export async function saveLayout({
     },
   };
 }
+
 
 export async function resetLayout({
   dashboardType,

@@ -3,13 +3,12 @@ import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 
 export default function DashboardToolbar({
-  title,
-  generatedAt,
-  onRefresh,
-  onReset,
-  refreshing,
-  saving,
+    title, generatedAt, onRefresh, onReset, refreshing, saving,
+    isCustomizing, onStartCustomization, onFinishCustomization,
+    widgets, onToggleWidget
 }) {
+
+  
   return (
     <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2} flexWrap="wrap">
       <Stack>

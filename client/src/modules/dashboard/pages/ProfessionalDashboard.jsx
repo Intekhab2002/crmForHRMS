@@ -27,23 +27,25 @@ const DEFAULTS = Object.freeze([
 
 export default function ProfessionalDashboard() {
   const { filters, update } = useDashboardFilters();
-
   const { data, loading, refreshing, error, reload } = useDashboard(
     "professional",
     filters,
   );
 
-  const { layout, saving, reset } = useDashboardLayout(
-    "professional",
-    DEFAULTS,
-  );
+  const {
+    layout,
+    saving,
+    saveError,
+    isCustomizing,
+    setLayout,
+    toggleWidgetVisibility,
+    startCustomization,
+    finishCustomization,
+    reset,
+  } = useDashboardLayout("professional", DEFAULTS);
 
   const onDrillDown = useMetricDrillDown();
-
-  const visibleMetrics = useMemo(
-    () => data?.metrics ?? [],
-    [data],
-  );
+  const visibleMetrics = useMemo(() => data?.metrics ?? [], [data]);
 
   return (
     <Stack spacing={2}>
@@ -54,6 +56,12 @@ export default function ProfessionalDashboard() {
         onReset={reset}
         refreshing={refreshing}
         saving={saving}
+        isCustomizing={isCustomizing}
+        onStartCustomization={startCustomization}
+        onFinishCustomization={finishCustomization}
+        widgets={layout.widgets}
+        onToggleWidget={toggleWidgetVisibility}
+        saveError={saveError}
       />
 
       <Paper variant="outlined" sx={{ p: 2 }}>
@@ -67,21 +75,17 @@ export default function ProfessionalDashboard() {
       )}
 
       {loading ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: 16,
-          }}
-        >
+        <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
           {DEFAULTS.map((widget) => (
             <MetricCardSkeleton key={widget.id} />
           ))}
-        </div>
+        </Stack>
       ) : (
         <DashboardGrid
           metrics={visibleMetrics}
           layout={layout}
+          onLayoutChange={setLayout}
+          isCustomizing={isCustomizing}
           onDrillDown={onDrillDown}
         />
       )}

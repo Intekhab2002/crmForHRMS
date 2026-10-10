@@ -37,16 +37,17 @@ export default function DashboardWidget({ metric, onDrillDown, size }) {
     if (!viewModes.includes(viewMode)) {
       setViewMode(getDefaultView(metric, viewModes));
     }
-  }, [metric?.code, metric?.defaultView, metric?.visualization, viewModes, viewMode]);
+  }, [
+    metric?.code,
+    metric?.defaultView,
+    metric?.visualization,
+    viewModes,
+    viewMode,
+  ]);
 
   const content = (() => {
     if (viewMode === "kpi") {
-      return (
-        <MetricCard
-          metric={metric}
-          onClick={onDrillDown}
-        />
-      );
+      return <MetricCard metric={metric} onClick={onDrillDown} />;
     }
 
     if (viewMode === "table") {
@@ -71,7 +72,7 @@ export default function DashboardWidget({ metric, onDrillDown, size }) {
   })();
 
   return (
-    <Grid size={size}>
+    <Grid size={size} sx={{ height: "100%", minWidth: 0 }}>
       <Stack spacing={1.5} sx={{ height: "100%", minWidth: 0 }}>
         {content}
       </Stack>
