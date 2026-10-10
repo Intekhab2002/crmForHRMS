@@ -1,4 +1,4 @@
-import { Card, CardContent, Stack } from "@mui/material";
+import { Box, Card, CardContent, Stack } from "@mui/material";
 import EmptyMetricState from "./EmptyMetricState";
 import MetricErrorState from "./MetricErrorState";
 import MetricHeader from "./MetricHeader";
@@ -17,13 +17,30 @@ export default function ChartCard({
     <Card
       variant="outlined"
       sx={{
+        display: "flex",
+        flexDirection: "column",
         height: "100%",
+        minWidth: 0,
+        minHeight: 0,
+        overflow: "hidden",
         borderTop: 3,
         borderTopColor: "primary.main",
       }}
     >
-      <CardContent sx={{ height: "100%" }}>
-        <Stack spacing={1.5} sx={{ height: "100%", minWidth: 0 }}>
+      <CardContent
+        sx={{
+          boxSizing: "border-box",
+          display: "flex",
+          flex: 1,
+          flexDirection: "column",
+          width: "100%",
+          minWidth: 0,
+          minHeight: 0,
+          p: 2,
+          "&:last-child": { pb: 2 },
+        }}
+      >
+        <Stack spacing={1.5} sx={{ height: "100%", minWidth: 0, minHeight: 0 }}>
           <MetricHeader
             metric={metric}
             viewMode={viewMode}
@@ -36,7 +53,9 @@ export default function ChartCard({
           ) : !data.length ? (
             <EmptyMetricState />
           ) : (
-            <DashboardChart metric={metric} />
+            <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, overflow: "auto" }}>
+              <DashboardChart metric={metric} />
+            </Box>
           )}
         </Stack>
       </CardContent>

@@ -7,6 +7,7 @@ import {
 } from "./dashboard.constants.js";
 import metrics from "./dashboard.metrics.js";
 import layoutRepository from "./dashboard.layout.repository.js";
+import { layoutSchema } from "./dashboard.validator.js";
 
 function assertDashboardType(dashboardType) {
   if (!DASHBOARD_TYPES.includes(dashboardType)) {

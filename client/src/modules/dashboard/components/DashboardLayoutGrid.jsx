@@ -13,8 +13,12 @@ import DashboardWidget from "./DashboardWidget";
 import { normalizeMetric } from "../config/metricRegistry";
 
 const GRID_COLUMNS = 12;
+const GRID_ROW_HEIGHT = 70;
 const MEDIUM_BREAKPOINT = 900;
 const MOBILE_BREAKPOINT = 600;
+const CHART_MIN_HEIGHT = 7;
+const TABLE_MIN_HEIGHT = 6;
+const KPI_MIN_HEIGHT = 2;
 
 function getColumnCount(width) {
   if (width < MOBILE_BREAKPOINT) return 1;
@@ -22,16 +26,30 @@ function getColumnCount(width) {
   return GRID_COLUMNS;
 }
 
-function toGridItem(widget, columns, isCustomizing, mobileY) {
+function getEffectiveMinHeight(widget, metric) {
+  const configuredMin = Math.max(1, Number(widget.minH) || 1);
+  if (metric?.visualization === "kpi") {
+    return Math.max(configuredMin, KPI_MIN_HEIGHT);
+  }
+  if (metric?.visualization === "table") {
+    return Math.max(configuredMin, TABLE_MIN_HEIGHT);
+  }
+  return Math.max(configuredMin, CHART_MIN_HEIGHT);
+}
+
+function toGridItem(widget, metric, columns, isCustomizing, mobileY) {
+  const minH = getEffectiveMinHeight(widget, metric);
+  const h = Math.max(Number(widget.h) || 1, minH);
+
   if (columns === 1) {
     return {
       i: widget.id,
       x: 0,
       y: mobileY,
       w: 1,
-      h: Math.max(2, Number(widget.h) || 2),
+      h,
       minW: 1,
-      minH: Math.max(1, Number(widget.minH) || 1),
+      minH,
       isDraggable: false,
       isResizable: false,
     };
@@ -51,12 +69,12 @@ function toGridItem(widget, columns, isCustomizing, mobileY) {
     ),
     y: Math.max(0, Number(widget.y) || 0),
     w,
-    h: Math.max(1, Number(widget.h) || 1),
+    h,
     minW: Math.min(
       w,
       Math.max(1, Math.round((Number(widget.minW) || 1) * scale)),
     ),
-    minH: Math.max(1, Number(widget.minH) || 1),
+    minH,
     isDraggable: isCustomizing,
     isResizable: isCustomizing,
   };
@@ -67,19 +85,18 @@ function fromGridLayout(gridLayout, currentLayout, columns) {
     gridLayout.map((item) => [
       item.i,
       {
-        x: columns === 1
-          ? 0
-          : Math.min(
-              11,
-              Math.round((item.x * GRID_COLUMNS) / columns),
-            ),
+        x:
+          columns === 1
+            ? 0
+            : Math.min(11, Math.round((item.x * GRID_COLUMNS) / columns)),
         y: item.y,
-        w: columns === 1
-          ? 12
-          : Math.min(
-              GRID_COLUMNS,
-              Math.max(1, Math.round((item.w * GRID_COLUMNS) / columns)),
-            ),
+        w:
+          columns === 1
+            ? 12
+            : Math.min(
+                GRID_COLUMNS,
+                Math.max(1, Math.round((item.w * GRID_COLUMNS) / columns)),
+              ),
         h: item.h,
       },
     ]),
@@ -121,42 +138,54 @@ export default function DashboardLayoutGrid({
   const columns = getColumnCount(width);
 
   const metricMap = useMemo(
-    () => new Map(
-      metrics.map((metric) => {
-        const normalized = normalizeMetric(metric);
-        return [normalized.id, normalized];
-      }),
-    ),
+    () =>
+      new Map(
+        metrics.map((metric) => {
+          const normalized = normalizeMetric(metric);
+          return [normalized.id, normalized];
+        }),
+      ),
     [metrics],
   );
 
   const visibleWidgets = useMemo(
-    () => (layout?.widgets ?? [])
-      .filter((widget) => widget.visible !== false)
-      .filter((widget) => metricMap.has(widget.id)),
+    () =>
+      (layout?.widgets ?? [])
+        .filter((widget) => widget.visible !== false)
+        .filter((widget) => metricMap.has(widget.id)),
     [layout?.widgets, metricMap],
   );
 
   const gridLayout = useMemo(() => {
     let mobileY = 0;
     return visibleWidgets.map((widget) => {
-      const item = toGridItem(widget, columns, isCustomizing, mobileY);
+      const metric = metricMap.get(widget.id);
+      const item = toGridItem(
+        widget,
+        metric,
+        columns,
+        isCustomizing,
+        mobileY,
+      );
       if (columns === 1) mobileY += item.h;
       return item;
     });
-  }, [visibleWidgets, columns, isCustomizing]);
+  }, [visibleWidgets, metricMap, columns, isCustomizing]);
 
-  const handleLayoutChange = useCallback((nextGridLayout) => {
-    if (
-      !isCustomizing ||
-      columns === 1 ||
-      typeof onLayoutChange !== "function"
-    ) {
-      return;
-    }
+  const handleLayoutChange = useCallback(
+    (nextGridLayout) => {
+      if (
+        !isCustomizing ||
+        columns === 1 ||
+        typeof onLayoutChange !== "function"
+      ) {
+        return;
+      }
 
-    onLayoutChange(fromGridLayout(nextGridLayout, layout, columns));
-  }, [columns, isCustomizing, layout, onLayoutChange]);
+      onLayoutChange(fromGridLayout(nextGridLayout, layout, columns));
+    },
+    [columns, isCustomizing, layout, onLayoutChange],
+  );
 
   if (!visibleWidgets.length) {
     return (
@@ -189,7 +218,7 @@ export default function DashboardLayoutGrid({
           layout={gridLayout}
           gridConfig={{
             cols: columns,
-            rowHeight: 42,
+            rowHeight: GRID_ROW_HEIGHT,
             margin: [16, 16],
             padding: [0, 0],
           }}
@@ -216,8 +245,10 @@ export default function DashboardLayoutGrid({
               <Box
                 key={widget.id}
                 sx={{
+                  boxSizing: "border-box",
                   height: "100%",
                   minWidth: 0,
+                  minHeight: 0,
                   overflow: "visible",
                   outline: isCustomizing ? "1px dashed" : "none",
                   outlineColor: isCustomizing ? "divider" : "transparent",
@@ -239,6 +270,7 @@ export default function DashboardLayoutGrid({
                       color: "text.secondary",
                       cursor: "grab",
                       userSelect: "none",
+                      touchAction: "none",
                       "&:active": { cursor: "grabbing" },
                     }}
                     aria-label={`Drag to move ${metric.label ?? widget.id}`}
@@ -254,12 +286,12 @@ export default function DashboardLayoutGrid({
                   sx={{
                     height: isCustomizing ? "calc(100% - 30px)" : "100%",
                     minWidth: 0,
+                    minHeight: 0,
                   }}
                 >
                   <DashboardWidget
                     metric={metric}
                     onDrillDown={onDrillDown}
-                    size={{ xs: 12 }}
                   />
                 </Box>
               </Box>

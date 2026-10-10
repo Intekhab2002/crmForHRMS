@@ -43,13 +43,30 @@ export default function DataTableCard({
     <Card
       variant="outlined"
       sx={{
+        display: "flex",
+        flexDirection: "column",
         height: "100%",
+        minWidth: 0,
+        minHeight: 0,
+        overflow: "hidden",
         borderTop: 3,
         borderTopColor: "secondary.main",
       }}
     >
-      <CardContent>
-        <Stack spacing={1.5} sx={{ height: 360, minWidth: 0 }}>
+      <CardContent
+        sx={{
+          boxSizing: "border-box",
+          display: "flex",
+          flex: 1,
+          flexDirection: "column",
+          width: "100%",
+          minWidth: 0,
+          minHeight: 0,
+          p: 2,
+          "&:last-child": { pb: 2 },
+        }}
+      >
+        <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0, minHeight: 0 }}>
           <MetricHeader
             metric={metric}
             viewMode={viewMode}
@@ -73,6 +90,9 @@ export default function DataTableCard({
               },
             }}
             sx={{
+              flex: 1,
+              minHeight: 180,
+              minWidth: 0,
               border: 0,
               "& .MuiDataGrid-columnHeaders": {
                 backgroundColor: "action.hover",

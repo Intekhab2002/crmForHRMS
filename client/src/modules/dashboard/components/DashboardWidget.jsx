@@ -1,5 +1,5 @@
+import { Box } from "@mui/material";
 import { useEffect, useState } from "react";
-import { Grid, Stack } from "@mui/material";
 
 import MetricCard from "./MetricCard";
 import ChartCard from "./ChartCard";
@@ -27,7 +27,7 @@ function getDefaultView(metric, viewModes) {
   return viewModes.includes("graph") ? "graph" : viewModes[0];
 }
 
-export default function DashboardWidget({ metric, onDrillDown, size }) {
+export default function DashboardWidget({ metric, onDrillDown }) {
   const viewModes = getViewModes(metric);
   const [viewMode, setViewMode] = useState(() =>
     getDefaultView(metric, viewModes),
@@ -45,23 +45,20 @@ export default function DashboardWidget({ metric, onDrillDown, size }) {
     viewMode,
   ]);
 
-  const content = (() => {
-    if (viewMode === "kpi") {
-      return <MetricCard metric={metric} onClick={onDrillDown} />;
-    }
-
-    if (viewMode === "table") {
-      return (
-        <DataTableCard
-          metric={metric}
-          viewMode={viewMode}
-          viewModes={viewModes}
-          onViewChange={setViewMode}
-        />
-      );
-    }
-
-    return (
+  let content;
+  if (viewMode === "kpi") {
+    content = <MetricCard metric={metric} onClick={onDrillDown} />;
+  } else if (viewMode === "table") {
+    content = (
+      <DataTableCard
+        metric={metric}
+        viewMode={viewMode}
+        viewModes={viewModes}
+        onViewChange={setViewMode}
+      />
+    );
+  } else {
+    content = (
       <ChartCard
         metric={metric}
         viewMode={viewMode}
@@ -69,13 +66,11 @@ export default function DashboardWidget({ metric, onDrillDown, size }) {
         onViewChange={setViewMode}
       />
     );
-  })();
+  }
 
   return (
-    <Grid size={size} sx={{ height: "100%", minWidth: 0 }}>
-      <Stack spacing={1.5} sx={{ height: "100%", minWidth: 0 }}>
-        {content}
-      </Stack>
-    </Grid>
+    <Box sx={{ width: "100%", height: "100%", minWidth: 0, minHeight: 0 }}>
+      {content}
+    </Box>
   );
 }
