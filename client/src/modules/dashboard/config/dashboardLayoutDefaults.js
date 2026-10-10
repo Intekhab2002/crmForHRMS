@@ -1,4 +1,4 @@
-export const DASHBOARD_LAYOUT_VERSION = 1;
+export const DASHBOARD_LAYOUT_VERSION = 3;
 
 const DASHBOARD_GRID_COLUMNS = 12;
 
