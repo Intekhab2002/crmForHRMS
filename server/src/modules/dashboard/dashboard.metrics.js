@@ -15,6 +15,127 @@ const COMMON_TICKET_FILTERS = Object.freeze([
   "status",
 ]);
 
+
+
+const KPI_THRESHOLDS = Object.freeze({
+  // Informational ticket counts: intentionally no status threshold.
+  "tickets.total": null,
+  "tickets.open": null,
+  "tickets.in_progress": null,
+  "tickets.waiting": null,
+  "tickets.closed": null,
+  "tickets.my_open": null,
+  "tickets.my_created": null,
+  "tickets.my_assigned": null,
+  "tickets.my_in_progress": null,
+  "tickets.my_waiting": null,
+  "tickets.my_closed": null,
+  "sla.running": null,
+
+  // Zero is ideal; positive exposure is a concern.
+  "tickets.unassigned": {
+    direction: "lower",
+    good: 0,
+    warning: 2,
+    idealValue: 0,
+    minimum: 0,
+    target: 0,
+    unit: "count",
+  },
+  "sla.breached": {
+    direction: "lower",
+    good: 0,
+    warning: 0,
+    idealValue: 0,
+    minimum: 0,
+    target: 0,
+    unit: "count",
+  },
+  "M041": {
+    direction: "lower",
+    good: 0,
+    warning: 0,
+    idealValue: 0,
+    minimum: 0,
+    target: 0,
+    unit: "count",
+  },
+  "M042": {
+    direction: "lower",
+    good: 0,
+    warning: 0,
+    idealValue: 0,
+    minimum: 0,
+    target: 0,
+    unit: "count",
+  },
+  "M043": {
+    direction: "lower",
+    good: 0,
+    warning: 0,
+    idealValue: 0,
+    minimum: 0,
+    target: 0,
+    unit: "count",
+  },
+
+  // Percentage metrics.
+  "sla.compliance": {
+    direction: "higher",
+    good: 95,
+    warning: 85,
+    idealValue: 100,
+    minimum: 85,
+    maximum: 100,
+    target: 95,
+    unit: "percent",
+  },
+  M002: {
+    direction: "higher",
+    good: 95,
+    warning: 85,
+    idealValue: 100,
+    minimum: 85,
+    maximum: 100,
+    target: 95,
+    unit: "percent",
+  },
+  M009: {
+    direction: "higher",
+    good: 95,
+    warning: 85,
+    idealValue: 100,
+    minimum: 85,
+    maximum: 100,
+    target: 95,
+    unit: "percent",
+  },
+  M004: {
+    direction: "lower",
+    good: 5,
+    warning: 10,
+    idealValue: 0,
+    minimum: 0,
+    maximum: 10,
+    target: 5,
+    unit: "percent",
+  },
+
+  // Require policy-specific thresholds before assigning colors.
+  M001: null,
+  M006: null,
+  M007: null,
+  M010: null,
+  M011: null,
+  M012: null,
+  M024: null,
+  M025: null,
+  M038: null,
+  M039: null,
+  M040: null,
+});
+
+
 const METRIC_REGISTRY = Object.freeze([
   {
     code: "tickets.total",
@@ -303,6 +424,18 @@ const METRIC_REGISTRY = Object.freeze([
     visualization: "kpi",
     queryKey: "slaCompliance",
     drillDown: false,
+    idealValue: 100,
+    minimum: 95,
+    maximum: 100,
+    target: 95,
+    direction: "higher is better",
+    calculation: "(SLA runs met / (SLA runs met + SLA runs breached)) × 100",
+    interpretation:
+      "The percentage of eligible SLA runs completed within their configured targets.",
+    belowTarget:
+      "Review breached SLA runs, severity mix, dependency transitions, policy configuration, and business calendar settings.",
+    aboveTarget:
+      "Verify the eligible run count and confirm the reporting period and filters are correct.",
   },
   {
     code: "M003",
@@ -329,6 +462,19 @@ const METRIC_REGISTRY = Object.freeze([
     visualization: "kpi",
     queryKey: "slaBreachRate",
     drillDown: false,
+    idealValue: 0,
+    minimum: 0,
+    maximum: 5,
+    target: 5,
+    direction: "lower is better",
+    calculation:
+      "(Breached SLA runs / (SLA runs met + SLA runs breached)) × 100",
+    interpretation:
+      "The percentage of eligible SLA runs that exceeded their configured targets.",
+    belowTarget:
+      "A lower breach rate is generally favorable. Verify that eligible and breached runs are being counted consistently.",
+    aboveTarget:
+      "Investigate breached tickets by severity, policy, dependency category, and time period.",
   },
   {
     code: "M005",
@@ -632,6 +778,19 @@ const METRIC_REGISTRY = Object.freeze([
     visualization: "kpi",
     queryKey: "slaRiskExposure",
     drillDown: false,
+    idealValue: 0,
+    minimum: 0,
+    maximum: 0,
+    target: 0,
+    direction: "lower is better",
+    calculation:
+      "Count of running SLA records that meet the configured risk threshold.",
+    interpretation:
+      "The number of running SLA records approaching their resolution deadline.",
+    belowTarget:
+      "Zero is the ideal value. Confirm that active SLA runs and risk thresholds are being evaluated correctly.",
+    aboveTarget:
+      "Review at-risk tickets, remaining business minutes, severity, owners, and upcoming deadlines.",
   },
 
   ...[
@@ -687,6 +846,20 @@ function getMetricExplanation(definition) {
     calculation: definition?.calculation ?? null,
     interpretation: definition?.interpretation ?? null,
     dataSource: definition?.dataSource ?? null,
+
+    idealValue: definition?.idealValue ?? null,
+    minimum: definition?.minimum ?? null,
+    maximum: definition?.maximum ?? null,
+    target: definition?.target ?? null,
+    direction: definition?.direction ?? null,
+
+    belowTarget: definition?.belowTarget ?? null,
+    aboveTarget: definition?.aboveTarget ?? null,
+
+     thresholds:
+      definition?.thresholds ??
+      KPI_THRESHOLDS[definition?.code] ??
+      null,
   };
 }
 
@@ -725,6 +898,7 @@ export async function executeMetric(metricCode, context) {
     defaultView,
     metadata: {
       ...(result.metadata || {}),
+      thresholds: explanation.thresholds,
       definition: {
         code: definition.code,
         description: definition.description,
@@ -736,6 +910,15 @@ export async function executeMetric(metricCode, context) {
         calculation: explanation.calculation,
         interpretation: explanation.interpretation,
         dataSource: explanation.dataSource,
+
+        idealValue: explanation.idealValue,
+        minimum: explanation.minimum,
+        maximum: explanation.maximum,
+        target: explanation.target,
+        direction: explanation.direction,
+        belowTarget: explanation.belowTarget,
+        aboveTarget: explanation.aboveTarget,
+        thresholds: explanation.thresholds,
       },
     },
   };
