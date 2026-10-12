@@ -27,7 +27,11 @@ function getDefaultView(metric, viewModes) {
   return viewModes.includes("graph") ? "graph" : viewModes[0];
 }
 
-export default function DashboardWidget({ metric, onDrillDown }) {
+export default function DashboardWidget({
+  metric,
+  onDrillDown,
+  isCustomizing = false,
+}) {
   const viewModes = getViewModes(metric);
   const [viewMode, setViewMode] = useState(() =>
     getDefaultView(metric, viewModes),
@@ -55,6 +59,7 @@ export default function DashboardWidget({ metric, onDrillDown }) {
         viewMode={viewMode}
         viewModes={viewModes}
         onViewChange={setViewMode}
+        isCustomizing={isCustomizing}
       />
     );
   } else {
@@ -64,13 +69,21 @@ export default function DashboardWidget({ metric, onDrillDown }) {
         viewMode={viewMode}
         viewModes={viewModes}
         onViewChange={setViewMode}
+        isCustomizing={isCustomizing}
       />
     );
   }
 
-  return (
-    <Box sx={{ width: "100%", height: "100%", minWidth: 0, minHeight: 0 }}>
-      {content}
-    </Box>
-  );
+return (
+  <Box
+    sx={{
+      width: "100%",
+      height: isCustomizing ? "100%" : "auto",
+      minWidth: 0,
+      minHeight: 0,
+    }}
+  >
+    {content}
+  </Box>
+);
 }

@@ -9,6 +9,7 @@ export default function ChartCard({
   viewMode,
   viewModes,
   onViewChange,
+  isCustomizing = false,
 }) {
   const data = Array.isArray(metric?.data) ? metric.data : [];
   const error = metric?.metadata?.error;
@@ -19,7 +20,7 @@ export default function ChartCard({
       sx={{
         display: "flex",
         flexDirection: "column",
-        height: "100%",
+        height: isCustomizing ? "100%" : "auto",
         minWidth: 0,
         minHeight: 0,
         overflow: "hidden",
@@ -31,7 +32,7 @@ export default function ChartCard({
         sx={{
           boxSizing: "border-box",
           display: "flex",
-          flex: 1,
+          flex: isCustomizing ? 1 : "0 0 auto",
           flexDirection: "column",
           width: "100%",
           minWidth: 0,
@@ -40,7 +41,14 @@ export default function ChartCard({
           "&:last-child": { pb: 2 },
         }}
       >
-        <Stack spacing={1.5} sx={{ height: "100%", minWidth: 0, minHeight: 0 }}>
+        <Stack
+          spacing={1.5}
+          sx={{
+            height: isCustomizing ? "100%" : "auto",
+            minWidth: 0,
+            minHeight: 0,
+          }}
+        >
           <MetricHeader
             metric={metric}
             viewMode={viewMode}
@@ -53,7 +61,14 @@ export default function ChartCard({
           ) : !data.length ? (
             <EmptyMetricState />
           ) : (
-            <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, overflow: "auto" }}>
+            <Box
+              sx={{
+                flex: isCustomizing ? 1 : "0 0 auto",
+                minWidth: 0,
+                minHeight: 0,
+                overflow: isCustomizing ? "auto" : "visible",
+              }}
+            >
               <DashboardChart metric={metric} />
             </Box>
           )}

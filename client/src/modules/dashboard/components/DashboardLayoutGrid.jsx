@@ -28,12 +28,15 @@ function getColumnCount(width) {
 
 function getEffectiveMinHeight(widget, metric) {
   const configuredMin = Math.max(1, Number(widget.minH) || 1);
+
   if (metric?.visualization === "kpi") {
     return Math.max(configuredMin, KPI_MIN_HEIGHT);
   }
+
   if (metric?.visualization === "table") {
     return Math.max(configuredMin, TABLE_MIN_HEIGHT);
   }
+
   return Math.max(configuredMin, CHART_MIN_HEIGHT);
 }
 
@@ -160,13 +163,7 @@ export default function DashboardLayoutGrid({
     let mobileY = 0;
     return visibleWidgets.map((widget) => {
       const metric = metricMap.get(widget.id);
-      const item = toGridItem(
-        widget,
-        metric,
-        columns,
-        isCustomizing,
-        mobileY,
-      );
+      const item = toGridItem(widget, metric, columns, isCustomizing, mobileY);
       if (columns === 1) mobileY += item.h;
       return item;
     });
@@ -195,7 +192,11 @@ export default function DashboardLayoutGrid({
             No visible widgets are configured for this dashboard.
           </Typography>
           {isCustomizing && (
-            <Typography variant="body2" color="text.secondary" textAlign="center">
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              textAlign="center"
+            >
               Use “Manage widgets” to restore hidden widgets.
             </Typography>
           )}
@@ -208,56 +209,58 @@ export default function DashboardLayoutGrid({
     <Box ref={containerRef} sx={{ width: "100%", minWidth: 0 }}>
       {isCustomizing && columns === 1 && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Cards are stacked on narrow screens. Dragging and resizing are available on wider screens.
+          Cards are stacked on narrow screens. Dragging and resizing are
+          available on wider screens.
         </Alert>
       )}
 
-      {mounted && (
-        <ReactGridLayout
-          width={width}
-          layout={gridLayout}
-          gridConfig={{
-            cols: columns,
-            rowHeight: GRID_ROW_HEIGHT,
-            margin: [16, 16],
-            padding: [0, 0],
-          }}
-          dragConfig={{
-            enabled: isCustomizing && columns > 1,
-            handle: ".dashboard-widget-drag-handle",
-            cancel: "button, a, input, textarea, select, .dashboard-widget-no-drag",
-            bounded: true,
-          }}
-          resizeConfig={{
-            enabled: isCustomizing && columns > 1,
-            handles: ["se", "sw"],
-          }}
-          compactor={verticalCompactor}
-          onLayoutChange={handleLayoutChange}
-          autoSize
-          style={{ minHeight: 1 }}
-        >
-          {visibleWidgets.map((widget) => {
-            const metric = metricMap.get(widget.id);
-            if (!metric) return null;
+      {mounted &&
+        (isCustomizing ? (
+          <ReactGridLayout
+            width={width}
+            layout={gridLayout}
+            gridConfig={{
+              cols: columns,
+              rowHeight: GRID_ROW_HEIGHT,
+              margin: [16, 16],
+              padding: [0, 0],
+            }}
+            dragConfig={{
+              enabled: columns > 1,
+              handle: ".dashboard-widget-drag-handle",
+              cancel:
+                "button, a, input, textarea, select, .dashboard-widget-no-drag",
+              bounded: true,
+            }}
+            resizeConfig={{
+              enabled: columns > 1,
+              handles: ["se", "sw"],
+            }}
+            compactor={verticalCompactor}
+            onLayoutChange={handleLayoutChange}
+            autoSize
+            style={{ minHeight: 1 }}
+          >
+            {visibleWidgets.map((widget) => {
+              const metric = metricMap.get(widget.id);
+              if (!metric) return null;
 
-            return (
-              <Box
-                key={widget.id}
-                sx={{
-                  boxSizing: "border-box",
-                  height: "100%",
-                  minWidth: 0,
-                  minHeight: 0,
-                  overflow: "visible",
-                  outline: isCustomizing ? "1px dashed" : "none",
-                  outlineColor: isCustomizing ? "divider" : "transparent",
-                  borderRadius: 2,
-                  bgcolor: isCustomizing ? "action.hover" : "transparent",
-                  p: isCustomizing ? 0.75 : 0,
-                }}
-              >
-                {isCustomizing && (
+              return (
+                <Box
+                  key={widget.id}
+                  sx={{
+                    boxSizing: "border-box",
+                    height: "100%",
+                    minWidth: 0,
+                    minHeight: 0,
+                    overflow: "visible",
+                    outline: "1px dashed",
+                    outlineColor: "divider",
+                    borderRadius: 2,
+                    bgcolor: "action.hover",
+                    p: 0.75,
+                  }}
+                >
                   <Box
                     className="dashboard-widget-drag-handle"
                     sx={{
@@ -281,24 +284,68 @@ export default function DashboardLayoutGrid({
                       Drag to move
                     </Typography>
                   </Box>
-                )}
-                <Box
-                  sx={{
-                    height: isCustomizing ? "calc(100% - 30px)" : "100%",
-                    minWidth: 0,
-                    minHeight: 0,
-                  }}
-                >
-                  <DashboardWidget
-                    metric={metric}
-                    onDrillDown={onDrillDown}
-                  />
+
+                  <Box sx={{ height: "calc(100% - 30px)", minHeight: 0 }}>
+                    <DashboardWidget
+                      metric={metric}
+                      onDrillDown={onDrillDown}
+                      isCustomizing
+                    />
+                  </Box>
                 </Box>
-              </Box>
-            );
-          })}
-        </ReactGridLayout>
-      )}
+              );
+            })}
+          </ReactGridLayout>
+        ) : (
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+              gap: 2,
+              alignItems: "start",
+              "& > *": {
+                minWidth: 0,
+              },
+            }}
+          >
+            {[...visibleWidgets]
+              .sort((a, b) => a.order - b.order)
+              .map((widget) => {
+                const metric = metricMap.get(widget.id);
+                if (!metric) return null;
+
+                const span =
+                  columns === 1
+                    ? 1
+                    : Math.min(
+                        columns,
+                        Math.max(
+                          1,
+                          Math.ceil(
+                            (Number(widget.w) || 1) * (columns / GRID_COLUMNS),
+                          ),
+                        ),
+                      );
+
+                return (
+                  <Box
+                    key={widget.id}
+                    sx={{
+                      gridColumn: `span ${span}`,
+                      minWidth: 0,
+                      alignSelf: "start",
+                    }}
+                  >
+                    <DashboardWidget
+                      metric={metric}
+                      onDrillDown={onDrillDown}
+                      isCustomizing={false}
+                    />
+                  </Box>
+                );
+              })}
+          </Box>
+        ))}
     </Box>
   );
 }
