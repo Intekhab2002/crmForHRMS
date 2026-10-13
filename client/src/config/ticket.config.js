@@ -305,7 +305,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
         md: 12,
       },
     },
-    grid: { visible: false },
+    grid: { visible: true },
   },
   {
     key: "initial_diagnosis",
@@ -322,7 +322,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
         md: 12,
       },
     },
-    grid: { visible: false },
+    grid: { visible: true },
   },
   {
     key: "solution",
@@ -339,7 +339,7 @@ export const TICKET_FIELD_CONFIG = Object.freeze([
         md: 12,
       },
     },
-    grid: { visible: false },
+    grid: { visible: true },
   },
   {
     key: "resolution",

@@ -28,21 +28,75 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
   const addUuidValues = (items) =>
     items.map((item) => `${addValue(item)}::UUID`);
 
+
   /*
-   * Global search intentionally remains separate from
-   * structured field filters.
+   * Global search covers ticket text fields and the display labels
+   * of related records. Relationship IDs are intentionally not used
+   * as substitutes for human-readable labels.
+   *
+   * This WHERE clause is shared by the list and count queries.
    */
   if (filters.search) {
     const parameter = addValue(filters.search);
 
     conditions.push(`
       (
+        -- Core ticket fields
         t.ticket_number ILIKE '%' || ${parameter} || '%'
         OR t.subject ILIKE '%' || ${parameter} || '%'
+        OR t.description ILIKE '%' || ${parameter} || '%'
+        OR t.initial_diagnosis ILIKE '%' || ${parameter} || '%'
+        OR t.solution ILIKE '%' || ${parameter} || '%'
+        OR t.resolution ILIKE '%' || ${parameter} || '%'
         OR t.employee_id ILIKE '%' || ${parameter} || '%'
+        OR t.employee_current_office_name_id ILIKE '%' || ${parameter} || '%'
+        OR t.bill_reference_no ILIKE '%' || ${parameter} || '%'
+        OR t.duplicate_ticket ILIKE '%' || ${parameter} || '%'
+        OR t.letter_no ILIKE '%' || ${parameter} || '%'
+        OR t.priority ILIKE '%' || ${parameter} || '%'
+
+        -- Contact information
+        OR contact.name ILIKE '%' || ${parameter} || '%'
+        OR contact.mobile_phone ILIKE '%' || ${parameter} || '%'
+        OR contact.email ILIKE '%' || ${parameter} || '%'
+        OR district.name ILIKE '%' || ${parameter} || '%'
+
+        -- User display names
+        OR CONCAT_WS(' ', requester.first_name, requester.last_name)
+          ILIKE '%' || ${parameter} || '%'
+        OR CONCAT_WS(' ', creator.first_name, creator.last_name)
+          ILIKE '%' || ${parameter} || '%'
+        OR creator.username ILIKE '%' || ${parameter} || '%'
+        OR creator.email ILIKE '%' || ${parameter} || '%'
+        OR CONCAT_WS(' ', assignee.first_name, assignee.last_name)
+          ILIKE '%' || ${parameter} || '%'
+
+        -- Related master-data labels and codes
+        OR ticket_status.name ILIKE '%' || ${parameter} || '%'
+        OR ticket_status.code ILIKE '%' || ${parameter} || '%'
+        OR organization.name ILIKE '%' || ${parameter} || '%'
+        OR organization.code ILIKE '%' || ${parameter} || '%'
+        OR department.name ILIKE '%' || ${parameter} || '%'
+        OR department.code ILIKE '%' || ${parameter} || '%'
+        OR service_type.name ILIKE '%' || ${parameter} || '%'
+        OR service_type.code ILIKE '%' || ${parameter} || '%'
+        OR ticket_category.name ILIKE '%' || ${parameter} || '%'
+        OR ticket_category.code ILIKE '%' || ${parameter} || '%'
+        OR problem_statement.name ILIKE '%' || ${parameter} || '%'
+        OR problem_statement.code ILIKE '%' || ${parameter} || '%'
+        OR current_bill_status.name ILIKE '%' || ${parameter} || '%'
+        OR current_bill_status.code ILIKE '%' || ${parameter} || '%'
+        OR ticket_severity.name ILIKE '%' || ${parameter} || '%'
+        OR ticket_severity.code ILIKE '%' || ${parameter} || '%'
+        OR issue_category.name ILIKE '%' || ${parameter} || '%'
+        OR issue_category.code ILIKE '%' || ${parameter} || '%'
+        OR dependency_category.name ILIKE '%' || ${parameter} || '%'
+        OR dependency_category.code ILIKE '%' || ${parameter} || '%'
+        OR caller_department.name ILIKE '%' || ${parameter} || '%'
       )
     `);
   }
+
 
   for (const definition of Object.values(TICKET_CONFIG.listFilterDefinitions)) {
     const value = filters[definition.queryKey];
