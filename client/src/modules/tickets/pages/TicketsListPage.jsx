@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Stack } from "@mui/material";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useLocation } from "react-router";
 
 import CanAccess from "../../../components/rbac/CanAccess";
 import PageHeader from "../../../components/page/PageHeader";
@@ -13,14 +13,50 @@ import {
 } from "../../../config/ticket.config";
 import { ticketService } from "../services/ticket.service";
 import TicketListFilters from "../components/TicketListFilters";
-import { getTicketListFilterCount } from "../../../config/ticketListFilter.config";
+import { getTicketListFilterCount, TICKET_LIST_FILTER_CONFIG } from "../../../config/ticketListFilter.config";
 import {
   loadTicketListFilters,
   saveTicketListFilters,
 } from "../utils/ticketListViewState";
 
+const TICKET_FILTER_QUERY_KEYS = new Set(
+  TICKET_LIST_FILTER_CONFIG.flatMap((filter) =>
+    filter.type === "dateRange"
+      ? [filter.fromQueryKey, filter.toQueryKey]
+      : [filter.queryKey],
+  ),
+);
+
+function parseTicketFilters(search) {
+  const params = new URLSearchParams(search);
+  const parsedFilters = {};
+
+  for (const [rawKey, value] of params.entries()) {
+    const isArrayParam = rawKey.endsWith("[]");
+    const key = isArrayParam ? rawKey.slice(0, -2) : rawKey;
+
+    // Ignore parameters that are not ticket filters.
+    if (!TICKET_FILTER_QUERY_KEYS.has(key) || value === "") {
+      continue;
+    }
+
+    if (isArrayParam || params.getAll(rawKey).length > 1) {
+      const existingValues = Array.isArray(parsedFilters[key])
+        ? parsedFilters[key]
+        : [];
+
+      parsedFilters[key] = [...existingValues, value];
+    } else {
+      parsedFilters[key] = value;
+    }
+  }
+
+  return parsedFilters;
+}
+
 export default function TicketsListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [rows, setRows] = useState([]);
   const [rowCount, setRowCount] = useState(0);
@@ -28,8 +64,13 @@ export default function TicketsListPage() {
   const [error, setError] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState(() =>
-  loadTicketListFilters(),);
+  const [filters, setFilters] = useState(() => {
+    const urlFilters = parseTicketFilters(location.search);
+
+    return Object.keys(urlFilters).length > 0
+      ? urlFilters
+      : loadTicketListFilters();
+  });
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [paginationModel, setPaginationModel] = useState({
@@ -37,6 +78,24 @@ export default function TicketsListPage() {
     pageSize: TICKET_GRID_CONFIG.defaultPageSize,
   });
   const [selectedTicketIds, setSelectedTicketIds] = useState([]);
+
+  useEffect(() => {
+  const urlFilters = parseTicketFilters(location.search);
+
+  // A URL without ticket filters should preserve saved filters.
+  if (Object.keys(urlFilters).length === 0) {
+    return;
+  }
+
+  // Explicit URL filters take precedence over stale saved filters.
+  setFilters(urlFilters);
+  saveTicketListFilters(urlFilters);
+
+  setPaginationModel((currentModel) => ({
+    ...currentModel,
+    page: 0,
+  }));
+}, [location.search]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

@@ -302,7 +302,7 @@ export default function DashboardLayoutGrid({
               display: "grid",
               gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
               gap: 2,
-              alignItems: "start",
+              alignItems: "stretch",
               "& > *": {
                 minWidth: 0,
               },
@@ -333,7 +333,8 @@ export default function DashboardLayoutGrid({
                     sx={{
                       gridColumn: `span ${span}`,
                       minWidth: 0,
-                      alignSelf: "start",
+                      display: "flex",
+                      flexDirection: "column",
                     }}
                   >
                     <DashboardWidget

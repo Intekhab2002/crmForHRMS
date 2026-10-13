@@ -42,7 +42,8 @@ export default function MetricCard({ metric, onClick }) {
     <Card
       variant="outlined"
       sx={{
-        height: "100%",
+        height: "auto",
+        flex: 1,
         minWidth: 0,
         borderRadius: 3,
         borderColor: "divider",
