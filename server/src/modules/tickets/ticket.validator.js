@@ -171,6 +171,16 @@ const positiveIntegerQuery = z
 
     priority: z.string().trim().max(50).optional(),
 
+    mobileNumber: z.string().trim().max(30).optional(),
+
+    name: z.string().trim().max(255).optional(),
+
+    description: z.string().trim().max(5000).optional(),
+
+    initialDiagnosis: z.string().trim().max(5000).optional(),
+
+    solution: z.string().trim().max(5000).optional(),
+
     /*
      * Date filters
      */

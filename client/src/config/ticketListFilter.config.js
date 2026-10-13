@@ -48,7 +48,7 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
 
   Object.freeze({
     key: "requesterUserId",
-    label: "Requester",
+    label: "Created By",
     type: "lookup",
     queryKey: "requesterUserId",
     endpoint: "/users?limit=100",
@@ -167,6 +167,41 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     label: "Letter No",
     type: "text",
     queryKey: "letterNo",
+  }),
+
+    Object.freeze({
+    key: "mobileNumber",
+    label: "Mobile Number",
+    type: "text",
+    queryKey: "mobileNumber",
+  }),
+
+  Object.freeze({
+    key: "name",
+    label: "Name",
+    type: "text",
+    queryKey: "name",
+  }),
+
+  Object.freeze({
+    key: "description",
+    label: "Description",
+    type: "text",
+    queryKey: "description",
+  }),
+
+  Object.freeze({
+    key: "initialDiagnosis",
+    label: "Initial Diagnosis",
+    type: "text",
+    queryKey: "initialDiagnosis",
+  }),
+
+  Object.freeze({
+    key: "solution",
+    label: "Solution",
+    type: "text",
+    queryKey: "solution",
   }),
 
   Object.freeze({

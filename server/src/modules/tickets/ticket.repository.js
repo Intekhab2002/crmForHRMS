@@ -427,7 +427,7 @@ async function findTickets(filters, tx = null) {
 
   const countQuery = `
     SELECT COUNT(*)::BIGINT AS total
-    FROM tickets t
+    ${FROM}
     ${whereClause};
   `;
 

@@ -17,7 +17,7 @@ function assertDashboardType(dashboardType) {
 }
 
 function normalizeFilters(input = {}) {
-  return Object.freeze({
+  return Object.freeze({  
     periodStart: input.periodStart || null,
     periodEnd: input.periodEnd || null,
     departmentId: input.departmentId || [],

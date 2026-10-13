@@ -520,6 +520,41 @@ const listFilterDefinitions = Object.freeze({
     multi: true,
   }),
 
+    mobile_number: Object.freeze({
+    queryKey: "mobileNumber",
+    sqlExpression: "contact.mobile_phone",
+    type: "text",
+    operator: "contains",
+  }),
+
+  name: Object.freeze({
+    queryKey: "name",
+    sqlExpression: "contact.name",
+    type: "text",
+    operator: "contains",
+  }),
+
+  description: Object.freeze({
+    queryKey: "description",
+    column: "description",
+    type: "text",
+    operator: "contains",
+  }),
+
+  initial_diagnosis: Object.freeze({
+    queryKey: "initialDiagnosis",
+    column: "initial_diagnosis",
+    type: "text",
+    operator: "contains",
+  }),
+
+  solution: Object.freeze({
+    queryKey: "solution",
+    column: "solution",
+    type: "text",
+    operator: "contains",
+  }),
+
   organization: Object.freeze({
     queryKey: "organizationId",
     column: "organization_id",

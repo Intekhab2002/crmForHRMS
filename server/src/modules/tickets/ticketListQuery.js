@@ -124,12 +124,14 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
 
       case "text": {
         const parameter = addValue(value);
+        const expression =
+          definition.sqlExpression ?? `t.${definition.column}`;
 
         if (definition.operator === "equals") {
-          conditions.push(`t.${definition.column} = ${parameter}`);
+          conditions.push(`${expression} = ${parameter}`);
         } else {
           conditions.push(
-            `t.${definition.column} ILIKE '%' || ${parameter} || '%'`,
+            `${expression} ILIKE '%' || ${parameter} || '%'`,
           );
         }
 
