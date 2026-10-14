@@ -710,7 +710,7 @@ export default function TicketLifecyclePage() {
                       py: 1,
                     }}
                   >
-                    <TicketAttachmentList ticketId={ticket.id} />
+                    <TicketAttachmentList ticketId={ticket.id} onLifecycleChange={loadLifecycle} />
                   </Box>
                 ) : null}
               </Box>

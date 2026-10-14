@@ -36,7 +36,6 @@ const TICKET_EXPORT_SELECT = `
 
     t.resolution_note,
     t.assigned_at,
-    t.resolved_at,
     t.closed_at,
 
     t.employee_current_office_name_id AS employee_current_office_name,

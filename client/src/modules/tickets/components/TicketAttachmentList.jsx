@@ -20,7 +20,6 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutl
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
 
-
 import CanAccess from "../../../components/rbac/CanAccess";
 
 import { ticketService } from "../services/ticket.service";
@@ -63,7 +62,7 @@ function getDownloadFilename(contentDisposition, fallback) {
   return filenameMatch?.[1] || fallback;
 }
 
-export default function TicketAttachmentList({ ticketId }) {
+export default function TicketAttachmentList({ ticketId, onLifecycleChange }) {
   const inputRef = useRef(null);
 
   const [attachments, setAttachments] = useState([]);
@@ -148,6 +147,7 @@ export default function TicketAttachmentList({ ticketId }) {
       }
 
       await loadAttachments();
+      await onLifecycleChange?.();
 
       setSuccess(
         files.length === 1
@@ -219,7 +219,7 @@ export default function TicketAttachmentList({ ticketId }) {
       setAttachments((current) =>
         current.filter((item) => item.id !== attachment.id),
       );
-
+      await onLifecycleChange?.();
       setSuccess("Attachment deleted successfully.");
     } catch (deleteError) {
       console.error("Attachment deletion failed:", deleteError);

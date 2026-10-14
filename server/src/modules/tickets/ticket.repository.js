@@ -234,26 +234,67 @@ function getColumnForField(fieldKey) {
 
 
 
+
 function buildUpdate(fields) {
   const assignments = fields.map((fieldKey, index) => {
     const column = getColumnForField(fieldKey);
 
     if (!column) {
-      throw new Error("Ticket configuration contains an invalid update field.");
+      throw new Error(
+        "Ticket configuration contains an invalid update field.",
+      );
     }
 
     return `${column} = $${index + 2}`;
   });
 
+  const assigneeFieldIndex = fields.indexOf("assigned_to");
+
+  if (assigneeFieldIndex !== -1) {
+    const assigneeParameter = `$${assigneeFieldIndex + 2}::UUID`;
+
+    assignments.push(`
+      assigned_at = CASE
+        WHEN assigned_user_id IS DISTINCT FROM ${assigneeParameter}
+        THEN CASE
+          WHEN ${assigneeParameter} IS NULL THEN NULL
+          ELSE CURRENT_TIMESTAMP
+        END
+        ELSE assigned_at
+      END
+    `);
+  }
+
+  const statusFieldIndex = fields.indexOf("status");
+
+  if (statusFieldIndex !== -1) {
+    const statusParameter = `$${statusFieldIndex + 2}`;
+
+    assignments.push(`
+      closed_at = CASE
+        WHEN status_id IS DISTINCT FROM ${statusParameter}::UUID
+          AND EXISTS (
+            SELECT 1
+            FROM ticket_statuses target_status
+            WHERE target_status.id = ${statusParameter}::UUID
+              AND UPPER(target_status.code) = 'CLOSED'
+          )
+        THEN CURRENT_TIMESTAMP
+        ELSE closed_at
+      END
+    `);
+  }
+
   return `
-        UPDATE tickets t
-        SET
-            ${assignments.join(",\n            ")},
-            updated_at = CURRENT_TIMESTAMP
-        WHERE t.id = $1::UUID
-        RETURNING ${RETURNING_COLUMNS};
-    `;
+    UPDATE tickets t
+    SET
+      ${assignments.join(",\n      ")},
+      updated_at = CURRENT_TIMESTAMP
+    WHERE t.id = $1::UUID
+    RETURNING ${RETURNING_COLUMNS};
+  `;
 }
+
 
 function toNestedObject(id, code, name) {
   if (!id) {

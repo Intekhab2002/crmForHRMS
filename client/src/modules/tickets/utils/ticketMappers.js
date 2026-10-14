@@ -254,6 +254,18 @@ function mapLifecycleEvent(event) {
         }
       : null;
 
+  const files =
+    eventType === "ATTACHMENT" && metadata.attachmentId
+      ? [
+          {
+            id: metadata.attachmentId,
+            name: metadata.originalName ?? "Attachment",
+            size: metadata.fileSize ?? null,
+            mimeType: metadata.mimeType ?? null,
+          },
+        ]
+      : [];
+
   return {
     id: event.id ?? null,
 
@@ -293,6 +305,7 @@ function mapLifecycleEvent(event) {
     newDisplayValue,
 
     metadata,
+    files,
 
     changes: commentChange ? [commentChange] : change ? [change] : [],
     createdAt: event.created_at ?? event.createdAt ?? null,

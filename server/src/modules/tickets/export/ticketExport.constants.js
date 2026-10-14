@@ -28,7 +28,6 @@ const TICKET_EXPORT_COLUMNS = Object.freeze([
   Object.freeze({ key: "departmentName", header: "Department" }),
   Object.freeze({ key: "resolutionNote", header: "Resolution Note" }),
   Object.freeze({ key: "assignedAt", header: "Assigned At" }),
-  Object.freeze({ key: "resolvedAt", header: "Resolved At" }),
   Object.freeze({ key: "closedAt", header: "Closed At" }),
   Object.freeze({ key: "employeeCurrentOfficeName", header: "Employee Current Office" }),
   Object.freeze({ key: "employeeId", header: "Employee ID" }),

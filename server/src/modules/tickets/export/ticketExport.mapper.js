@@ -1,4 +1,10 @@
-function displayUserName(row, firstNameKey, lastNameKey, usernameKey, emailKey) {
+function displayUserName(
+  row,
+  firstNameKey,
+  lastNameKey,
+  usernameKey,
+  emailKey,
+) {
   const fullName = [row[firstNameKey], row[lastNameKey]]
     .filter(Boolean)
     .join(" ")
@@ -33,10 +39,10 @@ function mapTicketExportRow(row) {
     assignedUserName: row.assigned_user_id
       ? displayUserName(
           row,
-          "assignee_first_name",
-          "assignee_last_name",
-          "assignee_username",
-          "assignee_email",
+          "assigned_user_first_name",
+          "assigned_user_last_name",
+          "assigned_user_username",
+          "assigned_user_email",
         )
       : null,
 
@@ -51,7 +57,6 @@ function mapTicketExportRow(row) {
 
     resolutionNote: row.resolution_note,
     assignedAt: row.assigned_at,
-    resolvedAt: row.resolved_at,
     closedAt: row.closed_at,
 
     employeeCurrentOfficeName: row.employee_current_office_name,
