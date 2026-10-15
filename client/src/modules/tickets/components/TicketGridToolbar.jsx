@@ -1,9 +1,10 @@
 import { useCallback, useState } from "react";
-import {
-  ColumnsPanelTrigger,
-  Toolbar,
-} from "@mui/x-data-grid";import { IconButton, InputAdornment, TextField } from "@mui/material";
+import { ColumnsPanelTrigger, Toolbar } from "@mui/x-data-grid";
+import { IconButton, InputAdornment, TextField } from "@mui/material";
 import { Button, Stack } from "@mui/material";
+import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
+import Tooltip from "@mui/material/Tooltip";
+import { TICKET_MODULE_CONFIG } from "../../../config/ticket.config";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import CanAccess from "../../../components/rbac/CanAccess";
 import TicketExportDialog from "./TicketExportDialog";
@@ -30,6 +31,16 @@ export default function TicketGridToolbar({
   const handleCloseExport = useCallback(() => {
     setExportOpen(false);
   }, []);
+
+  const canDuplicate =
+    selectedTicketIds.length === 1 && typeof onDuplicateTicket === "function";
+
+  const duplicateTooltip =
+    selectedTicketIds.length === 0
+      ? "Select one ticket to duplicate."
+      : selectedTicketIds.length > 1
+        ? "Select only one ticket to duplicate."
+        : "Create a duplicate of the selected ticket.";
 
   return (
     <>
@@ -73,6 +84,26 @@ export default function TicketGridToolbar({
         />
 
         <Stack direction="row" spacing={1}>
+          <CanAccess permission={TICKET_MODULE_CONFIG.permissions.create}>
+            <Tooltip title={duplicateTooltip}>
+              <span>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<ContentCopyOutlinedIcon />}
+                  disabled={!canDuplicate}
+                  onClick={() => {
+                    if (canDuplicate) {
+                      onDuplicateTicket(selectedTicketIds[0]);
+                    }
+                  }}
+                  aria-label="Duplicate selected ticket"
+                >
+                  Duplicate
+                </Button>
+              </span>
+            </Tooltip>
+          </CanAccess>
           <Button
             size="small"
             variant={activeFilterCount > 0 ? "contained" : "outlined"}

@@ -23,7 +23,8 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import CommentOutlinedIcon from "@mui/icons-material/CommentOutlined";
 import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
-import { Link, useParams } from "react-router";
+import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
+import { Link, useNavigate, useParams } from "react-router";
 
 import CompactPageToolbar from "../../../components/page/CompactPageToolbar";
 import CanAccess from "../../../components/rbac/CanAccess";
@@ -90,6 +91,7 @@ function buildUpdateValues(ticket) {
 export default function TicketLifecyclePage() {
   const { ticketId } = useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [ticket, setTicket] = useState(null);
   const [comments, setComments] = useState([]);
@@ -451,78 +453,102 @@ export default function TicketLifecyclePage() {
             "aria-label": "Refresh ticket",
           }}
           actions={
-            <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
-              <Stack
-                direction="row"
-                spacing={0.75}
-                alignItems="center"
-                flexWrap="wrap"
-                useFlexGap
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.75,
-                    px: 0.75,
-                    py: 0.5,
-                    border: 1,
-                    borderColor: "divider",
-                    borderRadius: 1.5,
-                    bgcolor: "background.default",
-                  }}
+            <>
+              <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
+                <Stack
+                  direction="row"
+                  spacing={0.75}
+                  alignItems="center"
+                  flexWrap="wrap"
+                  useFlexGap
                 >
-                  <Typography
-                    component="span"
-                    variant="caption"
-                    fontWeight={700}
-                    color="text.secondary"
-                  >
-                    Status
-                  </Typography>
-
-                  <Select
-                    size="small"
-                    value={pendingStatus}
-                    onChange={handleStatusChange}
-                    disabled={saving || statusOptionsLoading}
-                    inputProps={{ "aria-label": "Ticket status" }}
+                  <Box
                     sx={{
-                      minWidth: { xs: 130, sm: 150 },
-                      "& .MuiSelect-select": {
-                        py: 0.75,
-                        fontWeight: 700,
-                      },
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.75,
+                      px: 0.75,
+                      py: 0.5,
+                      border: 1,
+                      borderColor: "divider",
+                      borderRadius: 1.5,
+                      bgcolor: "background.default",
                     }}
                   >
-                    {statusOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </Box>
+                    <Typography
+                      component="span"
+                      variant="caption"
+                      fontWeight={700}
+                      color="text.secondary"
+                    >
+                      Status
+                    </Typography>
 
+                    <Select
+                      size="small"
+                      value={pendingStatus}
+                      onChange={handleStatusChange}
+                      disabled={saving || statusOptionsLoading}
+                      inputProps={{ "aria-label": "Ticket status" }}
+                      sx={{
+                        minWidth: { xs: 130, sm: 150 },
+                        "& .MuiSelect-select": {
+                          py: 0.75,
+                          fontWeight: 700,
+                        },
+                      }}
+                    >
+                      {statusOptions.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </Box>
+
+                  <Button
+                    variant="outlined"
+                    onClick={handleStatusUpdate}
+                    disabled={
+                      saving ||
+                      !pendingStatus ||
+                      pendingStatus === ticket.status
+                    }
+                  >
+                    Update Status
+                  </Button>
+
+                  <Button
+                    variant="contained"
+                    startIcon={<EditOutlinedIcon />}
+                    onClick={() => setEditOpen(true)}
+                    disabled={saving}
+                  >
+                    Edit
+                  </Button>
+                </Stack>
+              </CanAccess>
+
+              <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
+                {/* Keep the existing status selector, Update Status button,
+          and Edit button here without changing their handlers. */}
+              </CanAccess>
+
+              <CanAccess permission={TICKET_MODULE_CONFIG.permissions.create}>
                 <Button
                   variant="outlined"
-                  onClick={handleStatusUpdate}
-                  disabled={
-                    saving || !pendingStatus || pendingStatus === ticket.status
+                  startIcon={<ContentCopyOutlinedIcon />}
+                  onClick={() =>
+                    navigate(
+                      `/tickets/create?duplicateFrom=${encodeURIComponent(ticket.id)}`,
+                    )
                   }
+                  disabled={!ticket?.id}
                 >
-                  Update Status
+                  Duplicate
                 </Button>
-
-                <Button
-                  variant="contained"
-                  startIcon={<EditOutlinedIcon />}
-                  onClick={() => setEditOpen(true)}
-                  disabled={saving}
-                >
-                  Edit
-                </Button>
-              </Stack>
-            </CanAccess>
+              </CanAccess>
+            </>
           }
         />
 
@@ -710,7 +736,10 @@ export default function TicketLifecyclePage() {
                       py: 1,
                     }}
                   >
-                    <TicketAttachmentList ticketId={ticket.id} onLifecycleChange={loadLifecycle} />
+                    <TicketAttachmentList
+                      ticketId={ticket.id}
+                      onLifecycleChange={loadLifecycle}
+                    />
                   </Box>
                 ) : null}
               </Box>
