@@ -14,22 +14,18 @@ import { ticketService } from "../services/ticket.service";
 import CanAccess from "../../../components/rbac/CanAccess";
 
 export default function TicketCreatePage() {
-  const { success, error: notifyError,info } = useNotification();
-  // const [error, setError] = useState("");
+  const { success, error: notifyError, info } = useNotification();
   const [submitting, setSubmitting] = useState(false);
   const [searchParams] = useSearchParams();
   const duplicateFrom = searchParams.get("duplicateFrom");
 
-  const [duplicateSource, setDuplicateSource] = useState(null);
   const [duplicateInitialValues, setDuplicateInitialValues] = useState(null);
   const [loadingDuplicateSource, setLoadingDuplicateSource] = useState(false);
-  // const [duplicateError, setDuplicateError] = useState("");
 
   useEffect(() => {
     let active = true;
 
     if (!duplicateFrom) {
-      setDuplicateSource(null);
       setDuplicateInitialValues(null);
       setLoadingDuplicateSource(false);
 
@@ -85,13 +81,13 @@ export default function TicketCreatePage() {
     };
   }, [duplicateFrom, info, notifyError]);
 
-  async function handleSubmit(values, formikHelpers) {
+  async function handleSubmit(values) {
     setSubmitting(true);
 
     try {
       const ticket = await ticketService.createTicket(values);
-      success("Ticket created successfully.");
 
+      success("Ticket created successfully.");
       window.location.assign(`/tickets/${ticket.id}`);
     } catch (requestError) {
       notifyError(
@@ -99,7 +95,6 @@ export default function TicketCreatePage() {
           requestError?.message ??
           "Unable to create ticket.",
       );
-      formikHelpers.setStatus(message);
     } finally {
       setSubmitting(false);
     }

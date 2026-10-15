@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { Button, Paper } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
-import { GridActionsCellItem } from "@mui/x-data-grid";
 
 import { AppDataGrid } from "../../../components/data-grid";
 import OptionChip from "../../../components/display/OptionChip";
@@ -77,6 +76,7 @@ export default function TicketDataGrid({
   activeFilterCount = 0,
   selectedTicketIds = [],
   onSelectedTicketIdsChange,
+  onDuplicateTicket
 }) {
   const { hasPermission } = useAuth();
   const selectionModel = useMemo(
@@ -176,6 +176,7 @@ export default function TicketDataGrid({
             activeFilterCount,
             rowCount,
             selectedTicketIds,
+            onDuplicateTicket,
           },
         }}
         aria-label={title}

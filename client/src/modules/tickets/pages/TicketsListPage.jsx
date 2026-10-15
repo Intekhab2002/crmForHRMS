@@ -13,7 +13,10 @@ import {
 } from "../../../config/ticket.config";
 import { ticketService } from "../services/ticket.service";
 import TicketListFilters from "../components/TicketListFilters";
-import { getTicketListFilterCount, TICKET_LIST_FILTER_CONFIG } from "../../../config/ticketListFilter.config";
+import {
+  getTicketListFilterCount,
+  TICKET_LIST_FILTER_CONFIG,
+} from "../../../config/ticketListFilter.config";
 import {
   loadTicketListFilters,
   saveTicketListFilters,
@@ -80,22 +83,22 @@ export default function TicketsListPage() {
   const [selectedTicketIds, setSelectedTicketIds] = useState([]);
 
   useEffect(() => {
-  const urlFilters = parseTicketFilters(location.search);
+    const urlFilters = parseTicketFilters(location.search);
 
-  // A URL without ticket filters should preserve saved filters.
-  if (Object.keys(urlFilters).length === 0) {
-    return;
-  }
+    // A URL without ticket filters should preserve saved filters.
+    if (Object.keys(urlFilters).length === 0) {
+      return;
+    }
 
-  // Explicit URL filters take precedence over stale saved filters.
-  setFilters(urlFilters);
-  saveTicketListFilters(urlFilters);
+    // Explicit URL filters take precedence over stale saved filters.
+    setFilters(urlFilters);
+    saveTicketListFilters(urlFilters);
 
-  setPaginationModel((currentModel) => ({
-    ...currentModel,
-    page: 0,
-  }));
-}, [location.search]);
+    setPaginationModel((currentModel) => ({
+      ...currentModel,
+      page: 0,
+    }));
+  }, [location.search]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -227,6 +230,11 @@ export default function TicketsListPage() {
         fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
         loading={loading}
         onOpenTicket={(row) => navigate(`/tickets/${row.id}`)}
+        onDuplicateTicket={(ticketId) =>
+          navigate(
+            `/tickets/create?duplicateFrom=${encodeURIComponent(ticketId)}`,
+          )
+        }
         search={searchInput}
         onSearchChange={setSearchInput}
         filters={filters}

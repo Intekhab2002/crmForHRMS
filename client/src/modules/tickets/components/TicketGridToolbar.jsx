@@ -21,6 +21,7 @@ export default function TicketGridToolbar({
   activeFilterCount = 0,
   selectedTicketIds = [],
   rowCount = 0,
+  onDuplicateTicket,
 }) {
   const [exportOpen, setExportOpen] = useState(false);
 
