@@ -1,53 +1,165 @@
-import { Alert, Button, FormControl, InputLabel, MenuItem, Select, Stack, Typography } from "@mui/material";
+
+import {
+  Alert,
+  Button,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  Typography,
+} from "@mui/material";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
+import RestartAltOutlinedIcon from "@mui/icons-material/RestartAltOutlined";
 import CanAccess from "../../../components/rbac/CanAccess";
 import { TICKET_MODULE_CONFIG } from "../../../config/ticket.config";
 
+const QUICK_UPDATE_FIELDS = [
+  {
+    key: "status",
+    label: "Status",
+    permission: TICKET_MODULE_CONFIG.permissions.update,
+  },
+  {
+    key: "assigned_to",
+    label: "Assigned To",
+    permission: TICKET_MODULE_CONFIG.permissions.assign,
+  },
+  {
+    key: "severity",
+    label: "Severity",
+    permission: TICKET_MODULE_CONFIG.permissions.update,
+  },
+  {
+    key: "dependency_category",
+    label: "Dependency Category",
+    permission: TICKET_MODULE_CONFIG.permissions.update,
+  },
+];
+
+function normalizeValue(value) {
+  return value == null ? "" : String(value);
+}
+
 export default function TicketQuickUpdate({
-  currentStatus,
-  pendingStatus,
-  statusOptions = [],
-  statusOptionsLoading = false,
+  currentValues = {},
+  pendingValues = {},
+  options = {},
+  optionsLoading = {},
   saving = false,
-  onStatusChange,
+  onValueChange,
   onSave,
+  onReset,
 }) {
-  const hasChange = Boolean(pendingStatus) && pendingStatus !== currentStatus;
-  const currentLabel = statusOptions.find((option) => option.value === currentStatus)?.label ?? currentStatus ?? "Not set";
+  const hasChanges = QUICK_UPDATE_FIELDS.some(
+    ({ key }) =>
+      normalizeValue(currentValues[key]) !==
+      normalizeValue(pendingValues[key]),
+  );
+
+  const isLoading = QUICK_UPDATE_FIELDS.some(
+    ({ key }) => optionsLoading[key],
+  );
 
   return (
     <Stack spacing={2} className="ticket-quick-update">
-      <Stack spacing={0.75} sx={{ minWidth: 0 }}>
-        <Typography variant="body2" color="text.secondary">Current status</Typography>
-        <Typography variant="body1" fontWeight={600}>{currentLabel}</Typography>
+      <Stack spacing={0.5}>
+        <Typography variant="body2" color="text.secondary">
+          Update frequently changed ticket fields
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Only changed values will be submitted.
+        </Typography>
       </Stack>
-      <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
-      <Stack spacing={1} sx={{ minWidth: 0 }}>
-        <FormControl size="small" fullWidth disabled={saving || statusOptionsLoading}>
-          <InputLabel id="ticket-quick-update-status-label">New status</InputLabel>
-          <Select
-            labelId="ticket-quick-update-status-label"
-            id="ticket-quick-update-status"
-            label="New status"
-            value={pendingStatus ?? ""}
-            onChange={(event) => onStatusChange(event.target.value)}
-          >
-            {statusOptions.map((option) => (
-              <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+
+      {isLoading ? (
+        <Alert severity="info">Loading ticket update options…</Alert>
+      ) : null}
+
+      <Stack
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "minmax(0, 1fr)",
+            sm: "repeat(2, minmax(0, 1fr))",
+            lg: "repeat(4, minmax(0, 1fr))",
+          },
+          gap: 2,
+          minWidth: 0,
+        }}
+      >
+        {QUICK_UPDATE_FIELDS.map((field) => {
+          const fieldOptions = options[field.key] ?? [];
+          const fieldLoading = Boolean(optionsLoading[field.key]);
+
+          return (
+            <CanAccess
+              key={field.key}
+              permission={field.permission}
+            >
+              <FormControl
+                size="small"
+                fullWidth
+                disabled={saving || fieldLoading}
+                sx={{ minWidth: 0 }}
+              >
+                <InputLabel id={`quick-update-${field.key}-label`}>
+                  {field.label}
+                </InputLabel>
+
+                <Select
+                  labelId={`quick-update-${field.key}-label`}
+                  id={`quick-update-${field.key}`}
+                  label={field.label}
+                  value={normalizeValue(pendingValues[field.key])}
+                  onChange={(event) =>
+                    onValueChange(field.key, event.target.value)
+                  }
+                >
+                  <MenuItem value="">
+                    <em>Not set</em>
+                  </MenuItem>
+
+                  {fieldOptions.map((option) => (
+                    <MenuItem
+                      key={option.value}
+                      value={String(option.value)}
+                    >
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </CanAccess>
+          );
+        })}
+      </Stack>
+
+      <Stack
+        direction="row"
+        justifyContent="flex-end"
+        alignItems="center"
+        spacing={1}
+        flexWrap="wrap"
+      >
+        <Button
+          variant="outlined"
+          startIcon={<RestartAltOutlinedIcon />}
+          onClick={onReset}
+          disabled={saving || !hasChanges}
+        >
+          Discard Changes
+        </Button>
+
         <Button
           variant="contained"
           startIcon={<SaveOutlinedIcon />}
           onClick={onSave}
-          disabled={saving || statusOptionsLoading || !hasChange}
+          disabled={saving || isLoading || !hasChanges}
         >
-          {saving ? "Saving…" : "Save status"}
+          {saving ? "Saving…" : "Save Changes"}
         </Button>
       </Stack>
-      </CanAccess>
-      {statusOptionsLoading ? <Alert severity="info">Loading available statuses…</Alert> : null}
     </Stack>
   );
 }

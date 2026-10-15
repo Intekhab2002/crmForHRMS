@@ -1,7 +1,10 @@
 /* Ticket details workspace: CSS Grid, no drag/resize dependency. */
 .ticket-details-workspace {
   display: grid;
-  grid-template-columns: var(--ticket-workspace-columns, minmax(0, 1fr) minmax(0, 1fr));
+  grid-template-columns: var(
+    --ticket-workspace-columns,
+    minmax(0, 1fr) minmax(0, 1fr)
+  );
   align-items: stretch;
   gap: 1rem;
   width: 100%;
@@ -31,8 +34,20 @@
 }
 
 .ticket-workspace-panel[data-panel-id="ticket-quick-update"] {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   height: auto;
-  min-height: 0;
+  min-height: 8rem;
+  max-height: none;
+}
+
+.ticket-details-workspace--upper-collapsed
+  .ticket-workspace-panel[data-panel-id="ticket-quick-update"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ticket-workspace-panel__header {

@@ -110,9 +110,21 @@ export default function TicketLifecyclePage() {
   const [activeTab, setActiveTab] = useState("activity");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [pendingStatus, setPendingStatus] = useState("");
-  const [statusOptions, setStatusOptions] = useState([]);
-  const [statusOptionsLoading, setStatusOptionsLoading] = useState(true);
+  const QUICK_UPDATE_KEYS = [
+    "status",
+    "assigned_to",
+    "severity",
+    "dependency_category",
+  ];
+
+  const [pendingQuickValues, setPendingQuickValues] = useState({});
+  const [quickOptions, setQuickOptions] = useState({});
+  const [quickOptionsLoading, setQuickOptionsLoading] = useState({
+    status: true,
+    assigned_to: true,
+    severity: true,
+    dependency_category: true,
+  });
   const [createOpen, setCreateOpen] = useState(false);
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createError, setCreateError] = useState("");
@@ -281,34 +293,36 @@ export default function TicketLifecyclePage() {
   useEffect(() => {
     let active = true;
 
-    async function loadStatusOptions() {
-      setStatusOptionsLoading(true);
+    async function loadQuickUpdateOptions() {
+      const fields = QUICK_UPDATE_KEYS.map(
+        (key) => TICKET_FIELD_MAP[key],
+      ).filter(Boolean);
 
-      try {
-        const statusField = TICKET_FIELD_MAP.status;
+      setQuickOptionsLoading(
+        Object.fromEntries(fields.map((field) => [field.key, true])),
+      );
 
-        const options = await getOptionSource(statusField, user);
+      const results = await Promise.all(
+        fields.map(async (field) => {
+          try {
+            const result = await getOptionSource(field, user);
 
-        if (active) {
-          setStatusOptions(Array.isArray(options) ? options : []);
-        }
-      } catch (requestError) {
-        if (active) {
-          setStatusOptions([]);
-          setError(
-            requestError?.response?.data?.message ??
-              requestError?.message ??
-              "Unable to load ticket statuses.",
-          );
-        }
-      } finally {
-        if (active) {
-          setStatusOptionsLoading(false);
-        }
-      }
+            return [field.key, Array.isArray(result) ? result : []];
+          } catch (requestError) {
+            return [field.key, []];
+          }
+        }),
+      );
+
+      if (!active) return;
+
+      setQuickOptions(Object.fromEntries(results));
+      setQuickOptionsLoading(
+        Object.fromEntries(fields.map((field) => [field.key, false])),
+      );
     }
 
-    loadStatusOptions();
+    loadQuickUpdateOptions();
 
     return () => {
       active = false;
@@ -320,8 +334,14 @@ export default function TicketLifecyclePage() {
   }, [loadAll]);
 
   useEffect(() => {
-    setPendingStatus(ticket?.status ?? "");
-  }, [ticket?.status]);
+    if (!ticket) return;
+
+    setPendingQuickValues(
+      Object.fromEntries(
+        QUICK_UPDATE_KEYS.map((key) => [key, ticket[key] ?? ""]),
+      ),
+    );
+  }, [ticket]);
 
   const updateValues = useMemo(
     () => (ticket ? buildUpdateValues(ticket) : {}),
@@ -355,37 +375,64 @@ export default function TicketLifecyclePage() {
     }
   };
 
-  const handleStatusChange = (value) => {
-    setPendingStatus(value);
+  const handleQuickValueChange = (key, value) => {
+    setPendingQuickValues((current) => ({
+      ...current,
+      [key]: value,
+    }));
   };
 
-  const handleStatusUpdate = async () => {
-    if (!pendingStatus || pendingStatus === ticket?.status) {
-      return;
-    }
+  const handleQuickUpdateReset = () => {
+    if (!ticket) return;
+
+    setPendingQuickValues(
+      Object.fromEntries(
+        QUICK_UPDATE_KEYS.map((key) => [key, ticket[key] ?? ""]),
+      ),
+    );
+  };
+
+  const handleQuickUpdateSave = async () => {
+    if (!ticket || saving) return;
+
+    const changedValues = Object.fromEntries(
+      QUICK_UPDATE_KEYS.filter((key) => {
+        const currentValue = ticket[key] ?? "";
+        const pendingValue = pendingQuickValues[key] ?? "";
+
+        return String(currentValue) !== String(pendingValue);
+      }).map((key) => [
+        key,
+        pendingQuickValues[key] === "" ? null : pendingQuickValues[key],
+      ]),
+    );
+
+    if (Object.keys(changedValues).length === 0) return;
 
     setSaving(true);
     setError("");
     setNotice("");
 
     try {
-      await ticketService.updateTicket(ticketId, {
-        status: pendingStatus,
-      });
+      await ticketService.updateTicket(ticketId, changedValues);
 
-      await refreshTicket({
+      const refreshedTicket = await refreshTicket({
         initial: false,
         showRefreshing: false,
       });
 
-      setNotice("Ticket status updated successfully.");
-    } catch (requestError) {
-      setPendingStatus(ticket?.status ?? "");
+      if (!refreshedTicket) {
+        throw new Error(
+          "The update was submitted, but the ticket could not be refreshed.",
+        );
+      }
 
+      setNotice("Ticket updated successfully.");
+    } catch (requestError) {
       setError(
         requestError?.response?.data?.message ??
           requestError?.message ??
-          "Unable to update ticket status.",
+          "Unable to update ticket.",
       );
     } finally {
       setSaving(false);
@@ -398,7 +445,9 @@ export default function TicketLifecyclePage() {
     try {
       const createdTicket = await ticketService.createTicket(values);
       if (!createdTicket?.id) {
-        throw new Error("The ticket was created, but its identifier was not returned.");
+        throw new Error(
+          "The ticket was created, but its identifier was not returned.",
+        );
       }
 
       setCreateOpen(false);
@@ -456,7 +505,11 @@ export default function TicketLifecyclePage() {
   }
 
   return (
-    <Stack spacing={2} className="ticket-details-page" sx={{ minWidth: 0, pb: 2 }}>
+    <Stack
+      spacing={2}
+      className="ticket-details-page"
+      sx={{ minWidth: 0, pb: 2 }}
+    >
       <CompactPageToolbar
         title={ticket.ticketNumber ?? ticket.reference ?? "Ticket details"}
         description={ticket.subject ?? ""}
@@ -491,7 +544,12 @@ export default function TicketLifecyclePage() {
                   <IconButton
                     size="small"
                     aria-label="Duplicate ticket"
-                    onClick={() => navigate("/tickets/create?duplicateFrom=" + encodeURIComponent(ticket.id))}
+                    onClick={() =>
+                      navigate(
+                        "/tickets/create?duplicateFrom=" +
+                          encodeURIComponent(ticket.id),
+                      )
+                    }
                     disabled={!ticket?.id}
                   >
                     <ContentCopyOutlinedIcon />
@@ -502,7 +560,10 @@ export default function TicketLifecyclePage() {
                 <IconButton
                   size="small"
                   aria-label="Create new ticket"
-                  onClick={() => { setCreateError(""); setCreateOpen(true); }}
+                  onClick={() => {
+                    setCreateError("");
+                    setCreateOpen(true);
+                  }}
                 >
                   <AddOutlinedIcon />
                 </IconButton>
@@ -567,9 +628,24 @@ export default function TicketLifecyclePage() {
                   scrollButtons="auto"
                   aria-label="Ticket lifecycle sections"
                 >
-                  <Tab value="activity" icon={<HistoryOutlinedIcon />} iconPosition="start" label="Activity" />
-                  <Tab value="comments" icon={<CommentOutlinedIcon />} iconPosition="start" label="Comments" />
-                  <Tab value="attachments" icon={<AttachFileOutlinedIcon />} iconPosition="start" label="Files" />
+                  <Tab
+                    value="activity"
+                    icon={<HistoryOutlinedIcon />}
+                    iconPosition="start"
+                    label="Activity"
+                  />
+                  <Tab
+                    value="comments"
+                    icon={<CommentOutlinedIcon />}
+                    iconPosition="start"
+                    label="Comments"
+                  />
+                  <Tab
+                    value="attachments"
+                    icon={<AttachFileOutlinedIcon />}
+                    iconPosition="start"
+                    label="Files"
+                  />
                 </Tabs>
                 <Divider />
                 <Box className="ticket-lifecycle-panel-body">
@@ -619,13 +695,14 @@ export default function TicketLifecyclePage() {
             mode: layout.panels["ticket-quick-update"],
             content: (
               <TicketQuickUpdate
-                currentStatus={ticket.status}
-                pendingStatus={pendingStatus}
-                statusOptions={statusOptions}
-                statusOptionsLoading={statusOptionsLoading}
+                currentValues={ticket}
+                pendingValues={pendingQuickValues}
+                options={quickOptions}
+                optionsLoading={quickOptionsLoading}
                 saving={saving}
-                onStatusChange={handleStatusChange}
-                onSave={handleStatusUpdate}
+                onValueChange={handleQuickValueChange}
+                onSave={handleQuickUpdateSave}
+                onReset={handleQuickUpdateReset}
               />
             ),
           },
@@ -634,7 +711,9 @@ export default function TicketLifecyclePage() {
 
       <Dialog
         open={editOpen}
-        onClose={() => { if (!saving) setEditOpen(false); }}
+        onClose={() => {
+          if (!saving) setEditOpen(false);
+        }}
         fullWidth
         maxWidth="lg"
       >
@@ -646,14 +725,18 @@ export default function TicketLifecyclePage() {
             onSubmit={handleUpdate}
             submitting={saving}
             submitLabel="Save Changes"
-            onCancel={() => { if (!saving) setEditOpen(false); }}
+            onCancel={() => {
+              if (!saving) setEditOpen(false);
+            }}
           />
         </DialogContent>
       </Dialog>
 
       <TicketCreateDialog
         open={createOpen}
-        onClose={() => { if (!createSubmitting) setCreateOpen(false); }}
+        onClose={() => {
+          if (!createSubmitting) setCreateOpen(false);
+        }}
         onSubmit={handleCreateTicket}
         submitting={createSubmitting}
         error={createError}
