@@ -16,7 +16,6 @@ const TICKET_EXPORT_COLUMNS = Object.freeze([
   Object.freeze({ key: "subject", header: "Subject" }),
   Object.freeze({ key: "description", header: "Description" }),
   Object.freeze({ key: "priority", header: "Priority" }),
-  Object.freeze({ key: "requesterName", header: "Requester" }),
   Object.freeze({ key: "createdByName", header: "Created By" }),
   Object.freeze({ key: "assignedUserName", header: "Assigned To" }),
   Object.freeze({ key: "contactName", header: "Contact Name" }),
