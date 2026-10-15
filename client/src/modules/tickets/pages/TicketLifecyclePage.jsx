@@ -529,11 +529,6 @@ export default function TicketLifecyclePage() {
                 </Stack>
               </CanAccess>
 
-              <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
-                {/* Keep the existing status selector, Update Status button,
-          and Edit button here without changing their handlers. */}
-              </CanAccess>
-
               <CanAccess permission={TICKET_MODULE_CONFIG.permissions.create}>
                 <Button
                   variant="outlined"

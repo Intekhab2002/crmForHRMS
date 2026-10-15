@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Alert, Paper, Stack } from "@mui/material";
+import { CircularProgress, Paper, Stack, Typography } from "@mui/material";
 import { Link, useSearchParams } from "react-router";
 import { buildDuplicateTicketValues } from "../utils/ticketDuplicate";
 
@@ -14,8 +14,8 @@ import { ticketService } from "../services/ticket.service";
 import CanAccess from "../../../components/rbac/CanAccess";
 
 export default function TicketCreatePage() {
-  const { success, error: notifyError } = useNotification();
-  const [error, setError] = useState("");
+  const { success, error: notifyError,info } = useNotification();
+  // const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [searchParams] = useSearchParams();
   const duplicateFrom = searchParams.get("duplicateFrom");
@@ -23,16 +23,14 @@ export default function TicketCreatePage() {
   const [duplicateSource, setDuplicateSource] = useState(null);
   const [duplicateInitialValues, setDuplicateInitialValues] = useState(null);
   const [loadingDuplicateSource, setLoadingDuplicateSource] = useState(false);
-  const [duplicateError, setDuplicateError] = useState("");
+  // const [duplicateError, setDuplicateError] = useState("");
 
   useEffect(() => {
     let active = true;
 
-    // Normal ticket creation does not require a source ticket.
     if (!duplicateFrom) {
       setDuplicateSource(null);
       setDuplicateInitialValues(null);
-      setDuplicateError("");
       setLoadingDuplicateSource(false);
 
       return () => {
@@ -44,7 +42,6 @@ export default function TicketCreatePage() {
       setLoadingDuplicateSource(true);
       setDuplicateSource(null);
       setDuplicateInitialValues(null);
-      setDuplicateError("");
 
       try {
         const source = await ticketService.getTicket(duplicateFrom);
@@ -52,16 +49,24 @@ export default function TicketCreatePage() {
         if (!active) return;
 
         if (!source) {
-          setDuplicateError("The source ticket could not be found.");
+          notifyError("The source ticket could not be found.");
           return;
         }
 
+        const initialValues = buildDuplicateTicketValues(source);
+
         setDuplicateSource(source);
-        setDuplicateInitialValues(buildDuplicateTicketValues(source));
+        setDuplicateInitialValues(initialValues);
+
+        info(
+          `Details copied from ticket ${
+            source.ticketNumber || source.id
+          }. Review the form before submitting.`,
+        );
       } catch (requestError) {
         if (!active) return;
 
-        setDuplicateError(
+        notifyError(
           requestError?.response?.data?.message ??
             requestError?.message ??
             "Unable to load the source ticket.",
@@ -78,10 +83,9 @@ export default function TicketCreatePage() {
     return () => {
       active = false;
     };
-  }, [duplicateFrom]);
+  }, [duplicateFrom, info, notifyError]);
 
   async function handleSubmit(values, formikHelpers) {
-    setError("");
     setSubmitting(true);
 
     try {
@@ -90,13 +94,11 @@ export default function TicketCreatePage() {
 
       window.location.assign(`/tickets/${ticket.id}`);
     } catch (requestError) {
-      const message =
+      notifyError(
         requestError?.response?.data?.message ??
-        requestError?.message ??
-        "Unable to create ticket.";
-
-      setError(message);
-      notifyError(message);
+          requestError?.message ??
+          "Unable to create ticket.",
+      );
       formikHelpers.setStatus(message);
     } finally {
       setSubmitting(false);
@@ -112,8 +114,21 @@ export default function TicketCreatePage() {
           <Link to="/tickets">{TICKET_MODULE_CONFIG.labels.backToTickets}</Link>
         }
       />
+      {loadingDuplicateSource ? (
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          role="status"
+          aria-live="polite"
+        >
+          <CircularProgress size={20} />
+          <Typography variant="body2" color="text.secondary">
+            Loading ticket details...
+          </Typography>
+        </Stack>
+      ) : null}
 
-      {error ? <Alert severity="error">{error}</Alert> : null}
       <CanAccess permission={TICKET_MODULE_CONFIG.permissions.create}>
         <Paper
           variant="outlined"
@@ -124,12 +139,16 @@ export default function TicketCreatePage() {
             },
           }}
         >
-          <TicketForm
-            mode="create"
-            onSubmit={handleSubmit}
-            submitting={submitting}
-            submitLabel={TICKET_FORM_CONFIG.create.submitLabel}
-          />
+          {(!duplicateFrom || duplicateInitialValues !== null) &&
+          !loadingDuplicateSource ? (
+            <TicketForm
+              mode="create"
+              initialValues={duplicateFrom ? duplicateInitialValues : undefined}
+              onSubmit={handleSubmit}
+              submitting={submitting}
+              submitLabel={TICKET_FORM_CONFIG.create.submitLabel}
+            />
+          ) : null}
         </Paper>
       </CanAccess>
     </Stack>
