@@ -27,19 +27,6 @@ export const ticketService = {
 
     const responseData = response.data;
 
-    // Current paginated API contract:
-    //
-    // {
-    //   data: [...],
-    //   meta: {
-    //     page,
-    //     limit,
-    //     total,
-    //     totalPages,
-    //     hasNextPage,
-    //     hasPreviousPage,
-    //   }
-    // }
     if (Array.isArray(responseData?.data)) {
       return {
         rows: mapTicketsFromApi(responseData.data),
@@ -109,6 +96,15 @@ export const ticketService = {
     return mapTicketFromApi(response.data?.data ?? response.data);
   },
 
+  async bulkUpdateTickets(payload) {
+    const response = await apiClient.patch(
+      `${API_CONFIG.endpoints.tickets}/bulk`,
+      payload,
+    );
+
+    return response.data?.data ?? response.data;
+  },
+
   async addComment(ticketId, body) {
     const response = await apiClient.post(
       `${API_CONFIG.endpoints.tickets}/${ticketId}/comments`,
@@ -119,13 +115,13 @@ export const ticketService = {
   },
 
   async updateComment(ticketId, commentId, body) {
-  const response = await apiClient.patch(
-    `${API_CONFIG.endpoints.tickets}/${ticketId}/comments/${commentId}`,
-    { comment: body },
-  );
+    const response = await apiClient.patch(
+      `${API_CONFIG.endpoints.tickets}/${ticketId}/comments/${commentId}`,
+      { comment: body },
+    );
 
-  return response.data?.data ?? null;
-},
+    return response.data?.data ?? null;
+  },
 
   async listComments(ticketId) {
     const response = await apiClient.get(
@@ -206,29 +202,29 @@ export const ticketService = {
     return response.data?.data ?? [];
   },
 
-async exportTickets(payload) {
-  const response = await apiClient.post(
-    API_CONFIG.endpoints.ticketExport,
-    payload,
-    {
-      responseType: "blob",
-      timeout: 0,
-      headers: {
-        Accept: "text/csv",
+  async exportTickets(payload) {
+    const response = await apiClient.post(
+      API_CONFIG.endpoints.ticketExport,
+      payload,
+      {
+        responseType: "blob",
+        timeout: 0,
+        headers: {
+          Accept: "text/csv",
+        },
       },
-    },
-  );
+    );
 
-  const fallbackFilename = "tickets-export.csv";
+    const fallbackFilename = "tickets-export.csv";
 
-  return {
-    blob: response.data,
-    filename: getExportFilename(
-      response.headers["content-disposition"],
-      fallbackFilename,
-    ),
-  };
-},
+    return {
+      blob: response.data,
+      filename: getExportFilename(
+        response.headers["content-disposition"],
+        fallbackFilename,
+      ),
+    };
+  },
 
   getErrorMessage,
 };

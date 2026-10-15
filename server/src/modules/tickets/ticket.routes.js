@@ -155,6 +155,14 @@ router.delete(
 );
 
 router.patch(
+  "/bulk",
+  authenticate,
+  requirePermission(TICKET_UPDATE),
+  validateBody(ticketValidator.bulkUpdateSchema),
+  ticketController.bulkUpdateTickets,
+);
+
+router.patch(
   "/:ticketId",
   authenticate,
   requirePermission(TICKET_UPDATE),

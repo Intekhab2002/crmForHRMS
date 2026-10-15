@@ -12,6 +12,7 @@ import { TICKET_EXPORT_CONFIG } from "../config/ticketExport.config";
 import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
 import ClearOutlinedIcon from "@mui/icons-material/ClearOutlined";
 import ViewColumnOutlinedIcon from "@mui/icons-material/ViewColumnOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
 export default function TicketGridToolbar({
   search = "",
@@ -22,6 +23,7 @@ export default function TicketGridToolbar({
   selectedTicketIds = [],
   rowCount = 0,
   onDuplicateTicket,
+  onBulkEdit,
 }) {
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -85,6 +87,18 @@ export default function TicketGridToolbar({
         />
 
         <Stack direction="row" spacing={1}>
+          <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<EditOutlinedIcon />}
+              disabled={selectedTicketIds.length === 0}
+              onClick={onBulkEdit}
+              aria-label="Bulk edit selected tickets"
+            >
+              Multi Edit
+            </Button>
+          </CanAccess>
           <CanAccess permission={TICKET_MODULE_CONFIG.permissions.create}>
             <Tooltip title={duplicateTooltip}>
               <span>

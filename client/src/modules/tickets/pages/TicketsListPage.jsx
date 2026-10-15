@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Stack } from "@mui/material";
+import { Alert, Button, Stack, Typography } from "@mui/material";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import { Link, useNavigate, useLocation } from "react-router";
 
@@ -21,6 +21,7 @@ import {
   loadTicketListFilters,
   saveTicketListFilters,
 } from "../utils/ticketListViewState";
+import BulkEditTicketDrawer from "../components/BulkEditTicketDrawer";
 
 const TICKET_FILTER_QUERY_KEYS = new Set(
   TICKET_LIST_FILTER_CONFIG.flatMap((filter) =>
@@ -67,6 +68,11 @@ export default function TicketsListPage() {
   const [error, setError] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedTicketVersions, setSelectedTicketVersions] = useState({});
   const [filters, setFilters] = useState(() => {
     const urlFilters = parseTicketFilters(location.search);
 
@@ -155,7 +161,7 @@ export default function TicketsListPage() {
     return () => {
       active = false;
     };
-  }, [paginationModel, search, filters]);
+  }, [paginationModel, search, filters, refreshKey]);
 
   const handlePaginationModelChange = (nextModel) => {
     setPaginationModel((currentModel) => {
@@ -191,6 +197,79 @@ export default function TicketsListPage() {
     }));
   };
 
+  const handleSelectedTicketIdsChange = (nextIds) => {
+    const visibleRowsById = new Map(rows.map((row) => [row.id, row]));
+
+    setSelectedTicketVersions((current) =>
+      Object.fromEntries(
+        nextIds
+          .map((id) => [id, current[id] ?? visibleRowsById.get(id)?.updatedAt])
+          .filter(([, updatedAt]) => Boolean(updatedAt)),
+      ),
+    );
+
+    setSelectedTicketIds(nextIds);
+  };
+
+  const handleBulkUpdate = async (changes) => {
+    setBulkUpdating(true);
+    setBulkResult(null);
+
+    try {
+      const expectedUpdatedAt = Object.fromEntries(
+        selectedTicketIds
+          .map((id) => [id, selectedTicketVersions[id]])
+          .filter(([, updatedAt]) => Boolean(updatedAt)),
+      );
+
+      const result = await ticketService.bulkUpdateTickets({
+        ticketIds: selectedTicketIds,
+        changes,
+        expectedUpdatedAt,
+      });
+
+      setBulkResult(result);
+
+      const completedIds = result.results
+        .filter(
+          (item) => item.status === "updated" || item.status === "unchanged",
+        )
+        .map((item) => item.ticketId);
+
+      setSelectedTicketIds((current) =>
+        current.filter((id) => !completedIds.includes(id)),
+      );
+
+      setSelectedTicketVersions((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(([id]) => !completedIds.includes(id)),
+        ),
+      );
+
+      setBulkEditOpen(false);
+      setRefreshKey((current) => current + 1);
+    } catch (requestError) {
+      setBulkResult({
+        requested: selectedTicketIds.length,
+        updated: 0,
+        unchanged: 0,
+        failed: selectedTicketIds.length,
+        results: selectedTicketIds.map((ticketId) => ({
+          ticketId,
+          ticketNumber:
+            rows.find((row) => row.id === ticketId)?.ticketNumber ?? ticketId,
+          status: "failed",
+          message:
+            requestError.response?.data?.message ??
+            requestError.message ??
+            "Unable to process the bulk update.",
+        })),
+      });
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
   return (
     <Stack spacing={3} flex={1}>
       <PageHeader
@@ -213,12 +292,44 @@ export default function TicketsListPage() {
       />
 
       {error ? <Alert severity="error">{error}</Alert> : null}
+      {bulkResult ? (
+        <Alert
+          severity={
+            bulkResult.failed > 0
+              ? bulkResult.updated + bulkResult.unchanged > 0
+                ? "warning"
+                : "error"
+              : "success"
+          }
+          onClose={() => setBulkResult(null)}
+        >
+          <Stack spacing={0.5}>
+            <Typography variant="body2" fontWeight={700}>
+              Bulk Update: {bulkResult.updated} updated, {bulkResult.unchanged}{" "}
+              unchanged, {bulkResult.failed} failed.
+            </Typography>
+
+            {bulkResult.results
+              .filter((item) => item.status === "failed")
+              .map((item) => (
+                <Typography
+                  key={item.ticketId}
+                  variant="body2"
+                  sx={{ overflowWrap: "anywhere" }}
+                >
+                  {item.ticketNumber}: {item.message}
+                </Typography>
+              ))}
+          </Stack>
+        </Alert>
+      ) : null}
 
       <TicketDataGrid
         rows={rows}
         rowCount={rowCount}
         selectedTicketIds={selectedTicketIds}
-        onSelectedTicketIdsChange={setSelectedTicketIds}
+        onSelectedTicketIdsChange={handleSelectedTicketIdsChange}
+        onBulkEdit={() => setBulkEditOpen(true)}
         paginationModel={paginationModel}
         onPaginationModelChange={handlePaginationModelChange}
         paginationMode="server"
@@ -247,6 +358,14 @@ export default function TicketsListPage() {
         filters={filters}
         onApply={handleApplyFilters}
         onClose={() => setFiltersOpen(false)}
+      />
+
+      <BulkEditTicketDrawer
+        open={bulkEditOpen}
+        selectedCount={selectedTicketIds.length}
+        submitting={bulkUpdating}
+        onClose={() => setBulkEditOpen(false)}
+        onSubmit={handleBulkUpdate}
       />
     </Stack>
   );

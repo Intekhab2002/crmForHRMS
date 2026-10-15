@@ -54,6 +54,23 @@ async function updateTicket(req, res, next) {
   }
 }
 
+async function bulkUpdateTickets(req, res, next) {
+  try {
+    const result = await ticketService.bulkUpdateTickets(
+      req.body,
+      req.auth.userId,
+    );
+
+    return ApiResponse.success(
+      res,
+      result,
+      "Bulk ticket update processed.",
+    );
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function getAssignableUsers(req, res, next) {
   try {
     const users = await ticketService.getAssignableUsers();
@@ -74,4 +91,5 @@ export default Object.freeze({
   createTicket,
   updateTicket,
   getAssignableUsers,
+  bulkUpdateTickets,
 });

@@ -451,6 +451,22 @@ async function findTicketById(id, tx = null) {
   return mapTicketRow(result.rows[0] ?? null);
 }
 
+async function lockTicketForUpdate(id, tx = null) {
+  const executor = getQueryExecutor(tx);
+
+  const result = await executor.query(
+    `
+      SELECT id
+      FROM tickets
+      WHERE id = $1::UUID
+      FOR UPDATE;
+    `,
+    [id],
+  );
+
+  return Boolean(result.rows[0]);
+}
+
 async function findTickets(filters, tx = null) {
   const executor = getQueryExecutor(tx);
 
@@ -676,6 +692,7 @@ async function getAssignableUsers(tx = null) {
 export default Object.freeze({
   findTickets,
   findTicketById,
+  lockTicketForUpdate,
   createTicket,
   updateTicket,
   findUser,

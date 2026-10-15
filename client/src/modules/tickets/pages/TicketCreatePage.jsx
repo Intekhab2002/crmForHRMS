@@ -36,7 +36,6 @@ export default function TicketCreatePage() {
 
     async function loadSourceTicket() {
       setLoadingDuplicateSource(true);
-      setDuplicateSource(null);
       setDuplicateInitialValues(null);
 
       try {
@@ -51,7 +50,6 @@ export default function TicketCreatePage() {
 
         const initialValues = buildDuplicateTicketValues(source);
 
-        setDuplicateSource(source);
         setDuplicateInitialValues(initialValues);
 
         info(

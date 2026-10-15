@@ -261,6 +261,16 @@ const updateTicketSchema = createSchema({
   "At least one ticket field must be provided.",
 );
 
+const bulkUpdateSchema = z
+  .object({
+    ticketIds: z.array(uuidSchema).min(1).max(100),
+    changes: updateTicketSchema,
+    expectedUpdatedAt: z
+      .record(uuidSchema, z.string().min(1))
+      .optional(),
+  })
+  .strict();
+
 export function validateConfiguredOptions(payload) {
   /*
    * Keep this function because it is part of the existing service
@@ -302,5 +312,6 @@ export default Object.freeze({
   createTicketSchema,
   updateTicketSchema,
   validateConfiguredOptions,
-  ticketListFilterSchema
+  ticketListFilterSchema,
+  bulkUpdateSchema,
 });

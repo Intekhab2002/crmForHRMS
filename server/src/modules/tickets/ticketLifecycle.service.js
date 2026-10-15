@@ -191,7 +191,7 @@ async function recordTicketCreated({ ticket, actorUserId }, tx = null) {
 }
 
 async function recordTicketChanges(
-  { ticketId, actorUserId, changes },
+  { ticketId, actorUserId, changes, source = null  },
   tx = null,
 ) {
   for (const change of changes) {
@@ -218,6 +218,7 @@ async function recordTicketChanges(
           entity: change.field.entity,
 
           dataType: change.field.dataType,
+          ...(source ? { source } : {}),
         },
       },
       tx,

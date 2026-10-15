@@ -728,6 +728,14 @@ export default function TicketLifecycleTimeline({
                             label={eventActionLabel}
                             color={eventType.color ?? "default"}
                           />
+                          {event.metadata?.source === "BULK_UPDATE" ? (
+                            <Chip
+                              size="small"
+                              label="Bulk Update"
+                              color="info"
+                              variant="outlined"
+                            />
+                          ) : null}
                         </Stack>
 
                         <Typography

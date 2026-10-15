@@ -76,16 +76,17 @@ export default function TicketDataGrid({
   activeFilterCount = 0,
   selectedTicketIds = [],
   onSelectedTicketIdsChange,
-  onDuplicateTicket
+  onDuplicateTicket,
+  onBulkEdit,
 }) {
   const { hasPermission } = useAuth();
   const selectionModel = useMemo(
-  () => ({
-    type: "include",
-    ids: new Set(selectedTicketIds),
-  }),
-  [selectedTicketIds],
-);
+    () => ({
+      type: "include",
+      ids: new Set(selectedTicketIds),
+    }),
+    [selectedTicketIds],
+  );
 
   const gridColumns = useMemo(
     () =>
@@ -177,6 +178,7 @@ export default function TicketDataGrid({
             rowCount,
             selectedTicketIds,
             onDuplicateTicket,
+              onBulkEdit,
           },
         }}
         aria-label={title}

@@ -416,7 +416,12 @@ async function createTicket(payload, authenticatedUserId) {
   });
 }
 
-async function updateTicket(ticketId, payload, authenticatedUserId) {
+async function updateTicket(
+  ticketId,
+  payload,
+  authenticatedUserId,
+  { source = null, expectedUpdatedAt = null, includeOutcome = false } = {},
+) {
   const configuredError = ticketValidator.validateConfiguredOptions(payload);
 
   if (configuredError) {
@@ -435,12 +440,29 @@ async function updateTicket(ticketId, payload, authenticatedUserId) {
   }
 
   return executeTransaction(async (tx) => {
+    await ticketRepository.lockTicketForUpdate(ticketId, tx);
     const current = await ticketRepository.findTicketById(ticketId, tx);
 
     if (!current) {
       throw AppError.notFound("Ticket not found.", {
         code: TICKET_ERROR_CODES.NOT_FOUND,
       });
+    }
+
+    if (expectedUpdatedAt) {
+      const currentTime = new Date(current.updatedAt).getTime();
+      const expectedTime = new Date(expectedUpdatedAt).getTime();
+
+      if (
+        !Number.isFinite(currentTime) ||
+        !Number.isFinite(expectedTime) ||
+        currentTime !== expectedTime
+      ) {
+        throw AppError.conflict(
+          "This ticket changed after it was selected. Refresh the list and retry.",
+          { code: "TICKET_BULK_UPDATE_CONFLICT" },
+        );
+      }
     }
 
     const { ticket, contact } = splitPayload(payload);
@@ -456,6 +478,11 @@ async function updateTicket(ticketId, payload, authenticatedUserId) {
       lifecycleCurrent,
       payload,
     );
+    if (changes.length === 0) {
+      return includeOutcome
+        ? { ticket: current, outcome: "unchanged" }
+        : current;
+    }
 
     const currentDepartmentId = getTicketReferenceId(current, "department");
 
@@ -575,6 +602,7 @@ async function updateTicket(ticketId, payload, authenticatedUserId) {
         actorUserId: authenticatedUserId,
 
         changes,
+        source,
       },
       tx,
     );
@@ -583,8 +611,75 @@ async function updateTicket(ticketId, payload, authenticatedUserId) {
       tx,
     });
 
-    return ticketRepository.findTicketById(ticketId, tx);
+    const updatedTicket = await ticketRepository.findTicketById(ticketId, tx);
+
+    return includeOutcome
+      ? { ticket: updatedTicket, outcome: "updated" }
+      : updatedTicket;
   });
+}
+
+async function bulkUpdateTickets(
+  { ticketIds, changes, expectedUpdatedAt = {} },
+  authenticatedUserId,
+) {
+  const uniqueTicketIds = [...new Set(ticketIds)];
+  const results = [];
+
+  for (const ticketId of uniqueTicketIds) {
+    let current = null;
+
+    try {
+      current = await ticketRepository.findTicketById(ticketId);
+
+      const result = await updateTicket(
+        ticketId,
+        changes,
+        authenticatedUserId,
+        {
+          source: "BULK_UPDATE",
+          expectedUpdatedAt: expectedUpdatedAt[ticketId] ?? null,
+          includeOutcome: true,
+        },
+      );
+
+      results.push({
+        ticketId,
+        ticketNumber:
+          result.ticket?.ticketNumber ?? current?.ticketNumber ?? ticketId,
+        status: result.outcome,
+        message:
+          result.outcome === "unchanged" ? "No changes were needed." : null,
+      });
+    } catch (error) {
+      results.push({
+        ticketId,
+        ticketNumber: current?.ticketNumber ?? ticketId,
+        status: "failed",
+        message: error?.isOperational
+          ? error.message
+          : "Unable to update this ticket.",
+      });
+    }
+  }
+
+  const updated = results.filter(
+    (result) => result.status === "updated",
+  ).length;
+
+  const unchanged = results.filter(
+    (result) => result.status === "unchanged",
+  ).length;
+
+  const failed = results.filter((result) => result.status === "failed").length;
+
+  return {
+    requested: uniqueTicketIds.length,
+    updated,
+    unchanged,
+    failed,
+    results,
+  };
 }
 
 async function getAssignableUsers() {
@@ -596,5 +691,6 @@ export default Object.freeze({
   getTicket,
   createTicket,
   updateTicket,
+  bulkUpdateTickets,
   getAssignableUsers,
 });
