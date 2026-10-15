@@ -133,6 +133,7 @@ export default function TicketDataGrid({
       variant="outlined"
       sx={{
         width: "100%",
+        minWidth: 0,
         flex: 1,
         minHeight: 0,
         overflow: "hidden",
@@ -178,7 +179,7 @@ export default function TicketDataGrid({
             rowCount,
             selectedTicketIds,
             onDuplicateTicket,
-              onBulkEdit,
+            onBulkEdit,
           },
         }}
         aria-label={title}

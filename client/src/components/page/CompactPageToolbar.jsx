@@ -67,28 +67,23 @@ export default function CompactPageToolbar({
           ) : null}
 
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            {/* <Typography
-              variant="subtitle1"
-              fontWeight={700}
-              noWrap
-              sx={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {title}
-            </Typography> */}
-
-            {description ? (
+            {title ? (
               <Typography
-                variant="h6"
+                variant="subtitle1"
+                fontWeight={700}
                 color="text.primary"
                 noWrap
-                sx={{
-                  display: "block",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
+                sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+              >
+                {title}
+              </Typography>
+            ) : null}
+            {description ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                noWrap
+                sx={{ display: "block", overflow: "hidden", textOverflow: "ellipsis" }}
               >
                 {description}
               </Typography>

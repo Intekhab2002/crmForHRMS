@@ -271,7 +271,15 @@ export default function TicketsListPage() {
   };
 
   return (
-    <Stack spacing={3} flex={1}>
+    <Stack
+      spacing={3}
+      flex={1}
+      sx={{
+        minWidth: 0,
+        minHeight: 0,
+        width: "100%",
+      }}
+    >
       <PageHeader
         title={TICKET_MODULE_CONFIG.list.title}
         description={TICKET_MODULE_CONFIG.list.description}

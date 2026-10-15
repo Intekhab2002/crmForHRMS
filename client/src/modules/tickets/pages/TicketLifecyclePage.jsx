@@ -3,27 +3,26 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
-  Button,
-  Chip,
   Dialog,
   DialogContent,
   DialogTitle,
   Divider,
-  Grid,
-  MenuItem,
-  Paper,
-  Select,
+  IconButton,
   Skeleton,
   Stack,
   Tab,
   Tabs,
-  Typography,
+  Tooltip,
 } from "@mui/material";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import CommentOutlinedIcon from "@mui/icons-material/CommentOutlined";
 import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
 import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";
+import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
+import RestartAltOutlinedIcon from "@mui/icons-material/RestartAltOutlined";
 import { Link, useNavigate, useParams } from "react-router";
 
 import CompactPageToolbar from "../../../components/page/CompactPageToolbar";
@@ -42,8 +41,12 @@ import {
   TICKET_MODULE_CONFIG,
   TICKET_FIELD_MAP,
 } from "../../../config/ticket.config";
-import ModulePage from "../../../components/layout/ModulePage";
 import TicketSlaCard from "../../sla/components/TicketSlaCard";
+import TicketDetailsWorkspace from "../components/TicketDetailsWorkspace";
+import TicketQuickUpdate from "../components/TicketQuickUpdate";
+import TicketCreateDialog from "../components/TicketCreateDialog";
+import { useTicketDetailsLayout } from "../hooks/useTicketDetailsLayout";
+import { useNotification } from "../../../components/feedback";
 
 const DETAIL_FIELDS = TICKET_FIELD_CONFIG.filter((field) => field.form?.detail)
   .map((field) => field.key)
@@ -92,6 +95,8 @@ export default function TicketLifecyclePage() {
   const { ticketId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { success: notifySuccess, error: notifyError } = useNotification();
+  const { layout, setPanelMode, resetLayout } = useTicketDetailsLayout();
 
   const [ticket, setTicket] = useState(null);
   const [comments, setComments] = useState([]);
@@ -108,6 +113,9 @@ export default function TicketLifecyclePage() {
   const [pendingStatus, setPendingStatus] = useState("");
   const [statusOptions, setStatusOptions] = useState([]);
   const [statusOptionsLoading, setStatusOptionsLoading] = useState(true);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   const refreshTicket = useCallback(
     async ({ initial = false, showRefreshing = true } = {}) => {
@@ -347,8 +355,8 @@ export default function TicketLifecyclePage() {
     }
   };
 
-  const handleStatusChange = (event) => {
-    setPendingStatus(event.target.value);
+  const handleStatusChange = (value) => {
+    setPendingStatus(value);
   };
 
   const handleStatusUpdate = async () => {
@@ -383,6 +391,31 @@ export default function TicketLifecyclePage() {
       setSaving(false);
     }
   };
+  const handleCreateTicket = async (values) => {
+    setCreateSubmitting(true);
+    setCreateError("");
+
+    try {
+      const createdTicket = await ticketService.createTicket(values);
+      if (!createdTicket?.id) {
+        throw new Error("The ticket was created, but its identifier was not returned.");
+      }
+
+      setCreateOpen(false);
+      notifySuccess("Ticket created successfully.");
+      navigate("/tickets/" + createdTicket.id);
+    } catch (requestError) {
+      const message =
+        requestError?.response?.data?.message ??
+        requestError?.message ??
+        "Unable to create ticket.";
+      setCreateError(message);
+      notifyError(message);
+    } finally {
+      setCreateSubmitting(false);
+    }
+  };
+
   const handleComment = async (comment) => {
     await ticketService.addComment(ticketId, comment);
 
@@ -423,178 +456,92 @@ export default function TicketLifecyclePage() {
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        overflowY: "auto",
-      }}
-    >
-      <Stack
-        spacing={2}
-        sx={{
-          height: "100%",
-          minHeight: 0,
-          overflowY: "auto",
-          overflowX: "hidden",
-          pr: 1,
-          pb: 2,
+    <Stack spacing={2} className="ticket-details-page" sx={{ minWidth: 0, pb: 2 }}>
+      <CompactPageToolbar
+        title={ticket.ticketNumber ?? ticket.reference ?? "Ticket details"}
+        description={ticket.subject ?? ""}
+        backAction={{ component: Link, to: "/tickets" }}
+        backLabel="Back"
+        backTooltip="Back to Tickets"
+        refreshAction={{
+          onClick: () => loadAll(false),
+          disabled: refreshing,
+          "aria-label": "Refresh ticket",
         }}
-      >
-        <TicketSlaCard ticketId={ticketId} />
-        <CompactPageToolbar
-          title={ticket.subject || ticket.ticketNumber || ticket.reference}
-          description={ticket.ticketNumber ?? ticket.reference}
-          backAction={{ component: Link, to: "/tickets" }}
-          backLabel="Back"
-          backTooltip="Back to Tickets"
-          refreshAction={{
-            onClick: () => loadAll(false),
-            disabled: refreshing,
-            "aria-label": "Refresh ticket",
-          }}
-          actions={
-            <>
-              <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
-                <Stack
-                  direction="row"
-                  spacing={0.75}
-                  alignItems="center"
-                  flexWrap="wrap"
-                  useFlexGap
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 0.75,
-                      px: 0.75,
-                      py: 0.5,
-                      border: 1,
-                      borderColor: "divider",
-                      borderRadius: 1.5,
-                      bgcolor: "background.default",
-                    }}
-                  >
-                    <Typography
-                      component="span"
-                      variant="caption"
-                      fontWeight={700}
-                      color="text.secondary"
-                    >
-                      Status
-                    </Typography>
-
-                    <Select
-                      size="small"
-                      value={pendingStatus}
-                      onChange={handleStatusChange}
-                      disabled={saving || statusOptionsLoading}
-                      inputProps={{ "aria-label": "Ticket status" }}
-                      sx={{
-                        minWidth: { xs: 130, sm: 150 },
-                        "& .MuiSelect-select": {
-                          py: 0.75,
-                          fontWeight: 700,
-                        },
-                      }}
-                    >
-                      {statusOptions.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </Box>
-
-                  <Button
-                    variant="outlined"
-                    onClick={handleStatusUpdate}
-                    disabled={
-                      saving ||
-                      !pendingStatus ||
-                      pendingStatus === ticket.status
-                    }
-                  >
-                    Update Status
-                  </Button>
-
-                  <Button
-                    variant="contained"
-                    startIcon={<EditOutlinedIcon />}
+        actions={
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
+              <Tooltip title="Edit ticket" arrow>
+                <span>
+                  <IconButton
+                    size="small"
+                    aria-label="Edit ticket"
                     onClick={() => setEditOpen(true)}
                     disabled={saving}
                   >
-                    Edit
-                  </Button>
-                </Stack>
-              </CanAccess>
+                    <EditOutlinedIcon />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </CanAccess>
 
-              <CanAccess permission={TICKET_MODULE_CONFIG.permissions.create}>
-                <Button
-                  variant="outlined"
-                  startIcon={<ContentCopyOutlinedIcon />}
-                  onClick={() =>
-                    navigate(
-                      `/tickets/create?duplicateFrom=${encodeURIComponent(ticket.id)}`,
-                    )
-                  }
-                  disabled={!ticket?.id}
+            <CanAccess permission={TICKET_MODULE_CONFIG.permissions.create}>
+              <Tooltip title="Duplicate ticket" arrow>
+                <span>
+                  <IconButton
+                    size="small"
+                    aria-label="Duplicate ticket"
+                    onClick={() => navigate("/tickets/create?duplicateFrom=" + encodeURIComponent(ticket.id))}
+                    disabled={!ticket?.id}
+                  >
+                    <ContentCopyOutlinedIcon />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title="Create new ticket" arrow>
+                <IconButton
+                  size="small"
+                  aria-label="Create new ticket"
+                  onClick={() => { setCreateError(""); setCreateOpen(true); }}
                 >
-                  Duplicate
-                </Button>
-              </CanAccess>
-            </>
-          }
-        />
+                  <AddOutlinedIcon />
+                </IconButton>
+              </Tooltip>
+            </CanAccess>
 
-        {notice ? (
-          <Alert severity="success" onClose={() => setNotice("")}>
-            {notice}
-          </Alert>
-        ) : null}
-
-        {error ? <Alert severity="error">{error}</Alert> : null}
-        <Grid
-          container
-          spacing={1.5}
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            minHeight: 0,
-            overflow: "hidden",
-            alignItems: "stretch",
-          }}
-        >
-          <Grid
-            size={{ xs: 12, md: 7 }}
-            sx={{
-              minWidth: 0,
-              minHeight: 0,
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <Paper
-              variant="outlined"
-              sx={{
-                flex: "1 1 0",
-                minWidth: 0,
-                minHeight: "0",
-                overflow: "hidden",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <Box
-                sx={{
-                  flex: "1 1 0",
-                  minWidth: 0,
-                  minHeight: 0,
-                  overflowY: "auto",
-                  overflowX: "hidden",
-                  p: 1,
-                }}
+            <Tooltip title="Reset workspace layout" arrow>
+              <IconButton
+                size="small"
+                aria-label="Reset workspace layout"
+                onClick={resetLayout}
               >
+                <RestartAltOutlinedIcon />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        }
+      />
+
+      <TicketSlaCard ticketId={ticketId} />
+
+      {notice ? (
+        <Alert severity="success" onClose={() => setNotice("")}>
+          {notice}
+        </Alert>
+      ) : null}
+      {error ? <Alert severity="error">{error}</Alert> : null}
+
+      <TicketDetailsWorkspace
+        layout={layout}
+        onPanelModeChange={setPanelMode}
+        panels={[
+          {
+            id: "ticket-details",
+            title: "Ticket Details",
+            icon: <DescriptionOutlinedIcon />,
+            mode: layout.panels["ticket-details"],
+            content: (
+              <Box className="ticket-workspace-scroll-content">
                 <TicketOverview
                   ticket={ticket}
                   fields={TICKET_FIELD_CONFIG}
@@ -604,169 +551,113 @@ export default function TicketLifecyclePage() {
                   enforcePermissions={false}
                 />
               </Box>
-            </Paper>
-          </Grid>
-
-          <Grid
-            size={{ xs: 12, md: 5 }}
-            sx={{
-              minWidth: 0,
-              minHeight: 0,
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <Paper
-              variant="outlined"
-              sx={{
-                flex: "1 1 0",
-                minWidth: 0,
-                minHeight: 0,
-                overflow: "hidden",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <Tabs
-                value={activeTab}
-                onChange={(_, value) => setActiveTab(value)}
-                variant="fullWidth"
-                sx={{
-                  flexShrink: 0,
-                }}
-              >
-                <Tab
-                  value="activity"
-                  icon={<HistoryOutlinedIcon />}
-                  iconPosition="start"
-                  label="Activity"
-                />
-
-                <Tab
-                  value="comments"
-                  icon={<CommentOutlinedIcon />}
-                  iconPosition="start"
-                  label="Comments"
-                />
-
-                <Tab
-                  value="attachments"
-                  icon={<AttachFileOutlinedIcon />}
-                  iconPosition="start"
-                  label="Files"
-                />
-              </Tabs>
-
-              <Divider />
-
-              <Box
-                sx={{
-                  flex: "1 1 0",
-                  minWidth: 0,
-                  minHeight: 0,
-                  overflow: "hidden",
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                {activeTab === "activity" ? (
-                  <Box
-                    sx={{
-                      flex: "1 1 0",
-                      minWidth: 0,
-                      minHeight: 0,
-                      overflowY: "auto",
-                      overflowX: "hidden",
-                      px: 1,
-                      py: 1,
-                    }}
-                  >
-                    <TicketLifecycleTimeline
-                      events={lifecycle}
-                      fields={TICKET_FIELD_CONFIG}
-                      emptyMessage="No activity recorded yet."
-                      fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
-                      loading={lifecycleLoading}
-                    />
-                  </Box>
-                ) : null}
-
-                {activeTab === "comments" ? (
-                  <Box
-                    sx={{
-                      flex: "1 1 0",
-                      minWidth: 0,
-                      minHeight: 0,
-                      overflowY: "auto",
-                      overflowX: "hidden",
-                      px: 1,
-                      py: 1,
-                    }}
-                  >
-                    <Stack spacing={1}>
-                      <TicketComments
-                        comments={comments}
-                        loading={commentsLoading}
-                        currentUserId={user?.id}
-                        onUpdateComment={handleUpdateComment}
+            ),
+          },
+          {
+            id: "ticket-lifecycle",
+            title: "Ticket Lifecycle",
+            icon: <HistoryOutlinedIcon />,
+            mode: layout.panels["ticket-lifecycle"],
+            content: (
+              <Box className="ticket-lifecycle-panel-content">
+                <Tabs
+                  value={activeTab}
+                  onChange={(_, value) => setActiveTab(value)}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  aria-label="Ticket lifecycle sections"
+                >
+                  <Tab value="activity" icon={<HistoryOutlinedIcon />} iconPosition="start" label="Activity" />
+                  <Tab value="comments" icon={<CommentOutlinedIcon />} iconPosition="start" label="Comments" />
+                  <Tab value="attachments" icon={<AttachFileOutlinedIcon />} iconPosition="start" label="Files" />
+                </Tabs>
+                <Divider />
+                <Box className="ticket-lifecycle-panel-body">
+                  {activeTab === "activity" ? (
+                    <Box className="ticket-workspace-scroll-content">
+                      <TicketLifecycleTimeline
+                        events={lifecycle}
+                        fields={TICKET_FIELD_CONFIG}
+                        emptyMessage="No activity recorded yet."
+                        fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
+                        loading={lifecycleLoading}
                       />
-
-                      <TicketCommentComposer
-                        config={COMMENT_CONFIG}
-                        onSubmit={handleComment}
+                    </Box>
+                  ) : null}
+                  {activeTab === "comments" ? (
+                    <Box className="ticket-workspace-scroll-content">
+                      <Stack spacing={1}>
+                        <TicketComments
+                          comments={comments}
+                          loading={commentsLoading}
+                          currentUserId={user?.id}
+                          onUpdateComment={handleUpdateComment}
+                        />
+                        <TicketCommentComposer
+                          config={COMMENT_CONFIG}
+                          onSubmit={handleComment}
+                        />
+                      </Stack>
+                    </Box>
+                  ) : null}
+                  {activeTab === "attachments" ? (
+                    <Box className="ticket-workspace-scroll-content">
+                      <TicketAttachmentList
+                        ticketId={ticket.id}
+                        onLifecycleChange={loadLifecycle}
                       />
-                    </Stack>
-                  </Box>
-                ) : null}
-
-                {activeTab === "attachments" ? (
-                  <Box
-                    sx={{
-                      flex: "1 1 0",
-                      minWidth: 0,
-                      minHeight: 0,
-                      overflowY: "auto",
-                      overflowX: "hidden",
-                      px: 1,
-                      py: 1,
-                    }}
-                  >
-                    <TicketAttachmentList
-                      ticketId={ticket.id}
-                      onLifecycleChange={loadLifecycle}
-                    />
-                  </Box>
-                ) : null}
+                    </Box>
+                  ) : null}
+                </Box>
               </Box>
-            </Paper>
-          </Grid>
-        </Grid>
+            ),
+          },
+          {
+            id: "ticket-quick-update",
+            title: "Quick Update",
+            icon: <EditNoteOutlinedIcon />,
+            mode: layout.panels["ticket-quick-update"],
+            content: (
+              <TicketQuickUpdate
+                currentStatus={ticket.status}
+                pendingStatus={pendingStatus}
+                statusOptions={statusOptions}
+                statusOptionsLoading={statusOptionsLoading}
+                saving={saving}
+                onStatusChange={handleStatusChange}
+                onSave={handleStatusUpdate}
+              />
+            ),
+          },
+        ]}
+      />
 
-        {/* Controlled inline-edit dialog */}
-        <Dialog
-          open={editOpen}
-          onClose={() => {
-            if (!saving) setEditOpen(false);
-          }}
-          fullWidth
-          maxWidth="lg"
-        >
-          <DialogTitle>Edit Ticket</DialogTitle>
+      <Dialog
+        open={editOpen}
+        onClose={() => { if (!saving) setEditOpen(false); }}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>Edit Ticket</DialogTitle>
+        <DialogContent dividers>
+          <TicketForm
+            mode="update"
+            initialValues={updateValues}
+            onSubmit={handleUpdate}
+            submitting={saving}
+            submitLabel="Save Changes"
+            onCancel={() => { if (!saving) setEditOpen(false); }}
+          />
+        </DialogContent>
+      </Dialog>
 
-          <DialogContent dividers>
-            <TicketForm
-              mode="update"
-              initialValues={updateValues}
-              onSubmit={handleUpdate}
-              submitting={saving}
-              submitLabel="Save Changes"
-              onCancel={() => {
-                if (!saving) setEditOpen(false);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
-      </Stack>
-    </Box>
+      <TicketCreateDialog
+        open={createOpen}
+        onClose={() => { if (!createSubmitting) setCreateOpen(false); }}
+        onSubmit={handleCreateTicket}
+        submitting={createSubmitting}
+        error={createError}
+      />
+    </Stack>
   );
 }
