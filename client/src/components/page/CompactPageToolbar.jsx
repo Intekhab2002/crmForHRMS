@@ -69,7 +69,7 @@ export default function CompactPageToolbar({
           <Box sx={{ minWidth: 0, flex: 1 }}>
             {title ? (
               <Typography
-                variant="subtitle1"
+                variant="h6"
                 fontWeight={700}
                 color="text.primary"
                 noWrap

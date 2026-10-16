@@ -109,7 +109,6 @@ export default function TicketLifecyclePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("activity");
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const QUICK_UPDATE_KEYS = [
     "status",
     "assigned_to",
@@ -351,7 +350,6 @@ export default function TicketLifecyclePage() {
   const handleUpdate = async (values) => {
     setSaving(true);
     setError("");
-    setNotice("");
 
     try {
       await ticketService.updateTicket(ticketId, values);
@@ -363,7 +361,7 @@ export default function TicketLifecyclePage() {
 
       setEditOpen(false);
 
-      setNotice("Ticket updated successfully.");
+      notifySuccess("Ticket updated successfully.");
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ??
@@ -411,7 +409,7 @@ export default function TicketLifecyclePage() {
 
     setSaving(true);
     setError("");
-    setNotice("");
+    
 
     try {
       await ticketService.updateTicket(ticketId, changedValues);
@@ -427,7 +425,7 @@ export default function TicketLifecyclePage() {
         );
       }
 
-      setNotice("Ticket updated successfully.");
+      notifySuccess("Ticket updated successfully.");
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ??
@@ -512,7 +510,7 @@ export default function TicketLifecyclePage() {
     >
       <CompactPageToolbar
         title={ticket.ticketNumber ?? ticket.reference ?? "Ticket details"}
-        description={ticket.subject ?? ""}
+        // description={ticket.subject ?? ""}
         backAction={{ component: Link, to: "/tickets" }}
         backLabel="Back"
         backTooltip="Back to Tickets"
@@ -585,11 +583,6 @@ export default function TicketLifecyclePage() {
 
       <TicketSlaCard ticketId={ticketId} />
 
-      {notice ? (
-        <Alert severity="success" onClose={() => setNotice("")}>
-          {notice}
-        </Alert>
-      ) : null}
       {error ? <Alert severity="error">{error}</Alert> : null}
 
       <TicketDetailsWorkspace
