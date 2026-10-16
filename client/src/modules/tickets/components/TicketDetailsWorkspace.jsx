@@ -46,7 +46,7 @@ function WorkspacePanel({ panel, onModeChange }) {
             ? "auto"
             : quickUpdate
               ? "auto"
-              : "clamp(22rem, 60vh, 46rem)",
+              : "clamp(38rem, 60vh, 46rem)",
         },
         maxHeight: {
           xs: "none",

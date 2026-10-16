@@ -151,6 +151,7 @@ export default function TicketDataGrid({
         paginationModel={paginationModel}
         onPaginationModelChange={onPaginationModelChange}
         pageSizeOptions={pageSizeOptions}
+        disableRowSelectionExcludeModel
         checkboxSelection
         keepNonExistentRowsSelected
         rowSelectionModel={selectionModel}
