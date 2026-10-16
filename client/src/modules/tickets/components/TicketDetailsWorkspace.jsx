@@ -1,9 +1,9 @@
-import { IconButton, Paper, Stack, Tooltip, Typography } from "@mui/material";
+
+import { Box, IconButton, Paper, Stack, Tooltip, Typography } from "@mui/material";
 import ViewColumnOutlinedIcon from "@mui/icons-material/ViewColumnOutlined";
 import OpenInFullOutlinedIcon from "@mui/icons-material/OpenInFullOutlined";
 import KeyboardDoubleArrowLeftOutlinedIcon from "@mui/icons-material/KeyboardDoubleArrowLeftOutlined";
 import KeyboardDoubleArrowRightOutlinedIcon from "@mui/icons-material/KeyboardDoubleArrowRightOutlined";
-import "./TicketDetailsWorkspace.css";
 
 function PanelAction({ title, label, onClick, disabled = false, children }) {
   return (
@@ -24,48 +24,111 @@ function PanelAction({ title, label, onClick, disabled = false, children }) {
 
 function WorkspacePanel({ panel, onModeChange }) {
   const collapsed = panel.mode === "collapsed";
+  const full = panel.mode === "full";
+  const quickUpdate = panel.id === "ticket-quick-update";
 
   return (
     <Paper
       component="section"
       variant="outlined"
-      className={"ticket-workspace-panel ticket-workspace-panel--" + panel.mode}
-      data-panel-id={panel.id}
       aria-label={panel.title}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        minWidth: 0,
+        minHeight: {
+          xs: collapsed ? 0 : quickUpdate ? 0 : "18rem",
+          md: collapsed ? 0 : quickUpdate ? "8rem" : "22rem",
+        },
+        height: {
+          xs: "auto",
+          md: collapsed
+            ? "auto"
+            : quickUpdate
+              ? "auto"
+              : "clamp(22rem, 60vh, 46rem)",
+        },
+        maxHeight: {
+          xs: "none",
+          md: quickUpdate || collapsed ? "none" : "46rem",
+        },
+        width: collapsed ? { xs: "100%", md: "4rem" } : "100%",
+        minWidth: collapsed ? { xs: 0, md: "4rem" } : 0,
+        overflow: "hidden",
+        borderRadius: 3,
+        gridColumn: {
+          xs: "1 / -1",
+          md: full || (quickUpdate && panel.spanWorkspace)
+            ? "1 / -1"
+            : "auto",
+        },
+      }}
     >
       <Stack
         component="header"
         direction="row"
         alignItems="center"
-        justifyContent={collapsed ? "center" : "space-between"}
+        justifyContent={collapsed ? { xs: "space-between", md: "center" } : "space-between"}
         spacing={1}
-        className="ticket-workspace-panel__header"
+        sx={{
+          flex: "0 0 auto",
+          minWidth: 0,
+          minHeight: "3.5rem",
+          px: 1.5,
+          py: 1,
+          borderBottom: 1,
+          borderColor: "divider",
+          bgcolor: "background.paper",
+        }}
       >
         {collapsed ? (
-          <Stack spacing={0.5} alignItems="center">
-            <Tooltip title={panel.title} placement="right" arrow>
-              <span
-                className="ticket-workspace-panel__collapsed-icon"
-                aria-label={panel.title}
+          <>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+              <Tooltip title={panel.title} placement="right" arrow>
+                <Box
+                  component="span"
+                  aria-label={panel.title}
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flex: "0 0 auto",
+                    color: "primary.main",
+                  }}
+                >
+                  {panel.icon}
+                </Box>
+              </Tooltip>
+              <Typography
+                variant="body2"
+                fontWeight={600}
+                sx={{ display: { xs: "block", md: "none" } }}
               >
-                {panel.icon}
-              </span>
-            </Tooltip>
-            <PanelAction
-              title={"Expand " + panel.title + " to half width"}
-              label={"Expand " + panel.title + " to half width"}
-              onClick={() => onModeChange(panel.id, "half")}
+                {panel.title}
+              </Typography>
+            </Stack>
+
+            <Stack
+              direction={{ xs: "row", md: "column" }}
+              spacing={0.5}
+              alignItems="center"
             >
-              <KeyboardDoubleArrowRightOutlinedIcon fontSize="small" />
-            </PanelAction>
-            <PanelAction
-              title={"Expand " + panel.title + " to full width"}
-              label={"Expand " + panel.title + " to full width"}
-              onClick={() => onModeChange(panel.id, "full")}
-            >
-              <OpenInFullOutlinedIcon fontSize="small" />
-            </PanelAction>
-          </Stack>
+              <PanelAction
+                title={`Expand ${panel.title} to half width`}
+                label={`Expand ${panel.title} to half width`}
+                onClick={() => onModeChange(panel.id, "half")}
+              >
+                <KeyboardDoubleArrowRightOutlinedIcon fontSize="small" />
+              </PanelAction>
+              <PanelAction
+                title={`Expand ${panel.title} to full width`}
+                label={`Expand ${panel.title} to full width`}
+                onClick={() => onModeChange(panel.id, "full")}
+              >
+                <OpenInFullOutlinedIcon fontSize="small" />
+              </PanelAction>
+            </Stack>
+          </>
         ) : (
           <>
             <Stack
@@ -74,20 +137,28 @@ function WorkspacePanel({ panel, onModeChange }) {
               spacing={1}
               sx={{ minWidth: 0 }}
             >
-              <span
-                className="ticket-workspace-panel__title-icon"
+              <Box
+                component="span"
                 aria-hidden="true"
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flex: "0 0 auto",
+                  color: "primary.main",
+                }}
               >
                 {panel.icon}
-              </span>
+              </Box>
               <Typography variant="subtitle1" fontWeight={700} noWrap>
                 {panel.title}
               </Typography>
             </Stack>
+
             <Stack direction="row" spacing={0.25} alignItems="center">
               <PanelAction
                 title="Use half width"
-                label={"Use half width for " + panel.title}
+                label={`Use half width for ${panel.title}`}
                 disabled={panel.mode === "half"}
                 onClick={() => onModeChange(panel.id, "half")}
               >
@@ -95,8 +166,8 @@ function WorkspacePanel({ panel, onModeChange }) {
               </PanelAction>
               <PanelAction
                 title="Expand to full width"
-                label={"Expand " + panel.title + " to full width"}
-                disabled={panel.mode === "full"}
+                label={`Expand ${panel.title} to full width`}
+                disabled={full}
                 onClick={() => onModeChange(panel.id, "full")}
               >
                 <OpenInFullOutlinedIcon fontSize="small" />
@@ -112,9 +183,21 @@ function WorkspacePanel({ panel, onModeChange }) {
           </>
         )}
       </Stack>
-      {!collapsed ? (
-        <div className="ticket-workspace-panel__body">{panel.content}</div>
-      ) : null}
+
+      {!collapsed && (
+        <Box
+          sx={{
+            display: "flex",
+            flex: "1 1 0%",
+            flexDirection: "column",
+            minWidth: 0,
+            minHeight: 0,
+            overflow: "auto",
+          }}
+        >
+          {panel.content}
+        </Box>
+      )}
     </Paper>
   );
 }
@@ -126,27 +209,19 @@ export default function TicketDetailsWorkspace({
 }) {
   const detailsMode = layout.panels["ticket-details"];
   const lifecycleMode = layout.panels["ticket-lifecycle"];
-  let gridTemplateColumns = "minmax(0, 1fr) minmax(0, 1fr)";
 
   const bothUpperPanelsCollapsed =
     detailsMode === "collapsed" && lifecycleMode === "collapsed";
 
-  if (bothUpperPanelsCollapsed) {
-    // Two compact rails plus a flexible track for the workspace.
-    gridTemplateColumns = "64px 64px minmax(0, 1fr)";
-  } else if (detailsMode === "collapsed") {
-    gridTemplateColumns = "64px minmax(0, 1fr)";
-  } else if (lifecycleMode === "collapsed") {
-    gridTemplateColumns = "minmax(0, 1fr) 64px";
-  }
+  let gridTemplateColumns = "minmax(0, 1fr) minmax(0, 1fr)";
 
-  // if (detailsMode === "collapsed" && lifecycleMode === "collapsed") {
-  //   gridTemplateColumns = "64px 64px";
-  // } else if (detailsMode === "collapsed") {
-  //   gridTemplateColumns = "64px minmax(0, 1fr)";
-  // } else if (lifecycleMode === "collapsed") {
-  //   gridTemplateColumns = "minmax(0, 1fr) 64px";
-  // }
+  if (bothUpperPanelsCollapsed) {
+    gridTemplateColumns = "4rem 4rem minmax(0, 1fr)";
+  } else if (detailsMode === "collapsed") {
+    gridTemplateColumns = "4rem minmax(0, 1fr)";
+  } else if (lifecycleMode === "collapsed") {
+    gridTemplateColumns = "minmax(0, 1fr) 4rem";
+  }
 
   const orderedPanels = [...panels].sort((a, b) => {
     if (a.id === "ticket-quick-update") return 1;
@@ -157,22 +232,31 @@ export default function TicketDetailsWorkspace({
   });
 
   return (
-    <div
-      className={
-        "ticket-details-workspace" +
-        (bothUpperPanelsCollapsed
-          ? " ticket-details-workspace--upper-collapsed"
-          : "")
-      }
-      style={{ "--ticket-workspace-columns": gridTemplateColumns }}
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: {
+          xs: "minmax(0, 1fr)",
+          md: gridTemplateColumns,
+        },
+        alignItems: "stretch",
+        gap: 2,
+        width: "100%",
+        minWidth: 0,
+      }}
     >
       {orderedPanels.map((panel) => (
         <WorkspacePanel
           key={panel.id}
-          panel={panel}
+          panel={{
+            ...panel,
+            spanWorkspace:
+              panel.id === "ticket-quick-update" &&
+              bothUpperPanelsCollapsed,
+          }}
           onModeChange={onPanelModeChange}
         />
       ))}
-    </div>
+    </Box>
   );
 }

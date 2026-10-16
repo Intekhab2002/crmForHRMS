@@ -1,4 +1,3 @@
-
 import {
   Alert,
   Button,
@@ -53,16 +52,39 @@ export default function TicketQuickUpdate({
 }) {
   const hasChanges = QUICK_UPDATE_FIELDS.some(
     ({ key }) =>
-      normalizeValue(currentValues[key]) !==
-      normalizeValue(pendingValues[key]),
+      normalizeValue(currentValues[key]) !== normalizeValue(pendingValues[key]),
   );
 
-  const isLoading = QUICK_UPDATE_FIELDS.some(
-    ({ key }) => optionsLoading[key],
-  );
+  const isLoading = QUICK_UPDATE_FIELDS.some(({ key }) => optionsLoading[key]);
 
   return (
-    <Stack spacing={2} className="ticket-quick-update">
+    <Stack
+      spacing={2}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "stretch",
+        justifyContent: "flex-start",
+        gap: 2,
+        width: "100%",
+        minWidth: 0,
+        p: { xs: 1.5, sm: 2 },
+        boxSizing: "border-box",
+        "& > *": {
+          minWidth: 0,
+          maxWidth: "100%",
+        },
+        "& .MuiFormControl-root": {
+          width: "100%",
+          minWidth: 0,
+        },
+        "& .MuiSelect-select": {
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        },
+      }}
+    >
       <Stack spacing={0.5}>
         <Typography variant="body2" color="text.secondary">
           Update frequently changed ticket fields
@@ -93,10 +115,7 @@ export default function TicketQuickUpdate({
           const fieldLoading = Boolean(optionsLoading[field.key]);
 
           return (
-            <CanAccess
-              key={field.key}
-              permission={field.permission}
-            >
+            <CanAccess key={field.key} permission={field.permission}>
               <FormControl
                 size="small"
                 fullWidth
@@ -121,10 +140,7 @@ export default function TicketQuickUpdate({
                   </MenuItem>
 
                   {fieldOptions.map((option) => (
-                    <MenuItem
-                      key={option.value}
-                      value={String(option.value)}
-                    >
+                    <MenuItem key={option.value} value={String(option.value)}>
                       {option.label}
                     </MenuItem>
                   ))}
@@ -141,6 +157,18 @@ export default function TicketQuickUpdate({
         alignItems="center"
         spacing={1}
         flexWrap="wrap"
+        sx={{
+          width: "100%",
+          "& .MuiButton-root": {
+            flex: "0 0 auto",
+          },
+          "@media (max-width:599.95px)": {
+            justifyContent: "stretch",
+            "& .MuiButton-root": {
+              flex: "1 1 auto",
+            },
+          },
+        }}
       >
         <Button
           variant="outlined"

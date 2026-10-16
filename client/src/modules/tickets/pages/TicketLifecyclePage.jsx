@@ -409,7 +409,6 @@ export default function TicketLifecyclePage() {
 
     setSaving(true);
     setError("");
-    
 
     try {
       await ticketService.updateTicket(ticketId, changedValues);
@@ -595,7 +594,14 @@ export default function TicketLifecyclePage() {
             icon: <DescriptionOutlinedIcon />,
             mode: layout.panels["ticket-details"],
             content: (
-              <Box className="ticket-workspace-scroll-content">
+              <Box
+                sx={{
+                  minWidth: 0,
+                  minHeight: 0,
+                  overflow: "auto",
+                  p: 1,
+                }}
+              >
                 <TicketOverview
                   ticket={ticket}
                   fields={TICKET_FIELD_CONFIG}
@@ -613,7 +619,16 @@ export default function TicketLifecyclePage() {
             icon: <HistoryOutlinedIcon />,
             mode: layout.panels["ticket-lifecycle"],
             content: (
-              <Box className="ticket-lifecycle-panel-content">
+              <Box
+                sx={{
+                  display: "flex",
+                  flex: "1 1 0%",
+                  flexDirection: "column",
+                  minWidth: 0,
+                  minHeight: 0,
+                  overflow: "hidden",
+                }}
+              >
                 <Tabs
                   value={activeTab}
                   onChange={(_, value) => setActiveTab(value)}
@@ -641,9 +656,29 @@ export default function TicketLifecyclePage() {
                   />
                 </Tabs>
                 <Divider />
-                <Box className="ticket-lifecycle-panel-body">
+                <Box
+                  sx={{
+                    display: "flex",
+                    flex: "1 1 0%",
+                    flexDirection: "column",
+                    minWidth: 0,
+                    minHeight: 0,
+                    overflow: "auto",
+                    "& > .MuiBox-root": {
+                      flex: "1 1 auto",
+                      minHeight: 0,
+                    },
+                  }}
+                >
                   {activeTab === "activity" ? (
-                    <Box className="ticket-workspace-scroll-content">
+                    <Box
+                      sx={{
+                        minWidth: 0,
+                        minHeight: 0,
+                        overflow: "auto",
+                        p: 1,
+                      }}
+                    >
                       <TicketLifecycleTimeline
                         events={lifecycle}
                         fields={TICKET_FIELD_CONFIG}
@@ -654,7 +689,14 @@ export default function TicketLifecyclePage() {
                     </Box>
                   ) : null}
                   {activeTab === "comments" ? (
-                    <Box className="ticket-workspace-scroll-content">
+                    <Box
+                      sx={{
+                        minWidth: 0,
+                        minHeight: 0,
+                        overflow: "auto",
+                        p: 1,
+                      }}
+                    >
                       <Stack spacing={1}>
                         <TicketComments
                           comments={comments}
@@ -670,7 +712,14 @@ export default function TicketLifecyclePage() {
                     </Box>
                   ) : null}
                   {activeTab === "attachments" ? (
-                    <Box className="ticket-workspace-scroll-content">
+                    <Box
+                      sx={{
+                        minWidth: 0,
+                        minHeight: 0,
+                        overflow: "auto",
+                        p: 1,
+                      }}
+                    >
                       <TicketAttachmentList
                         ticketId={ticket.id}
                         onLifecycleChange={loadLifecycle}
