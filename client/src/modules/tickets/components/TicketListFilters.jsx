@@ -58,7 +58,9 @@ export default function TicketListFilters({
 
   const lookupFilters = useMemo(
     () =>
-      TICKET_LIST_FILTER_CONFIG.filter((filter) => filter.type === "lookup"),
+      TICKET_LIST_FILTER_CONFIG.filter((filter) =>
+        ["lookup", "staticLookup"].includes(filter.type),
+      ),
     [],
   );
 
@@ -78,9 +80,11 @@ export default function TicketListFilters({
     }));
 
     try {
-      const nextOptions = await apiOptionProvider({
-        config: filter,
-      });
+      const nextOptions = Array.isArray(filter.options)
+        ? filter.options
+        : await apiOptionProvider({
+            config: filter,
+          });
 
       loadedKeysRef.current.add(filter.key);
 
@@ -317,6 +321,59 @@ export default function TicketListFilters({
                   handleChange(filter.queryKey, event.target.value)
                 }
               />
+            </Grid>
+          ))}
+
+          {TICKET_LIST_FILTER_CONFIG.filter(
+            (filter) => filter.type === "numericRange",
+          ).map((filter) => (
+            <Grid key={filter.key} size={{ xs: 12 }}>
+              <Box>
+                <Box
+                  sx={{
+                    mb: 1,
+                    typography: "body2",
+                    fontWeight: 600,
+                    color: "text.secondary",
+                  }}
+                >
+                  {filter.label}
+                </Box>
+
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Minimum hours"
+                      value={draftFilters[filter.minQueryKey] ?? ""}
+                      onChange={(event) =>
+                        handleChange(filter.minQueryKey, event.target.value)
+                      }
+                      slotProps={{
+                        htmlInput: { min: 0, step: 0.25 },
+                        inputLabel: { shrink: true },
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Maximum hours"
+                      value={draftFilters[filter.maxQueryKey] ?? ""}
+                      onChange={(event) =>
+                        handleChange(filter.maxQueryKey, event.target.value)
+                      }
+                      slotProps={{
+                        htmlInput: { min: 0, step: 0.25 },
+                        inputLabel: { shrink: true },
+                      }}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
             </Grid>
           ))}
 

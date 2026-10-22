@@ -5,6 +5,7 @@ import {
   TICKET_CONFIG,
   TICKET_COLUMN_FILTER_OPERATORS,
 } from "./ticket.config.js";
+import { SLA_STATUS } from "../sla/sla.constants.js";
 
 const uuidSchema = z.string().uuid();
 const uuidArraySchema = z.preprocess((value) => {
@@ -14,6 +15,29 @@ const uuidArraySchema = z.preprocess((value) => {
 
   return Array.isArray(value) ? value : [value];
 }, z.array(uuidSchema).min(1).max(100));
+
+const slaStatusValues = Object.values(SLA_STATUS);
+
+const slaStatusArraySchema = z.preprocess(
+  (value) => {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    return Array.isArray(value) ? value : [value];
+  },
+  z.array(z.enum(slaStatusValues)).min(1).max(slaStatusValues.length),
+);
+
+const nonNegativeHoursQuery = z
+  .union([z.string().trim().min(1).transform(Number), z.number()])
+  .pipe(
+    z
+      .number()
+      .finite()
+      .min(0, "SLA remaining hours cannot be negative.")
+      .max(100000, "SLA remaining hours is outside the supported range."),
+  );
 
 const stringSchema = (field) => {
   let schema = z.string().trim();
@@ -182,6 +206,7 @@ const ticketListFilterSchema = z
     issueCategoryId: uuidArraySchema.optional(),
     dependencyCategoryId: uuidArraySchema.optional(),
     createdByUserId: uuidArraySchema.optional(),
+    districtId: uuidArraySchema.optional(),
 
     /*
      * Text filters
@@ -211,6 +236,13 @@ const ticketListFilterSchema = z
     initialDiagnosis: z.string().trim().max(5000).optional(),
 
     solution: z.string().trim().max(5000).optional(),
+
+    /*
+     * SLA filters
+     */
+    slaStatus: slaStatusArraySchema.optional(),
+    slaRemainingHoursMin: nonNegativeHoursQuery.optional(),
+    slaRemainingHoursMax: nonNegativeHoursQuery.optional(),
 
     /*
      * Date filters
@@ -339,6 +371,19 @@ const ticketListQuerySchema = ticketListFilterSchema
         path: ["expectedResolutionDateFrom"],
         message:
           "expectedResolutionDateFrom must not be later than expectedResolutionDateTo.",
+      });
+    }
+
+    if (
+      value.slaRemainingHoursMin !== undefined &&
+      value.slaRemainingHoursMax !== undefined &&
+      value.slaRemainingHoursMin > value.slaRemainingHoursMax
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["slaRemainingHoursMin"],
+        message:
+          "slaRemainingHoursMin must not be greater than slaRemainingHoursMax.",
       });
     }
   });

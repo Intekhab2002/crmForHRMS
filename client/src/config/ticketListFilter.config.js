@@ -28,15 +28,32 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     multi: true,
   }),
 
-//   Object.freeze({
-//     key: "contactId",
-//     label: "Contact",
-//     type: "lookup",
-//     queryKey: "contactId",
-//     endpoint: "/contacts?limit=100",
-//     valueKey: "id",
-//     labelKey: "name",
-//   }),
+  Object.freeze({
+    key: "districtId",
+    label: "District",
+    type: "lookup",
+    queryKey: "districtId",
+    endpoint: "/districts?limit=100",
+    valueKey: "id",
+    labelKey: "name",
+    multi: true,
+  }),
+
+    Object.freeze({
+    key: "slaStatus",
+    label: "SLA Status",
+    type: "staticLookup",
+    queryKey: "slaStatus",
+    multi: true,
+    options: [
+      { value: "NOT_TRACKED", label: "Not Tracked" },
+      { value: "RUNNING", label: "Running" },
+      { value: "PAUSED", label: "Paused" },
+      { value: "BREACHED", label: "Breached" },
+      { value: "COMPLETED", label: "Completed" },
+      { value: "STOPPED", label: "Stopped" },
+    ],
+  }),
 
 //   Object.freeze({
 //     key: "organizationId",
@@ -204,6 +221,14 @@ export const TICKET_LIST_FILTER_CONFIG = Object.freeze([
     queryKey: "solution",
   }),
 
+    Object.freeze({
+    key: "slaRemainingHours",
+    label: "SLA Time Remaining (Business Hours)",
+    type: "numericRange",
+    minQueryKey: "slaRemainingHoursMin",
+    maxQueryKey: "slaRemainingHoursMax",
+  }),
+
   Object.freeze({
     key: "expectedResolutionDate",
     label: "Expected Resolution Date",
@@ -239,6 +264,16 @@ export function getTicketListFilterCount(filters = {}) {
           : 0)
       );
     }
+     if (filter.type === "numericRange") {
+      return (
+        count +
+        (filters[filter.minQueryKey] !== undefined ||
+        filters[filter.maxQueryKey] !== undefined
+          ? 1
+          : 0)
+      );
+    }
+
 
     return count + (filters[filter.queryKey] ? 1 : 0);
   }, 0);

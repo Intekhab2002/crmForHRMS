@@ -159,6 +159,42 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
   }
 
   /*
+   * SLA filters. The ticket repository and export repository must both
+   * expose the current ticket_sla row using the alias `ts`.
+   */
+  if (Array.isArray(filters.slaStatus) && filters.slaStatus.length > 0) {
+    const requestedStatuses = [...new Set(filters.slaStatus)];
+    const statusConditions = [];
+    const regularStatuses = requestedStatuses.filter(
+      (status) => status !== "NOT_TRACKED",
+    );
+
+    if (regularStatuses.length > 0) {
+      const parameter = addValue(regularStatuses);
+
+      statusConditions.push(`ts.status = ANY(${parameter}::TEXT[])`);
+    }
+
+    if (requestedStatuses.includes("NOT_TRACKED")) {
+      statusConditions.push("(ts.id IS NULL OR ts.status = 'NOT_TRACKED')");
+    }
+
+    conditions.push(`(${statusConditions.join(" OR ")})`);
+  }
+
+  if (filters.slaRemainingHoursMin !== undefined) {
+    const parameter = addValue(filters.slaRemainingHoursMin * 60);
+
+    conditions.push(`ts.remaining_business_minutes >= ${parameter}::NUMERIC`);
+  }
+
+  if (filters.slaRemainingHoursMax !== undefined) {
+    const parameter = addValue(filters.slaRemainingHoursMax * 60);
+
+    conditions.push(`ts.remaining_business_minutes <= ${parameter}::NUMERIC`);
+  }
+
+  /*
    * DataGrid column filters.
    *
    * SQL expressions are selected exclusively from the trusted

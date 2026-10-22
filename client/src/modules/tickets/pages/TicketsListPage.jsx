@@ -28,11 +28,17 @@ import {
 import BulkEditTicketDrawer from "../components/BulkEditTicketDrawer";
 
 const TICKET_FILTER_QUERY_KEYS = new Set(
-  TICKET_LIST_FILTER_CONFIG.flatMap((filter) =>
-    filter.type === "dateRange"
-      ? [filter.fromQueryKey, filter.toQueryKey]
-      : [filter.queryKey],
-  ),
+  TICKET_LIST_FILTER_CONFIG.flatMap((filter) => {
+    if (filter.type === "dateRange") {
+      return [filter.fromQueryKey, filter.toQueryKey];
+    }
+
+    if (filter.type === "numericRange") {
+      return [filter.minQueryKey, filter.maxQueryKey];
+    }
+
+    return [filter.queryKey];
+  }),
 );
 
 function parseTicketFilters(search) {
@@ -201,7 +207,7 @@ export default function TicketsListPage() {
     return () => {
       active = false;
     };
-  }, [paginationModel, search, filters, columnFilterModel,refreshKey]);
+  }, [paginationModel, search, filters, columnFilterModel, refreshKey]);
 
   const handlePaginationModelChange = (nextModel) => {
     setPaginationModel((currentModel) => {
@@ -228,7 +234,7 @@ export default function TicketsListPage() {
     setFiltersOpen(false);
   };
 
-    const handleColumnFilterModelChange = (nextModel) => {
+  const handleColumnFilterModelChange = (nextModel) => {
     const normalizedModel = {
       items: nextModel.items ?? [],
       logicOperator: nextModel.logicOperator === "or" ? "or" : "and",
@@ -337,7 +343,7 @@ export default function TicketsListPage() {
     }
   };
 
-    const hasAnyFilters =
+  const hasAnyFilters =
     Boolean(searchInput.trim()) ||
     Object.keys(filters).length > 0 ||
     columnFilterModel.items.some(isActiveColumnFilter);
