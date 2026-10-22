@@ -20,6 +20,10 @@ import {
 import {
   loadTicketListFilters,
   saveTicketListFilters,
+  clearTicketListFilters,
+  loadTicketColumnFilterModel,
+  saveTicketColumnFilterModel,
+  clearTicketColumnFilterModel,
 } from "../utils/ticketListViewState";
 import BulkEditTicketDrawer from "../components/BulkEditTicketDrawer";
 
@@ -58,6 +62,22 @@ function parseTicketFilters(search) {
   return parsedFilters;
 }
 
+function isActiveColumnFilter(item) {
+  if (!item || typeof item.field !== "string") {
+    return false;
+  }
+
+  if (["isEmpty", "isNotEmpty"].includes(item.operator)) {
+    return true;
+  }
+
+  if (Array.isArray(item.value)) {
+    return item.value.length > 0;
+  }
+
+  return typeof item.value === "string" && item.value.trim().length > 0;
+}
+
 export default function TicketsListPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -80,6 +100,10 @@ export default function TicketsListPage() {
       ? urlFilters
       : loadTicketListFilters();
   });
+  const [columnFilterModel, setColumnFilterModel] = useState(() =>
+    loadTicketColumnFilterModel(),
+  );
+
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [paginationModel, setPaginationModel] = useState({
@@ -126,6 +150,21 @@ export default function TicketsListPage() {
 
     setLoading(true);
     setError("");
+    const activeColumnFilters = columnFilterModel.items
+      .filter(isActiveColumnFilter)
+      .map(({ field, operator, value }) => ({
+        field,
+        operator,
+        ...(value !== undefined ? { value } : {}),
+      }));
+
+    const columnFilters =
+      activeColumnFilters.length > 0
+        ? JSON.stringify({
+            logicOperator: columnFilterModel.logicOperator ?? "and",
+            items: activeColumnFilters,
+          })
+        : undefined;
 
     ticketService
       .listTickets({
@@ -133,6 +172,7 @@ export default function TicketsListPage() {
         limit: paginationModel.pageSize,
         ...(search ? { search } : {}),
         ...filters,
+        ...(columnFilters ? { columnFilters } : {}),
       })
       .then(({ rows: ticketRows, total }) => {
         if (!active) return;
@@ -161,7 +201,7 @@ export default function TicketsListPage() {
     return () => {
       active = false;
     };
-  }, [paginationModel, search, filters, refreshKey]);
+  }, [paginationModel, search, filters, columnFilterModel,refreshKey]);
 
   const handlePaginationModelChange = (nextModel) => {
     setPaginationModel((currentModel) => {
@@ -188,8 +228,35 @@ export default function TicketsListPage() {
     setFiltersOpen(false);
   };
 
-  const handleClearFilters = () => {
+    const handleColumnFilterModelChange = (nextModel) => {
+    const normalizedModel = {
+      items: nextModel.items ?? [],
+      logicOperator: nextModel.logicOperator === "or" ? "or" : "and",
+    };
+
+    setColumnFilterModel(normalizedModel);
+    saveTicketColumnFilterModel(normalizedModel);
+
+    setPaginationModel((currentModel) => ({
+      ...currentModel,
+      page: 0,
+    }));
+  };
+
+  const handleClearAllFilters = () => {
     setFilters({});
+    clearTicketListFilters();
+
+    const emptyColumnFilterModel = {
+      items: [],
+      logicOperator: "and",
+    };
+
+    setColumnFilterModel(emptyColumnFilterModel);
+    clearTicketColumnFilterModel();
+
+    setSearchInput("");
+    setSearch("");
 
     setPaginationModel((currentModel) => ({
       ...currentModel,
@@ -270,6 +337,11 @@ export default function TicketsListPage() {
     }
   };
 
+    const hasAnyFilters =
+    Boolean(searchInput.trim()) ||
+    Object.keys(filters).length > 0 ||
+    columnFilterModel.items.some(isActiveColumnFilter);
+
   return (
     <Stack
       spacing={3}
@@ -341,6 +413,10 @@ export default function TicketsListPage() {
         paginationModel={paginationModel}
         onPaginationModelChange={handlePaginationModelChange}
         paginationMode="server"
+        filterModel={columnFilterModel}
+        onFilterModelChange={handleColumnFilterModelChange}
+        onClearAllFilters={handleClearAllFilters}
+        hasAnyFilters={hasAnyFilters}
         fields={TICKET_FIELD_CONFIG}
         columns={[TICKET_GRID_CONFIG.action, ...TICKET_GRID_CONFIG.columns]}
         pageSizeOptions={TICKET_GRID_CONFIG.pageSizeOptions}

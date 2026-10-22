@@ -734,6 +734,88 @@ const listFilterDefinitions = Object.freeze({
   }),
 });
 
+/**
+ * Server-side column filters for the ticket DataGrid.
+ *
+ * Keys must match the actual `field` values in TICKET_GRID_CONFIG.
+ * SQL expressions are fixed and trusted; request values are never
+ * interpolated into these expressions.
+ */
+const columnFilterDefinitions = Object.freeze({
+  ticketNumber: Object.freeze({
+    sqlExpression: "t.ticket_number",
+  }),
+  mobile_phone: Object.freeze({
+    sqlExpression: "contact.mobile_phone",
+  }),
+  service_type: Object.freeze({
+    sqlExpression: "service_type.name",
+  }),
+  district: Object.freeze({
+    sqlExpression: "district.name",
+  }),
+  departmentName: Object.freeze({
+    sqlExpression: "department.name",
+  }),
+  category: Object.freeze({
+    sqlExpression: "ticket_category.name",
+  }),
+  subject: Object.freeze({
+    sqlExpression: "t.subject",
+  }),
+  status: Object.freeze({
+    sqlExpression: "ticket_status.name",
+  }),
+  assignedUserName: Object.freeze({
+    sqlExpression: `
+      COALESCE(
+        NULLIF(
+          TRIM(CONCAT_WS(' ', assignee.first_name, assignee.last_name)),
+          ''
+        ),
+        assignee.username,
+        assignee.email
+      )
+    `,
+  }),
+  severity: Object.freeze({
+    sqlExpression: "ticket_severity.name",
+  }),
+  expected_resolution_date: Object.freeze({
+    sqlExpression: "t.expected_resolution_date::TEXT",
+  }),
+  employee_id: Object.freeze({
+    sqlExpression: "t.employee_id",
+  }),
+  issue_category: Object.freeze({
+    sqlExpression: "issue_category.name",
+  }),
+  dependency_category: Object.freeze({
+    sqlExpression: "dependency_category.name",
+  }),
+  created_by: Object.freeze({
+    sqlExpression: `
+      COALESCE(
+        NULLIF(
+          TRIM(CONCAT_WS(' ', creator.first_name, creator.last_name)),
+          ''
+        ),
+        creator.username,
+        creator.email
+      )
+    `,
+  }),
+  description: Object.freeze({
+    sqlExpression: "t.description",
+  }),
+  initial_diagnosis: Object.freeze({
+    sqlExpression: "t.initial_diagnosis",
+  }),
+  solution: Object.freeze({
+    sqlExpression: "t.solution",
+  }),
+});
+
 export const TICKET_CONFIG = Object.freeze({
   module: "ticket",
   fields,
@@ -741,6 +823,7 @@ export const TICKET_CONFIG = Object.freeze({
   ticketFields,
   contactFields,
   listFilterDefinitions,
+  columnFilterDefinitions,
 });
 
 export function getField(fieldKey) {

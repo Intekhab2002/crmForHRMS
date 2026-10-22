@@ -28,7 +28,6 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
   const addUuidValues = (items) =>
     items.map((item) => `${addValue(item)}::UUID`);
 
-
   /*
    * Global search covers ticket text fields and the display labels
    * of related records. Relationship IDs are intentionally not used
@@ -97,7 +96,6 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
     `);
   }
 
-
   for (const definition of Object.values(TICKET_CONFIG.listFilterDefinitions)) {
     const value = filters[definition.queryKey];
 
@@ -124,15 +122,12 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
 
       case "text": {
         const parameter = addValue(value);
-        const expression =
-          definition.sqlExpression ?? `t.${definition.column}`;
+        const expression = definition.sqlExpression ?? `t.${definition.column}`;
 
         if (definition.operator === "equals") {
           conditions.push(`${expression} = ${parameter}`);
         } else {
-          conditions.push(
-            `${expression} ILIKE '%' || ${parameter} || '%'`,
-          );
+          conditions.push(`${expression} ILIKE '%' || ${parameter} || '%'`);
         }
 
         break;
@@ -160,6 +155,129 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
         throw new Error(
           `Unsupported ticket list filter type: ${definition.type}`,
         );
+    }
+  }
+
+  /*
+   * DataGrid column filters.
+   *
+   * Field expressions come only from TICKET_CONFIG.columnFilterDefinitions.
+   * All filter values use the existing parameterized addValue() helper.
+   */
+  const columnFilterModel = filters.columnFilters;
+
+  if (columnFilterModel?.items?.length) {
+    const columnConditions = [];
+
+    for (const item of columnFilterModel.items) {
+      const definition = TICKET_CONFIG.columnFilterDefinitions[item.field];
+
+      // The validator normally rejects unsupported fields. Keep this
+      // guard so the SQL builder is also safe when called independently.
+      if (!definition) {
+        throw new Error(
+          `Unsupported ticket column filter field: ${item.field}`,
+        );
+      }
+
+      const expression = definition.sqlExpression;
+      const operator = item.operator;
+      const value = item.value;
+
+      if (operator === "isEmpty") {
+        columnConditions.push(`
+          NULLIF(
+            BTRIM(COALESCE((${expression})::TEXT, '')),
+            ''
+          ) IS NULL
+        `);
+        continue;
+      }
+
+      if (operator === "isNotEmpty") {
+        columnConditions.push(`
+          NULLIF(
+            BTRIM(COALESCE((${expression})::TEXT, '')),
+            ''
+          ) IS NOT NULL
+        `);
+        continue;
+      }
+
+      if (operator === "isAnyOf") {
+        if (!Array.isArray(value) || value.length === 0) {
+          continue;
+        }
+
+        const parameters = value.map((itemValue) => addValue(itemValue));
+
+        columnConditions.push(`
+          LOWER((${expression})::TEXT) IN (
+            ${parameters.map((parameter) => `LOWER(${parameter})`).join(", ")}
+          )
+        `);
+        continue;
+      }
+
+      if (typeof value !== "string" || value.trim() === "") {
+        continue;
+      }
+
+      // Treat SQL LIKE wildcards in user input as literal characters.
+      const escapedValue = value.replace(/[\\%_]/g, "\\$&");
+      const parameter = addValue(
+        operator === "contains" ||
+          operator === "startsWith" ||
+          operator === "endsWith"
+          ? escapedValue
+          : value,
+      );
+
+      switch (operator) {
+        case "contains":
+          columnConditions.push(`
+            (${expression})::TEXT
+              ILIKE '%' || ${parameter} || '%'
+              ESCAPE E'\\\\'
+          `);
+          break;
+
+        case "startsWith":
+          columnConditions.push(`
+            (${expression})::TEXT
+              ILIKE ${parameter} || '%'
+              ESCAPE E'\\\\'
+          `);
+          break;
+
+        case "endsWith":
+          columnConditions.push(`
+            (${expression})::TEXT
+              ILIKE '%' || ${parameter}
+              ESCAPE E'\\\\'
+          `);
+          break;
+
+        case "equals":
+          columnConditions.push(`
+            LOWER((${expression})::TEXT) = LOWER(${parameter})
+          `);
+          break;
+
+        default:
+          throw new Error(
+            `Unsupported ticket column filter operator: ${operator}`,
+          );
+      }
+    }
+
+    if (columnConditions.length > 0) {
+      const logicOperator =
+        columnFilterModel.logicOperator === "or" ? "OR" : "AND";
+
+      conditions.push(`
+        (${columnConditions.join(` ${logicOperator} `)})
+      `);
     }
   }
 

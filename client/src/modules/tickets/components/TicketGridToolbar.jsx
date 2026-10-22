@@ -1,9 +1,5 @@
-
 import { useCallback, useState } from "react";
-import {
-  ColumnsPanelTrigger,
-  Toolbar,
-} from "@mui/x-data-grid";
+import { ColumnsPanelTrigger, Toolbar } from "@mui/x-data-grid";
 import {
   Badge,
   IconButton,
@@ -20,6 +16,7 @@ import ClearOutlinedIcon from "@mui/icons-material/ClearOutlined";
 import ViewColumnOutlinedIcon from "@mui/icons-material/ViewColumnOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import FilterAltOffOutlinedIcon from "@mui/icons-material/FilterAltOffOutlined";
 
 import { TICKET_MODULE_CONFIG } from "../../../config/ticket.config";
 import CanAccess from "../../../components/rbac/CanAccess";
@@ -36,6 +33,8 @@ export default function TicketGridToolbar({
   rowCount = 0,
   onDuplicateTicket,
   onBulkEdit,
+  onClearAllFilters,
+  hasAnyFilters = false,
 }) {
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -48,8 +47,7 @@ export default function TicketGridToolbar({
   }, []);
 
   const canDuplicate =
-    selectedTicketIds.length === 1 &&
-    typeof onDuplicateTicket === "function";
+    selectedTicketIds.length === 1 && typeof onDuplicateTicket === "function";
 
   const duplicateTooltip =
     selectedTicketIds.length === 0
@@ -80,9 +78,7 @@ export default function TicketGridToolbar({
         <TextField
           size="small"
           value={search}
-          onChange={(event) =>
-            onSearchChange?.(event.target.value)
-          }
+          onChange={(event) => onSearchChange?.(event.target.value)}
           placeholder="Search tickets..."
           aria-label="Search tickets"
           fullWidth={false}
@@ -90,10 +86,7 @@ export default function TicketGridToolbar({
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchOutlinedIcon
-                    fontSize="small"
-                    color="action"
-                  />
+                  <SearchOutlinedIcon fontSize="small" color="action" />
                 </InputAdornment>
               ),
               endAdornment: search ? (
@@ -136,9 +129,7 @@ export default function TicketGridToolbar({
             flex: { xs: "1 1 100%", sm: "0 0 auto" },
           }}
         >
-          <CanAccess
-            permission={TICKET_MODULE_CONFIG.permissions.update}
-          >
+          <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>
             <Tooltip title="Multi-edit selected tickets">
               <span>
                 <IconButton
@@ -156,9 +147,7 @@ export default function TicketGridToolbar({
             </Tooltip>
           </CanAccess>
 
-          <CanAccess
-            permission={TICKET_MODULE_CONFIG.permissions.create}
-          >
+          <CanAccess permission={TICKET_MODULE_CONFIG.permissions.create}>
             <Tooltip title={duplicateTooltip}>
               <span>
                 <IconButton
@@ -188,9 +177,7 @@ export default function TicketGridToolbar({
               size="small"
               onClick={onOpenFilters}
               aria-label={`Filter tickets${
-                activeFilterCount > 0
-                  ? `, ${activeFilterCount} active`
-                  : ""
+                activeFilterCount > 0 ? `, ${activeFilterCount} active` : ""
               }`}
               aria-haspopup="dialog"
             >
@@ -208,10 +195,7 @@ export default function TicketGridToolbar({
           <Tooltip title="Choose columns">
             <ColumnsPanelTrigger
               render={
-                <IconButton
-                  size="small"
-                  aria-label="Choose ticket columns"
-                >
+                <IconButton size="small" aria-label="Choose ticket columns">
                   <ViewColumnOutlinedIcon />
                 </IconButton>
               }
@@ -229,6 +213,20 @@ export default function TicketGridToolbar({
               </IconButton>
             </Tooltip>
           </CanAccess>
+          <Tooltip title="Reset all filters">
+            <span>
+              <IconButton
+                size="small"
+                disabled={
+                  !hasAnyFilters || typeof onClearAllFilters !== "function"
+                }
+                onClick={onClearAllFilters}
+                aria-label="Reset all ticket filters"
+              >
+                <FilterAltOffOutlinedIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
         </Stack>
       </Toolbar>
 

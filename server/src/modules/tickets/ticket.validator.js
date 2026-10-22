@@ -3,16 +3,13 @@ import { z } from "zod";
 import { getField, TICKET_CONFIG } from "./ticket.config.js";
 
 const uuidSchema = z.string().uuid();
-const uuidArraySchema = z.preprocess(
-  (value) => {
-    if (value === undefined) {
-      return undefined;
-    }
+const uuidArraySchema = z.preprocess((value) => {
+  if (value === undefined) {
+    return undefined;
+  }
 
-    return Array.isArray(value) ? value : [value];
-  },
-  z.array(uuidSchema).min(1).max(100),
-);
+  return Array.isArray(value) ? value : [value];
+}, z.array(uuidSchema).min(1).max(100));
 
 const stringSchema = (field) => {
   let schema = z.string().trim();
@@ -34,6 +31,47 @@ const stringSchema = (field) => {
 const dateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a valid date in YYYY-MM-DD format.");
+
+const columnFilterItemSchema = z
+  .object({
+    field: z.string().trim().min(1).max(100),
+
+    operator: z.enum([
+      "contains",
+      "equals",
+      "startsWith",
+      "endsWith",
+      "isEmpty",
+      "isNotEmpty",
+      "isAnyOf",
+    ]),
+
+    value: z
+      .union([z.string().max(5000), z.array(z.string().max(255)).max(100)])
+      .optional(),
+  })
+  .strict();
+
+const columnFilterModelSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    try {
+      return JSON.parse(value);
+    } catch {
+      // Keep malformed JSON invalid so Zod rejects the request.
+      return value;
+    }
+  },
+  z
+    .object({
+      items: z.array(columnFilterItemSchema).max(20),
+      logicOperator: z.enum(["and", "or"]).optional(),
+    })
+    .strict(),
+);
 
 function schemaForField(field) {
   if (field.dataType === "uuid") {
@@ -120,8 +158,7 @@ const positiveIntegerQuery = z
     "Value must be a positive integer.",
   );
 
-
-  const ticketListFilterSchema = z
+const ticketListFilterSchema = z
   .object({
     /*
      * Global search intentionally remains limited to the existing
@@ -129,6 +166,8 @@ const positiveIntegerQuery = z
      * when the user explicitly selects a field.
      */
     search: z.string().trim().max(255).optional(),
+
+    columnFilters: columnFilterModelSchema.optional(),
 
     /*
      * UUID lookup filters
@@ -157,11 +196,7 @@ const positiveIntegerQuery = z
 
     employeeId: z.string().trim().max(100).optional(),
 
-    employeeCurrentOfficeNameId: z
-      .string()
-      .trim()
-      .max(100)
-      .optional(),
+    employeeCurrentOfficeNameId: z.string().trim().max(100).optional(),
 
     billReferenceNo: z.string().trim().max(100).optional(),
 
@@ -206,6 +241,38 @@ const ticketListQuerySchema = ticketListFilterSchema
   })
   .strict()
   .superRefine((value, context) => {
+    for (const [index, item] of (value.columnFilters?.items ?? []).entries()) {
+      if (!TICKET_CONFIG.columnFilterDefinitions[item.field]) {
+        context.addIssue({
+          code: "custom",
+          path: ["columnFilters", "items", index, "field"],
+          message: `Unsupported ticket column filter field: ${item.field}`,
+        });
+      }
+
+      const requiresValue = !["isEmpty", "isNotEmpty"].includes(item.operator);
+
+      if (
+        requiresValue &&
+        (item.value === undefined ||
+          (typeof item.value === "string" && item.value.trim() === "") ||
+          (Array.isArray(item.value) && item.value.length === 0))
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["columnFilters", "items", index, "value"],
+          message: "A value is required for this column filter operator.",
+        });
+      }
+
+      if (item.operator === "isAnyOf" && !Array.isArray(item.value)) {
+        context.addIssue({
+          code: "custom",
+          path: ["columnFilters", "items", index, "value"],
+          message: "The isAnyOf operator requires an array of values.",
+        });
+      }
+    }
     if (value.limit > 100) {
       context.addIssue({
         code: "custom",
@@ -265,9 +332,7 @@ const bulkUpdateSchema = z
   .object({
     ticketIds: z.array(uuidSchema).min(1).max(100),
     changes: updateTicketSchema,
-    expectedUpdatedAt: z
-      .record(uuidSchema, z.string().min(1))
-      .optional(),
+    expectedUpdatedAt: z.record(uuidSchema, z.string().min(1)).optional(),
   })
   .strict();
 

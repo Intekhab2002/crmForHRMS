@@ -78,6 +78,10 @@ export default function TicketDataGrid({
   onSelectedTicketIdsChange,
   onDuplicateTicket,
   onBulkEdit,
+  filterModel,
+  onFilterModelChange,
+  onClearAllFilters,
+  hasAnyFilters = false,
 }) {
   const { hasPermission } = useAuth();
   const selectionModel = useMemo(
@@ -155,6 +159,9 @@ export default function TicketDataGrid({
         checkboxSelection
         keepNonExistentRowsSelected
         rowSelectionModel={selectionModel}
+        filterMode="server"
+        filterModel={filterModel}
+        onFilterModelChange={onFilterModelChange}
         onRowSelectionModelChange={(nextSelection) => {
           onSelectedTicketIdsChange?.(Array.from(nextSelection.ids ?? []));
         }}
@@ -181,6 +188,8 @@ export default function TicketDataGrid({
             selectedTicketIds,
             onDuplicateTicket,
             onBulkEdit,
+            onClearAllFilters,
+            hasAnyFilters,
           },
         }}
         aria-label={title}
