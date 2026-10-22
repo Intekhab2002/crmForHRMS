@@ -121,6 +121,14 @@ const SYSTEM_PERMISSIONS = Object.freeze([
   }),
 
   Object.freeze({
+    code: "user:navigation",
+    name: "User Management Navigation",
+    description: "Controls visibility of the User Management navigation item.",
+    resource: "user",
+    action: "navigation",
+  }),
+
+  Object.freeze({
     code: "user:create",
     name: "Create Users",
     description: "Create new users.",
@@ -154,6 +162,14 @@ const SYSTEM_PERMISSIONS = Object.freeze([
     description: "View roles.",
     resource: "role",
     action: "read",
+  }),
+
+  Object.freeze({
+    code: "role:navigation",
+    name: "Role Management Navigation",
+    description: "Controls visibility of the Role Management navigation item.",
+    resource: "role",
+    action: "navigation",
   }),
 
   Object.freeze({
@@ -265,6 +281,14 @@ const SYSTEM_PERMISSIONS = Object.freeze([
   }),
 
   Object.freeze({
+    code: "ticket:navigation",
+    name: "Ticket Management Navigation",
+    description:
+      "Controls visibility of the Ticket Management navigation item.",
+    resource: "ticket",
+    action: "navigation",
+  }),
+  Object.freeze({
     code: "ticket:export",
     name: "Export Tickets",
     description: "Export tickets accessible to the authenticated user.",
@@ -345,6 +369,14 @@ const SYSTEM_PERMISSIONS = Object.freeze([
   }),
 
   Object.freeze({
+    code: "option:navigation",
+    name: "Option Management Navigation",
+    description:
+      "Controls visibility of the Option Management navigation item.",
+    resource: "option",
+    action: "navigation",
+  }),
+  Object.freeze({
     code: "option:create",
     name: "Create Options",
     description: "Create configurable select options.",
@@ -386,6 +418,14 @@ const SYSTEM_PERMISSIONS = Object.freeze([
     description: "Create SLA policies.",
     resource: "sla",
     action: "create",
+  }),
+
+  Object.freeze({
+    code: "sla:navigation",
+    name: "SLA Navigation",
+    description: "Controls visibility of the top-level SLA navigation item.",
+    resource: "sla",
+    action: "navigation",
   }),
 
   Object.freeze({
@@ -488,53 +528,61 @@ const SYSTEM_PERMISSIONS = Object.freeze([
   // Dashboard
   // -------------------------------------------------------------------------
 
-Object.freeze({
-  code: "dashboard:read",
-  name: "Read Dashboard",
-  description: "Access the dashboard module.",
-  resource: "dashboard",
-  action: "read",
-}),
+  Object.freeze({
+    code: "dashboard:read",
+    name: "Read Dashboard",
+    description: "Access the dashboard module.",
+    resource: "dashboard",
+    action: "read",
+  }),
 
-Object.freeze({
-  code: "dashboard_operational:read",
-  name: "Read Operational Dashboard",
-  description: "View the operational dashboard.",
-  resource: "dashboard_operational",
-  action: "read",
-}),
+  Object.freeze({
+    code: "dashboard:navigation",
+    name: "Dashboard Navigation",
+    description: "Controls visibility of the Dashboard navigation item.",
+    resource: "dashboard",
+    action: "navigation",
+  }),
 
-Object.freeze({
-  code: "dashboard_management:read",
-  name: "Read Management Dashboard",
-  description: "View the management dashboard.",
-  resource: "dashboard_management",
-  action: "read",
-}),
+  Object.freeze({
+    code: "dashboard_operational:read",
+    name: "Read Operational Dashboard",
+    description: "View the operational dashboard.",
+    resource: "dashboard_operational",
+    action: "read",
+  }),
 
-Object.freeze({
-  code: "dashboard_professional:read",
-  name: "Read Professional Dashboard",
-  description: "View the professional dashboard.",
-  resource: "dashboard_professional",
-  action: "read",
-}),
+  Object.freeze({
+    code: "dashboard_management:read",
+    name: "Read Management Dashboard",
+    description: "View the management dashboard.",
+    resource: "dashboard_management",
+    action: "read",
+  }),
 
-Object.freeze({
-  code: "dashboard_executive:read",
-  name: "Read Executive Dashboard",
-  description: "View the executive dashboard.",
-  resource: "dashboard_executive",
-  action: "read",
-}),
+  Object.freeze({
+    code: "dashboard_professional:read",
+    name: "Read Professional Dashboard",
+    description: "View the professional dashboard.",
+    resource: "dashboard_professional",
+    action: "read",
+  }),
 
-Object.freeze({
-  code: "dashboard_audit:read",
-  name: "Read Audit Dashboard",
-  description: "View the audit dashboard.",
-  resource: "dashboard_audit",
-  action: "read",
-}),
+  Object.freeze({
+    code: "dashboard_executive:read",
+    name: "Read Executive Dashboard",
+    description: "View the executive dashboard.",
+    resource: "dashboard_executive",
+    action: "read",
+  }),
+
+  Object.freeze({
+    code: "dashboard_audit:read",
+    name: "Read Audit Dashboard",
+    description: "View the audit dashboard.",
+    resource: "dashboard_audit",
+    action: "read",
+  }),
 
   //--------------------------------------------------------------------------
   //Report
@@ -548,6 +596,13 @@ Object.freeze({
     action: "read",
   }),
 
+  Object.freeze({
+    code: "reports:navigation",
+    name: "Reports Navigation",
+    description: "Controls visibility of the Reports navigation item.",
+    resource: "reports",
+    action: "navigation",
+  }),
   Object.freeze({
     code: "reports:generate",
     name: "Generate Reports",

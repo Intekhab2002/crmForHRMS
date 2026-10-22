@@ -20,7 +20,7 @@ export default function ChartCard({
       sx={{
         display: "flex",
         flexDirection: "column",
-        height: isCustomizing ? "100%" : "auto",
+        height: "auto",
         minWidth: 0,
         minHeight: 0,
         overflow: "hidden",
@@ -32,7 +32,7 @@ export default function ChartCard({
         sx={{
           boxSizing: "border-box",
           display: "flex",
-          flex: isCustomizing ? 1 : "0 0 auto",
+          flex: "0 0 auto",
           flexDirection: "column",
           width: "100%",
           minWidth: 0,
@@ -44,7 +44,7 @@ export default function ChartCard({
         <Stack
           spacing={1.5}
           sx={{
-            height: isCustomizing ? "100%" : "auto",
+            height: "auto",
             minWidth: 0,
             minHeight: 0,
           }}
@@ -63,10 +63,10 @@ export default function ChartCard({
           ) : (
             <Box
               sx={{
-                flex: isCustomizing ? 1 : "0 0 auto",
+                flex:  "0 0 auto",
                 minWidth: 0,
                 minHeight: 0,
-                overflow: isCustomizing ? "auto" : "visible",
+                overflow:  "visible",
               }}
             >
               <DashboardChart metric={metric} />

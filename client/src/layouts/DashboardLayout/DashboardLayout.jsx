@@ -10,8 +10,9 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
-import { Outlet } from "react-router";
+import { Outlet, Link } from "react-router";
 import { useTheme } from "@mui/material/styles";
+import { PERMISSIONS } from "../../config/permission.config";
 
 import { useAuth } from "../../context/useAuth";
 import Sidebar from "../../components/navigation/Sidebar";
@@ -27,7 +28,9 @@ export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
+
+  const canCreateTicket = hasPermission(PERMISSIONS.TICKET_CREATE);
 
   const closeMobile = () => {
     setMobileOpen(false);
@@ -76,6 +79,22 @@ export default function DashboardLayout() {
           <Typography variant="h6" fontWeight={700} sx={{ flexGrow: 1 }}>
             CRM for HRMS
           </Typography>
+
+          {canCreateTicket ? (
+            <Button
+              component={Link}
+              to="/tickets/create"
+              color="inherit"
+              variant="outlined"
+              size="small"
+              sx={{
+                mr: 2,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Create Ticket
+            </Button>
+          ) : null}
 
           <Typography
             sx={{
@@ -167,7 +186,7 @@ export default function DashboardLayout() {
       >
         <Toolbar />
 
-        <PageViewport >
+        <PageViewport>
           <Outlet />
         </PageViewport>
       </Box>

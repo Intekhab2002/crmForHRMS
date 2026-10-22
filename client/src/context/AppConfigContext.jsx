@@ -3,7 +3,10 @@ import { useMemo } from "react";
 import { APP_MODULE_CONFIG } from "../config/module.config";
 import { APP_CONFIG } from "../config/app.config";
 import { DASHBOARD_CONFIG } from "../config/dashboard.config";
-import { TICKET_FIELD_CONFIG, TICKET_MODULE_CONFIG } from "../config/ticket.config";
+import {
+  TICKET_FIELD_CONFIG,
+  TICKET_MODULE_CONFIG,
+} from "../config/ticket.config";
 
 import { AppConfigContext } from "./AppConfigContextValue";
 
@@ -43,7 +46,8 @@ function resolveNavigation(routes, section, parentPath = "") {
         icon: route.navigation.icon,
         iconKey: route.navigation.iconKey,
         order: route.navigation.order ?? 0,
-        permissions: route.access?.permissions ?? [],
+        permissions:
+          route.navigation?.permissions ?? route.access?.permissions ?? [],
         children,
       },
     ];

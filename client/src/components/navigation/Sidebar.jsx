@@ -25,6 +25,7 @@ import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
 import PolicyOutlinedIcon from "@mui/icons-material/PolicyOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
+import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined';
 
 import { Link, useLocation } from "react-router";
 
@@ -41,7 +42,7 @@ const ICONS = Object.freeze({
   sla: TimerOutlinedIcon,
   slaPolicies: PolicyOutlinedIcon,
   slaCalendars: CalendarMonthOutlinedIcon,
-  reports: "reports"
+  reports: SummarizeOutlinedIcon
 
 });
 

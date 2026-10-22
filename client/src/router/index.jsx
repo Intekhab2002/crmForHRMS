@@ -27,25 +27,26 @@ import DefaultEntryPage from "../pages/common/DefaultEntryPage";
 import RoleManagementPage from "../modules/roles/pages/RoleManagementPage";
 
 import OptionManagementPage from "../modules/options/pages/OptionManagementPage";
-  import SlaPoliciesPage from "../modules/sla/pages/SlaPoliciesPage";
-  import SlaPolicyCreatePage from "../modules/sla/pages/SlaPolicyCreatePage";
-  import SlaPolicyDetailPage from "../modules/sla/pages/SlaPolicyDetailPage";
-  import SlaCalendarsPage from "../modules/sla/pages/SlaCalendarsPage";
-  import SlaCalendarDetailPage from "../modules/sla/pages/SlaCalendarDetailPage";
-  import RouteErrorPage from "../components/feedback/RouteErrorPage";
+import SlaPoliciesPage from "../modules/sla/pages/SlaPoliciesPage";
+import SlaPolicyCreatePage from "../modules/sla/pages/SlaPolicyCreatePage";
+import SlaPolicyDetailPage from "../modules/sla/pages/SlaPolicyDetailPage";
+import SlaCalendarsPage from "../modules/sla/pages/SlaCalendarsPage";
+import SlaCalendarDetailPage from "../modules/sla/pages/SlaCalendarDetailPage";
+import RouteErrorPage from "../components/feedback/RouteErrorPage";
 
 import { APP_MODULE_CONFIG, SYSTEM_ROUTES } from "../config/module.config";
 import LandingPage from "../pages/public/LandingPage";
-    import ReportsPage from "../modules/reports/pages/ReportsPage";
-    import {
-      DashboardPage as DashboardModulePage,
-      OperationalDashboard,
-      ManagementDashboard,
-      ProfessionalDashboard,
-      ExecutiveDashboard,
-      AuditDashboard,
-    } from "../modules/dashboard";
+import ReportsPage from "../modules/reports/pages/ReportsPage";
+import {
+  DashboardPage as DashboardModulePage,
+  OperationalDashboard,
+  ManagementDashboard,
+  ProfessionalDashboard,
+  ExecutiveDashboard,
+  AuditDashboard,
+} from "../modules/dashboard";
 
+import DashboardIndexRedirect from "../modules/dashboard/pages/DashboardIndexRedirect";
 
 const LAYOUTS = Object.freeze({
   public: PublicLayout,
@@ -80,12 +81,13 @@ const COMPONENTS = Object.freeze({
   slaCalendars: SlaCalendarsPage,
   slaCalendarDetail: SlaCalendarDetailPage,
   reports: ReportsPage,
-      dashboardModule: DashboardModulePage,
-    dashboardOperational: OperationalDashboard,
-    dashboardManagement: ManagementDashboard,
-    dashboardProfessional: ProfessionalDashboard,
-    dashboardExecutive: ExecutiveDashboard,
-    dashboardAudit: AuditDashboard,
+  dashboardModule: DashboardModulePage,
+  dashboardIndexRedirect: DashboardIndexRedirect,
+  dashboardOperational: OperationalDashboard,
+  dashboardManagement: ManagementDashboard,
+  dashboardProfessional: ProfessionalDashboard,
+  dashboardExecutive: ExecutiveDashboard,
+  dashboardAudit: AuditDashboard,
 });
 
 function applyPermissionGuard(route, element) {
@@ -135,9 +137,9 @@ function buildRoute(route) {
   }
 
   const result = {
-  element,
-  errorElement: <RouteErrorPage />,
-};
+    element,
+    errorElement: <RouteErrorPage />,
+  };
 
   if (route.path) {
     result.path = route.path;

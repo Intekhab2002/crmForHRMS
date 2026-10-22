@@ -65,7 +65,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
         component: "dashboardModule",
 
         access: {
-          permissions: [PERMISSIONS.DASHBOARD_READ],
+          permissions: [PERMISSIONS.DASHBOARD_NAVIGATION],
         },
 
         navigation: {
@@ -74,6 +74,11 @@ export const APP_MODULE_CONFIG = Object.freeze({
           order: 10,
         },
         children: Object.freeze([
+          createRoute({
+            id: "dashboard.index",
+            index: true,
+            component: "dashboardIndexRedirect",
+          }),
           createRoute({
             id: "dashboard.operational",
             path: "operational",
@@ -129,7 +134,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
         component: "users",
 
         access: {
-          permissions: [PERMISSIONS.USER_READ],
+          permissions: [PERMISSIONS.USER_NAVIGATION],
         },
 
         navigation: {
@@ -146,7 +151,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
         component: "roles",
 
         access: {
-          permissions: [PERMISSIONS.ROLE_READ],
+          permissions: [PERMISSIONS.ROLE_NAVIGATION],
         },
 
         navigation: {
@@ -163,7 +168,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
         component: "options",
 
         access: {
-          permissions: [PERMISSIONS.OPTION_READ],
+          permissions: [PERMISSIONS.OPTION_NAVIGATION],
         },
 
         navigation: {
@@ -185,7 +190,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
          * own permissions below.
          */
         access: {
-          permissions: [PERMISSIONS.TICKET_READ],
+          permissions: [PERMISSIONS.TICKET_NAVIGATION],
         },
 
         navigation: {
@@ -240,7 +245,7 @@ export const APP_MODULE_CONFIG = Object.freeze({
         component: null,
 
         access: {
-          permissions: [PERMISSIONS.SLA_READ],
+          permissions: [PERMISSIONS.SLA_NAVIGATION],
         },
 
         navigation: {
@@ -336,12 +341,13 @@ export const APP_MODULE_CONFIG = Object.freeze({
         component: "reports",
 
         access: {
-          permissions: [PERMISSIONS.REPORTS_READ],
+          permissions: [PERMISSIONS.REPORTS_NAVIGATION],
         },
 
         navigation: {
           section: "app",
           order: 40,
+          iconKey: "reports",
         },
       }),
     ]),

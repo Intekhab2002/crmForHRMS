@@ -12,7 +12,7 @@
 
 export const PERMISSIONS = Object.freeze({
   DASHBOARD_READ: "dashboard:read",
-
+  DASHBOARD_NAVIGATION: "dashboard:navigation",
   DASHBOARD_OPERATIONAL_READ: "dashboard_operational:read",
   DASHBOARD_MANAGEMENT_READ: "dashboard_management:read",
   DASHBOARD_PROFESSIONAL_READ: "dashboard_professional:read",
@@ -20,7 +20,7 @@ export const PERMISSIONS = Object.freeze({
   DASHBOARD_AUDIT_READ: "dashboard_audit:read",
 
   USER_READ: "user:read",
-
+  USER_NAVIGATION: "user:navigation",
   USER_CREATE: "user:create",
 
   USER_UPDATE: "user:update",
@@ -28,7 +28,7 @@ export const PERMISSIONS = Object.freeze({
   USER_DELETE: "user:delete",
 
   ROLE_READ: "role:read",
-
+  ROLE_NAVIGATION: "role:navigation",
   ROLE_CREATE: "role:create",
 
   ROLE_UPDATE: "role:update",
@@ -36,7 +36,7 @@ export const PERMISSIONS = Object.freeze({
   ROLE_DELETE: "role:delete",
 
   TICKET_READ: "ticket:read",
-
+  TICKET_NAVIGATION: "ticket:navigation",
   TICKET_CREATE: "ticket:create",
 
   TICKET_UPDATE: "ticket:update",
@@ -46,7 +46,7 @@ export const PERMISSIONS = Object.freeze({
   TICKET_ATTACHMENT: "ticket:attachment",
 
   OPTION_READ: "option:read",
-
+  OPTION_NAVIGATION: "option:navigation",
   OPTION_CREATE: "option:create",
 
   OPTION_UPDATE: "option:update",
@@ -54,6 +54,7 @@ export const PERMISSIONS = Object.freeze({
   OPTION_DELETE: "option:delete",
 
   SLA_READ: "sla:read",
+  SLA_NAVIGATION: "sla:navigation",
   SLA_CREATE: "sla:create",
   SLA_UPDATE: "sla:update",
   SLA_DELETE: "sla:delete",
@@ -68,6 +69,7 @@ export const PERMISSIONS = Object.freeze({
   SLA_HOLIDAY_DELETE: "sla:holiday_delete",
   SLA_RECALCULATE: "sla:recalculate",
   REPORTS_READ: "reports:read",
+  REPORTS_NAVIGATION: "reports:navigation",
   REPORTS_GENERATE: "reports:generate",
   REPORTS_DOWNLOAD: "reports:download",
 });

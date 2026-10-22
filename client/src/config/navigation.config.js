@@ -47,7 +47,8 @@ function collectNavigation(routes, section, parentPath = "") {
         id: route.id,
         label: route.label,
         path,
-        permissions: route.access?.permissions ?? [],
+        permissions:
+          route.navigation?.permissions ?? route.access?.permissions ?? [],
         iconKey: route.navigation?.iconKey,
         order: route.navigation?.order ?? 0,
         children,
@@ -73,7 +74,8 @@ function collectChildNavigation(routes, section, parentPath) {
         id: route.id,
         label: route.label,
         path,
-        permissions: route.access?.permissions ?? [],
+        permissions:
+          route.navigation?.permissions ?? route.access?.permissions ?? [],
         iconKey: route.navigation?.iconKey,
         order: route.navigation?.order ?? 0,
         children: collectChildNavigation(route.children ?? [], section, path),

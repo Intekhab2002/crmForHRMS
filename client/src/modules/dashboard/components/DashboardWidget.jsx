@@ -78,15 +78,15 @@ return (
   <Box
     sx={{
       width: "100%",
-      height: isCustomizing ? "100%" : "auto",
+      height:  "auto",
       minWidth: 0,
       minHeight: 0,
       display: "flex",
       flexDirection: "column",
-      flex: isCustomizing ? "initial" : 1,
+      flex:  1,
       "& > *": {
         minWidth: 0,
-        ...(isCustomizing ? {} : { flex: 1 }),
+         flex: 1 ,
       },
     }}
   >
