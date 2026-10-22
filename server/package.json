@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/sla/*.test.js",
+    "test": "node --test tests/sla/*.test.js tests/tickets/*.test.js",
     "test:sla": "node --test tests/sla/*.test.js",
     "test:sla:unit": "node --test tests/sla/businessCalendar.test.js tests/sla/businessTime.test.js tests/sla/resolver.test.js tests/sla/slaInvariants.test.js tests/sla/slaSourceContracts.test.js",
     "test:sla:api": "node --test tests/sla/apiSmoke.test.js",

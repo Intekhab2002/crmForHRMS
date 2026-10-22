@@ -816,6 +816,19 @@ const columnFilterDefinitions = Object.freeze({
   }),
 });
 
+
+export const TICKET_COLUMN_FILTER_OPERATORS = Object.freeze([
+  "contains",
+  "doesNotContain",
+  "equals",
+  "doesNotEqual",
+  "startsWith",
+  "endsWith",
+  "isEmpty",
+  "isNotEmpty",
+  "isAnyOf",
+]);
+
 export const TICKET_CONFIG = Object.freeze({
   module: "ticket",
   fields,
@@ -824,6 +837,7 @@ export const TICKET_CONFIG = Object.freeze({
   contactFields,
   listFilterDefinitions,
   columnFilterDefinitions,
+  columnFilterOperators: TICKET_COLUMN_FILTER_OPERATORS,
 });
 
 export function getField(fieldKey) {

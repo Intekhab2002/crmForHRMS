@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { getField, TICKET_CONFIG } from "./ticket.config.js";
+import {
+  getField,
+  TICKET_CONFIG,
+  TICKET_COLUMN_FILTER_OPERATORS,
+} from "./ticket.config.js";
 
 const uuidSchema = z.string().uuid();
 const uuidArraySchema = z.preprocess((value) => {
@@ -36,15 +40,7 @@ const columnFilterItemSchema = z
   .object({
     field: z.string().trim().min(1).max(100),
 
-    operator: z.enum([
-      "contains",
-      "equals",
-      "startsWith",
-      "endsWith",
-      "isEmpty",
-      "isNotEmpty",
-      "isAnyOf",
-    ]),
+    operator: z.enum(TICKET_COLUMN_FILTER_OPERATORS),
 
     value: z
       .union([z.string().max(5000), z.array(z.string().max(255)).max(100)])
@@ -242,34 +238,62 @@ const ticketListQuerySchema = ticketListFilterSchema
   .strict()
   .superRefine((value, context) => {
     for (const [index, item] of (value.columnFilters?.items ?? []).entries()) {
+      const itemPath = ["columnFilters", "items", index];
+
+      // Only configured SQL expressions may be used in ticket filters.
       if (!TICKET_CONFIG.columnFilterDefinitions[item.field]) {
         context.addIssue({
           code: "custom",
-          path: ["columnFilters", "items", index, "field"],
+          path: [...itemPath, "field"],
           message: `Unsupported ticket column filter field: ${item.field}`,
         });
+
+        continue;
       }
 
-      const requiresValue = !["isEmpty", "isNotEmpty"].includes(item.operator);
+      // Operators that do not require a comparison value.
+      if (["isEmpty", "isNotEmpty"].includes(item.operator)) {
+        // MUI may omit the value or provide an empty string.
+        // A non-empty value or an array is invalid for these operators.
+        if (
+          (typeof item.value === "string" && item.value !== "") ||
+          Array.isArray(item.value)
+        ) {
+          context.addIssue({
+            code: "custom",
+            path: [...itemPath, "value"],
+            message: `${item.operator} does not accept a comparison value.`,
+          });
+        }
 
-      if (
-        requiresValue &&
-        (item.value === undefined ||
-          (typeof item.value === "string" && item.value.trim() === "") ||
-          (Array.isArray(item.value) && item.value.length === 0))
-      ) {
-        context.addIssue({
-          code: "custom",
-          path: ["columnFilters", "items", index, "value"],
-          message: "A value is required for this column filter operator.",
-        });
+        continue;
       }
 
-      if (item.operator === "isAnyOf" && !Array.isArray(item.value)) {
+      // isAnyOf requires a non-empty array of valid string values.
+      if (item.operator === "isAnyOf") {
+        if (
+          !Array.isArray(item.value) ||
+          item.value.length === 0 ||
+          item.value.some(
+            (entry) => typeof entry !== "string" || entry.trim() === "",
+          )
+        ) {
+          context.addIssue({
+            code: "custom",
+            path: [...itemPath, "value"],
+            message: "isAnyOf requires a non-empty array of non-empty strings.",
+          });
+        }
+
+        continue;
+      }
+
+      // All other operators require a single non-empty string.
+      if (typeof item.value !== "string" || item.value.trim() === "") {
         context.addIssue({
           code: "custom",
-          path: ["columnFilters", "items", index, "value"],
-          message: "The isAnyOf operator requires an array of values.",
+          path: [...itemPath, "value"],
+          message: `${item.operator} requires a non-empty string value.`,
         });
       }
     }

@@ -161,8 +161,8 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
   /*
    * DataGrid column filters.
    *
-   * Field expressions come only from TICKET_CONFIG.columnFilterDefinitions.
-   * All filter values use the existing parameterized addValue() helper.
+   * SQL expressions are selected exclusively from the trusted
+   * TICKET_CONFIG allowlist. Request values are always parameterized.
    */
   const columnFilterModel = filters.columnFilters;
 
@@ -172,97 +172,123 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
     for (const item of columnFilterModel.items) {
       const definition = TICKET_CONFIG.columnFilterDefinitions[item.field];
 
-      // The validator normally rejects unsupported fields. Keep this
-      // guard so the SQL builder is also safe when called independently.
+      // Defense in depth: the builder may be called without Zod validation.
       if (!definition) {
         throw new Error(
           `Unsupported ticket column filter field: ${item.field}`,
         );
       }
 
-      const expression = definition.sqlExpression;
-      const operator = item.operator;
-      const value = item.value;
-
-      if (operator === "isEmpty") {
-        columnConditions.push(`
-          NULLIF(
-            BTRIM(COALESCE((${expression})::TEXT, '')),
-            ''
-          ) IS NULL
-        `);
-        continue;
-      }
-
-      if (operator === "isNotEmpty") {
-        columnConditions.push(`
-          NULLIF(
-            BTRIM(COALESCE((${expression})::TEXT, '')),
-            ''
-          ) IS NOT NULL
-        `);
-        continue;
-      }
-
-      if (operator === "isAnyOf") {
-        if (!Array.isArray(value) || value.length === 0) {
-          continue;
-        }
-
-        const parameters = value.map((itemValue) => addValue(itemValue));
-
-        columnConditions.push(`
-          LOWER((${expression})::TEXT) IN (
-            ${parameters.map((parameter) => `LOWER(${parameter})`).join(", ")}
-          )
-        `);
-        continue;
-      }
-
-      if (typeof value !== "string" || value.trim() === "") {
-        continue;
-      }
-
-      // Treat SQL LIKE wildcards in user input as literal characters.
-      const escapedValue = value.replace(/[\\%_]/g, "\\$&");
-      const parameter = addValue(
-        operator === "contains" ||
-          operator === "startsWith" ||
-          operator === "endsWith"
-          ? escapedValue
-          : value,
-      );
+      const expression = `(${definition.sqlExpression})::TEXT`;
+      const { operator, value } = item;
 
       switch (operator) {
+        case "isEmpty": {
+          columnConditions.push(`
+            NULLIF(BTRIM(COALESCE(${expression}, '')), '') IS NULL
+          `);
+          break;
+        }
+
+        case "isNotEmpty": {
+          columnConditions.push(`
+            NULLIF(BTRIM(COALESCE(${expression}, '')), '') IS NOT NULL
+          `);
+          break;
+        }
+
+        case "isAnyOf": {
+          if (!Array.isArray(value) || value.length === 0) {
+            continue;
+          }
+
+          // Deduplicate values case-insensitively to avoid redundant binds.
+          const uniqueValues = [
+            ...new Map(
+              value.map((entry) => [entry.toLocaleLowerCase("en-US"), entry]),
+            ).values(),
+          ];
+
+          const parameters = uniqueValues.map((entry) => addValue(entry));
+
+          columnConditions.push(`
+            LOWER(${expression}) IN (
+              ${parameters.map((parameter) => `LOWER(${parameter})`).join(", ")}
+            )
+          `);
+          break;
+        }
+
         case "contains":
-          columnConditions.push(`
-            (${expression})::TEXT
-              ILIKE '%' || ${parameter} || '%'
-              ESCAPE E'\\\\'
-          `);
-          break;
-
+        case "doesNotContain":
         case "startsWith":
-          columnConditions.push(`
-            (${expression})::TEXT
-              ILIKE ${parameter} || '%'
-              ESCAPE E'\\\\'
-          `);
-          break;
+        case "endsWith": {
+          if (typeof value !== "string" || value.trim() === "") {
+            continue;
+          }
 
-        case "endsWith":
-          columnConditions.push(`
-            (${expression})::TEXT
-              ILIKE '%' || ${parameter}
-              ESCAPE E'\\\\'
-          `);
+          // User-entered % and _ must be treated literally, not as
+          // SQL LIKE wildcards. Backslashes must also be escaped.
+          const escapedValue = value.replace(/[\\%_]/g, "\\$&");
+          const parameter = addValue(escapedValue);
+
+          switch (operator) {
+            case "contains":
+              columnConditions.push(`
+                ${expression} ILIKE '%' || ${parameter} || '%'
+                ESCAPE E'\\\\'
+              `);
+              break;
+
+            case "doesNotContain":
+              columnConditions.push(`
+                ${expression} IS NOT NULL
+                AND ${expression} NOT ILIKE '%' || ${parameter} || '%'
+                ESCAPE E'\\\\'
+              `);
+              break;
+
+            case "startsWith":
+              columnConditions.push(`
+                ${expression} ILIKE ${parameter} || '%'
+                ESCAPE E'\\\\'
+              `);
+              break;
+
+            case "endsWith":
+              columnConditions.push(`
+                ${expression} ILIKE '%' || ${parameter}
+                ESCAPE E'\\\\'
+              `);
+              break;
+          }
+
           break;
+        }
 
         case "equals":
-          columnConditions.push(`
-            LOWER((${expression})::TEXT) = LOWER(${parameter})
-          `);
+        case "doesNotEqual": {
+          if (typeof value !== "string" || value.trim() === "") {
+            continue;
+          }
+
+          const parameter = addValue(value);
+
+          if (operator === "equals") {
+            columnConditions.push(`
+              LOWER(${expression}) = LOWER(${parameter})
+            `);
+          } else {
+            // SQL NULL is not treated as a value that differs from
+            // the requested value.
+            columnConditions.push(`
+              ${expression} IS NOT NULL
+              AND LOWER(${expression}) <> LOWER(${parameter})
+            `);
+          }
+
           break;
+        }
 
         default:
           throw new Error(
