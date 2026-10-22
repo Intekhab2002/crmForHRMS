@@ -159,6 +159,18 @@ function buildTicketListWhereClause(filters = {}, parameterOffset = 0) {
   }
 
   /*
+   * District is associated with the ticket's contact.
+   * Use the existing contact join; district is not a column on tickets.
+   */
+  if (Array.isArray(filters.districtId) && filters.districtId.length > 0) {
+    const districtParameters = addUuidValues([...new Set(filters.districtId)]);
+
+    conditions.push(
+      `contact.district_id IN (${districtParameters.join(", ")})`,
+    );
+  }
+
+  /*
    * SLA filters. The ticket repository and export repository must both
    * expose the current ticket_sla row using the alias `ts`.
    */

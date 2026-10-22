@@ -160,6 +160,9 @@ COALESCE(
 
 const FROM = `
     FROM tickets t
+    
+    LEFT JOIN ticket_sla ts
+        ON ts.ticket_id = t.id
 
     INNER JOIN users requester
         ON requester.id = t.requester_user_id
