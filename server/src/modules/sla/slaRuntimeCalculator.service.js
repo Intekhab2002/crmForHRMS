@@ -84,20 +84,33 @@ export function calculateLiveRuntime(runtime, segments, now = new Date()) {
       continue;
     }
 
-    elapsed += calculateBusinessMinutes({
-      startAt: segment.started_at,
-      endAt: now,
-      calendar: calendarFromPolicy(policy),
-      holidays,
-    });
+    const baseline = Math.max(0, Number(segment.consumed_minutes ?? 0));
+
+    elapsed +=
+      baseline +
+      calculateBusinessMinutes({
+        startAt: segment.started_at,
+        endAt: now,
+        calendar: calendarFromPolicy(policy),
+        holidays,
+      });
   }
 
   elapsed = Math.max(0, Math.floor(elapsed));
 
   const target = Number(runtime.target_resolution_minutes ?? 0);
 
+  let liveStatus = runtime.status;
+
+  if ([SLA_STATUS.RUNNING, SLA_STATUS.BREACHED].includes(runtime.status)) {
+    liveStatus =
+      target > 0 && elapsed >= target
+        ? SLA_STATUS.BREACHED
+        : SLA_STATUS.RUNNING;
+  }
+
   return {
-    status: runtime.status,
+    status: liveStatus,
     elapsedBusinessMinutes: elapsed,
     remainingBusinessMinutes: target > 0 ? Math.max(target - elapsed, 0) : null,
   };

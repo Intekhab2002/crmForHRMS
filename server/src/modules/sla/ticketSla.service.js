@@ -58,9 +58,13 @@ async function get(id) {
 
   const segments = await repository.listSegments(sla.id);
 
+  const currentRunSegments = segments.filter(
+    (segment) => Number(segment.run_number) === Number(sla.run_number),
+  );
+
   const live = runtimeCalculator.calculateLiveRuntime(
     sla,
-    segments,
+    currentRunSegments,
     new Date(),
   );
 
@@ -108,7 +112,10 @@ async function setNotTracked(
     options.preserveElapsed ?? existing?.elapsed_business_minutes ?? 0,
   );
 
-  if (existing && existing.status === SLA_STATUS.RUNNING) {
+  if (
+    existing &&
+    [SLA_STATUS.RUNNING, SLA_STATUS.BREACHED].includes(existing.status)
+  ) {
     const segments = await repository.listSegments(existing.id, tx);
 
     const activeSegment = segments
@@ -150,9 +157,7 @@ async function activate(ticket, policy, rule, now, tx = null) {
   const isNewRuntime = !existing || existing.status === SLA_STATUS.NOT_TRACKED;
   const isRestart =
     existing &&
-    [SLA_STATUS.STOPPED, SLA_STATUS.BREACHED, SLA_STATUS.COMPLETED].includes(
-      existing.status,
-    );
+    [SLA_STATUS.STOPPED, SLA_STATUS.COMPLETED].includes(existing.status);
 
   let runNumber = existing?.run_number ?? 1;
 
@@ -245,6 +250,7 @@ async function pause(runtime, now, consumedResult, tx = null) {
     tx,
   );
 }
+
 async function changeDuration(
   runtime,
   { ticket, policy, rule, durationValueKey },
@@ -270,6 +276,7 @@ async function changeDuration(
 
   const holidayRows = await repository.listHolidays(policy.calendar_id, {}, tx);
 
+  // Preserve the actual consumption of the segment being closed.
   await repository.closeSegment(
     runtime.id,
     runtime.run_number,
@@ -287,22 +294,27 @@ async function changeDuration(
       startedAt: now,
       triggerValueKey: policy.trigger_value_key,
       durationValueKey,
-      targetMinutes: rule.resolution_minutes,
+      targetMinutes: Number(rule.resolution_minutes),
       consumedMinutes: 0,
       status: SLA_STATUS.RUNNING,
     },
     tx,
   );
 
+  /*
+   * Use updateTicketSla, not upsertTicketSla.
+   * This preserves breached_at and other timestamp fields that
+   * must not be reset when severity changes.
+   */
   return repository.updateTicketSla(
     runtime.id,
     {
       status: SLA_STATUS.RUNNING,
       pausedAt: null,
-      targetResolutionMinutes: rule.resolution_minutes,
+      targetResolutionMinutes: Number(rule.resolution_minutes),
       elapsedBusinessMinutes: totalConsumed,
       remainingBusinessMinutes: Math.max(
-        rule.resolution_minutes - totalConsumed,
+        Number(rule.resolution_minutes) - totalConsumed,
         0,
       ),
       durationFieldValueKey: durationValueKey,
@@ -362,6 +374,7 @@ async function resume(ticket, policy, rule, now, consumed, tx = null) {
     tx,
   );
 }
+
 async function terminal(
   runtime,
   now,
@@ -369,14 +382,13 @@ async function terminal(
   segmentConsumed,
   status,
   tx = null,
+  endReasonOverride = null,
 ) {
   const endReason =
-    status === SLA_STATUS.BREACHED
-      ? "BREACHED"
-      : status === SLA_STATUS.COMPLETED
-        ? "RESOLVED"
-        : "TICKET_CLOSED";
+    endReasonOverride ??
+    (status === SLA_STATUS.COMPLETED ? "RESOLVED" : "TICKET_CLOSED");
 
+  // Close the current segment with its own consumption only.
   await repository.closeSegment(
     runtime.id,
     runtime.run_number,
@@ -393,7 +405,10 @@ async function terminal(
       status,
       completedAt: status === SLA_STATUS.COMPLETED ? now : undefined,
       stoppedAt: status === SLA_STATUS.STOPPED ? now : undefined,
-      breachedAt: status === SLA_STATUS.BREACHED ? now : undefined,
+      breachedAt:
+        status === SLA_STATUS.BREACHED && !runtime.breached_at
+          ? now
+          : undefined,
       elapsedBusinessMinutes: totalConsumed,
       remainingBusinessMinutes: remaining(
         runtime.target_resolution_minutes,
@@ -403,46 +418,74 @@ async function terminal(
     },
     tx,
   );
+
   await repository.archiveTicketSlaRun(updated.id, tx);
 
   return updated;
 }
 
-async function complete(runtime, now, totalConsumed, tx = null) {
+async function complete(
+  runtime,
+  now,
+  consumedResult,
+  tx = null,
+  endReason = "RESOLVED",
+) {
+  const totalConsumed = Number(
+    consumedResult?.totalConsumed ?? consumedResult ?? 0,
+  );
+
+  const segmentConsumed = Number(
+    consumedResult?.activeSegmentConsumed ?? totalConsumed,
+  );
+
   return terminal(
     runtime,
     now,
     totalConsumed,
-    totalConsumed,
+    segmentConsumed,
     SLA_STATUS.COMPLETED,
     tx,
+    endReason,
   );
 }
 
-async function stop(runtime, now, totalConsumed, tx = null) {
+async function stop(runtime, now, consumedResult, tx = null) {
+  const totalConsumed = Number(
+    consumedResult?.totalConsumed ?? consumedResult ?? 0,
+  );
+
+  const segmentConsumed = Number(
+    consumedResult?.activeSegmentConsumed ?? totalConsumed,
+  );
+
   return terminal(
     runtime,
     now,
     totalConsumed,
-    totalConsumed,
+    segmentConsumed,
     SLA_STATUS.STOPPED,
     tx,
     "TICKET_CLOSED",
   );
 }
 
-async function breach(runtime, now, totalConsumed, segmentConsumed, tx = null) {
-  // const target = Number(runtime.target_resolution_minutes ?? 0);
+async function breach(runtime, now, totalConsumed, tx = null) {
+  const target = Number(runtime.target_resolution_minutes ?? 0);
 
-  return terminal(
-    runtime,
-    now,
-    totalConsumed,
-    Number(segmentConsumed ?? totalConsumed),
-    SLA_STATUS.BREACHED,
+  return repository.updateTicketSla(
+    runtime.id,
+    {
+      status: SLA_STATUS.BREACHED,
+      breachedAt: runtime.breached_at ?? now,
+      elapsedBusinessMinutes: totalConsumed,
+      remainingBusinessMinutes: Math.max(target - totalConsumed, 0),
+      lastCalculatedAt: now,
+    },
     tx,
   );
 }
+
 export default Object.freeze({
   get,
   history,

@@ -379,7 +379,10 @@ async function nextTicketSlaRunNumber(ticketId, tx = null) {
 
 async function runningSlas(limit = 500, tx = null) {
   const r = await ex(tx).query(
-    `${SLA_SELECT} WHERE ts.status='RUNNING' ORDER BY ts.last_calculated_at NULLS FIRST LIMIT $1`,
+    `${SLA_SELECT}
+ WHERE ts.status IN ('RUNNING', 'BREACHED')
+ ORDER BY ts.last_calculated_at NULLS FIRST
+ LIMIT $1`,
     [limit],
   );
   return r.rows;
@@ -424,7 +427,23 @@ async function archiveTicketSlaRun(ticketSlaId, tx = null) {
         $11,$12,$13,$14,$15,$16,$17
       )
       ON CONFLICT (ticket_id, run_number)
-      DO NOTHING
+      DO UPDATE SET
+      sla_policy_id = EXCLUDED.sla_policy_id,
+      status = EXCLUDED.status,
+      activated_at = EXCLUDED.activated_at,
+      paused_at = EXCLUDED.paused_at,
+      stopped_at = EXCLUDED.stopped_at,
+      completed_at = EXCLUDED.completed_at,
+      breached_at = EXCLUDED.breached_at,
+      target_resolution_minutes = EXCLUDED.target_resolution_minutes,
+      elapsed_business_minutes = EXCLUDED.elapsed_business_minutes,
+      remaining_business_minutes = EXCLUDED.remaining_business_minutes,
+      activation_field_key = EXCLUDED.activation_field_key,
+      activation_field_value_key = EXCLUDED.activation_field_value_key,
+      duration_field_key = EXCLUDED.duration_field_key,
+      duration_field_value_key = EXCLUDED.duration_field_value_key,
+      policy_snapshot = EXCLUDED.policy_snapshot,
+      updated_at = CURRENT_TIMESTAMP
     `,
     [
       runtime.ticket_id,
@@ -580,10 +599,7 @@ async function closeSegment(
     `UPDATE ticket_sla_segments
 SET
   ended_at=$3,
-  consumed_minutes=LEAST(
-    GREATEST($4,0),
-    target_minutes
-  ),
+consumed_minutes=GREATEST($4,0),
   status=$5,
   end_reason=$6
 WHERE id=(
