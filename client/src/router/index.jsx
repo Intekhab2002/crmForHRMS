@@ -32,6 +32,7 @@ import OptionManagementPage from "../modules/options/pages/OptionManagementPage"
   import SlaPolicyDetailPage from "../modules/sla/pages/SlaPolicyDetailPage";
   import SlaCalendarsPage from "../modules/sla/pages/SlaCalendarsPage";
   import SlaCalendarDetailPage from "../modules/sla/pages/SlaCalendarDetailPage";
+  import RouteErrorPage from "../components/feedback/RouteErrorPage";
 
 import { APP_MODULE_CONFIG, SYSTEM_ROUTES } from "../config/module.config";
 import LandingPage from "../pages/public/LandingPage";
@@ -134,8 +135,9 @@ function buildRoute(route) {
   }
 
   const result = {
-    element,
-  };
+  element,
+  errorElement: <RouteErrorPage />,
+};
 
   if (route.path) {
     result.path = route.path;
@@ -181,19 +183,33 @@ export const router = createBrowserRouter([
   {
     path: SYSTEM_ROUTES.defaultEntry,
     element: <LandingPage />,
+    errorElement: <RouteErrorPage />,
   },
 
-  buildRoute(publicRoutes),
-  buildRoute(authRoutes),
-  buildRoute(dashboardRoutes),
+  {
+    ...buildRoute(publicRoutes),
+    errorElement: <RouteErrorPage />,
+  },
+
+  {
+    ...buildRoute(authRoutes),
+    errorElement: <RouteErrorPage />,
+  },
+
+  {
+    ...buildRoute(dashboardRoutes),
+    errorElement: <RouteErrorPage />,
+  },
 
   {
     path: SYSTEM_ROUTES.forbidden,
     element: <ForbiddenPage />,
+    errorElement: <RouteErrorPage />,
   },
 
   {
     path: SYSTEM_ROUTES.notFound,
     element: <NotFoundPage />,
+    errorElement: <RouteErrorPage />,
   },
 ]);
