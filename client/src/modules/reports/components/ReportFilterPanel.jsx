@@ -30,8 +30,8 @@ export default function ReportFilterPanel({ value, onChange, policies = [] }) {
         <TextField
           fullWidth
           size="small"
-          label="Severity / Duration Value"
-          placeholder="e.g. SEVERITY1"
+          label="SLA Duration Value"
+          placeholder="e.g. severity3"
           value={value.severityKey || ""}
           onChange={(event) =>
             onChange({
@@ -39,7 +39,7 @@ export default function ReportFilterPanel({ value, onChange, policies = [] }) {
               severityKey: event.target.value,
             })
           }
-          helperText="Uses historical SLA segment duration values."
+          helperText="Exact historical SLA rule value, e.g. severity3. Leave blank for all values."
         />
       </Grid>
 
@@ -58,13 +58,18 @@ export default function ReportFilterPanel({ value, onChange, policies = [] }) {
           }
         >
           <MenuItem value="">All Statuses</MenuItem>
-          {["COMPLETED", "STOPPED", "BREACHED", "RUNNING", "PAUSED", "NOT_TRACKED"].map(
-            (status) => (
-              <MenuItem key={status} value={status}>
-                {status}
-              </MenuItem>
-            ),
-          )}
+          {[
+            "COMPLETED",
+            "STOPPED",
+            "BREACHED",
+            "RUNNING",
+            "PAUSED",
+            "NOT_TRACKED",
+          ].map((status) => (
+            <MenuItem key={status} value={status}>
+              {status}
+            </MenuItem>
+          ))}
         </TextField>
       </Grid>
     </Grid>

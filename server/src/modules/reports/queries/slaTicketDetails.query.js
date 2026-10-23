@@ -32,7 +32,11 @@ async function getDueAt(run, cutoff, tx) {
   if (!resolved) return null;
   let holidays = [];
   if (resolved.policy.calendarId) {
-    holidays = await slaRepository.listHolidays(resolved.policy.calendarId, {}, tx);
+    holidays = await slaRepository.listHolidays(
+      resolved.policy.calendarId,
+      {},
+      tx,
+    );
   }
 
   try {
@@ -53,27 +57,53 @@ export async function fetchSlaTicketDetailsDataset(input, tx = null) {
 
   const ids = [...new Set(runs.map((r) => r.ticket_id).filter(Boolean))];
   const result = await ex(tx).query(
-    "SELECT id, ticket_number, subject FROM tickets WHERE id = ANY($1::uuid[])",
+    "SELECT id, ticket_number, created_at, updated_at FROM tickets WHERE id = ANY($1::uuid[])",
     [ids],
   );
   const tickets = new Map(result.rows.map((row) => [row.id, row]));
 
-  const rows = await Promise.all(runs.map(async (run) => {
-    const ticket = tickets.get(run.ticket_id);
-    return {
-      // Intentionally do not expose ticket_id in the report dataset.
-      ticketNumber: ticket?.ticket_number ?? run.ticket_number ?? "—",
-      subject: ticket?.subject ?? "—",
-      targetMinutes: run.target_resolution_minutes == null ? null : Number(run.target_resolution_minutes),
-      elapsedMinutes: run.elapsed_business_minutes == null ? null : Number(run.elapsed_business_minutes),
-      remainingMinutes: run.remaining_business_minutes == null ? null : Number(run.remaining_business_minutes),
-      dueAt: await getDueAt(run, input.dataCutoff, tx),
-      policyName: run.policy_name || run.policy_code || "—",
-      activatedAt: run.activated_at ?? null,
-      status: run.status,
-    };
-  }));
+  const rows = await Promise.all(
+    runs.map(async (run) => {
+      const ticket = tickets.get(run.ticket_id);
+      return {
+        // Intentionally do not expose ticket_id in the report dataset.
+        ticketNumber: ticket?.ticket_number ?? run.ticket_number ?? "—",
+        ticketCreatedAt: ticket?.created_at ?? null,
+        ticketLastUpdatedAt: ticket?.updated_at ?? null,
+        targetMinutes:
+          run.target_resolution_minutes == null
+            ? null
+            : Number(run.target_resolution_minutes),
+        elapsedMinutes:
+          run.elapsed_business_minutes == null
+            ? null
+            : Number(run.elapsed_business_minutes),
+        remainingMinutes:
+          run.remaining_business_minutes == null
+            ? null
+            : Number(run.remaining_business_minutes),
+        // Business minutes exceeded beyond the SLA target.
+        // Only breached runs receive a breach duration.
+        breachMinutes:
+          run.status === "BREACHED" && run.elapsed_business_minutes != null
+            ? Math.max(
+                0,
+                Number(run.elapsed_business_minutes) -
+                  Number(run.target_resolution_minutes || 0),
+              )
+            : null,
 
-  return rows.sort((a, b) => new Date(a.activatedAt || 0) - new Date(b.activatedAt || 0));
+        dueAt: await getDueAt(run, input.dataCutoff, tx),
+        policyName: run.policy_name || run.policy_code || "—",
+        activatedAt: run.activated_at ?? null,
+        breachedAt: run.breached_at ?? null,
+        status: run.status,
+      };
+    }),
+  );
+
+  return rows.sort(
+    (a, b) => new Date(a.activatedAt || 0) - new Date(b.activatedAt || 0),
+  );
 }
 export default Object.freeze({ fetchSlaTicketDetailsDataset });

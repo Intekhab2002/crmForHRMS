@@ -11,23 +11,61 @@ function timestamp(value, timezone) {
   if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("en-IN", {
     timeZone: timezone || "Asia/Kolkata",
-    year: "numeric", month: "short", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", hour12: true,
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
   }).format(date);
 }
 
 export function renderSlaTicketDetails(doc, data) {
   heading(doc, "SLA Ticket Details");
-  paragraph(doc,
-    "Each row represents an SLA run activated during the selected period. Target, elapsed and remaining values are business minutes. Due time is projected for running SLAs and uses the recorded breach timestamp for breached SLAs; paused, stopped and completed non-breached runs have no projected deadline."
+
+  paragraph(
+    doc,
+    "Each row represents an SLA run activated during the selected reporting period. " +
+      "Target, elapsed, remaining and breach durations are business minutes. " +
+      "Breach Time is the elapsed business time beyond the target. " +
+      "Breach Timestamp records when the SLA breached. Ticket Created Time and " +
+      "Ticket Last Updated Time come from the ticket record.",
   );
-  const rows = (data.ticketDetails || []).map((r) => [
-    r.ticketNumber, r.subject, minutes(r.targetMinutes), minutes(r.elapsedMinutes),
-    minutes(r.remainingMinutes), timestamp(r.dueAt, data.documentControl.timezone),
-    r.policyName, timestamp(r.activatedAt, data.documentControl.timezone),
+
+  const timezone = data.documentControl.timezone;
+
+  const rows = (data.ticketDetails || []).map((row) => [
+    row.ticketNumber,
+    timestamp(row.ticketCreatedAt, timezone),
+    row.policyName,
+    timestamp(row.activatedAt, timezone),
+    minutes(row.targetMinutes),
+    minutes(row.elapsedMinutes),
+    minutes(row.remainingMinutes),
+    minutes(row.breachMinutes),
+    timestamp(row.breachedAt, timezone),
+    timestamp(row.dueAt, timezone),
+    timestamp(row.ticketLastUpdatedAt, timezone),
+    row.status,
   ]);
-  table(doc,
-    ["Ticket No.", "Subject", "Target", "Elapsed", "Remaining", "Due Time", "SLA Policy", "SLA Activated At"],
-    rows, [12, 22, 9, 9, 10, 15, 17, 18]
+
+  table(
+    doc,
+    [
+      "Ticket Number",
+      "Ticket Created",
+      "SLA Policy",
+      "SLA Activated",
+      "Target",
+      "Elapsed",
+      "Remaining",
+      "Breach Time",
+      "Breach Timestamp",
+      "Due Time",
+      "Ticket Last Updated",
+      "Status",
+    ],
+    rows,
+    [15, 17, 16, 17, 9, 9, 10, 10, 17, 17, 18, 12],
   );
 }
