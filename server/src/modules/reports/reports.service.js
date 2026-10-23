@@ -24,12 +24,8 @@ import { slaTicketDetailsDefinition } from "./definitions/slaTicketDetails.defin
 import { fetchSlaTicketDetailsDataset } from "./queries/slaTicketDetails.query.js";
 
 const DEFINITIONS = new Map([
-  [
-    slaComplianceDefinition.code,
-    slaComplianceDefinition,
-    slaTicketDetailsDefinition.code,
-    slaTicketDetailsDefinition,
-  ],
+  [slaComplianceDefinition.code, slaComplianceDefinition],
+  [slaTicketDetailsDefinition.code, slaTicketDetailsDefinition],
 ]);
 
 function resolvePeriod(input) {

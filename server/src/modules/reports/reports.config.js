@@ -14,12 +14,19 @@ const parsePositiveInt = (value, fallback) => {
 export const reportsConfig = Object.freeze({
   timezone: process.env.REPORT_DEFAULT_TIMEZONE || "Asia/Kolkata",
   storageRoot: path.resolve(
-    process.env.REPORT_STORAGE_PATH || path.join(process.cwd(), "storage", "reports"),
+    process.env.REPORT_STORAGE_PATH ||
+      path.join(process.cwd(), "storage", "reports"),
   ),
   workerPollMs: parsePositiveInt(process.env.REPORT_WORKER_POLL_MS, 2000),
-  historyDefaultLimit: parsePositiveInt(process.env.REPORT_HISTORY_DEFAULT_LIMIT, 20),
+  historyDefaultLimit: parsePositiveInt(
+    process.env.REPORT_HISTORY_DEFAULT_LIMIT,
+    20,
+  ),
   historyMaxLimit: parsePositiveInt(process.env.REPORT_HISTORY_MAX_LIMIT, 100),
-  maxGenerationRows: parsePositiveInt(process.env.REPORT_MAX_GENERATION_ROWS, 250000),
+  maxGenerationRows: parsePositiveInt(
+    process.env.REPORT_MAX_GENERATION_ROWS,
+    250000,
+  ),
   company: Object.freeze({
     name: process.env.REPORT_COMPANY_NAME || "CRM for HRMS",
     address: process.env.REPORT_COMPANY_ADDRESS || "",
@@ -37,6 +44,15 @@ export const reportsConfig = Object.freeze({
       supportsPdf: true,
       supportsExcel: true,
       filters: Object.freeze(["period", "policy", "severity", "status"]),
+    }),
+    [REPORT_CODE.SLA_TICKET_DETAILS]: Object.freeze({
+      code: REPORT_CODE.SLA_TICKET_DETAILS,
+      name: "SLA Ticket Details",
+      version: REPORT_VERSION,
+      calculationVersion: "SLA-TICKET-DETAILS-1.0",
+      supportsPdf: true,
+      supportsExcel: true,
+      filters: Object.freeze(["period", "policy", "status"]),
     }),
   }),
 });
