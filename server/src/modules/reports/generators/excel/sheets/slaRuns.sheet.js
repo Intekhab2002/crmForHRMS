@@ -2,7 +2,7 @@ import { setupSheet, addRows, formatDateColumns } from "./_sheet.utils.js";
 
 export function buildSlaRunsSheet(workbook, data) {
   const sheet = setupSheet(workbook, "05 SLA Runs", [
-    ["Ticket", "ticketNumber", 18], ["Ticket ID", "ticketId", 38], ["Run", "runNumber", 10],
+    ["Ticket", "ticketNumber", 18], ["Run", "runNumber", 10],
     ["Policy Code", "policyCode", 20], ["Policy Name", "policyName", 28], ["Status", "status", 14],
     ["Activated At", "activatedAt", 24], ["Paused At", "pausedAt", 24], ["Stopped At", "stoppedAt", 24],
     ["Completed At", "completedAt", 24], ["Breached At", "breachedAt", 24],
@@ -13,7 +13,6 @@ export function buildSlaRunsSheet(workbook, data) {
   ]);
   addRows(sheet, data.runs.map((row) => ({
     ticketNumber: row.ticket_number,
-    ticketId: row.ticket_id,
     runNumber: row.run_number,
     policyCode: row.policy_code,
     policyName: row.policy_name,

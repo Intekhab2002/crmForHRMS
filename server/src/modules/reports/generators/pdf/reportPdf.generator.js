@@ -15,7 +15,7 @@ import { renderDataSources } from "./sections/dataSources.section.js";
 import { renderAuditEvidence } from "./sections/auditEvidence.section.js";
 import { renderAppendix } from "./sections/appendix.section.js";
 import { PDF_COLORS } from "./reportPdf.styles.js";
- import { renderSlaTicketDetails } from "./sections/slaTicketDetails.section.js";
+import { renderSlaTicketDetails } from "./sections/slaTicketDetails.section.js";
 const PDF_MARGINS = Object.freeze({
   top: 55,
   right: 42,
@@ -38,60 +38,63 @@ const FOOTER = Object.freeze({
  * the bottom of the page. This leaves a protected gap between report data
  * and footer content.
  */
+
 function renderFooter(doc, data, pageNumber, pageCount) {
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
 
   const footerY = pageHeight - FOOTER.textOffset;
-
   const footerLineY = footerY - FOOTER.lineOffset;
 
-  doc
-    .strokeColor("#D1D5DB")
-    .moveTo(PDF_MARGINS.left, footerLineY)
-    .lineTo(pageWidth - PDF_MARGINS.right, footerLineY)
-    .stroke();
+  // Footer content intentionally occupies the bottom margin.
+  // Disable PDFKit's normal bottom-margin page-break boundary
+  // while drawing the footer, then restore it.
+  const originalBottomMargin = doc.page.margins.bottom;
+  doc.page.margins.bottom = 0;
 
-  doc.font("Helvetica").fontSize(7).fillColor(PDF_COLORS.muted);
+  try {
+    doc
+      .strokeColor("#D1D5DB")
+      .moveTo(PDF_MARGINS.left, footerLineY)
+      .lineTo(pageWidth - PDF_MARGINS.right, footerLineY)
+      .stroke();
 
-  doc.text(
-    String(data.company.classification ?? ""),
-    PDF_MARGINS.left,
-    footerY,
-    {
-      width: FOOTER.sideWidth,
-      lineBreak: false,
-    },
-  );
+    doc.font("Helvetica").fontSize(7).fillColor(PDF_COLORS.muted);
 
-  doc.text(
-    String(data.documentControl.reportId ?? ""),
-    pageWidth / 2 - FOOTER.centerWidth / 2,
-    footerY,
-    {
-      width: FOOTER.centerWidth,
-      align: "center",
-      lineBreak: false,
-    },
-  );
+    doc.text(
+      String(data.company.classification ?? ""),
+      PDF_MARGINS.left,
+      footerY,
+      {
+        width: FOOTER.sideWidth,
+        lineBreak: false,
+      },
+    );
 
-  doc.text(
-    `Page ${pageNumber} of ${pageCount}`,
-    pageWidth - PDF_MARGINS.right - FOOTER.rightWidth,
-    footerY,
-    {
-      width: FOOTER.rightWidth,
-      align: "right",
-      lineBreak: false,
-    },
-  );
+    doc.text(
+      String(data.documentControl.reportId ?? ""),
+      pageWidth / 2 - FOOTER.centerWidth / 2,
+      footerY,
+      {
+        width: FOOTER.centerWidth,
+        align: "center",
+        lineBreak: false,
+      },
+    );
 
-  /*
-   * Restore the normal content cursor after writing the footer.
-   * This prevents footer rendering from affecting subsequent PDF operations.
-   */
-  doc.x = PDF_MARGINS.left;
-  doc.y = pageHeight - PDF_MARGINS.bottom;
+    doc.text(
+      `Page ${pageNumber} of ${pageCount}`,
+      pageWidth - PDF_MARGINS.right - FOOTER.rightWidth,
+      footerY,
+      {
+        width: FOOTER.rightWidth,
+        align: "right",
+        lineBreak: false,
+      },
+    );
+  } finally {
+    doc.page.margins.bottom = originalBottomMargin;
+  }
 }
 
 export async function generateReportPdf(data) {
