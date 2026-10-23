@@ -13,38 +13,18 @@ export default function ReportPreview({ data, loading = false }) {
     );
   }
 
-  const cards =
-    data.reportCode === "SLA_TICKET_DETAILS"
-      ? [
-          ["SLA Ticket Rows", data.recordCount],
-          ["Tickets", data.ticketCount],
-        ]
-      : [
-          ["SLA Runs", data.recordCount],
-          ["Eligible", data.eligibleRuns],
-          ["Met", data.metRuns],
-          ["Breached", data.breachedRuns],
-          ["Running", data.runningRuns],
-          ["Paused", data.pausedRuns],
-          [
-            "Compliance",
-            data.compliance == null
-              ? "—"
-              : `${Number(data.compliance).toFixed(2)}%`,
-          ],
-          ["Reconciliation", data.reconciliation],
-        ];
+  const cards = data.previewCards || [];
 
   return (
     <Grid container spacing={1.5}>
-      {cards.map(([label, value]) => (
+      {cards.map(({ label, value }) => (
         <Grid key={label} size={{ xs: 6, sm: 4, md: 3 }}>
           <Paper variant="outlined" sx={{ p: 1.5, height: "100%" }}>
             <Stack spacing={0.5}>
               <Typography variant="caption" color="text.secondary">
                 {label}
               </Typography>
-              <Typography variant="h6">{value}</Typography>
+              <Typography variant="h6">{value ?? "—"}</Typography>
             </Stack>
           </Paper>
         </Grid>

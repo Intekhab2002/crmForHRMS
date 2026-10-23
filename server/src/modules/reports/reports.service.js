@@ -83,14 +83,6 @@ function resolvePeriod(input) {
   };
 }
 
-function resolveDefinition(code) {
-  const definition = DEFINITIONS.get(code);
-  if (!definition) {
-    throw AppError.notFound(`Report definition '${code}' was not found.`);
-  }
-  return definition;
-}
-
 function normalizeInput(input) {
   const period = resolvePeriod(input);
   return {
@@ -154,62 +146,149 @@ async function buildComplianceDataset(input) {
   };
 }
 
-async function buildDataset(code, input) {
-  if (code === slaTicketDetailsDefinition.code) {
-    const ticketDetails = await fetchSlaTicketDetailsDataset(input);
-    return {
-      ticketDetails,
-      runs: ticketDetails,
-      scope: {
-        ticketCount: new Set(ticketDetails.map((row) => row.ticketNumber)).size,
+const REPORT_HANDLERS = new Map([
+  [
+    slaComplianceDefinition.code,
+    {
+      definition: slaComplianceDefinition,
+      buildDataset: buildComplianceDataset,
+
+      getRecordCount: (dataset) => dataset.runs.length,
+
+      getGenerationEligibility: (dataset) => ({
+        canGenerate: dataset.reconciliation?.status === "PASS",
+        reason:
+          dataset.reconciliation?.status === "PASS"
+            ? null
+            : "Report reconciliation failed. The report cannot be finalized.",
+        errorCode: "REPORT_RECONCILIATION_FAILED",
+      }),
+
+      buildPreview: (dataset, normalized, definition) => ({
+        reportCode: definition.code,
+        reportName: definition.name,
+        reportVersion: definition.version,
+        calculationVersion: definition.calculationVersion,
+        reportingPeriod: {
+          start: normalized.periodStart,
+          end: normalized.periodEnd,
+        },
+        dataCutoff: normalized.dataCutoff,
+        timezone: normalized.timezone,
+        recordCount: dataset.runs.length,
+        ...dataset.compliance,
+        compliance: dataset.compliance.complianceRate,
+        reconciliation: dataset.reconciliation.status,
+        exceptions: dataset.exceptions.length,
+        exceptionBreakdown: dataset.exceptions.reduce((acc, row) => {
+          acc[row.code] = (acc[row.code] || 0) + 1;
+          return acc;
+        }, {}),
+        previewCards: [
+          { label: "SLA Runs", value: dataset.runs.length },
+          { label: "Eligible", value: dataset.compliance.eligibleRuns },
+          { label: "Met", value: dataset.compliance.metRuns },
+          { label: "Breached", value: dataset.compliance.breachedRuns },
+          { label: "Running", value: dataset.compliance.runningRuns },
+          { label: "Paused", value: dataset.compliance.pausedRuns },
+          {
+            label: "Compliance",
+            value:
+              dataset.compliance.complianceRate == null
+                ? "—"
+                : `${Number(dataset.compliance.complianceRate).toFixed(2)}%`,
+          },
+          {
+            label: "Reconciliation",
+            value: dataset.reconciliation.status,
+          },
+        ],
+      }),
+    },
+  ],
+  [
+    slaTicketDetailsDefinition.code,
+    {
+      definition: slaTicketDetailsDefinition,
+
+      async buildDataset(input) {
+        const ticketDetails = await fetchSlaTicketDetailsDataset(input);
+
+        return {
+          ticketDetails,
+          // Preserve the common dataset contract used by the run lifecycle.
+          runs: ticketDetails,
+          scope: {
+            ticketCount: new Set(ticketDetails.map((row) => row.ticketNumber))
+              .size,
+          },
+        };
       },
-    };
+
+      getRecordCount: (dataset) => dataset.ticketDetails.length,
+
+      getGenerationEligibility: () => ({
+        canGenerate: true,
+        reason: null,
+        errorCode: null,
+      }),
+
+      buildPreview: (dataset, normalized, definition) => ({
+        reportCode: definition.code,
+        reportName: definition.name,
+        reportVersion: definition.version,
+        calculationVersion: definition.calculationVersion,
+        reportingPeriod: {
+          start: normalized.periodStart,
+          end: normalized.periodEnd,
+        },
+        dataCutoff: normalized.dataCutoff,
+        timezone: normalized.timezone,
+        recordCount: dataset.ticketDetails.length,
+        ticketCount: dataset.scope.ticketCount,
+        previewCards: [
+          {
+            label: "SLA Ticket Rows",
+            value: dataset.ticketDetails.length,
+          },
+          {
+            label: "Tickets",
+            value: dataset.scope.ticketCount,
+          },
+        ],
+      }),
+    },
+  ],
+]);
+
+function resolveHandler(code) {
+  const handler = REPORT_HANDLERS.get(code);
+
+  if (!handler) {
+    throw AppError.notFound(`Report definition '${code}' was not found.`);
   }
-  return buildComplianceDataset(input);
+
+  return handler;
+}
+
+function resolveDefinition(code) {
+  return resolveHandler(code).definition;
 }
 
 export async function preview(code, input) {
-  const definition = resolveDefinition(code);
+  const handler = resolveHandler(code);
+  const { definition } = handler;
   const normalized = normalizeInput(input);
-  const dataset = await buildDataset(code, normalized);
 
-  if (definition.code === slaTicketDetailsDefinition.code) {
-    return {
-      reportCode: definition.code,
-      reportName: definition.name,
-      reportVersion: definition.version,
-      calculationVersion: definition.calculationVersion,
-      reportingPeriod: {
-        start: normalized.periodStart,
-        end: normalized.periodEnd,
-      },
-      dataCutoff: normalized.dataCutoff,
-      timezone: normalized.timezone,
-      recordCount: dataset.ticketDetails.length,
-      ticketCount: dataset.scope.ticketCount,
-    };
-  }
+  const dataset = await handler.buildDataset(normalized);
+  const eligibility = handler.getGenerationEligibility(dataset);
 
   return {
-    reportCode: definition.code,
-    reportName: definition.name,
-    reportVersion: definition.version,
-    calculationVersion: definition.calculationVersion,
-    reportingPeriod: {
-      start: normalized.periodStart,
-      end: normalized.periodEnd,
+    ...handler.buildPreview(dataset, normalized, definition),
+    capabilities: {
+      canGenerate: eligibility.canGenerate,
+      reason: eligibility.reason,
     },
-    dataCutoff: normalized.dataCutoff,
-    timezone: normalized.timezone,
-    recordCount: dataset.runs.length,
-    ...dataset.compliance,
-    compliance: dataset.compliance.complianceRate,
-    reconciliation: dataset.reconciliation.status,
-    exceptions: dataset.exceptions.length,
-    exceptionBreakdown: dataset.exceptions.reduce((acc, row) => {
-      acc[row.code] = (acc[row.code] || 0) + 1;
-      return acc;
-    }, {}),
   };
 }
 
@@ -279,9 +358,12 @@ export async function processRun(runId) {
   const createdArtifacts = [];
 
   try {
-    const definition = resolveDefinition(claimed.report_code);
+    const handler = resolveHandler(claimed.report_code);
+    const { definition } = handler;
     const filters = claimed.filters || {};
-    const dataset = await buildDataset(claimed.report_code, {
+
+    const normalized = normalizeInput({
+      period: claimed.parameters?.period,
       periodStart: claimed.period_start,
       periodEnd: claimed.period_end,
       dataCutoff: claimed.data_cutoff,
@@ -291,30 +373,31 @@ export async function processRun(runId) {
       statuses: filters.statuses || [],
     });
 
-    const recordCount = dataset.ticketDetails
-      ? dataset.ticketDetails.length
-      : dataset.runs.length;
+    const dataset = await handler.buildDataset(normalized);
+    const recordCount = handler.getRecordCount(dataset);
 
-    if (dataset.runs.length > reportsConfig.maxGenerationRows) {
+    if (recordCount > reportsConfig.maxGenerationRows) {
       throw AppError.badRequest(
-        `Report contains ${dataset.runs.length} SLA runs, exceeding the configured generation limit of ${reportsConfig.maxGenerationRows}.`,
+        `Report contains ${recordCount} rows, exceeding the configured generation limit of ${reportsConfig.maxGenerationRows}.`,
         { code: "REPORT_ROW_LIMIT_EXCEEDED" },
       );
     }
 
-    if (dataset.reconciliation.status !== "PASS") {
+    const eligibility = handler.getGenerationEligibility(dataset);
+
+    if (!eligibility.canGenerate) {
       throw AppError.conflict(
-        "Report reconciliation failed. The report cannot be finalized.",
-        { code: "REPORT_RECONCILIATION_FAILED" },
+        eligibility.reason || "The report cannot be finalized.",
+        { code: eligibility.errorCode || "REPORT_GENERATION_NOT_ALLOWED" },
       );
     }
-
     const generatedAt = new Date();
     const reportData = {
       ...dataset,
       documentControl: {
         reportId: claimed.report_id,
         reportType: definition.name,
+        reportCode: claimed.report_code,
         reportVersion: definition.version,
         calculationVersion: definition.calculationVersion,
         periodStart: claimed.period_start,
@@ -324,7 +407,7 @@ export async function processRun(runId) {
         generatedByUserId: claimed.requested_by_user_id,
         timezone: claimed.timezone,
         status: "FINAL",
-        recordCount: dataset.runs.length,
+        recordCount,
       },
       company: reportsConfig.company,
     };
@@ -377,7 +460,7 @@ export async function processRun(runId) {
     }
 
     const completed = await repository.completeRun(claimed.id, {
-      recordCount: dataset.runs.length,
+      recordCount,
       generatedByUserId: claimed.requested_by_user_id,
     });
 
@@ -385,7 +468,7 @@ export async function processRun(runId) {
       reportCode: claimed.report_code,
       reportRunId: claimed.id,
       reportId: claimed.report_id,
-      recordCount: dataset.runs.length,
+      recordCount,
       durationMs: Date.now() - startedAt,
       artifactSize: pdfBuffer.length + excelBuffer.length,
     });
