@@ -20,9 +20,16 @@ import { reconcile } from "./calculators/reconciliation.calculator.js";
 import { generateReportPdf } from "./generators/pdf/reportPdf.generator.js";
 import { generateReportExcel } from "./generators/excel/reportExcel.generator.js";
 import storage from "./storage/reportStorage.js";
+import { slaTicketDetailsDefinition } from "./definitions/slaTicketDetails.definition.js";
+import { fetchSlaTicketDetailsDataset } from "./queries/slaTicketDetails.query.js";
 
 const DEFINITIONS = new Map([
-  [slaComplianceDefinition.code, slaComplianceDefinition],
+  [
+    slaComplianceDefinition.code,
+    slaComplianceDefinition,
+    slaTicketDetailsDefinition.code,
+    slaTicketDetailsDefinition,
+  ],
 ]);
 
 function resolvePeriod(input) {
@@ -52,7 +59,9 @@ function resolvePeriod(input) {
   }
 
   if (!input.periodStart || !input.periodEnd) {
-    throw AppError.validation("Custom reporting period requires periodStart and periodEnd.");
+    throw AppError.validation(
+      "Custom reporting period requires periodStart and periodEnd.",
+    );
   }
 
   const start = DateTime.fromISO(input.periodStart, { setZone: true });
@@ -97,7 +106,7 @@ function normalizeInput(input) {
   };
 }
 
-async function buildDataset(input) {
+async function buildComplianceDataset(input) {
   const runs = await fetchComplianceDataset(input);
 
   let filteredRuns = runs;
@@ -106,7 +115,9 @@ async function buildDataset(input) {
     const segments = await fetchSegments(runs);
     const allowed = new Set(
       segments
-        .filter((segment) => input.severityKeys.includes(segment.duration_value_key))
+        .filter((segment) =>
+          input.severityKeys.includes(segment.duration_value_key),
+        )
         .map((segment) => `${segment.ticket_id}:${segment.run_number}`),
     );
 
@@ -147,10 +158,41 @@ async function buildDataset(input) {
   };
 }
 
+async function buildDataset(code, input) {
+  if (code === slaTicketDetailsDefinition.code) {
+    const ticketDetails = await fetchSlaTicketDetailsDataset(input);
+    return {
+      ticketDetails,
+      runs: ticketDetails,
+      scope: {
+        ticketCount: new Set(ticketDetails.map((row) => row.ticketNumber)).size,
+      },
+    };
+  }
+  return buildComplianceDataset(input);
+}
+
 export async function preview(code, input) {
   const definition = resolveDefinition(code);
   const normalized = normalizeInput(input);
-  const dataset = await buildDataset(normalized);
+  const dataset = await buildDataset(code, normalized);
+
+  if (definition.code === slaTicketDetailsDefinition.code) {
+    return {
+      reportCode: definition.code,
+      reportName: definition.name,
+      reportVersion: definition.version,
+      calculationVersion: definition.calculationVersion,
+      reportingPeriod: {
+        start: normalized.periodStart,
+        end: normalized.periodEnd,
+      },
+      dataCutoff: normalized.dataCutoff,
+      timezone: normalized.timezone,
+      recordCount: dataset.ticketDetails.length,
+      ticketCount: dataset.scope.ticketCount,
+    };
+  }
 
   return {
     reportCode: definition.code,
@@ -180,7 +222,9 @@ export async function createGenerationRun(code, input, userId) {
   const normalized = normalizeInput(input);
 
   const reportNumber = await repository.nextReportNumber();
-  const periodMonth = DateTime.fromISO(normalized.periodStart, { setZone: true })
+  const periodMonth = DateTime.fromISO(normalized.periodStart, {
+    setZone: true,
+  })
     .setZone(normalized.timezone)
     .toFormat("yyyy-MM");
 
@@ -188,9 +232,12 @@ export async function createGenerationRun(code, input, userId) {
 
   const persistedDefinition = await repository.findDefinition(definition.code);
   if (!persistedDefinition) {
-    throw AppError.conflict("Report definition is not registered in the database.", {
-      code: "REPORT_DEFINITION_NOT_REGISTERED",
-    });
+    throw AppError.conflict(
+      "Report definition is not registered in the database.",
+      {
+        code: "REPORT_DEFINITION_NOT_REGISTERED",
+      },
+    );
   }
 
   const run = await repository.createRun({
@@ -238,7 +285,7 @@ export async function processRun(runId) {
   try {
     const definition = resolveDefinition(claimed.report_code);
     const filters = claimed.filters || {};
-    const dataset = await buildDataset({
+    const dataset = await buildDataset(claimed.report_code, {
       periodStart: claimed.period_start,
       periodEnd: claimed.period_end,
       dataCutoff: claimed.data_cutoff,
@@ -247,6 +294,10 @@ export async function processRun(runId) {
       severityKeys: filters.severityKeys || [],
       statuses: filters.statuses || [],
     });
+
+    const recordCount = dataset.ticketDetails
+      ? dataset.ticketDetails.length
+      : dataset.runs.length;
 
     if (dataset.runs.length > reportsConfig.maxGenerationRows) {
       throw AppError.badRequest(
@@ -395,7 +446,10 @@ export async function getRun(runId) {
 }
 
 export async function getArtifact(runId, artifactType) {
-  const artifact = await repository.findArtifact(runId, artifactType.toUpperCase());
+  const artifact = await repository.findArtifact(
+    runId,
+    artifactType.toUpperCase(),
+  );
   if (!artifact) throw AppError.notFound("Report artifact not found.");
   return artifact;
 }

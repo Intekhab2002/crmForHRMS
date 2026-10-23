@@ -15,7 +15,7 @@ import { renderDataSources } from "./sections/dataSources.section.js";
 import { renderAuditEvidence } from "./sections/auditEvidence.section.js";
 import { renderAppendix } from "./sections/appendix.section.js";
 import { PDF_COLORS } from "./reportPdf.styles.js";
-
+ import { renderSlaTicketDetails } from "./sections/slaTicketDetails.section.js";
 const PDF_MARGINS = Object.freeze({
   top: 55,
   right: 42,
@@ -42,28 +42,17 @@ function renderFooter(doc, data, pageNumber, pageCount) {
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
 
-  const footerY =
-    pageHeight - FOOTER.textOffset;
+  const footerY = pageHeight - FOOTER.textOffset;
 
-  const footerLineY =
-    footerY - FOOTER.lineOffset;
+  const footerLineY = footerY - FOOTER.lineOffset;
 
   doc
     .strokeColor("#D1D5DB")
-    .moveTo(
-      PDF_MARGINS.left,
-      footerLineY,
-    )
-    .lineTo(
-      pageWidth - PDF_MARGINS.right,
-      footerLineY,
-    )
+    .moveTo(PDF_MARGINS.left, footerLineY)
+    .lineTo(pageWidth - PDF_MARGINS.right, footerLineY)
     .stroke();
 
-  doc
-    .font("Helvetica")
-    .fontSize(7)
-    .fillColor(PDF_COLORS.muted);
+  doc.font("Helvetica").fontSize(7).fillColor(PDF_COLORS.muted);
 
   doc.text(
     String(data.company.classification ?? ""),
@@ -76,11 +65,8 @@ function renderFooter(doc, data, pageNumber, pageCount) {
   );
 
   doc.text(
-    String(
-      data.documentControl.reportId ?? "",
-    ),
-    pageWidth / 2 -
-      FOOTER.centerWidth / 2,
+    String(data.documentControl.reportId ?? ""),
+    pageWidth / 2 - FOOTER.centerWidth / 2,
     footerY,
     {
       width: FOOTER.centerWidth,
@@ -91,9 +77,7 @@ function renderFooter(doc, data, pageNumber, pageCount) {
 
   doc.text(
     `Page ${pageNumber} of ${pageCount}`,
-    pageWidth -
-      PDF_MARGINS.right -
-      FOOTER.rightWidth,
+    pageWidth - PDF_MARGINS.right - FOOTER.rightWidth,
     footerY,
     {
       width: FOOTER.rightWidth,
@@ -135,20 +119,24 @@ export async function generateReportPdf(data) {
       resolve(Buffer.concat(chunks));
     });
 
-    renderCover(doc, data);
-    renderDocumentControl(doc, data);
-    renderScope(doc, data);
-    renderSummary(doc, data);
-    renderPolicy(doc, data);
-    renderSeverity(doc, data);
-    renderBreach(doc, data);
-    renderTrend(doc, data);
-    renderExceptions(doc, data);
-    renderReconciliation(doc, data);
-    renderMethodology(doc, data);
-    renderDataSources(doc, data);
-    renderAuditEvidence(doc, data);
-    renderAppendix(doc, data);
+    if (data.documentControl.reportType === "SLA Ticket Details") {
+      renderSlaTicketDetails(doc, data);
+    } else {
+      renderCover(doc, data);
+      renderDocumentControl(doc, data);
+      renderScope(doc, data);
+      renderSummary(doc, data);
+      renderPolicy(doc, data);
+      renderSeverity(doc, data);
+      renderBreach(doc, data);
+      renderTrend(doc, data);
+      renderExceptions(doc, data);
+      renderReconciliation(doc, data);
+      renderMethodology(doc, data);
+      renderDataSources(doc, data);
+      renderAuditEvidence(doc, data);
+      renderAppendix(doc, data);
+    }
 
     /*
      * Footer rendering is deliberately performed only after all report
@@ -157,19 +145,10 @@ export async function generateReportPdf(data) {
      */
     const pages = doc.bufferedPageRange();
 
-    for (
-      let index = 0;
-      index < pages.count;
-      index += 1
-    ) {
+    for (let index = 0; index < pages.count; index += 1) {
       doc.switchToPage(index);
 
-      renderFooter(
-        doc,
-        data,
-        index + 1,
-        pages.count,
-      );
+      renderFooter(doc, data, index + 1, pages.count);
     }
 
     doc.end();

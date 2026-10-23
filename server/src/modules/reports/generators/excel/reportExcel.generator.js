@@ -15,14 +15,18 @@ export async function generateReportExcel(data) {
   workbook.created = new Date(data.documentControl.generatedAt);
   workbook.properties.subject = data.documentControl.reportId;
 
-  buildSummarySheet(workbook, data);
-  buildPolicySheet(workbook, data);
-  buildSeveritySheet(workbook, data);
-  buildBreachesSheet(workbook, data);
-  buildSlaRunsSheet(workbook, data);
-  buildSegmentsSheet(workbook, data);
-  buildExceptionsSheet(workbook, data);
-  buildReconciliationSheet(workbook, data);
+  if (data.documentControl.reportType === "SLA Ticket Details") {
+    buildSlaTicketDetailsSheet(workbook, data);
+  } else {
+    buildSummarySheet(workbook, data);
+    buildPolicySheet(workbook, data);
+    buildSeveritySheet(workbook, data);
+    buildBreachesSheet(workbook, data);
+    buildSlaRunsSheet(workbook, data);
+    buildSegmentsSheet(workbook, data);
+    buildExceptionsSheet(workbook, data);
+    buildReconciliationSheet(workbook, data);
+  }
 
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
