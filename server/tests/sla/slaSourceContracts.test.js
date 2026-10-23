@@ -23,8 +23,8 @@ test("repository listSegments signature and engine invocation must agree", async
 
   assert.match(
     engine,
-    /repository\.listSegments\(runtime\.id,\s*null,\s*tx\)/,
-    "engine must pass null runNumber and tx explicitly",
+    /repository\.listSegments\(runtime\.id,\s*runtime\.run_number,\s*tx\)/,
+    "engine must restrict segment calculations to the current run",
   );
 });
 
@@ -70,18 +70,30 @@ test("SLA engine must reject multiple open segments", async () => {
   );
 });
 
-test("terminal SLA statuses must remain immutable in sync flow", async () => {
+test("only STOPPED and COMPLETED are immutable runtime states", async () => {
   const engine = await read("slaEngine.service.js");
 
   assert.match(
     engine,
-    /SLA_STATUS\.STOPPED,\s*SLA_STATUS\.COMPLETED,\s*SLA_STATUS\.BREACHED/,
-    "terminal statuses must be recognized",
+    /runtime\?\.status\s*===\s*SLA_STATUS\.COMPLETED/,
+    "completed runtimes must return early",
   );
 
   assert.match(
     engine,
-    /Terminal runtime states are immutable/,
-    "terminal-state guard must remain present",
+    /if\s*\(closed\(ticket\)\)/,
+    "ticket closure must be handled before the stopped-state guard",
+  );
+
+  assert.match(
+    engine,
+    /runtime\?\.status\s*===\s*SLA_STATUS\.STOPPED/,
+    "stopped runtimes must remain unchanged when the ticket is open",
+  );
+
+  assert.doesNotMatch(
+    engine,
+    /\[\s*SLA_STATUS\.STOPPED\s*,\s*SLA_STATUS\.COMPLETED\s*,\s*SLA_STATUS\.BREACHED\s*\]\.includes\(runtime\.status\)/,
+    "BREACHED must not be treated as a terminal state",
   );
 });

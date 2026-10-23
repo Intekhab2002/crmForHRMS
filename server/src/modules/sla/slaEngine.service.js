@@ -67,7 +67,7 @@ function policyFromSnapshot(runtime) {
 }
 
 async function getSegments(runtime, tx) {
-  return repository.listSegments(runtime.id,  runtime.run_number, tx);
+  return repository.listSegments(runtime.id, runtime.run_number, tx);
 }
 
 async function calculateSegmentConsumed(segment, now, policy, holidayRows) {
@@ -75,10 +75,7 @@ async function calculateSegmentConsumed(segment, now, policy, holidayRows) {
     return Math.max(0, Number(segment.consumed_minutes ?? 0));
   }
 
-  const baseline = Math.max(
-    0,
-    Number(segment.consumed_minutes ?? 0),
-  );
+  const baseline = Math.max(0, Number(segment.consumed_minutes ?? 0));
 
   const elapsedSinceSegmentStart = calculateBusinessMinutes({
     startAt: segment.started_at,
@@ -331,11 +328,45 @@ export async function syncTicket(
 
   const runtime = await repository.oneTicketSla(ticketId, tx);
 
-  // Completed and explicitly stopped runs remain immutable.
-  if (
-    runtime &&
-    [SLA_STATUS.STOPPED, SLA_STATUS.COMPLETED].includes(runtime.status)
-  ) {
+  // A completed run is already final.
+  if (runtime?.status === SLA_STATUS.COMPLETED) {
+    return runtime;
+  }
+
+  /*
+   * Ticket closure takes precedence over STOPPED.
+   * A ticket that is now closed must have a COMPLETED SLA runtime,
+   * including when its runtime was previously STOPPED or BREACHED.
+   */
+  if (closed(ticket)) {
+    if (!runtime) {
+      return null;
+    }
+
+    const policy = policyFromSnapshot(runtime);
+
+    if (policy && runtime.status === SLA_STATUS.BREACHED) {
+      await ensureActiveBreachedSegment(runtime, policy, now, tx);
+    }
+
+    const consumedResult = policy
+      ? await calculateRuntimeConsumed(runtime, now, policy, tx)
+      : {
+          totalConsumed: Number(runtime.elapsed_business_minutes ?? 0),
+          activeSegmentConsumed: 0,
+        };
+
+    return ticketSla.complete(
+      runtime,
+      now,
+      consumedResult,
+      tx,
+      "TICKET_CLOSED",
+    );
+  }
+
+  // A stopped runtime remains immutable while its ticket is not closed.
+  if (runtime?.status === SLA_STATUS.STOPPED) {
     return runtime;
   }
 

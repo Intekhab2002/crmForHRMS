@@ -37,18 +37,18 @@ test("remaining time equals target minus elapsed while under target", () => {
   assert.equal(Math.max(target - elapsed, 0), 300);
 });
 
-test("segment consumed time cannot exceed segment target", () => {
+test("breached segment consumption may exceed its target", () => {
   const target = 480;
   const consumed = 600;
 
-  assert.equal(Math.min(Math.max(consumed, 0), target), 480);
+  assert.equal(Math.max(consumed, 0), 600);
+  assert.ok(consumed > target);
 });
 
 test("negative segment consumption normalizes to zero", () => {
-  const target = 480;
   const consumed = -100;
 
-  assert.equal(Math.min(Math.max(consumed, 0), target), 0);
+  assert.equal(Math.max(consumed, 0), 0);
 });
 
 test("policy snapshot retains holiday date strings", () => {
@@ -79,16 +79,18 @@ test("sixteen business hours equals 960 minutes", () => {
   assert.equal(16 * 60, 960);
 });
 
-test("terminal SLA state should not have a future remaining target", () => {
+test("BREACHED is non-terminal; COMPLETED and STOPPED are terminal", () => {
   const terminalStates = [
-    SLA_STATUS.BREACHED,
     SLA_STATUS.COMPLETED,
     SLA_STATUS.STOPPED,
   ];
 
-  for (const status of terminalStates) {
-    assert.ok(terminalStates.includes(status));
-  }
+  assert.equal(terminalStates.includes(SLA_STATUS.BREACHED), false);
+  assert.equal(terminalStates.includes(SLA_STATUS.RUNNING), false);
+  assert.equal(terminalStates.includes(SLA_STATUS.PAUSED), false);
+
+  assert.equal(terminalStates.includes(SLA_STATUS.COMPLETED), true);
+  assert.equal(terminalStates.includes(SLA_STATUS.STOPPED), true);
 });
 
 test("only one open segment is a valid runtime invariant", () => {
