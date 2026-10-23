@@ -23,18 +23,34 @@ import storage from "./storage/reportStorage.js";
 import { slaTicketDetailsDefinition } from "./definitions/slaTicketDetails.definition.js";
 import { fetchSlaTicketDetailsDataset } from "./queries/slaTicketDetails.query.js";
 
-const DEFINITIONS = new Map([
-  [slaComplianceDefinition.code, slaComplianceDefinition],
-  [slaTicketDetailsDefinition.code, slaTicketDetailsDefinition],
-]);
+function parseReportDateTime(value) {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      return DateTime.invalid("Invalid JavaScript Date");
+    }
+
+    return DateTime.fromJSDate(value, { zone: "utc" });
+  }
+
+  if (typeof value === "string" && value.trim() !== "") {
+    return DateTime.fromISO(value, { setZone: true });
+  }
+
+  return DateTime.invalid("Expected an ISO timestamp string or Date");
+}
 
 function resolvePeriod(input) {
   const timezone = input.timezone || reportsConfig.timezone;
   const now = DateTime.now().setZone(timezone);
 
+  if (!now.isValid) {
+    throw AppError.validation("Reporting timezone is invalid.");
+  }
+
   if (input.period === "CURRENT_MONTH") {
     const start = now.startOf("month");
     const end = start.plus({ months: 1 });
+
     return {
       timezone,
       periodStart: start.toUTC().toISO(),
@@ -46,6 +62,7 @@ function resolvePeriod(input) {
   if (input.period === "PREVIOUS_MONTH") {
     const end = now.startOf("month");
     const start = end.minus({ months: 1 });
+
     return {
       timezone,
       periodStart: start.toUTC().toISO(),
@@ -60,18 +77,35 @@ function resolvePeriod(input) {
     );
   }
 
-  const start = DateTime.fromISO(input.periodStart, { setZone: true });
-  const end = DateTime.fromISO(input.periodEnd, { setZone: true });
+  const start = parseReportDateTime(input.periodStart);
+  const end = parseReportDateTime(input.periodEnd);
 
-  if (!start.isValid || !end.isValid || end <= start) {
+  if (!start.isValid || !end.isValid || end.toMillis() <= start.toMillis()) {
+    logger.warn("report_invalid_custom_period", {
+      periodStart: input.periodStart,
+      periodStartType:
+        input.periodStart instanceof Date ? "Date" : typeof input.periodStart,
+      periodEnd: input.periodEnd,
+      periodEndType:
+        input.periodEnd instanceof Date ? "Date" : typeof input.periodEnd,
+      startReason: start.invalidReason,
+      endReason: end.invalidReason,
+    });
+
     throw AppError.validation("Reporting period is invalid.");
   }
 
-  const cutoff = input.dataCutoff
-    ? DateTime.fromISO(input.dataCutoff, { setZone: true })
-    : end;
+  const cutoff = input.dataCutoff ? parseReportDateTime(input.dataCutoff) : end;
 
-  if (!cutoff.isValid || cutoff < end) {
+  if (!cutoff.isValid || cutoff.toMillis() < end.toMillis()) {
+    logger.warn("report_invalid_data_cutoff", {
+      dataCutoff: input.dataCutoff,
+      dataCutoffType:
+        input.dataCutoff instanceof Date ? "Date" : typeof input.dataCutoff,
+      periodEnd: input.periodEnd,
+      cutoffReason: cutoff.invalidReason,
+    });
+
     throw AppError.validation("dataCutoff must be on or after periodEnd.");
   }
 
@@ -405,6 +439,7 @@ export async function processRun(runId) {
         dataCutoff: claimed.data_cutoff,
         generatedAt: generatedAt.toISOString(),
         generatedByUserId: claimed.requested_by_user_id,
+        generatedByName: generatedByUser?.display_name || "System",
         timezone: claimed.timezone,
         status: "FINAL",
         recordCount,
