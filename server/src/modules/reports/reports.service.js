@@ -22,6 +22,7 @@ import { generateReportExcel } from "./generators/excel/reportExcel.generator.js
 import storage from "./storage/reportStorage.js";
 import { slaTicketDetailsDefinition } from "./definitions/slaTicketDetails.definition.js";
 import { fetchSlaTicketDetailsDataset } from "./queries/slaTicketDetails.query.js";
+import userRepository from "../users/user.repository.js";
 
 function parseReportDateTime(value) {
   if (value instanceof Date) {
@@ -395,6 +396,9 @@ export async function processRun(runId) {
     const handler = resolveHandler(claimed.report_code);
     const { definition } = handler;
     const filters = claimed.filters || {};
+    const generatedByUser = claimed.requested_by_user_id
+      ? await userRepository.findUserById(claimed.requested_by_user_id)
+      : null;
 
     const normalized = normalizeInput({
       period: claimed.parameters?.period,
@@ -439,7 +443,13 @@ export async function processRun(runId) {
         dataCutoff: claimed.data_cutoff,
         generatedAt: generatedAt.toISOString(),
         generatedByUserId: claimed.requested_by_user_id,
-        generatedByName: generatedByUser?.display_name || "System",
+        generatedByName:
+          [generatedByUser?.first_name, generatedByUser?.last_name]
+            .filter(Boolean)
+            .join(" ")
+            .trim() ||
+          generatedByUser?.username ||
+          "System",
         timezone: claimed.timezone,
         status: "FINAL",
         recordCount,
