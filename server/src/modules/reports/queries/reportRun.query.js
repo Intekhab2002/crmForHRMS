@@ -3,11 +3,7 @@ import { getQueryExecutor } from "../../../database/queryExecutor.js";
 const ex = (tx) => getQueryExecutor(tx);
 
 const buildRunScope = (input = {}, alias = "r") => {
-  const params = [
-    input.periodStart,
-    input.periodEnd,
-    input.dataCutoff,
-  ];
+  const params = [input.periodStart, input.periodEnd, input.dataCutoff];
 
   const where = [
     `${alias}.activated_at >= $1::timestamptz`,
@@ -18,18 +14,14 @@ const buildRunScope = (input = {}, alias = "r") => {
   let i = 4;
 
   if (input.policyIds?.length) {
-    where.push(
-      `${alias}.sla_policy_id = ANY($${i}::uuid[])`,
-    );
+    where.push(`${alias}.sla_policy_id = ANY($${i}::uuid[])`);
 
     params.push(input.policyIds);
     i += 1;
   }
 
   if (input.statuses?.length) {
-    where.push(
-      `${alias}.status = ANY($${i}::text[])`,
-    );
+    where.push(`${alias}.status = ANY($${i}::text[])`);
 
     params.push(input.statuses);
     i += 1;
@@ -43,7 +35,7 @@ const buildRunScope = (input = {}, alias = "r") => {
 };
 
 export async function listHistoricalRuns(input, tx = null) {
-  const { where, params, next } = buildRunScope(input,"r");
+  const { where, params, next } = buildRunScope(input, "r");
 
   const query = `
     SELECT
@@ -60,6 +52,8 @@ export async function listHistoricalRuns(input, tx = null) {
       r.stopped_at,
       r.completed_at,
       r.breached_at,
+      r.breached_elapsed_business_minutes,
+r.breached_target_resolution_minutes,
       r.target_resolution_minutes,
       r.elapsed_business_minutes,
       r.remaining_business_minutes,
@@ -95,7 +89,7 @@ export async function listHistoricalRuns(input, tx = null) {
  * when a corresponding history record already exists.
  */
 export async function listCurrentUnarchivedRuns(input, tx = null) {
-  const { where, params } = buildRunScope(input,"ts");
+  const { where, params } = buildRunScope(input, "ts");
 
   const query = `
     SELECT
@@ -119,6 +113,8 @@ export async function listCurrentUnarchivedRuns(input, tx = null) {
       ts.stopped_at,
       ts.completed_at,
       ts.breached_at,
+      ts.breached_elapsed_business_minutes,
+ts.breached_target_resolution_minutes,
       ts.target_resolution_minutes,
       CASE
         WHEN ts.completed_at IS NOT NULL AND ts.completed_at <= $3::timestamptz THEN ts.elapsed_business_minutes
@@ -181,7 +177,11 @@ export async function listRuns(input, tx = null) {
   return [...history, ...runtime].sort((a, b) => {
     const left = new Date(a.activated_at).getTime();
     const right = new Date(b.activated_at).getTime();
-    return left - right || a.ticket_id.localeCompare(b.ticket_id) || a.run_number - b.run_number;
+    return (
+      left - right ||
+      a.ticket_id.localeCompare(b.ticket_id) ||
+      a.run_number - b.run_number
+    );
   });
 }
 

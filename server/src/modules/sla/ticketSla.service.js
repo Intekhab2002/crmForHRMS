@@ -398,41 +398,90 @@ async function terminal(
   tx = null,
   endReasonOverride = null,
 ) {
+  const allowedTerminalStatuses = [SLA_STATUS.COMPLETED, SLA_STATUS.STOPPED];
+
+  if (!allowedTerminalStatuses.includes(status)) {
+    throw AppError.conflict(`Invalid terminal SLA status: ${status}.`, {
+      code: SLA_ERROR_CODES.INVALID_RUNTIME,
+    });
+  }
+
+  // Terminal transitions must be idempotent. Do not rewrite an already
+  // finalized run or its historical timestamps.
+  if (
+    runtime.status === SLA_STATUS.COMPLETED ||
+    runtime.status === SLA_STATUS.STOPPED
+  ) {
+    if (runtime.status === status) {
+      return runtime;
+    }
+
+    throw AppError.conflict(
+      `Cannot transition SLA from ${runtime.status} to ${status}.`,
+      { code: SLA_ERROR_CODES.INVALID_RUNTIME },
+    );
+  }
+
   const endReason =
     endReasonOverride ??
     (status === SLA_STATUS.COMPLETED ? "RESOLVED" : "TICKET_CLOSED");
 
-  // Close the current segment with its own consumption only.
-  await repository.closeSegment(
+  const total = Math.max(0, Number(totalConsumed ?? 0));
+  const activeConsumed = Math.max(0, Number(segmentConsumed ?? 0));
+
+  // Close the current run's active segment. The repository's database
+  // constraint enforces no more than one open segment per run.
+  const openSegment = await repository.oneOpenSegmentForRun(
     runtime.id,
     runtime.run_number,
-    now,
-    segmentConsumed,
-    status,
     tx,
-    endReason,
   );
+
+  if (openSegment) {
+    await repository.closeSegment(
+      runtime.id,
+      runtime.run_number,
+      now,
+      activeConsumed,
+      status,
+      tx,
+      endReason,
+    );
+  }
 
   const updated = await repository.updateTicketSla(
     runtime.id,
     {
       status,
-      completedAt: status === SLA_STATUS.COMPLETED ? now : null,
-      stoppedAt: status === SLA_STATUS.STOPPED ? now : null,
-      breachedAt:
-        status === SLA_STATUS.BREACHED && !runtime.breached_at
-          ? now
-          : null,
-      elapsedBusinessMinutes: totalConsumed,
+      completedAt:
+        status === SLA_STATUS.COMPLETED
+          ? (runtime.completed_at ?? now)
+          : (runtime.completed_at ?? null),
+      stoppedAt:
+        status === SLA_STATUS.STOPPED
+          ? (runtime.stopped_at ?? now)
+          : (runtime.stopped_at ?? null),
+
+      // A terminal transition must never erase the first breach timestamp.
+      breachedAt: runtime.breached_at ?? null,
+
+      elapsedBusinessMinutes: total,
       remainingBusinessMinutes: remaining(
         runtime.target_resolution_minutes,
-        totalConsumed,
+        total,
       ),
       lastCalculatedAt: now,
     },
     tx,
   );
 
+  if (!updated) {
+    throw AppError.conflict("Unable to finalize SLA runtime.", {
+      code: SLA_ERROR_CODES.INVALID_RUNTIME,
+    });
+  }
+
+  // This must use the same transaction as the runtime/segment writes.
   await repository.archiveTicketSlaRun(updated.id, tx);
 
   return updated;
@@ -485,15 +534,39 @@ async function stop(runtime, now, consumedResult, tx = null) {
 }
 
 async function breach(runtime, now, totalConsumed, tx = null) {
+  if (
+    runtime.status === SLA_STATUS.COMPLETED ||
+    runtime.status === SLA_STATUS.STOPPED
+  ) {
+    throw AppError.conflict(
+      `Cannot breach an SLA in ${runtime.status} status.`,
+      { code: SLA_ERROR_CODES.INVALID_RUNTIME },
+    );
+  }
+
   const target = Number(runtime.target_resolution_minutes ?? 0);
+  const consumed = Math.max(0, Number(totalConsumed ?? 0));
+
+  if (!Number.isFinite(target) || target < 1) {
+    throw AppError.conflict("Cannot breach an SLA with an invalid target.", {
+      code: SLA_ERROR_CODES.INVALID_RUNTIME,
+    });
+  }
+
+  const isFirstBreach = runtime.breached_at == null;
 
   return repository.updateTicketSla(
     runtime.id,
     {
       status: SLA_STATUS.BREACHED,
+
+      // Capture the first breach once. Later calls must not overwrite it.
       breachedAt: runtime.breached_at ?? now,
-      elapsedBusinessMinutes: totalConsumed,
-      remainingBusinessMinutes: Math.max(target - totalConsumed, 0),
+      breachedElapsedBusinessMinutes: isFirstBreach ? consumed : undefined,
+      breachedTargetResolutionMinutes: isFirstBreach ? target : undefined,
+
+      elapsedBusinessMinutes: consumed,
+      remainingBusinessMinutes: 0,
       lastCalculatedAt: now,
     },
     tx,

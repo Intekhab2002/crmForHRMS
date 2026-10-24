@@ -87,69 +87,6 @@ async function calculateSegmentConsumed(segment, now, policy, holidayRows) {
   return baseline + elapsedSinceSegmentStart;
 }
 
-async function ensureBreachedSegment(runtime, policy, now, tx) {
-  if (runtime?.status !== SLA_STATUS.BREACHED) {
-    return;
-  }
-
-  const segments = await repository.listSegments(
-    runtime.id,
-    runtime.run_number,
-    tx,
-  );
-
-  if (segments.some((segment) => !segment.ended_at)) {
-    return;
-  }
-
-  const closedConsumed = segments.reduce(
-    (total, segment) =>
-      total +
-      (segment.ended_at
-        ? Math.max(0, Number(segment.consumed_minutes ?? 0))
-        : 0),
-    0,
-  );
-
-  const historicalOverrun = Math.max(
-    Number(runtime.elapsed_business_minutes ?? 0) - closedConsumed,
-    0,
-  );
-
-  await repository.createSegment(
-    {
-      ticketSlaId: runtime.id,
-      runNumber: runtime.run_number,
-      startedAt: runtime.breached_at ?? now,
-      triggerValueKey:
-        runtime.activation_field_value_key ?? policy.trigger_value_key,
-      durationValueKey:
-        runtime.duration_field_value_key ??
-        runtime.policy_snapshot?.rule?.fieldValueKey ??
-        "LEGACY_BREACH",
-      targetMinutes: Math.max(
-        Number(runtime.target_resolution_minutes ?? 1),
-        1,
-      ),
-      consumedMinutes: historicalOverrun,
-      status: SLA_STATUS.BREACHED,
-    },
-    tx,
-  );
-}
-
-function qualifiesForPolicy(policy, ticket) {
-  if (!policy) {
-    return false;
-  }
-
-  const currentTriggerValue = normalize(
-    resolver.getTicketFieldValue(ticket, policy.trigger_field_key),
-  );
-
-  return sameKey(currentTriggerValue, policy.trigger_value_key);
-}
-
 async function calculateRuntimeConsumed(runtime, now, policy, tx) {
   const segments = await getSegments(runtime, tx);
   const snapshotHolidays = holidaySnapshot(runtime);
@@ -368,37 +305,6 @@ export async function syncTicket(
   // A stopped runtime remains immutable while its ticket is not closed.
   if (runtime?.status === SLA_STATUS.STOPPED) {
     return runtime;
-  }
-
-  /*
-   * Closing a ticket completes the SLA run.
-   * BREACHED is deliberately not treated as terminal.
-   */
-  if (closed(ticket)) {
-    if (!runtime) {
-      return null;
-    }
-
-    const policy = policyFromSnapshot(runtime);
-
-    if (policy && runtime.status === SLA_STATUS.BREACHED) {
-      await ensureActiveBreachedSegment(runtime, policy, now, tx);
-    }
-
-    const consumedResult = policy
-      ? await calculateRuntimeConsumed(runtime, now, policy, tx)
-      : {
-          totalConsumed: Number(runtime.elapsed_business_minutes ?? 0),
-          activeSegmentConsumed: 0,
-        };
-
-    return ticketSla.complete(
-      runtime,
-      now,
-      consumedResult,
-      tx,
-      "TICKET_CLOSED",
-    );
   }
 
   if (!runtime) {

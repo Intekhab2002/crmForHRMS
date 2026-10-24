@@ -84,12 +84,18 @@ export async function fetchSlaTicketDetailsDataset(input, tx = null) {
             : Number(run.remaining_business_minutes),
         // Business minutes exceeded beyond the SLA target.
         // Only breached runs receive a breach duration.
+        // Historical breach duration is based on the first-breach snapshot,
+        // not the run's final status or its potentially changed target.
         breachMinutes:
-          run.status === "BREACHED" && run.elapsed_business_minutes != null
+          run.breached_at &&
+          new Date(run.breached_at).getTime() <=
+            new Date(input.dataCutoff).getTime() &&
+          run.breached_elapsed_business_minutes != null &&
+          run.breached_target_resolution_minutes != null
             ? Math.max(
                 0,
-                Number(run.elapsed_business_minutes) -
-                  Number(run.target_resolution_minutes || 0),
+                Number(run.breached_elapsed_business_minutes) -
+                  Number(run.breached_target_resolution_minutes),
               )
             : null,
 

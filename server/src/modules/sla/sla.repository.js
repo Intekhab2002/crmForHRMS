@@ -413,6 +413,8 @@ async function archiveTicketSlaRun(ticketSlaId, tx = null) {
         stopped_at,
         completed_at,
         breached_at,
+        breached_elapsed_business_minutes,
+breached_target_resolution_minutes,
         target_resolution_minutes,
         elapsed_business_minutes,
         remaining_business_minutes,
@@ -424,7 +426,7 @@ async function archiveTicketSlaRun(ticketSlaId, tx = null) {
       )
       VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
-        $11,$12,$13,$14,$15,$16,$17
+        $11,$12,$13,$14,$15,$16,$17,$18,$19
       )
       ON CONFLICT (ticket_id, run_number)
       DO UPDATE SET
@@ -435,6 +437,10 @@ async function archiveTicketSlaRun(ticketSlaId, tx = null) {
       stopped_at = EXCLUDED.stopped_at,
       completed_at = EXCLUDED.completed_at,
       breached_at = EXCLUDED.breached_at,
+      breached_elapsed_business_minutes =
+  EXCLUDED.breached_elapsed_business_minutes,
+breached_target_resolution_minutes =
+  EXCLUDED.breached_target_resolution_minutes,
       target_resolution_minutes = EXCLUDED.target_resolution_minutes,
       elapsed_business_minutes = EXCLUDED.elapsed_business_minutes,
       remaining_business_minutes = EXCLUDED.remaining_business_minutes,
@@ -455,6 +461,8 @@ async function archiveTicketSlaRun(ticketSlaId, tx = null) {
       runtime.stopped_at,
       runtime.completed_at,
       runtime.breached_at,
+      runtime.breached_elapsed_business_minutes,
+      runtime.breached_target_resolution_minutes,
       runtime.target_resolution_minutes,
       runtime.elapsed_business_minutes,
       runtime.remaining_business_minutes,
@@ -470,37 +478,57 @@ async function archiveTicketSlaRun(ticketSlaId, tx = null) {
 }
 
 async function upsertTicketSla(d, tx = null) {
-  const r = await ex(tx).query(
-    `INSERT INTO ticket_sla(
-    ticket_id,
-    run_number,
-    sla_policy_id,
-    status,
-    activated_at,
-    paused_at,stopped_at,
-    completed_at,
-    breached_at,
-    target_resolution_minutes,
-    elapsed_business_minutes,
-    remaining_business_minutes,
-    last_calculated_at,
-    activation_field_key,
-    activation_field_value_key,
-    duration_field_key,
-    duration_field_value_key,
-    policy_snapshot)
- VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
- ON CONFLICT(ticket_id) 
- DO UPDATE SET
- run_number=EXCLUDED.run_number, 
- sla_policy_id=EXCLUDED.sla_policy_id,
- status=EXCLUDED.status,
- activated_at=EXCLUDED.activated_at,
- paused_at=EXCLUDED.paused_at,
- stopped_at=EXCLUDED.stopped_at,
- completed_at=EXCLUDED.completed_at,
- breached_at=EXCLUDED.breached_at,target_resolution_minutes=EXCLUDED.target_resolution_minutes,
- elapsed_business_minutes=EXCLUDED.elapsed_business_minutes,remaining_business_minutes=EXCLUDED.remaining_business_minutes,last_calculated_at=EXCLUDED.last_calculated_at,activation_field_key=EXCLUDED.activation_field_key,activation_field_value_key=EXCLUDED.activation_field_value_key,duration_field_key=EXCLUDED.duration_field_key,duration_field_value_key=EXCLUDED.duration_field_value_key,policy_snapshot=EXCLUDED.policy_snapshot RETURNING id`,
+  await ex(tx).query(
+    `INSERT INTO ticket_sla (
+      ticket_id,
+      run_number,
+      sla_policy_id,
+      status,
+      activated_at,
+      paused_at,
+      stopped_at,
+      completed_at,
+      breached_at,
+      breached_elapsed_business_minutes,
+      breached_target_resolution_minutes,
+      target_resolution_minutes,
+      elapsed_business_minutes,
+      remaining_business_minutes,
+      last_calculated_at,
+      activation_field_key,
+      activation_field_value_key,
+      duration_field_key,
+      duration_field_value_key,
+      policy_snapshot
+    )
+    VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+      $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+    )
+    ON CONFLICT (ticket_id)
+    DO UPDATE SET
+      run_number = EXCLUDED.run_number,
+      sla_policy_id = EXCLUDED.sla_policy_id,
+      status = EXCLUDED.status,
+      activated_at = EXCLUDED.activated_at,
+      paused_at = EXCLUDED.paused_at,
+      stopped_at = EXCLUDED.stopped_at,
+      completed_at = EXCLUDED.completed_at,
+      breached_at = EXCLUDED.breached_at,
+      breached_elapsed_business_minutes =
+        EXCLUDED.breached_elapsed_business_minutes,
+      breached_target_resolution_minutes =
+        EXCLUDED.breached_target_resolution_minutes,
+      target_resolution_minutes = EXCLUDED.target_resolution_minutes,
+      elapsed_business_minutes = EXCLUDED.elapsed_business_minutes,
+      remaining_business_minutes = EXCLUDED.remaining_business_minutes,
+      last_calculated_at = EXCLUDED.last_calculated_at,
+      activation_field_key = EXCLUDED.activation_field_key,
+      activation_field_value_key = EXCLUDED.activation_field_value_key,
+      duration_field_key = EXCLUDED.duration_field_key,
+      duration_field_value_key = EXCLUDED.duration_field_value_key,
+      policy_snapshot = EXCLUDED.policy_snapshot
+    RETURNING id`,
     [
       d.ticketId,
       d.runNumber ?? 1,
@@ -511,6 +539,8 @@ async function upsertTicketSla(d, tx = null) {
       d.stoppedAt ?? null,
       d.completedAt ?? null,
       d.breachedAt ?? null,
+      d.breachedElapsedBusinessMinutes ?? null,
+      d.breachedTargetResolutionMinutes ?? null,
       d.targetResolutionMinutes ?? null,
       d.elapsedBusinessMinutes ?? 0,
       d.remainingBusinessMinutes ?? null,
@@ -522,6 +552,7 @@ async function upsertTicketSla(d, tx = null) {
       d.policySnapshot ?? {},
     ],
   );
+
   return oneTicketSla(d.ticketId, tx);
 }
 async function updateTicketSla(id, d, tx = null) {
@@ -541,6 +572,8 @@ async function updateTicketSla(id, d, tx = null) {
     ["duration_field_key", d.durationFieldKey],
     ["duration_field_value_key", d.durationFieldValueKey],
     ["policy_snapshot", d.policySnapshot],
+    ["breached_elapsed_business_minutes", d.breachedElapsedBusinessMinutes],
+    ["breached_target_resolution_minutes", d.breachedTargetResolutionMinutes],
   ];
   const set = [],
     params = [id];
