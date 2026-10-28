@@ -1,25 +1,26 @@
+import { useState } from "react";
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Alert,
   Box,
-  Divider,
+  IconButton,
   LinearProgress,
-  Stack,
-  Typography,
   Paper,
+  Stack,
+  Tooltip,
+  Typography,
 } from "@mui/material";
-import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { useTicketSla } from "../hooks/useTicketSla";
 import SlaCountdown from "./SlaCountdown";
 import SlaStatusBadge from "./SlaStatusBadge";
-import { formatDateTime, formatDurationMinutes } from "../utils/slaFormatters";
+import SlaDetailsDrawer from "./SlaDetailsDrawer";
+import { formatDurationMinutes } from "../utils/slaFormatters";
 
 export default function TicketSlaCard({ ticketId }) {
   const { sla, loading, error } = useTicketSla(ticketId);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
-  if (loading && !sla)
+  if (loading && !sla) {
     return (
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="body2" color="text.secondary">
@@ -27,19 +28,17 @@ export default function TicketSlaCard({ ticketId }) {
         </Typography>
       </Paper>
     );
-  if (error)
-    return (
-      <Alert severity="warning">
-        SLA information is currently unavailable.
-      </Alert>
-    );
+  }
+
+  if (error) {
+    return <Alert severity="warning">SLA information is currently unavailable.</Alert>;
+  }
+
   if (!sla || sla.status === "NOT_TRACKED") {
     return (
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Stack spacing={0.75}>
-          <Typography variant="subtitle1" fontWeight={700}>
-            SLA
-          </Typography>
+          <Typography variant="subtitle1" fontWeight={700}>SLA</Typography>
           <Typography variant="body2" color="text.secondary">
             This ticket is not currently tracked by an SLA policy.
           </Typography>
@@ -51,153 +50,79 @@ export default function TicketSlaCard({ ticketId }) {
   const target = Number(sla.target_resolution_minutes);
   const remaining = Number(sla.remaining_business_minutes);
   const elapsed = Number(sla.elapsed_business_minutes);
-  const progress =
-    Number.isFinite(target) && target > 0 && Number.isFinite(elapsed)
-      ? Math.min(100, Math.max(0, (elapsed / target) * 100))
-      : 0;
+  const progress = Number.isFinite(target) && target > 0 && Number.isFinite(elapsed)
+    ? Math.min(100, Math.max(0, (elapsed / target) * 100))
+    : 0;
 
   return (
-    <Accordion
-      variant="outlined"
-      disableGutters
-      sx={{
-        "&:before": {
-          display: "none",
-        },
-        borderRadius: 1,
-        overflow: "hidden",
-      }}
-    >
-      <AccordionSummary
-        expandIcon={<ExpandMoreOutlinedIcon />}
-        aria-controls="ticket-sla-details"
-        id="ticket-sla-summary"
-        sx={{
-          px: 2,
-          py: 1,
-          "& .MuiAccordionSummary-content": {
-            my: 1,
-          },
-        }}
-      >
-        <Stack spacing={1.25} sx={{ width: "100%", pr: 1 }}>
-          {/* Main timing information */}
+    <>
+      <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
+        <Stack spacing={1.25}>
           <Stack
             direction={{ xs: "column", sm: "row" }}
-            spacing={{ xs: 1, sm: 3 }}
+            spacing={{ xs: 1, sm: 2 }}
             alignItems={{ xs: "flex-start", sm: "center" }}
-            justifyContent={"space-between"}
+            justifyContent="space-between"
           >
             {sla.status === "RUNNING" ? <SlaCountdown sla={sla} /> : null}
 
-            <Stack direction="row" spacing={2} flexWrap="wrap">
+            <Stack
+              direction="row"
+              spacing={{ xs: 1.25, sm: 2 }}
+              flexWrap="wrap"
+              alignItems="center"
+              useFlexGap
+            >
               <Typography variant="body2">
                 <strong>Target:</strong> {formatDurationMinutes(target)}
               </Typography>
-
               <Typography variant="body2">
                 <strong>Remaining:</strong> {formatDurationMinutes(remaining)}
               </Typography>
-
-              <Typography variant="body2" fontWeight={600}>
+              <Typography variant="body2">
                 <strong>Elapsed:</strong> {formatDurationMinutes(elapsed)}
               </Typography>
             </Stack>
-            <SlaStatusBadge status={sla.status} />
+
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <SlaStatusBadge status={sla.status} />
+              <Tooltip title="View SLA details" arrow>
+                <IconButton
+                  size="small"
+                  aria-label="View SLA details"
+                  onClick={() => setDetailsOpen(true)}
+                >
+                  <InfoOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
           </Stack>
 
-          {/* Progress */}
           <LinearProgress
             variant="determinate"
             value={progress}
+            color={sla.status === "BREACHED" ? "error" : "primary"}
             aria-label={`SLA progress ${Math.round(progress)} percent`}
           />
-        </Stack>
-      </AccordionSummary>
-
-      <AccordionDetails sx={{ px: 2, pb: 2 }}>
-        <Stack spacing={2}>
-          <Divider />
-
-          <Typography variant="subtitle2" fontWeight={700}>
-            SLA Details
-          </Typography>
-
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={2}
-            flexWrap="wrap"
-          >
-            <Box sx={{ minWidth: 160 }}>
-              <Typography variant="caption" color="text.secondary">
-                Target
-              </Typography>
-
-              <Typography variant="body2" fontWeight={600}>
-                {formatDurationMinutes(target)}
-              </Typography>
-            </Box>
-
-            <Box sx={{ minWidth: 160 }}>
-              <Typography variant="caption" color="text.secondary">
-                Elapsed
-              </Typography>
-
-              <Typography variant="body2" fontWeight={600}>
-                {formatDurationMinutes(elapsed)}
-              </Typography>
-            </Box>
-
-            <Box sx={{ minWidth: 160 }}>
-              <Typography variant="caption" color="text.secondary">
-                Remaining
-              </Typography>
-
-              <Typography variant="body2" fontWeight={600}>
-                {formatDurationMinutes(remaining)}
-              </Typography>
-            </Box>
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              spacing={2}
-            >
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="subtitle1" fontWeight={700}>
-                  Policy
-                </Typography>
-
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  {sla.policy_name ?? "Configured policy"}
-                </Typography>
-              </Box>
-            </Stack>
-          </Stack>
-
-          <Stack spacing={0.5}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, flexWrap: "wrap" }}>
             <Typography variant="caption" color="text.secondary">
-              Activated
+              {sla.policy_name ?? "Configured SLA policy"}
             </Typography>
-
-            <Typography variant="body2">
-              {formatDateTime(sla.activated_at)}
-            </Typography>
-          </Stack>
-
-          {sla.target_at ? (
-            <Stack spacing={0.5}>
+            {sla.run_number != null ? (
               <Typography variant="caption" color="text.secondary">
-                Target time
+                Run #{sla.run_number}
               </Typography>
-
-              <Typography variant="body2">
-                {formatDateTime(sla.target_at)}
-              </Typography>
-            </Stack>
-          ) : null}
+            ) : null}
+          </Box>
         </Stack>
-      </AccordionDetails>
-    </Accordion>
+      </Paper>
+
+      <SlaDetailsDrawer
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        ticketId={ticketId}
+        sla={sla}
+      />
+    </>
   );
 }

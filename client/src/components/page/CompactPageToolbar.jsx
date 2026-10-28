@@ -19,15 +19,17 @@ export default function CompactPageToolbar({
   backTooltip = "Back to Tickets",
   refreshAction = null,
   actions = null,
+  sx = null,
 }) {
   return (
     <Paper
-      variant="outlined"
+      // variant="outlined"
       sx={{
         p: 1,
         minWidth: 0,
         flexShrink: 0,
         marginY: 1,
+        ...(sx ?? {}),
       }}
     >
       <Stack

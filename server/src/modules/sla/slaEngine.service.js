@@ -265,9 +265,42 @@ export async function syncTicket(
 
   const runtime = await repository.oneTicketSla(ticketId, tx);
 
-  // A completed run is already final.
+  /*
+   * A completed SLA run is immutable.
+   *
+   * If its ticket is reopened, start a fresh SLA run only when the ticket
+   * currently qualifies under an enabled policy and resolution rule.
+   */
   if (runtime?.status === SLA_STATUS.COMPLETED) {
-    return runtime;
+    // Do not restart a ticket that is still closed or remains resolved.
+    if (closed(ticket) || resolved(ticket)) {
+      return runtime;
+    }
+
+    // Resolve eligibility using the ticket's current field values.
+    const policy = await resolver.resolve(ticket, now, tx);
+
+    if (!policy) {
+      return runtime;
+    }
+
+    const { rule } = await resolver.resolveRule(policy, ticket, tx);
+
+    if (
+      !rule ||
+      !rule.is_enabled ||
+      rule.resolution_minutes == null ||
+      Number(rule.resolution_minutes) < 1
+    ) {
+      return runtime;
+    }
+
+    /*
+     * activate() detects the COMPLETED runtime, archives the previous run,
+     * increments the run number, resets elapsed time, and creates a new
+     * RUNNING segment.
+     */
+    return ticketSla.activate(ticket, policy, rule, now, tx);
   }
 
   /*

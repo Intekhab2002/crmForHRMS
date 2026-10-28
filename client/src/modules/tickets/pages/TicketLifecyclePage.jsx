@@ -91,6 +91,71 @@ function buildUpdateValues(ticket) {
   );
 }
 
+function getTicketStatusHeaderSx(ticket) {
+  const status = String(ticket?.statusName ?? ticket?.status ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[ -]+/g, "_");
+
+  const textStyles = (color) => ({
+    color,
+    "& .MuiTypography-root": { color },
+    "& .MuiIconButton-root": { color },
+    "& .MuiButton-root": { color },
+  });
+
+  if (["closed", "resolved", "completed", "complete"].includes(status)) {
+    return {
+      bgcolor: "success.light",
+      borderColor: "success.main",
+      ...textStyles("success.contrastText"),
+    };
+  }
+
+  if (["cancelled", "canceled", "rejected", "invalid"].includes(status)) {
+    return {
+      bgcolor: "error.light",
+      borderColor: "error.main",
+      ...textStyles("error.dark"),
+    };
+  }
+
+  if (
+    [
+      "wait_for_response",
+      "waiting_for_response",
+      "on_hold",
+      "pending",
+    ].includes(status)
+  ) {
+    return {
+      bgcolor: "warning.light",
+      borderColor: "warning.main",
+      ...textStyles("text.dark"),
+    };
+  }
+
+  if (["in_progress", "inprogress", "assigned"].includes(status)) {
+    return {
+      bgcolor: "info.light",
+      borderColor: "info.main",
+      ...textStyles("text.dark"),
+    };
+  }
+
+  if (["open", "reopened"].includes(status)) {
+    return {
+      bgcolor: "secondary.light",
+      borderColor: "secondary.main",
+      ...textStyles("secondary.contrastText"),
+    };
+  }
+
+  return {
+    bgcolor: "background.paper",
+  };
+}
+
 export default function TicketLifecyclePage() {
   const { ticketId } = useParams();
   const { user } = useAuth();
@@ -518,6 +583,7 @@ export default function TicketLifecyclePage() {
           disabled: refreshing,
           "aria-label": "Refresh ticket",
         }}
+        sx={getTicketStatusHeaderSx(ticket)}
         actions={
           <Stack direction="row" spacing={0.5} alignItems="center">
             <CanAccess permission={TICKET_MODULE_CONFIG.permissions.update}>

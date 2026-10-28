@@ -90,12 +90,14 @@ export async function fetchSlaTicketDetailsDataset(input, tx = null) {
           run.breached_at &&
           new Date(run.breached_at).getTime() <=
             new Date(input.dataCutoff).getTime() &&
-          run.breached_elapsed_business_minutes != null &&
-          run.breached_target_resolution_minutes != null
+          (run.status === "BREACHED" ||
+            (Number(run.target_resolution_minutes ?? 0) > 0 &&
+              Number(run.elapsed_business_minutes ?? 0) >
+                Number(run.target_resolution_minutes ?? 0)))
             ? Math.max(
+                Number(run.elapsed_business_minutes ?? 0) -
+                  Number(run.target_resolution_minutes ?? 0),
                 0,
-                Number(run.breached_elapsed_business_minutes) -
-                  Number(run.breached_target_resolution_minutes),
               )
             : null,
 
