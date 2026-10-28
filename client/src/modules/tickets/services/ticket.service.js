@@ -226,5 +226,23 @@ export const ticketService = {
     };
   },
 
+  async findTicketsByBillReferenceNo(billReferenceNo) {
+    const normalizedReference = String(billReferenceNo ?? "").trim();
+
+    if (!normalizedReference) {
+      return [];
+    }
+
+    const response = await apiClient.get(
+      `${API_CONFIG.endpoints.tickets}/bill-reference/${encodeURIComponent(
+        normalizedReference,
+      )}`,
+    );
+
+    const payload = response.data?.data ?? response.data;
+
+    return Array.isArray(payload) ? payload : [];
+  },
+
   getErrorMessage,
 };

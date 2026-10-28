@@ -93,6 +93,12 @@ const columnFilterModelSchema = z.preprocess(
     .strict(),
 );
 
+const billReferenceLookupParamSchema = z
+  .object({
+    billReferenceNo: z.string().trim().min(1).max(100),
+  })
+  .strict();
+
 function schemaForField(field) {
   if (field.dataType === "uuid") {
     return uuidSchema;
@@ -448,4 +454,5 @@ export default Object.freeze({
   validateConfiguredOptions,
   ticketListFilterSchema,
   bulkUpdateSchema,
+  billReferenceLookupParamSchema,
 });

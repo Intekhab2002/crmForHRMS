@@ -85,6 +85,22 @@ async function getAssignableUsers(req, res, next) {
   }
 }
 
+async function lookupBillReference(req, res, next) {
+  try {
+    const tickets = await ticketService.findTicketsByBillReferenceNo(
+      req.params.billReferenceNo,
+    );
+
+    return ApiResponse.success(
+      res,
+      tickets,
+      "Bill reference lookup completed successfully.",
+    );
+  } catch (error) {
+    return next(error);
+  }
+}
+
 export default Object.freeze({
   getTickets,
   getTicket,
@@ -92,4 +108,5 @@ export default Object.freeze({
   updateTicket,
   getAssignableUsers,
   bulkUpdateTickets,
+  lookupBillReference,
 });

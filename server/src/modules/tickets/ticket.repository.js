@@ -504,6 +504,29 @@ async function findTickets(filters, tx = null) {
   };
 }
 
+
+async function findTicketsByBillReferenceNo(billReferenceNo, tx = null) {
+  const executor = getQueryExecutor(tx);
+
+  const result = await executor.query(
+    `
+      SELECT
+        id,
+        ticket_number
+      FROM tickets
+      WHERE NULLIF(BTRIM(bill_reference_no), '') IS NOT NULL
+        AND LOWER(BTRIM(bill_reference_no)) = LOWER(BTRIM($1::VARCHAR))
+      ORDER BY created_at DESC, id DESC;
+    `,
+    [billReferenceNo],
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    ticketNumber: row.ticket_number,
+  }));
+}
+
 async function createTicket(data, tx = null) {
   const executor = getQueryExecutor(tx);
 
@@ -694,6 +717,7 @@ async function getAssignableUsers(tx = null) {
 
 export default Object.freeze({
   findTickets,
+  findTicketsByBillReferenceNo,
   findTicketById,
   lockTicketForUpdate,
   createTicket,

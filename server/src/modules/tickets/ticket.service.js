@@ -693,6 +693,18 @@ async function getAssignableUsers() {
   return ticketRepository.getAssignableUsers();
 }
 
+async function findTicketsByBillReferenceNo(billReferenceNo) {
+  const normalizedReference = String(billReferenceNo ?? "").trim();
+
+  if (!normalizedReference) {
+    return [];
+  }
+
+  return ticketRepository.findTicketsByBillReferenceNo(
+    normalizedReference,
+  );
+}
+
 export default Object.freeze({
   listTickets,
   getTicket,
@@ -700,4 +712,5 @@ export default Object.freeze({
   updateTicket,
   bulkUpdateTickets,
   getAssignableUsers,
+  findTicketsByBillReferenceNo,
 });

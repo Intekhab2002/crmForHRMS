@@ -7,6 +7,7 @@ import { Form } from "formik";
 import { useContactLookup } from "../hooks/useContactLookup";
 import FieldRenderer from "./FieldRenderer";
 import { useNotification } from "../../../components/feedback/useNotification";
+import { useBillReferenceLookup } from "../hooks/useBillReferenceLookup";
 
 export default function TicketFormContent({
   formik,
@@ -74,6 +75,34 @@ export default function TicketFormContent({
       onLookupError: handleLookupError,
       onContactInactive: handleContactInactive,
     });
+
+  const handleBillReferenceMatches = useCallback(
+    (billReferenceNo, tickets) => {
+      const ticketNumbers = tickets
+        .map((ticket) => ticket.ticketNumber)
+        .filter(Boolean);
+
+      notification.warning(
+        `Bill reference number "${billReferenceNo}" is already associated with ${
+          ticketNumbers.length
+        } existing ticket(s): ${ticketNumbers.join(", ")}.`,
+      );
+    },
+    [notification.warning],
+  );
+
+  const handleBillReferenceLookupError = useCallback(() => {
+    notification.error(
+      "Unable to verify the bill reference number. You can continue entering the ticket details.",
+    );
+  }, [notification.error]);
+
+  const { isLoading: billReferenceLookupLoading } = useBillReferenceLookup({
+    billReferenceNo: formik.values.bill_reference_no,
+    enabled: mode === "create",
+    onMatchesFound: handleBillReferenceMatches,
+    onLookupError: handleBillReferenceLookupError,
+  });
 
   return (
     <Form noValidate>

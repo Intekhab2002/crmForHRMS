@@ -64,6 +64,14 @@ router.post(
 );
 
 router.get(
+  "/bill-reference/:billReferenceNo",
+  authenticate,
+  requirePermission(TICKET_CREATE),
+  validateParams(ticketValidator.billReferenceLookupParamSchema),
+  ticketController.lookupBillReference,
+);
+
+router.get(
   "/:ticketId",
   authenticate,
   requirePermission(TICKET_READ),
