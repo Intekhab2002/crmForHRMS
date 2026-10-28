@@ -246,8 +246,43 @@ const updateUserSchema = z
     departmentId: departmentIdSchema,
 
     roleCode: roleCodeSchema.optional(),
+
+    // Password changes are optional during user updates.
+    password: passwordSchema.optional(),
+
+    confirmPassword: passwordSchema.optional(),
   })
   .strict()
+  .superRefine((value, context) => {
+    const hasPassword = value.password !== undefined;
+    const hasConfirmation =
+      value.confirmPassword !== undefined;
+
+    if (hasPassword !== hasConfirmation) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [
+          hasPassword ? "confirmPassword" : "password",
+        ],
+        message: hasPassword
+          ? "Password confirmation is required."
+          : "Password is required.",
+      });
+
+      return;
+    }
+
+    if (
+      hasPassword &&
+      value.password !== value.confirmPassword
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["confirmPassword"],
+        message: "Passwords do not match.",
+      });
+    }
+  })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one user field must be provided.",
   });

@@ -393,6 +393,7 @@ async function updateUser(
     username,
     email,
     roleCode,
+    password,
 
     firstName,
     lastName,
@@ -459,6 +460,11 @@ async function updateUser(
 
   const normalizedRoleCode = roleCode?.trim().toLowerCase() || null;
 
+  const passwordHash =
+    password !== undefined
+      ? await passwordService.hashPassword(password)
+      : undefined;
+
   return executeTransaction(
     async (transactionContext) => {
       const currentRoles = await getUserRoles(userId, transactionContext);
@@ -513,6 +519,7 @@ async function updateUser(
 
           organizationId: normalizedOrganizationId,
           departmentId: normalizedDepartmentId,
+          passwordHash,
         },
         transactionContext,
       );
@@ -521,6 +528,10 @@ async function updateUser(
         throw AppError.notFound("User not found.", {
           code: USER_ERROR_CODES.USER_NOT_FOUND,
         });
+      }
+
+      if (passwordHash !== undefined) {
+        await authRepository.revokeActiveSessions(userId, transactionContext);
       }
 
       let roles = currentRoles;

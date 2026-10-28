@@ -206,6 +206,23 @@ const UPDATE_USER = `
             ELSE department_id
         END
 
+                department_id = CASE
+            WHEN $16::BOOLEAN THEN $17::UUID
+            ELSE department_id
+        END,
+
+        password_hash = CASE
+            WHEN $18::BOOLEAN THEN $19
+            ELSE password_hash
+        END,
+
+        password_changed_at = CASE
+            WHEN $18::BOOLEAN THEN CURRENT_TIMESTAMP
+            ELSE password_changed_at
+        END,
+
+        updated_at = CURRENT_TIMESTAMP
+
     WHERE id = $1::UUID
 
     RETURNING
@@ -498,6 +515,9 @@ async function updateUser(userId, data, transactionContext = null) {
 
     data.departmentId !== undefined,
     data.departmentId ?? null,
+
+    data.passwordHash !== undefined,
+    data.passwordHash ?? null,
   ]);
 
   return result.rows[0] ?? null;
@@ -572,28 +592,14 @@ async function findUsers(
  * @returns {Promise<number>}
  */
 async function countUsers(
-  {
-    search = "",
-    status = null,
-    roleCode = null,
-  } = {},
+  { search = "", status = null, roleCode = null } = {},
   transactionContext = null,
 ) {
-  const executor =
-    getExecutor(transactionContext);
+  const executor = getExecutor(transactionContext);
 
-  const result = await executor.query(
-    COUNT_USERS,
-    [
-      search,
-      status,
-      roleCode,
-    ],
-  );
+  const result = await executor.query(COUNT_USERS, [search, status, roleCode]);
 
-  return Number(
-    result.rows[0]?.total ?? 0,
-  );
+  return Number(result.rows[0]?.total ?? 0);
 }
 
 async function findOrganizationById(organizationId, transactionContext = null) {

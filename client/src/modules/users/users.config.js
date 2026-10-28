@@ -75,6 +75,21 @@ export const USER_FORM_FIELDS = Object.freeze([
     label: "Role",
     required: true,
   }),
+  // Object.freeze({
+  //   name: "password",
+  //   label: "Password",
+  //   type: "password",
+  //   autoComplete: "new-password",
+  //   required: false,
+  // }),
+
+  // Object.freeze({
+  //   name: "confirmPassword",
+  //   label: "Confirm Password",
+  //   type: "password",
+  //   autoComplete: "new-password",
+  //   required: false,
+  // }),
 ]);
 
 export const USER_COLUMNS = Object.freeze([
@@ -149,10 +164,7 @@ export function getRoleOptions(
         return false;
       }
 
-      if (
-        role.code === SYSTEM_ROLE_CODES.SUPERADMIN &&
-        !canManageSuperAdmin
-      ) {
+      if (role.code === SYSTEM_ROLE_CODES.SUPERADMIN && !canManageSuperAdmin) {
         return false;
       }
 
@@ -166,10 +178,7 @@ export function getRoleOptions(
   if (
     currentRoleCode &&
     currentRoleCode !== SYSTEM_ROLE_CODES.DEVELOPER &&
-    !options.some(
-      (option) =>
-        option.value === currentRoleCode,
-    )
+    !options.some((option) => option.value === currentRoleCode)
   ) {
     options.push({
       value: currentRoleCode,
@@ -187,29 +196,19 @@ export function getPrimaryRoleObject(user) {
 
   const firstRole = user?.roles?.[0];
 
-  return firstRole
-    ? normalizeRole(firstRole)
-    : null;
+  return firstRole ? normalizeRole(firstRole) : null;
 }
 
 export function isDeveloper(userOrRole) {
-  const role =
-    userOrRole?.role ?? userOrRole;
+  const role = userOrRole?.role ?? userOrRole;
 
-  return (
-    normalizeRole(role).code ===
-    SYSTEM_ROLE_CODES.DEVELOPER
-  );
+  return normalizeRole(role).code === SYSTEM_ROLE_CODES.DEVELOPER;
 }
 
 export function isSuperAdmin(userOrRole) {
-  const role =
-    userOrRole?.role ?? userOrRole;
+  const role = userOrRole?.role ?? userOrRole;
 
-  return (
-    normalizeRole(role).code ===
-    SYSTEM_ROLE_CODES.SUPERADMIN
-  );
+  return normalizeRole(role).code === SYSTEM_ROLE_CODES.SUPERADMIN;
 }
 
 export function isProtectedSystemUser(user) {
@@ -217,19 +216,12 @@ export function isProtectedSystemUser(user) {
     .map(normalizeRole)
     .map((role) => role.code);
 
-  const primaryRole =
-    getPrimaryRoleObject(user)?.code;
+  const primaryRole = getPrimaryRoleObject(user)?.code;
 
   return (
-    roleCodes.includes(
-      SYSTEM_ROLE_CODES.DEVELOPER,
-    ) ||
-    roleCodes.includes(
-      SYSTEM_ROLE_CODES.SUPERADMIN,
-    ) ||
-    primaryRole ===
-      SYSTEM_ROLE_CODES.DEVELOPER ||
-    primaryRole ===
-      SYSTEM_ROLE_CODES.SUPERADMIN
+    roleCodes.includes(SYSTEM_ROLE_CODES.DEVELOPER) ||
+    roleCodes.includes(SYSTEM_ROLE_CODES.SUPERADMIN) ||
+    primaryRole === SYSTEM_ROLE_CODES.DEVELOPER ||
+    primaryRole === SYSTEM_ROLE_CODES.SUPERADMIN
   );
 }
