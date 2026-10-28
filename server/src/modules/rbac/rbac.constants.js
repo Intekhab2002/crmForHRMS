@@ -44,6 +44,7 @@ export const RBAC_RESOURCES = Object.freeze({
   DASHBOARD: "dashboard",
   OPTION: "option",
   REPORTS: "reports",
+  CONTACT: "contact",
 });
 
 /**
@@ -107,6 +108,12 @@ export const RBAC_PERMISSIONS = Object.freeze({
   TICKET_CLOSE: "ticket:close",
   TICKET_ATTACHMENT: "ticket:attachment",
   TICKET_EXPORT: "ticket:export",
+
+  CONTACT_READ: "contact:read",
+  CONTACT_NAVIGATION: "contact:navigation",
+  CONTACT_CREATE: "contact:create",
+  CONTACT_UPDATE: "contact:update",
+  CONTACT_DELETE: "contact:delete",
 
   SLA_READ: "sla:read",
   SLA_CREATE: "sla:create",

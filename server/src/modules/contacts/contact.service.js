@@ -124,8 +124,176 @@ async function updateContactFromTicket(contactId, data, tx = null) {
   return contactRepository.findContactById(contactId, tx);
 }
 
+async function listContacts(query) {
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+
+  const result = await contactRepository.findContacts({
+    search: query.search,
+    organizationId: query.organizationId,
+    departmentId: query.departmentId,
+    districtId: query.districtId,
+    isActive: query.isActive ?? true,
+    limit,
+    offset: (page - 1) * limit,
+  });
+
+  const totalPages = result.total === 0 ? 0 : Math.ceil(result.total / limit);
+
+  return {
+    data: result.rows,
+    meta: {
+      page,
+      limit,
+      total: result.total,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1 && totalPages > 0,
+    },
+  };
+}
+
+async function getManagedContact(contactId) {
+  const contact = await contactRepository.findActiveContactById(contactId);
+
+  if (!contact) {
+    throw AppError.notFound("Contact not found or inactive.", {
+      code: CONTACT_ERROR_CODES.NOT_FOUND,
+    });
+  }
+
+  return contact;
+}
+
+async function validateContactReferences(data) {
+  if (data.organizationId) {
+    const organization = await contactRepository.findActiveOrganizationById(
+      data.organizationId,
+    );
+
+    if (!organization) {
+      throw AppError.badRequest("Invalid or inactive organization.");
+    }
+  }
+
+  if (data.departmentId) {
+    const department = await contactRepository.findActiveDepartmentById(
+      data.departmentId,
+    );
+
+    if (!department) {
+      throw AppError.badRequest("Invalid or inactive department.");
+    }
+  }
+
+  if (data.districtId) {
+    await validateDistrict(data.districtId);
+  }
+}
+
+async function assertMobileAvailable(
+  organizationId,
+  mobilePhone,
+  excludedContactId = null,
+) {
+  const existing = await contactRepository.findContactByMobile(
+    organizationId,
+    normalizeMobile(mobilePhone),
+  );
+
+  if (existing && existing.id !== excludedContactId) {
+    throw AppError.conflict(
+      "An active contact with this mobile number already exists in the organization.",
+      { code: CONTACT_ERROR_CODES.ALREADY_EXISTS },
+    );
+  }
+}
+
+async function createManagedContact(data) {
+  await validateContactReferences(data);
+
+  await assertMobileAvailable(data.organizationId, data.mobilePhone);
+
+  try {
+    return await contactRepository.createContact({
+      organizationId: data.organizationId,
+      departmentId: data.departmentId ?? null,
+      district: data.districtId ?? null,
+      name: data.name,
+      mobile: normalizeMobile(data.mobilePhone),
+      email: data.email ?? null,
+    });
+  } catch (error) {
+    if (error?.code === "23505") {
+      throw AppError.conflict(
+        "A contact with this mobile number already exists in the organization.",
+        { code: CONTACT_ERROR_CODES.ALREADY_EXISTS, cause: error },
+      );
+    }
+
+    throw error;
+  }
+}
+
+async function updateManagedContact(contactId, data) {
+  const current = await getManagedContact(contactId);
+
+  await validateContactReferences(data);
+
+  const organizationId = data.organizationId ?? current.organizationId;
+  const mobilePhone = data.mobilePhone ?? current.mobilePhone;
+
+  if (data.organizationId !== undefined || data.mobilePhone !== undefined) {
+    await assertMobileAvailable(organizationId, mobilePhone, contactId);
+  }
+
+  try {
+    const updated = await contactRepository.updateManagedContact(
+      contactId,
+      data,
+    );
+
+    if (!updated) {
+      throw AppError.notFound("Contact not found or inactive.", {
+        code: CONTACT_ERROR_CODES.NOT_FOUND,
+      });
+    }
+
+    return updated;
+  } catch (error) {
+    if (error?.code === "23505") {
+      throw AppError.conflict(
+        "A contact with this mobile number already exists in the organization.",
+        { code: CONTACT_ERROR_CODES.ALREADY_EXISTS, cause: error },
+      );
+    }
+
+    throw error;
+  }
+}
+
+async function deactivateManagedContact(contactId) {
+  await getManagedContact(contactId);
+
+  const contact = await contactRepository.deactivateContact(contactId);
+
+  if (!contact) {
+    throw AppError.notFound("Contact not found or already inactive.", {
+      code: CONTACT_ERROR_CODES.NOT_FOUND,
+    });
+  }
+
+  return contact;
+}
+
 export default Object.freeze({
   getContactByMobile,
   findOrCreateContact,
   updateContactFromTicket,
+
+  listContacts,
+  getManagedContact,
+  createManagedContact,
+  updateManagedContact,
+  deactivateManagedContact,
 });

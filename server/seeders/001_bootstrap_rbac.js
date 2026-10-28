@@ -619,6 +619,51 @@ const SYSTEM_PERMISSIONS = Object.freeze([
     resource: "reports",
     action: "download",
   }),
+
+  // -------------------------------------------------------------------------
+  // Contact Management
+  // -------------------------------------------------------------------------
+
+  Object.freeze({
+    code: "contact:read",
+    name: "Read Contacts",
+    description: "View contacts and their associated ticket counts.",
+    resource: "contact",
+    action: "read",
+  }),
+
+  Object.freeze({
+    code: "contact:navigation",
+    name: "Contact Management Navigation",
+    description: "Controls visibility of the Contacts navigation item.",
+    resource: "contact",
+    action: "navigation",
+  }),
+
+  Object.freeze({
+    code: "contact:create",
+    name: "Create Contacts",
+    description: "Create contact records.",
+    resource: "contact",
+    action: "create",
+  }),
+
+  Object.freeze({
+    code: "contact:update",
+    name: "Update Contacts",
+    description: "Update contact records.",
+    resource: "contact",
+    action: "update",
+  }),
+
+  Object.freeze({
+    code: "contact:delete",
+    name: "Deactivate Contacts",
+    description:
+      "Deactivate contacts while preserving historical ticket references.",
+    resource: "contact",
+    action: "delete",
+  }),
 ]);
 
 /**
