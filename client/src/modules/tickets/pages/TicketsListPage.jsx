@@ -27,8 +27,9 @@ import {
 } from "../utils/ticketListViewState";
 import BulkEditTicketDrawer from "../components/BulkEditTicketDrawer";
 
-const TICKET_FILTER_QUERY_KEYS = new Set(
-  TICKET_LIST_FILTER_CONFIG.flatMap((filter) => {
+
+const TICKET_FILTER_QUERY_KEYS = new Set([
+  ...TICKET_LIST_FILTER_CONFIG.flatMap((filter) => {
     if (filter.type === "dateRange") {
       return [filter.fromQueryKey, filter.toQueryKey];
     }
@@ -39,7 +40,9 @@ const TICKET_FILTER_QUERY_KEYS = new Set(
 
     return [filter.queryKey];
   }),
-);
+  "contactId",
+]);
+
 
 function parseTicketFilters(search) {
   const params = new URLSearchParams(search);

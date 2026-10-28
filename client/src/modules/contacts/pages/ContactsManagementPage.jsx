@@ -19,6 +19,7 @@ import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import ArrowCircleRightOutlinedIcon from '@mui/icons-material/ArrowCircleRightOutlined';
 import ConfirmationDialog from "../../../components/feedback/ConfirmationDialog";
 import PageHeader from "../../../components/page/PageHeader";
 import { AppDataGrid } from "../../../components/data-grid";
@@ -279,6 +280,54 @@ export default function ContactsManagementPage() {
 
   const columns = useMemo(() => {
     const nextColumns = [
+
+            {
+        field: "actions",
+        headerName: "Actions",
+        minWidth: canReadTickets ? 100 : 80,
+        flex: 0.8,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: (params) => (
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            {canReadTickets && (
+
+              <Tooltip title="Show Tickets">
+                <IconButton
+                  size="small"
+                  onClick={() => handleShowTickets(params.row)}
+                >
+                  <ArrowCircleRightOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {canUpdate && params.row.isActive && (
+              <Tooltip title="Edit contact">
+                <IconButton
+                  size="small"
+                  aria-label={`Edit ${params.row.name}`}
+                  onClick={() => handleOpenEdit(params.row)}
+                >
+                  <EditOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {canDelete && params.row.isActive && (
+              <Tooltip title="Deactivate contact">
+                <IconButton
+                  size="small"
+                  color="error"
+                  aria-label={`Deactivate ${params.row.name}`}
+                  onClick={() => setContactToDeactivate(params.row)}
+                >
+                  <DeleteOutlineOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Stack>
+        ),
+      },
       {
         field: "name",
         headerName: "Contact Name",
@@ -354,51 +403,7 @@ export default function ContactsManagementPage() {
           />
         ),
       },
-      {
-        field: "actions",
-        headerName: "Actions",
-        minWidth: canReadTickets ? 230 : 130,
-        flex: 0.8,
-        sortable: false,
-        filterable: false,
-        disableColumnMenu: true,
-        renderCell: (params) => (
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            {canReadTickets && (
-              <Button
-                size="small"
-                onClick={() => handleShowTickets(params.row)}
-                sx={{ whiteSpace: "nowrap" }}
-              >
-                Show Tickets
-              </Button>
-            )}
-            {canUpdate && params.row.isActive && (
-              <Tooltip title="Edit contact">
-                <IconButton
-                  size="small"
-                  aria-label={`Edit ${params.row.name}`}
-                  onClick={() => handleOpenEdit(params.row)}
-                >
-                  <EditOutlinedIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-            {canDelete && params.row.isActive && (
-              <Tooltip title="Deactivate contact">
-                <IconButton
-                  size="small"
-                  color="error"
-                  aria-label={`Deactivate ${params.row.name}`}
-                  onClick={() => setContactToDeactivate(params.row)}
-                >
-                  <DeleteOutlineOutlinedIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Stack>
-        ),
-      },
+
     ];
 
     return nextColumns;

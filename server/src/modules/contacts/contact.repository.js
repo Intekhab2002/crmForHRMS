@@ -41,7 +41,6 @@ const FIND_CONTACT_BY_MOBILE = `
         ON department.id = c.department_id
     WHERE c.organization_id = $1::UUID
       AND c.mobile_phone = $2::VARCHAR
-      AND c.is_active = TRUE
     LIMIT 1;
 `;
 

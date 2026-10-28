@@ -11,6 +11,7 @@ export function useContactLookup({
   onContactFound,
   onContactNotFound,
   onLookupError,
+  onContactInactive,
   enabled = true,
 }) {
   const [status, setStatus] = useState("idle");
@@ -25,6 +26,8 @@ export function useContactLookup({
   const onContactFoundRef = useRef(onContactFound);
   const onContactNotFoundRef = useRef(onContactNotFound);
   const onLookupErrorRef = useRef(onLookupError);
+    const onContactInactiveRef = useRef(onContactInactive);
+
 
   useEffect(() => {
     onContactFoundRef.current = onContactFound;
@@ -37,6 +40,11 @@ export function useContactLookup({
   useEffect(() => {
     onLookupErrorRef.current = onLookupError;
   }, [onLookupError]);
+
+
+useEffect(() => {
+  onContactInactiveRef.current = onContactInactive;
+}, [onContactInactive]);
 
   const normalizedOrganizationId = String(organizationId ?? "").trim();
 
@@ -97,6 +105,12 @@ export function useContactLookup({
         return;
       }
 
+      if (contact && contact.isActive === false) {
+        setStatus("inactive");
+        onContactInactiveRef.current?.(contact);
+        return;
+      }
+
       setStatus("found");
 
       onContactFoundRef.current?.(contact);
@@ -147,7 +161,7 @@ export function useContactLookup({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [lookup, lookupKey,enabled]);
+  }, [lookup, lookupKey, enabled]);
 
   return {
     status,

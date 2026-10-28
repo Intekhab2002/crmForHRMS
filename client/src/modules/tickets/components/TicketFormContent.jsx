@@ -50,14 +50,29 @@ export default function TicketFormContent({
     );
   }, [notification.error]);
 
+  const handleContactInactive = useCallback(
+    (contact) => {
+      formik.setFieldError(
+        "mobile_phone",
+        "This contact is inactive. You cannot create a ticket using this mobile number.",
+      );
+
+      notification.error(
+        `Contact ${contact.name ?? ""} is inactive. You cannot create a ticket using this mobile number. Contact an authorized user to reactivate it.`,
+      );
+    },
+    [formik.setFieldError, notification.error],
+  );
+
   const { status: contactLookupStatus, isLoading: contactLookupLoading } =
     useContactLookup({
-       organizationId: formik.values.organization,
+      organizationId: formik.values.organization,
       mobilePhone: formik.values.mobile_phone,
       enabled: mode === "create",
       onContactFound: handleContactFound,
       onContactNotFound: handleContactNotFound,
       onLookupError: handleLookupError,
+      onContactInactive: handleContactInactive,
     });
 
   return (

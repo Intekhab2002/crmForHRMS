@@ -257,6 +257,13 @@ async function validateReferences(data, tx) {
         code: TICKET_ERROR_CODES.CONTACT_NOT_FOUND,
       });
     }
+
+    if (!contact.isActive) {
+      throw AppError.conflict(
+        "This contact is inactive. You cannot create a ticket against this contact.",
+        { code: "CONTACT_INACTIVE" },
+      );
+    }
   }
 }
 

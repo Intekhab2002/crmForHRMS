@@ -204,11 +204,6 @@ const UPDATE_USER = `
         department_id = CASE
             WHEN $16::BOOLEAN THEN $17::UUID
             ELSE department_id
-        END
-
-                department_id = CASE
-            WHEN $16::BOOLEAN THEN $17::UUID
-            ELSE department_id
         END,
 
         password_hash = CASE
