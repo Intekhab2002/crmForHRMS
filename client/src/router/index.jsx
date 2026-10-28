@@ -37,6 +37,7 @@ import RouteErrorPage from "../components/feedback/RouteErrorPage";
 import { APP_MODULE_CONFIG, SYSTEM_ROUTES } from "../config/module.config";
 import LandingPage from "../pages/public/LandingPage";
 import ReportsPage from "../modules/reports/pages/ReportsPage";
+import ContactsManagementPage from "../modules/contacts/pages/ContactsManagementPage";
 import {
   DashboardPage as DashboardModulePage,
   OperationalDashboard,
@@ -75,6 +76,7 @@ const COMPONENTS = Object.freeze({
   notFound: NotFoundPage,
   defaultEntry: DefaultEntryPage,
   options: OptionManagementPage,
+  contacts: ContactsManagementPage,
   slaPolicies: SlaPoliciesPage,
   slaPolicyCreate: SlaPolicyCreatePage,
   slaPolicyDetail: SlaPolicyDetailPage,

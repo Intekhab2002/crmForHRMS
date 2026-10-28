@@ -177,6 +177,22 @@ export const APP_MODULE_CONFIG = Object.freeze({
           order: 27,
         },
       }),
+      createRoute({
+        id: "contacts",
+        path: "/contacts",
+        label: "Contacts",
+        component: "contacts",
+
+        access: {
+          permissions: [PERMISSIONS.CONTACT_NAVIGATION],
+        },
+
+        navigation: {
+          section: "app",
+          icon: "contacts",
+          order: 29,
+        },
+      }),
 
       createRoute({
         id: "tickets",

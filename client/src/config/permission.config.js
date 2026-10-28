@@ -43,6 +43,12 @@ export const PERMISSIONS = Object.freeze({
 
   TICKET_DELETE: "ticket:delete",
 
+  CONTACT_READ: "contact:read",
+  CONTACT_NAVIGATION: "contact:navigation",
+  CONTACT_CREATE: "contact:create",
+  CONTACT_UPDATE: "contact:update",
+  CONTACT_DELETE: "contact:delete",
+
   TICKET_ATTACHMENT: "ticket:attachment",
 
   OPTION_READ: "option:read",
