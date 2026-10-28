@@ -143,6 +143,11 @@ async function setNotTracked(
       runNumber: existing?.run_number ?? 1,
       slaPolicyId: policy?.id ?? null,
       status: SLA_STATUS.NOT_TRACKED,
+      breachedAt: existing?.breached_at ?? null,
+      breachedElapsedBusinessMinutes:
+        existing?.breached_elapsed_business_minutes ?? null,
+      breachedTargetResolutionMinutes:
+        existing?.breached_target_resolution_minutes ?? null,
       elapsedBusinessMinutes: elapsed,
       remainingBusinessMinutes: null,
       lastCalculatedAt: options.now ?? new Date(),
@@ -406,11 +411,18 @@ async function terminal(
     });
   }
 
-  // Terminal transitions must be idempotent. Do not rewrite an already
-  // finalized run or its historical timestamps.
+  // A stopped run is immutable unless the ticket itself has been closed.
+  // syncTicket() intentionally allows ticket closure to take precedence.
+  const isClosingStoppedRun =
+    runtime.status === SLA_STATUS.STOPPED &&
+    status === SLA_STATUS.COMPLETED &&
+    endReasonOverride === "TICKET_CLOSED";
+
+  // Completed runs are immutable. Stopped runs may only be finalized as
+  // completed for the explicit ticket-closure transition.
   if (
     runtime.status === SLA_STATUS.COMPLETED ||
-    runtime.status === SLA_STATUS.STOPPED
+    (runtime.status === SLA_STATUS.STOPPED && !isClosingStoppedRun)
   ) {
     if (runtime.status === status) {
       return runtime;

@@ -26,7 +26,7 @@ export default function DashboardLayout() {
   const desktop = useMediaQuery(theme.breakpoints.up("md"));
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   const { user, logout, hasPermission } = useAuth();
 
