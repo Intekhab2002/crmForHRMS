@@ -1,234 +1,62 @@
+import { useEffect, useMemo, useState } from "react";
+
 import {
   Alert,
   Box,
   Button,
   Card,
   CardContent,
-  Checkbox,
   CircularProgress,
-  Divider,
+  FormControl,
   Grid,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
-
-import { useEffect, useMemo, useState } from "react";
+import RestartAltOutlinedIcon from "@mui/icons-material/RestartAltOutlined";
 
 import { roleService } from "../services/role.service";
-
-import { PERMISSION_RESOURCE_CONFIG } from "../../../config/permission.config";
 import { useNotification } from "../../../components/feedback/useNotification";
+
+import PermissionGroupCard from "../components/PermissionGroupCard";
+
+import {
+  filterPermissions,
+  groupPermissions,
+  normalizePermission,
+  getPermissionResourceLabel,
+} from "../utils/permissionGrouping";
 
 function normalizeMatrix(response) {
   const data = response?.data ?? response ?? [];
-
   return Array.isArray(data) ? data : [];
 }
 
-function normalizePermission(permission) {
-  const resource =
-    permission.resource ??
-    permission.module ??
-    permission.code?.split(":")[0] ??
-    "other";
-
-  const action = permission.action ?? permission.code?.split(":")[1] ?? "";
-
-  return {
-    id: permission.id,
-    code: permission.code ?? "",
-    name: permission.name ?? permission.code ?? "",
-    resource,
-    action,
-    assigned: Boolean(
-      permission.assigned ?? permission.isAssigned ?? permission.enabled,
-    ),
-  };
-}
-
-function normalizeResourceLabel(resource) {
-  const configuredLabel = PERMISSION_RESOURCE_CONFIG?.[resource]?.label;
-
-  if (configuredLabel) {
-    return configuredLabel;
-  }
-
-  if (!resource) {
-    return "Other";
-  }
-
-  return resource
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
-function groupPermissions(permissions) {
-  const grouped = new Map();
-
-  permissions.forEach((permission) => {
-    if (!grouped.has(permission.resource)) {
-      grouped.set(permission.resource, []);
-    }
-
-    grouped.get(permission.resource).push(permission);
-  });
-
-  return [...grouped.entries()];
-}
-
-function PermissionItem({ permission, disabled, onChange }) {
+function getErrorMessage(error) {
   return (
-    <Box
-      component="label"
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 1,
-        width: "100%",
-        minHeight: 38,
-        px: 1,
-        borderRadius: 1,
-        cursor: disabled ? "default" : "pointer",
-        transition: "background-color 120ms ease",
-
-        "&:hover": {
-          bgcolor: disabled ? "transparent" : "action.hover",
-        },
-      }}
-    >
-      <Typography
-        variant="body2"
-        color="text.primary"
-        sx={{
-          minWidth: 0,
-          flex: 1,
-        }}
-      >
-        {permission.name}
-      </Typography>
-
-      <Checkbox
-        size="small"
-        checked={permission.assigned}
-        disabled={disabled}
-        onChange={(event) => onChange(permission.id, event.target.checked)}
-        inputProps={{
-          "aria-label": permission.name,
-        }}
-      />
-    </Box>
+    error?.response?.data?.message ??
+    error?.response?.data?.error?.message ??
+    error?.message ??
+    "Unable to complete the request."
   );
 }
 
-function PermissionModuleCard({
-  resource,
-  permissions,
-  canEdit,
-  saving,
-  onPermissionChange,
-}) {
-  const selectedCount = permissions.filter(
-    (permission) => permission.assigned,
-  ).length;
+function getAssignedIds(permissions) {
+  return permissions
+    .filter((permission) => permission.assigned)
+    .map((permission) => permission.id)
+    .sort();
+}
 
-  const allSelected =
-    permissions.length > 0 && selectedCount === permissions.length;
-
-  const partiallySelected =
-    selectedCount > 0 && selectedCount < permissions.length;
-
-  const handleSelectAll = (event) => {
-    const checked = event.target.checked;
-
-    permissions.forEach((permission) => {
-      if (permission.assigned !== checked) {
-        onPermissionChange(permission.id, checked);
-      }
-    });
-  };
-
-  const moduleLabel = normalizeResourceLabel(resource);
-
+function sameIds(first, second) {
   return (
-    <Card
-      variant="outlined"
-      sx={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        borderRadius: 2,
-        bgcolor: "background.paper",
-      }}
-    >
-      <Box
-        sx={{
-          borderTop: 3,
-          borderColor: "primary.main",
-          px: 1.75,
-          py: 1.25,
-        }}
-      >
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          spacing={1}
-        >
-          <Box
-            sx={{
-              minWidth: 0,
-              flex: 1,
-            }}
-          >
-            <Typography variant="subtitle2" fontWeight={800} noWrap>
-              {moduleLabel}
-            </Typography>
-
-            <Typography variant="caption" color="text.secondary">
-              {selectedCount} of {permissions.length} enabled
-            </Typography>
-          </Box>
-
-          <Checkbox
-            size="small"
-            checked={allSelected}
-            indeterminate={partiallySelected}
-            disabled={!canEdit || saving || permissions.length === 0}
-            onChange={handleSelectAll}
-            inputProps={{
-              "aria-label": `Select all ${moduleLabel} permissions`,
-            }}
-          />
-        </Stack>
-      </Box>
-
-      <Divider />
-
-      <CardContent
-        sx={{
-          p: 1,
-          "&:last-child": {
-            pb: 1,
-          },
-        }}
-      >
-        <Stack spacing={0.25}>
-          {permissions.map((permission) => (
-            <PermissionItem
-              key={permission.id}
-              permission={permission}
-              disabled={!canEdit || saving}
-              onChange={onPermissionChange}
-            />
-          ))}
-        </Stack>
-      </CardContent>
-    </Card>
+    first.length === second.length &&
+    first.every((id, index) => id === second[index])
   );
 }
 
@@ -241,10 +69,14 @@ export default function RolePermissionMatrix({
   const notification = useNotification();
 
   const [loading, setLoading] = useState(false);
-
   const [saving, setSaving] = useState(false);
-
   const [permissions, setPermissions] = useState([]);
+  const [initialAssignedIds, setInitialAssignedIds] = useState([]);
+
+  const [searchInput, setSearchInput] = useState("");
+  const [resourceFilter, setResourceFilter] = useState("all");
+  const [loadError, setLoadError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!open || !role?.id) {
@@ -255,21 +87,24 @@ export default function RolePermissionMatrix({
 
     async function loadMatrix() {
       setLoading(true);
+      setLoadError("");
+      setSearchInput("");
+      setResourceFilter("all");
 
       try {
         const response = await roleService.getPermissionMatrix(role.id);
 
+        if (cancelled) return;
+
+        const normalized = normalizeMatrix(response).map(normalizePermission);
+
+        setPermissions(normalized);
+        setInitialAssignedIds(getAssignedIds(normalized));
+      } catch (error) {
         if (!cancelled) {
-          setPermissions(normalizeMatrix(response).map(normalizePermission));
-        }
-      } catch (requestError) {
-        if (!cancelled) {
-          notification.error(
-            requestError?.response?.data?.message ??
-              requestError?.response?.data?.error?.message ??
-              requestError?.message ??
-              "Unable to load role permissions.",
-          );
+          setLoadError(getErrorMessage(error));
+          setPermissions([]);
+          setInitialAssignedIds([]);
         }
       } finally {
         if (!cancelled) {
@@ -283,92 +118,114 @@ export default function RolePermissionMatrix({
     return () => {
       cancelled = true;
     };
-  }, [open, role?.id, notification]);
+  }, [open, role?.id, reloadKey]);
 
-  const modules = useMemo(() => groupPermissions(permissions), [permissions]);
+  const resources = useMemo(() => {
+    const uniqueResources = [
+      ...new Set(permissions.map((permission) => permission.resource)),
+    ];
+
+    return uniqueResources.sort((a, b) => {
+      if (a === "dashboard") return -1;
+      if (b === "dashboard") return 1;
+
+      return getPermissionResourceLabel(a).localeCompare(
+        getPermissionResourceLabel(b),
+      );
+    });
+  }, [permissions]);
+
+  const filteredPermissions = useMemo(
+    () => filterPermissions(permissions, searchInput, resourceFilter),
+    [permissions, searchInput, resourceFilter],
+  );
+
+  const visibleGroups = useMemo(
+    () => groupPermissions(filteredPermissions),
+    [filteredPermissions],
+  );
+
+  const assignedCount = useMemo(
+    () => permissions.filter((permission) => permission.assigned).length,
+    [permissions],
+  );
+
+  const currentAssignedIds = useMemo(
+    () => getAssignedIds(permissions),
+    [permissions],
+  );
+
+  const isDirty = !sameIds(currentAssignedIds, initialAssignedIds);
 
   const handlePermissionChange = (permissionId, checked) => {
-    if (!canEdit || saving) {
-      return;
-    }
+    if (!canEdit || saving) return;
 
     setPermissions((current) =>
       current.map((permission) =>
         permission.id === permissionId
-          ? {
-              ...permission,
-              assigned: checked,
-            }
+          ? { ...permission, assigned: checked }
           : permission,
       ),
     );
   };
 
+  const handleReset = () => {
+    if (!canEdit || saving) return;
+
+    const assigned = new Set(initialAssignedIds);
+
+    setPermissions((current) =>
+      current.map((permission) => ({
+        ...permission,
+        assigned: assigned.has(permission.id),
+      })),
+    );
+  };
+
   const handleSave = async () => {
-    if (!canEdit || !role?.id) {
-      return;
-    }
+    if (!canEdit || !role?.id || saving || !isDirty) return;
 
     setSaving(true);
 
     try {
-      const permissionIds = permissions
-        .filter((permission) => permission.assigned)
-        .map((permission) => permission.id);
+      const permissionIds = getAssignedIds(permissions);
 
       const response = await roleService.replacePermissions(
         role.id,
         permissionIds,
       );
 
+      setInitialAssignedIds(permissionIds);
+
       notification.success(
         response?.message ?? "Role permissions updated successfully.",
       );
-    } catch (requestError) {
-      notification.error(
-        requestError?.response?.data?.message ??
-          requestError?.response?.data?.error?.message ??
-          requestError?.message ??
-          "Unable to update role permissions.",
-      );
+    } catch (error) {
+      notification.error(getErrorMessage(error));
     } finally {
       setSaving(false);
     }
   };
 
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
   return (
-    <Card
-      variant="outlined"
-      sx={{
-        width: "100%",
-        minWidth: 0,
-      }}
-    >
+    <Card variant="outlined" sx={{ width: "100%", minWidth: 0 }}>
       <CardContent>
-        <Stack spacing={2}>
+        <Stack spacing={2.5}>
           <Stack
-            direction={{
-              xs: "column",
-              sm: "row",
-            }}
+            direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
-            alignItems={{
-              xs: "flex-start",
-              sm: "center",
-            }}
-            spacing={1}
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            spacing={1.5}
           >
             <Box>
-              <Typography variant="h6" fontWeight={800}>
-                Permission Matrix
+              <Typography variant="h5" component="h2" fontWeight={800}>
+                Permissions
               </Typography>
 
-              <Typography variant="body2" color="text.secondary">
-                Configure permissions for {role?.name ?? role?.code}
+              <Typography color="text.secondary">
+                Configure access for {role?.name ?? role?.code ?? "this role"}.
               </Typography>
             </Box>
 
@@ -377,38 +234,150 @@ export default function RolePermissionMatrix({
             </Button>
           </Stack>
 
+          {!loading && !loadError && permissions.length > 0 && (
+            <Card
+              variant="outlined"
+              sx={{
+                p: 2,
+                bgcolor: "action.hover",
+                borderRadius: 2,
+              }}
+            >
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                justifyContent="space-between"
+              >
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Assigned permissions
+                  </Typography>
+
+                  <Typography variant="h4" component="p" fontWeight={800}>
+                    {assignedCount}
+                    <Typography
+                      component="span"
+                      variant="body1"
+                      color="text.secondary"
+                    >
+                      {" "}
+                      / {permissions.length}
+                    </Typography>
+                  </Typography>
+                </Box>
+
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    {isDirty
+                      ? "You have unsaved changes."
+                      : "All changes are saved."}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Card>
+          )}
+
+          {!loading && !loadError && permissions.length > 0 && (
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Search permissions"
+                placeholder="Search by name or permission code"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                slotProps={{
+                  htmlInput: {
+                    "aria-describedby": "permission-search-help",
+                  },
+                }}
+              />
+
+              <Typography
+                id="permission-search-help"
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: { xs: "none", md: "none" } }}
+              >
+                Search by permission name, code, resource, or action.
+              </Typography>
+
+              <FormControl
+                size="small"
+                sx={{ minWidth: { xs: "100%", md: 220 } }}
+              >
+                <InputLabel id="permission-resource-filter-label">
+                  Resource
+                </InputLabel>
+
+                <Select
+                  labelId="permission-resource-filter-label"
+                  id="permission-resource-filter"
+                  value={resourceFilter}
+                  label="Resource"
+                  onChange={(event) => setResourceFilter(event.target.value)}
+                >
+                  <MenuItem value="all">All resources</MenuItem>
+
+                  {resources.map((resource) => (
+                    <MenuItem key={resource} value={resource}>
+                      {getPermissionResourceLabel(resource)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+          )}
+
           {loading ? (
             <Box
+              role="status"
+              aria-live="polite"
               sx={{
-                minHeight: 240,
+                minHeight: 220,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                gap: 1.5,
               }}
             >
-              <CircularProgress size={28} aria-label="Loading permissions" />
+              <CircularProgress size={26} />
+              <Typography>Loading permissions…</Typography>
             </Box>
+          ) : loadError ? (
+            <Alert
+              severity="error"
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => setReloadKey((current) => current + 1)}
+                >
+                  Reload
+                </Button>
+              }
+            >
+              {loadError}
+            </Alert>
           ) : permissions.length === 0 ? (
             <Alert severity="info">
-              No active permissions are available for this role.
+              No permissions were returned for this role.
+            </Alert>
+          ) : visibleGroups.length === 0 ? (
+            <Alert severity="info">
+              No permissions match the current search and resource filters.
             </Alert>
           ) : (
             <Grid container spacing={2} alignItems="stretch">
-              {modules.map(([resource, modulePermissions]) => (
+              {visibleGroups.map(([resource, resourcePermissions]) => (
                 <Grid
                   key={resource}
-                  size={{
-                    xs: 12,
-                    sm: 6,
-                    lg: 4,
-                  }}
-                  sx={{
-                    display: "flex",
-                  }}
+                  size={{ xs: 12, sm: 6, lg: 4 }}
+                  sx={{ display: "flex", minWidth: 0 }}
                 >
-                  <PermissionModuleCard
+                  <PermissionGroupCard
                     resource={resource}
-                    permissions={modulePermissions}
+                    permissions={resourcePermissions}
                     canEdit={canEdit}
                     saving={saving}
                     onPermissionChange={handlePermissionChange}
@@ -418,29 +387,42 @@ export default function RolePermissionMatrix({
             </Grid>
           )}
 
-          {canEdit && !loading && permissions.length > 0 ? (
+          {canEdit && !loading && !loadError && permissions.length > 0 && (
             <Stack
-              direction="row"
+              direction={{ xs: "column-reverse", sm: "row" }}
               justifyContent="flex-end"
               spacing={1}
               sx={{
-                pt: 0.5,
+                pt: 1,
+                borderTop: 1,
+                borderColor: "divider",
               }}
             >
-              <Button variant="outlined" onClick={onClose} disabled={saving}>
-                Cancel
+              <Button
+                variant="outlined"
+                startIcon={<RestartAltOutlinedIcon />}
+                onClick={handleReset}
+                disabled={saving || !isDirty}
+              >
+                Reset changes
               </Button>
 
               <Button
                 variant="contained"
-                startIcon={<SaveOutlinedIcon />}
+                startIcon={
+                  saving ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : (
+                    <SaveOutlinedIcon />
+                  )
+                }
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || !isDirty}
               >
-                {saving ? "Saving..." : "Save permissions"}
+                {saving ? "Saving…" : "Save permissions"}
               </Button>
             </Stack>
-          ) : null}
+          )}
         </Stack>
       </CardContent>
     </Card>

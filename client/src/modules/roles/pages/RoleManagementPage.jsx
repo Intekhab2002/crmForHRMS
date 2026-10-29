@@ -343,7 +343,7 @@ export default function RoleManagementPage() {
         }}
         spacing={2}
       >
-        <Stack spacing={0.5}>
+        {/* <Stack spacing={0.5}>
           <Typography variant="h4" fontWeight={800}>
             {pageTitle}
           </Typography>
@@ -351,7 +351,7 @@ export default function RoleManagementPage() {
           <Typography color="text.secondary">
             Manage roles, permissions and assigned users.
           </Typography>
-        </Stack>
+        </Stack> */}
 
         {!matrixRole && !usersRole && canCreate ? (
           <Button
