@@ -77,12 +77,16 @@ async function bootstrap() {
       logger,
       cleanupTasks: [
         {
-          name: "PostgreSQL",
-          handler: database.close,
+          name: "SLA Maintenance Worker",
+          handler: slaMaintenanceJob.stopSlaMaintenanceJob,
         },
         {
           name: "Report Generation Worker",
           handler: stopReportGenerationJob,
+        },
+        {
+          name: "PostgreSQL",
+          handler: database.close,
         },
       ],
     });
