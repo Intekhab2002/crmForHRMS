@@ -14,19 +14,12 @@ import {
 
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import {
-  roleService,
-} from "../services/role.service";
+import { roleService } from "../services/role.service";
 
-import {
-  PERMISSION_RESOURCE_CONFIG,
-} from "../../../config/permission.config";
+import { PERMISSION_RESOURCE_CONFIG } from "../../../config/permission.config";
+import { useNotification } from "../../../components/feedback/useNotification";
 
 function normalizeMatrix(response) {
   const data = response?.data ?? response ?? [];
@@ -41,32 +34,22 @@ function normalizePermission(permission) {
     permission.code?.split(":")[0] ??
     "other";
 
-  const action =
-    permission.action ??
-    permission.code?.split(":")[1] ??
-    "";
+  const action = permission.action ?? permission.code?.split(":")[1] ?? "";
 
   return {
     id: permission.id,
     code: permission.code ?? "",
-    name:
-      permission.name ??
-      permission.code ??
-      "",
+    name: permission.name ?? permission.code ?? "",
     resource,
     action,
     assigned: Boolean(
-      permission.assigned ??
-        permission.isAssigned ??
-        permission.enabled,
+      permission.assigned ?? permission.isAssigned ?? permission.enabled,
     ),
   };
 }
 
 function normalizeResourceLabel(resource) {
-  const configuredLabel =
-    PERMISSION_RESOURCE_CONFIG?.[resource]
-      ?.label;
+  const configuredLabel = PERMISSION_RESOURCE_CONFIG?.[resource]?.label;
 
   if (configuredLabel) {
     return configuredLabel;
@@ -78,9 +61,7 @@ function normalizeResourceLabel(resource) {
 
   return resource
     .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (character) =>
-      character.toUpperCase(),
-    );
+    .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 function groupPermissions(permissions) {
@@ -91,19 +72,13 @@ function groupPermissions(permissions) {
       grouped.set(permission.resource, []);
     }
 
-    grouped
-      .get(permission.resource)
-      .push(permission);
+    grouped.get(permission.resource).push(permission);
   });
 
   return [...grouped.entries()];
 }
 
-function PermissionItem({
-  permission,
-  disabled,
-  onChange,
-}) {
+function PermissionItem({ permission, disabled, onChange }) {
   return (
     <Box
       component="label"
@@ -116,16 +91,11 @@ function PermissionItem({
         minHeight: 38,
         px: 1,
         borderRadius: 1,
-        cursor: disabled
-          ? "default"
-          : "pointer",
-        transition:
-          "background-color 120ms ease",
+        cursor: disabled ? "default" : "pointer",
+        transition: "background-color 120ms ease",
 
         "&:hover": {
-          bgcolor: disabled
-            ? "transparent"
-            : "action.hover",
+          bgcolor: disabled ? "transparent" : "action.hover",
         },
       }}
     >
@@ -144,12 +114,7 @@ function PermissionItem({
         size="small"
         checked={permission.assigned}
         disabled={disabled}
-        onChange={(event) =>
-          onChange(
-            permission.id,
-            event.target.checked,
-          )
-        }
+        onChange={(event) => onChange(permission.id, event.target.checked)}
         inputProps={{
           "aria-label": permission.name,
         }}
@@ -170,28 +135,22 @@ function PermissionModuleCard({
   ).length;
 
   const allSelected =
-    permissions.length > 0 &&
-    selectedCount === permissions.length;
+    permissions.length > 0 && selectedCount === permissions.length;
 
   const partiallySelected =
-    selectedCount > 0 &&
-    selectedCount < permissions.length;
+    selectedCount > 0 && selectedCount < permissions.length;
 
   const handleSelectAll = (event) => {
     const checked = event.target.checked;
 
     permissions.forEach((permission) => {
       if (permission.assigned !== checked) {
-        onPermissionChange(
-          permission.id,
-          checked,
-        );
+        onPermissionChange(permission.id, checked);
       }
     });
   };
 
-  const moduleLabel =
-    normalizeResourceLabel(resource);
+  const moduleLabel = normalizeResourceLabel(resource);
 
   return (
     <Card
@@ -226,37 +185,21 @@ function PermissionModuleCard({
               flex: 1,
             }}
           >
-            <Typography
-              variant="subtitle2"
-              fontWeight={800}
-              noWrap
-            >
+            <Typography variant="subtitle2" fontWeight={800} noWrap>
               {moduleLabel}
             </Typography>
 
-            <Typography
-              variant="caption"
-              color="text.secondary"
-            >
-              {selectedCount} of{" "}
-              {permissions.length} enabled
+            <Typography variant="caption" color="text.secondary">
+              {selectedCount} of {permissions.length} enabled
             </Typography>
           </Box>
 
           <Checkbox
             size="small"
             checked={allSelected}
-            indeterminate={
-              partiallySelected
-            }
-            disabled={
-              !canEdit ||
-              saving ||
-              permissions.length === 0
-            }
-            onChange={
-              handleSelectAll
-            }
+            indeterminate={partiallySelected}
+            disabled={!canEdit || saving || permissions.length === 0}
+            onChange={handleSelectAll}
             inputProps={{
               "aria-label": `Select all ${moduleLabel} permissions`,
             }}
@@ -275,20 +218,14 @@ function PermissionModuleCard({
         }}
       >
         <Stack spacing={0.25}>
-          {permissions.map(
-            (permission) => (
-              <PermissionItem
-                key={permission.id}
-                permission={permission}
-                disabled={
-                  !canEdit || saving
-                }
-                onChange={
-                  onPermissionChange
-                }
-              />
-            ),
-          )}
+          {permissions.map((permission) => (
+            <PermissionItem
+              key={permission.id}
+              permission={permission}
+              disabled={!canEdit || saving}
+              onChange={onPermissionChange}
+            />
+          ))}
         </Stack>
       </CardContent>
     </Card>
@@ -301,30 +238,13 @@ export default function RolePermissionMatrix({
   onClose,
   canEdit = false,
 }) {
-  const [
-    loading,
-    setLoading,
-  ] = useState(false);
+  const notification = useNotification();
 
-  const [
-    saving,
-    setSaving,
-  ] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [
-    error,
-    setError,
-  ] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const [
-    success,
-    setSuccess,
-  ] = useState("");
-
-  const [
-    permissions,
-    setPermissions,
-  ] = useState([]);
+  const [permissions, setPermissions] = useState([]);
 
   useEffect(() => {
     if (!open || !role?.id) {
@@ -335,29 +255,18 @@ export default function RolePermissionMatrix({
 
     async function loadMatrix() {
       setLoading(true);
-      setError("");
-      setSuccess("");
 
       try {
-        const response =
-          await roleService.getPermissionMatrix(
-            role.id,
-          );
+        const response = await roleService.getPermissionMatrix(role.id);
 
         if (!cancelled) {
-          setPermissions(
-            normalizeMatrix(response).map(
-              normalizePermission,
-            ),
-          );
+          setPermissions(normalizeMatrix(response).map(normalizePermission));
         }
       } catch (requestError) {
         if (!cancelled) {
-          setError(
-            requestError?.response
-              ?.data?.message ??
-              requestError?.response
-                ?.data?.error?.message ??
+          notification.error(
+            requestError?.response?.data?.message ??
+              requestError?.response?.data?.error?.message ??
               requestError?.message ??
               "Unable to load role permissions.",
           );
@@ -374,17 +283,11 @@ export default function RolePermissionMatrix({
     return () => {
       cancelled = true;
     };
-  }, [open, role?.id]);
+  }, [open, role?.id, notification]);
 
-  const modules = useMemo(
-    () => groupPermissions(permissions),
-    [permissions],
-  );
+  const modules = useMemo(() => groupPermissions(permissions), [permissions]);
 
-  const handlePermissionChange = (
-    permissionId,
-    checked,
-  ) => {
+  const handlePermissionChange = (permissionId, checked) => {
     if (!canEdit || saving) {
       return;
     }
@@ -407,37 +310,24 @@ export default function RolePermissionMatrix({
     }
 
     setSaving(true);
-    setError("");
-    setSuccess("");
 
     try {
-      const permissionIds =
-        permissions
-          .filter(
-            (permission) =>
-              permission.assigned,
-          )
-          .map(
-            (permission) =>
-              permission.id,
-          );
+      const permissionIds = permissions
+        .filter((permission) => permission.assigned)
+        .map((permission) => permission.id);
 
-      const response =
-        await roleService.replacePermissions(
-          role.id,
-          permissionIds,
-        );
+      const response = await roleService.replacePermissions(
+        role.id,
+        permissionIds,
+      );
 
-      setSuccess(
-        response?.message ??
-          "Role permissions updated successfully.",
+      notification.success(
+        response?.message ?? "Role permissions updated successfully.",
       );
     } catch (requestError) {
-      setError(
-        requestError?.response
-          ?.data?.message ??
-          requestError?.response
-            ?.data?.error?.message ??
+      notification.error(
+        requestError?.response?.data?.message ??
+          requestError?.response?.data?.error?.message ??
           requestError?.message ??
           "Unable to update role permissions.",
       );
@@ -455,7 +345,7 @@ export default function RolePermissionMatrix({
       variant="outlined"
       sx={{
         width: "100%",
-         minWidth: 0,
+        minWidth: 0,
       }}
     >
       <CardContent>
@@ -473,53 +363,19 @@ export default function RolePermissionMatrix({
             spacing={1}
           >
             <Box>
-              <Typography
-                variant="h6"
-                fontWeight={800}
-              >
+              <Typography variant="h6" fontWeight={800}>
                 Permission Matrix
               </Typography>
 
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Configure permissions for{" "}
-                {role?.name ??
-                  role?.code}
+              <Typography variant="body2" color="text.secondary">
+                Configure permissions for {role?.name ?? role?.code}
               </Typography>
             </Box>
 
-            <Button
-              variant="text"
-              onClick={onClose}
-              disabled={saving}
-            >
+            <Button variant="text" onClick={onClose} disabled={saving}>
               Close
             </Button>
           </Stack>
-
-          {error ? (
-            <Alert
-              severity="error"
-              onClose={() =>
-                setError("")
-              }
-            >
-              {error}
-            </Alert>
-          ) : null}
-
-          {success ? (
-            <Alert
-              severity="success"
-              onClose={() =>
-                setSuccess("")
-              }
-            >
-              {success}
-            </Alert>
-          ) : null}
 
           {loading ? (
             <Box
@@ -530,59 +386,39 @@ export default function RolePermissionMatrix({
                 justifyContent: "center",
               }}
             >
-              <CircularProgress
-                size={28}
-                aria-label="Loading permissions"
-              />
+              <CircularProgress size={28} aria-label="Loading permissions" />
             </Box>
-          ) : permissions.length ===
-            0 ? (
+          ) : permissions.length === 0 ? (
             <Alert severity="info">
-              No active permissions are
-              available for this role.
+              No active permissions are available for this role.
             </Alert>
           ) : (
-            <Grid
-              container
-              spacing={2}
-              alignItems="stretch"
-            >
-              {modules.map(
-                ([
-                  resource,
-                  modulePermissions,
-                ]) => (
-                  <Grid
-                    key={resource}
-                    size={{
-                      xs: 12,
-                      sm: 6,
-                      lg: 4,
-                    }}
-                    sx={{
-                      display: "flex",
-                    }}
-                  >
-                    <PermissionModuleCard
-                      resource={resource}
-                      permissions={
-                        modulePermissions
-                      }
-                      canEdit={canEdit}
-                      saving={saving}
-                      onPermissionChange={
-                        handlePermissionChange
-                      }
-                    />
-                  </Grid>
-                ),
-              )}
+            <Grid container spacing={2} alignItems="stretch">
+              {modules.map(([resource, modulePermissions]) => (
+                <Grid
+                  key={resource}
+                  size={{
+                    xs: 12,
+                    sm: 6,
+                    lg: 4,
+                  }}
+                  sx={{
+                    display: "flex",
+                  }}
+                >
+                  <PermissionModuleCard
+                    resource={resource}
+                    permissions={modulePermissions}
+                    canEdit={canEdit}
+                    saving={saving}
+                    onPermissionChange={handlePermissionChange}
+                  />
+                </Grid>
+              ))}
             </Grid>
           )}
 
-          {canEdit &&
-          !loading &&
-          permissions.length > 0 ? (
+          {canEdit && !loading && permissions.length > 0 ? (
             <Stack
               direction="row"
               justifyContent="flex-end"
@@ -591,25 +427,17 @@ export default function RolePermissionMatrix({
                 pt: 0.5,
               }}
             >
-              <Button
-                variant="outlined"
-                onClick={onClose}
-                disabled={saving}
-              >
+              <Button variant="outlined" onClick={onClose} disabled={saving}>
                 Cancel
               </Button>
 
               <Button
                 variant="contained"
-                startIcon={
-                  <SaveOutlinedIcon />
-                }
+                startIcon={<SaveOutlinedIcon />}
                 onClick={handleSave}
                 disabled={saving}
               >
-                {saving
-                  ? "Saving..."
-                  : "Save permissions"}
+                {saving ? "Saving..." : "Save permissions"}
               </Button>
             </Stack>
           ) : null}

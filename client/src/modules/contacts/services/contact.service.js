@@ -78,6 +78,14 @@ export const contactService = Object.freeze({
     return unwrapData(response);
   },
 
+  async reactivateContact(contactId) {
+  const response = await apiClient.post(
+    `${CONTACTS_ENDPOINT}/${encodeURIComponent(contactId)}/reactivate`,
+  );
+
+  return unwrapData(response);
+},
+
   async listOrganizations() {
     const response = await apiClient.get("/organizations", {
       params: { page: 1, limit: 100, status: "active" },

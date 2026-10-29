@@ -12,6 +12,7 @@ import {
 import FormTextField from "../../../components/forms/FormTextField";
 import FormSelect from "../../../components/forms/FormSelect";
 import FormSubmitButton from "../../../components/forms/FormSubmitButton";
+import { useNotification } from "../../../components/feedback/useNotification";
 
 import { USER_FORM_FIELDS } from "../users.config";
 
@@ -41,7 +42,7 @@ export default function UserFormDialog({
   canEdit = true,
 }) {
   const isEdit = Boolean(user);
-
+  const notification = useNotification();
   const fields = isEdit
     ? USER_FORM_FIELDS.filter((field) => field.name !== "password").flatMap(
         (field) =>
@@ -145,15 +146,15 @@ export default function UserFormDialog({
 
         await onSubmit(payload);
         helpers.resetForm();
-
-
       } catch (error) {
-        helpers.setStatus(
+        notification.error(
           error?.response?.data?.message ??
             error?.response?.data?.error?.message ??
             error?.message ??
             "Unable to save user.",
         );
+      } finally {
+        helpers.setSubmitting(false);
       }
     },
   });
@@ -172,10 +173,6 @@ export default function UserFormDialog({
 
         <DialogContent dividers>
           <Stack spacing={2.5} sx={{ pt: 1 }}>
-            {formik.status ? (
-              <Alert severity="error">{formik.status}</Alert>
-            ) : null}
-
             {fields.map((field) =>
               field.name === "roleCode" ? (
                 <FormSelect

@@ -174,11 +174,26 @@ async function updateRole(roleId, data, actorUserId) {
   }
 
   if (data.isActive === false) {
+    if (role.code === ROLE_SYSTEM_CODES.DEVELOPER) {
+      throw AppError.forbidden("The Developer role cannot be deactivated.", {
+        code: ROLE_ERROR_CODES.ROLE_DEVELOPER_PROTECTED,
+      });
+    }
+
+    if (role.code === ROLE_SYSTEM_CODES.SUPERADMIN) {
+      throw AppError.forbidden(
+        "The Super Admin role cannot be deactivated through normal role management.",
+        {
+          code: ROLE_ERROR_CODES.ROLE_SUPERADMIN_PROTECTED,
+        },
+      );
+    }
+
     const assignedUsers = await roleRepository.countRoleUsers(roleId);
 
     if (assignedUsers > 0) {
       throw AppError.conflict(
-        "A role assigned to users cannot be deactivated until its assignments are removed.",
+        `This role cannot be deactivated because ${assignedUsers} user(s) are assigned to it. Reassign those users before deactivating the role.`,
         {
           code: ROLE_ERROR_CODES.ROLE_HAS_USERS,
         },
@@ -421,63 +436,78 @@ async function removeRoleFromUser(roleId, userId, actorUserId) {
 }
 
 async function deleteRole(roleId, actorUserId) {
-  return executeTransaction(async (transactionContext) => {
-    const role = await requireRole(roleId, transactionContext);
+  try {
+    return await executeTransaction(async (transactionContext) => {
+      const role = await requireRole(roleId, transactionContext);
 
-    await rbacAuthority.requireCanModifyRole(
-      actorUserId,
-      role,
-      transactionContext,
-    );
-
-    await rbacAuthority.assertNotManagingOwnSuperAdminRole(
-      actorUserId,
-      role,
-      transactionContext,
-    );
-
-    if (role.code === ROLE_SYSTEM_CODES.DEVELOPER) {
-      throw AppError.forbidden("The Developer role cannot be deleted.", {
-        code: ROLE_ERROR_CODES.ROLE_DEVELOPER_PROTECTED,
-      });
-    }
-
-    if (role.code === ROLE_SYSTEM_CODES.SUPERADMIN) {
-      throw AppError.forbidden(
-        "The Super Admin role cannot be deleted through normal role management.",
-        {
-          code: ROLE_ERROR_CODES.ROLE_SUPERADMIN_PROTECTED,
-        },
+      await rbacAuthority.requireCanModifyRole(
+        actorUserId,
+        role,
+        transactionContext,
       );
-    }
 
-    const userCount = await roleRepository.countRoleUsers(
-      roleId,
-      transactionContext,
-    );
+      await rbacAuthority.assertNotManagingOwnSuperAdminRole(
+        actorUserId,
+        role,
+        transactionContext,
+      );
 
-    if (userCount > 0) {
+      if (role.code === ROLE_SYSTEM_CODES.DEVELOPER) {
+        throw AppError.forbidden("The Developer role cannot be deleted.", {
+          code: ROLE_ERROR_CODES.ROLE_DEVELOPER_PROTECTED,
+        });
+      }
+
+      if (role.code === ROLE_SYSTEM_CODES.SUPERADMIN) {
+        throw AppError.forbidden(
+          "The Super Admin role cannot be deleted through normal role management.",
+          {
+            code: ROLE_ERROR_CODES.ROLE_SUPERADMIN_PROTECTED,
+          },
+        );
+      }
+
+      const userCount = await roleRepository.countRoleUsers(
+        roleId,
+        transactionContext,
+      );
+
+      if (userCount > 0) {
+        throw AppError.conflict(
+          `The role "${role.name}" cannot be deleted because ${userCount} user(s) are assigned to it. Reassign those users to another role before deleting this role.`,
+          {
+            code: ROLE_ERROR_CODES.ROLE_HAS_USERS,
+          },
+        );
+      }
+
+      const deletedRole = await roleRepository.deleteRole(
+        roleId,
+        transactionContext,
+      );
+
+      if (!deletedRole) {
+        throw AppError.notFound("Role not found.", {
+          code: ROLE_ERROR_CODES.ROLE_NOT_FOUND,
+        });
+      }
+
+      return deletedRole;
+    });
+  } catch (error) {
+    // A foreign-key reference may still prevent deletion, even if the
+    // user_roles precheck found no assigned users.
+    if (error?.code === "23503") {
       throw AppError.conflict(
-        "This role cannot be deleted while users are assigned to it. Reassign the users first.",
+        "This role cannot be deleted because related records still reference it. Check role assignments and dependent records before retrying.",
         {
           code: ROLE_ERROR_CODES.ROLE_HAS_USERS,
         },
       );
     }
 
-    const deletedRole = await roleRepository.deleteRole(
-      roleId,
-      transactionContext,
-    );
-
-    if (!deletedRole) {
-      throw AppError.notFound("Role not found.", {
-        code: ROLE_ERROR_CODES.ROLE_NOT_FOUND,
-      });
-    }
-
-    return deletedRole;
-  });
+    throw error;
+  }
 }
 
 async function getRolePermissionMatrix(roleId, actorUserId) {

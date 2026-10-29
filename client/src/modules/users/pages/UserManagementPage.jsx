@@ -1,9 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   Alert,
@@ -31,250 +26,159 @@ import {
   getRoleOptions,
 } from "../users.config";
 
-import {
-  SYSTEM_ROLE_CODES,
-} from "../../../config/access.config";
+import { SYSTEM_ROLE_CODES } from "../../../config/access.config";
 
-import {
-  PERMISSIONS,
-} from "../../../config/permission.config";
+import { PERMISSIONS } from "../../../config/permission.config";
 
-import {
-  userService,
-} from "../services/user.service";
+import { userService } from "../services/user.service";
 
-import {
-  roleService,
-} from "../../roles/services/role.service";
+import { roleService } from "../../roles/services/role.service";
 
 import UserFormDialog from "../components/UserFormDialog";
 import UserTable from "../components/UserTable";
+import { useNotification } from "../../../components/feedback/useNotification";
+import ConfirmationDialog from "../../../components/feedback/ConfirmationDialog";
 
 const DEFAULT_PAGE_SIZE = 20;
 
-const EMPTY_PAGINATION =
-  Object.freeze({
-    page: 1,
-    limit: DEFAULT_PAGE_SIZE,
-    total: 0,
-    totalPages: 0,
-  });
+const EMPTY_PAGINATION = Object.freeze({
+  page: 1,
+  limit: DEFAULT_PAGE_SIZE,
+  total: 0,
+  totalPages: 0,
+});
 
 function getErrorMessage(error) {
   return (
     error?.response?.data?.message ??
-    error?.response?.data?.error
-      ?.message ??
+    error?.response?.data?.error?.message ??
     error?.message ??
     "Unable to complete the request."
   );
 }
 
 export default function UserManagementPage() {
-  const {
-    user: currentUser,
-    roles: currentRoles,
-    hasPermission,
-  } = useAuth();
+  const { user: currentUser, roles: currentRoles, hasPermission } = useAuth();
+  const notification = useNotification();
+
+  const [userToBlock, setUserToBlock] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);
+
+  const [blocking, setBlocking] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const currentUserIsDeveloper =
     currentRoles?.some(
       (role) =>
-        (
-          typeof role === "string"
-            ? role
-            : role?.code
-        ) ===
+        (typeof role === "string" ? role : role?.code) ===
         SYSTEM_ROLE_CODES.DEVELOPER,
     ) ?? false;
 
-  const canCreate =
-    hasPermission(
-      PERMISSIONS.USER_CREATE,
-    );
+  const canCreate = hasPermission(PERMISSIONS.USER_CREATE);
 
-  const canUpdate =
-    hasPermission(
-      PERMISSIONS.USER_UPDATE,
-    );
+  const canUpdate = hasPermission(PERMISSIONS.USER_UPDATE);
 
-  const canDelete =
-    hasPermission(
-      PERMISSIONS.USER_DELETE,
-    );
+  const canDelete = hasPermission(PERMISSIONS.USER_DELETE);
 
-  const [users, setUsers] =
-    useState([]);
+  const [users, setUsers] = useState([]);
 
-  const [roles, setRoles] =
-    useState([]);
+  const [roles, setRoles] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [rolesLoading, setRolesLoading] =
-    useState(false);
+  const [rolesLoading, setRolesLoading] = useState(false);
 
-  const [dialogOpen, setDialogOpen] =
-    useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const [editingUser, setEditingUser] =
-    useState(null);
+  const [editingUser, setEditingUser] = useState(null);
 
-  const [error, setError] =
-    useState("");
+  const [searchInput, setSearchInput] = useState("");
 
-  const [success, setSuccess] =
-    useState("");
+  const [search, setSearch] = useState("");
 
-  const [searchInput, setSearchInput] =
-    useState("");
+  const [status, setStatus] = useState("");
 
-  const [search, setSearch] =
-    useState("");
+  const [roleCode, setRoleCode] = useState("");
 
-  const [status, setStatus] =
-    useState("");
+  const [pagination, setPagination] = useState(EMPTY_PAGINATION);
 
-  const [roleCode, setRoleCode] =
-    useState("");
-
-  const [pagination, setPagination] =
-    useState(EMPTY_PAGINATION);
-
-  const [paginationModel, setPaginationModel] =
-    useState({
-      page: 0,
-      pageSize: DEFAULT_PAGE_SIZE,
-    });
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: DEFAULT_PAGE_SIZE,
+  });
 
   const roleOptions = useMemo(
     () =>
       getRoleOptions(
         roles,
-        editingUser?.role?.code ??
-          editingUser?.roles?.[0]?.code,
+        editingUser?.role?.code ?? editingUser?.roles?.[0]?.code,
         currentUserIsDeveloper,
       ),
-    [
-      roles,
-      editingUser,
-      currentUserIsDeveloper,
-    ],
+    [roles, editingUser, currentUserIsDeveloper],
   );
 
-  const loadRoles = useCallback(
-    async () => {
-      if (!canCreate && !canUpdate) {
-        setRoles([]);
-        return;
-      }
+  const loadRoles = useCallback(async () => {
+    if (!canCreate && !canUpdate) {
+      setRoles([]);
+      return;
+    }
 
-      setRolesLoading(true);
+    setRolesLoading(true);
 
-      try {
-        const response =
-          await roleService.list({
-            page: 1,
-            limit: 100,
-            isActive: "true",
-          });
+    try {
+      const response = await roleService.list({
+        page: 1,
+        limit: 100,
+        isActive: "true",
+      });
 
-        setRoles(
-          Array.isArray(
-            response?.data,
-          )
-            ? response.data
-            : [],
-        );
-      } catch (requestError) {
-        setError(
-          getErrorMessage(
-            requestError,
-          ),
-        );
-      } finally {
-        setRolesLoading(false);
-      }
-    },
-    [canCreate, canUpdate],
-  );
+      setRoles(Array.isArray(response?.data) ? response.data : []);
+    } catch (requestError) {
+      notification.error(getErrorMessage(requestError));
+    } finally {
+      setRolesLoading(false);
+    }
+  }, [canCreate, canUpdate]);
 
-  const loadUsers = useCallback(
-    async () => {
-      setLoading(true);
-      setError("");
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
 
-      try {
-        const response =
-          await userService.list({
-            page:
-              paginationModel.page + 1,
+    try {
+      const response = await userService.list({
+        page: paginationModel.page + 1,
 
-            limit:
-              paginationModel.pageSize,
+        limit: paginationModel.pageSize,
 
-            search,
+        search,
 
-            status: status || undefined,
+        status: status || undefined,
 
-            roleCode:
-              roleCode || undefined,
-          });
+        roleCode: roleCode || undefined,
+      });
 
-        const data =
-          Array.isArray(
-            response?.data,
-          )
-            ? response.data
-            : [];
+      const data = Array.isArray(response?.data) ? response.data : [];
 
-        /*
-         * Developer must never be presented
-         * as an ordinary user-management row.
-         */
-        const visibleUsers =
-          data.filter(
-            (user) =>
-              !isDeveloper(user),
-          );
+      /*
+       * Developer must never be presented
+       * as an ordinary user-management row.
+       */
+      const visibleUsers = data.filter((user) => !isDeveloper(user));
 
-        setUsers(
-          visibleUsers.map(
-            (user) => ({
-              ...user,
-              role:
-                user.role ??
-                getPrimaryRoleObject(
-                  user,
-                ),
-            }),
-          ),
-        );
+      setUsers(
+        visibleUsers.map((user) => ({
+          ...user,
+          role: user.role ?? getPrimaryRoleObject(user),
+        })),
+      );
 
-        setPagination(
-          response?.pagination ??
-            EMPTY_PAGINATION,
-        );
-      } catch (requestError) {
-        setError(
-          getErrorMessage(
-            requestError,
-          ),
-        );
-
-        setUsers([]);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [
-      paginationModel,
-      search,
-      status,
-      roleCode,
-    ],
-  );
+      setPagination(response?.pagination ?? EMPTY_PAGINATION);
+    } catch (requestError) {
+      notification.error(getErrorMessage(requestError));
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [paginationModel, search, status, roleCode]);
 
   useEffect(() => {
     void loadUsers();
@@ -285,55 +189,37 @@ export default function UserManagementPage() {
   }, [loadRoles]);
 
   const handleSearch = () => {
-    setPaginationModel(
-      (current) => ({
-        ...current,
-        page: 0,
-      }),
-    );
+    setPaginationModel((current) => ({
+      ...current,
+      page: 0,
+    }));
 
-    setSearch(
-      searchInput.trim(),
-    );
+    setSearch(searchInput.trim());
   };
 
-  const handleSearchKeyDown = (
-    event,
-  ) => {
+  const handleSearchKeyDown = (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
       handleSearch();
     }
   };
 
-  const handleStatusFilter = (
-    event,
-  ) => {
-    setStatus(
-      event.target.value,
-    );
+  const handleStatusFilter = (event) => {
+    setStatus(event.target.value);
 
-    setPaginationModel(
-      (current) => ({
-        ...current,
-        page: 0,
-      }),
-    );
+    setPaginationModel((current) => ({
+      ...current,
+      page: 0,
+    }));
   };
 
-  const handleRoleFilter = (
-    event,
-  ) => {
-    setRoleCode(
-      event.target.value,
-    );
+  const handleRoleFilter = (event) => {
+    setRoleCode(event.target.value);
 
-    setPaginationModel(
-      (current) => ({
-        ...current,
-        page: 0,
-      }),
-    );
+    setPaginationModel((current) => ({
+      ...current,
+      page: 0,
+    }));
   };
 
   const handleResetFilters = () => {
@@ -353,9 +239,7 @@ export default function UserManagementPage() {
     setDialogOpen(true);
   };
 
-  const handleOpenEdit = (
-    user,
-  ) => {
+  const handleOpenEdit = (user) => {
     if (!canUpdate) {
       return;
     }
@@ -364,10 +248,7 @@ export default function UserManagementPage() {
       return;
     }
 
-    if (
-      isSuperAdmin(user) &&
-      !currentUserIsDeveloper
-    ) {
+    if (isSuperAdmin(user) && !currentUserIsDeveloper) {
       return;
     }
 
@@ -375,30 +256,14 @@ export default function UserManagementPage() {
     setDialogOpen(true);
   };
 
-  const handleSave = async (
-    values,
-  ) => {
-    setError("");
-    setSuccess("");
-
+  const handleSave = async (values) => {
     try {
       if (editingUser) {
-        await userService.update(
-          editingUser.id,
-          values,
-        );
-
-        setSuccess(
-          "User updated successfully.",
-        );
+        await userService.update(editingUser.id, values);
+        notification.success("User updated successfully.");
       } else {
-        await userService.create(
-          values,
-        );
-
-        setSuccess(
-          "User created successfully.",
-        );
+        await userService.create(values);
+        notification.success("User created successfully.");
       }
 
       setDialogOpen(false);
@@ -406,14 +271,13 @@ export default function UserManagementPage() {
 
       await loadUsers();
     } catch (requestError) {
+      // Keep form-level validation/server errors available to UserFormDialog.
       throw requestError;
     }
   };
 
-  const handleStatusChange = async (
-    user,
-  ) => {
-    if (!canUpdate) {
+  const applyStatusChange = async (user, nextStatus) => {
+    if (!canUpdate || blocking) {
       return;
     }
 
@@ -421,106 +285,104 @@ export default function UserManagementPage() {
       return;
     }
 
-    if (
-      isSuperAdmin(user) &&
-      !currentUserIsDeveloper
-    ) {
+    if (isSuperAdmin(user) && !currentUserIsDeveloper) {
       return;
     }
 
-    setError("");
-    setSuccess("");
+    if (user.id === currentUser?.id && nextStatus !== "active") {
+      notification.error("You cannot block your own user account.");
+      return;
+    }
+
+    setBlocking(true);
 
     try {
-      const nextStatus =
-        user.status === "active"
-          ? "inactive"
-          : "active";
+      await userService.updateStatus(user.id, nextStatus);
 
-      await userService.updateStatus(
-        user.id,
-        nextStatus,
+      notification.success(
+        nextStatus === "inactive"
+          ? "User blocked successfully."
+          : "User activated successfully.",
       );
 
-      setSuccess(
-        `User ${nextStatus === "active" ? "activated" : "deactivated"} successfully.`,
-      );
-
+      setUserToBlock(null);
       await loadUsers();
     } catch (requestError) {
-      setError(
-        getErrorMessage(
-          requestError,
-        ),
-      );
+      notification.error(getErrorMessage(requestError));
+    } finally {
+      setBlocking(false);
     }
   };
 
-  const handleDelete = async (
-    user,
-  ) => {
-    if (!canDelete) {
+  const handleStatusChange = (user) => {
+    if (!canUpdate || isDeveloper(user)) {
       return;
     }
 
-    if (isDeveloper(user)) {
+    if (isSuperAdmin(user) && !currentUserIsDeveloper) {
       return;
     }
 
-    if (
-      isSuperAdmin(user) &&
-      !currentUserIsDeveloper
-    ) {
+    if (user.status === "active") {
+      // Blocking is destructive to access, so ask for confirmation.
+      setUserToBlock(user);
       return;
     }
 
-    if (
-      user.id === currentUser?.id
-    ) {
-      setError(
-        "You cannot delete your own user account.",
-      );
+    // Reactivating is not a blocking action; proceed directly.
+    void applyStatusChange(user, "active");
+  };
+
+  const handleConfirmBlock = async () => {
+    if (!userToBlock || blocking) {
       return;
     }
 
-    const confirmed =
-      window.confirm(
-        `Delete user '${user.username}'?`,
-      );
+    await applyStatusChange(userToBlock, "inactive");
+  };
 
-    if (!confirmed) {
+  const handleDelete = (user) => {
+    if (!canDelete || isDeveloper(user)) {
       return;
     }
 
-    setError("");
-    setSuccess("");
+    if (isSuperAdmin(user) && !currentUserIsDeveloper) {
+      return;
+    }
+
+    if (user.id === currentUser?.id) {
+      notification.error("You cannot delete your own user account.");
+      return;
+    }
+
+    setUserToDelete(user);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!userToDelete || deleting) {
+      return;
+    }
+
+    setDeleting(true);
 
     try {
-      await userService.remove(
-        user.id,
-      );
+      await userService.remove(userToDelete.id);
 
-      setSuccess(
-        "User deleted successfully.",
-      );
+      notification.success("User deleted successfully.");
+      setUserToDelete(null);
 
       await loadUsers();
     } catch (requestError) {
-      setError(
-        getErrorMessage(
-          requestError,
-        ),
-      );
+      notification.error(getErrorMessage(requestError));
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const hasFilters =
-    Boolean(search) ||
-    Boolean(status) ||
-    Boolean(roleCode);
+  const hasFilters = Boolean(search) || Boolean(status) || Boolean(roleCode);
 
   return (
-    <Stack  spacing={3}>
+    <Stack spacing={3}>
       <Stack
         direction={{
           xs: "column",
@@ -533,59 +395,26 @@ export default function UserManagementPage() {
         spacing={2}
       >
         <Stack spacing={0.5}>
-          <Typography
-            variant="h4"
-            fontWeight={800}
-          >
+          <Typography variant="h4" fontWeight={800}>
             User Management
           </Typography>
 
           <Typography color="text.secondary">
-            Manage application users,
-            status and role assignment.
+            Manage application users, status and role assignment.
           </Typography>
         </Stack>
 
         {canCreate ? (
           <Button
             variant="contained"
-            startIcon={
-              <AddOutlinedIcon />
-            }
-            onClick={
-              handleOpenCreate
-            }
-            disabled={
-              rolesLoading ||
-              roleOptions.length === 0
-            }
+            startIcon={<AddOutlinedIcon />}
+            onClick={handleOpenCreate}
+            disabled={rolesLoading || roleOptions.length === 0}
           >
             Create user
           </Button>
         ) : null}
       </Stack>
-
-      {error ? (
-        <Alert
-          severity="error"
-          onClose={() =>
-            setError("")
-          }
-        >
-          {error}
-        </Alert>
-      ) : null}
-
-      {success ? (
-        <Alert
-          severity="success"
-          onClose={() =>
-            setSuccess("")
-          }
-        >
-          {success}
-        </Alert>
-      ) : null}
 
       <Card>
         <CardContent>
@@ -603,22 +432,11 @@ export default function UserManagementPage() {
                 label="Search users"
                 placeholder="Username, email or name"
                 value={searchInput}
-                onChange={(event) =>
-                  setSearchInput(
-                    event.target.value,
-                  )
-                }
-                onKeyDown={
-                  handleSearchKeyDown
-                }
+                onChange={(event) => setSearchInput(event.target.value)}
+                onKeyDown={handleSearchKeyDown}
               />
 
-              <Button
-                variant="outlined"
-                onClick={
-                  handleSearch
-                }
-              >
+              <Button variant="outlined" onClick={handleSearch}>
                 Search
               </Button>
 
@@ -628,40 +446,24 @@ export default function UserManagementPage() {
                   minWidth: 160,
                 }}
               >
-                <InputLabel>
-                  Status
-                </InputLabel>
+                <InputLabel>Status</InputLabel>
 
                 <Select
                   label="Status"
                   value={status}
-                  onChange={
-                    handleStatusFilter
-                  }
+                  onChange={handleStatusFilter}
                 >
-                  <MenuItem value="">
-                    All statuses
-                  </MenuItem>
+                  <MenuItem value="">All statuses</MenuItem>
 
-                  <MenuItem value="pending">
-                    Pending
-                  </MenuItem>
+                  <MenuItem value="pending">Pending</MenuItem>
 
-                  <MenuItem value="active">
-                    Active
-                  </MenuItem>
+                  <MenuItem value="active">Active</MenuItem>
 
-                  <MenuItem value="inactive">
-                    Inactive
-                  </MenuItem>
+                  <MenuItem value="inactive">Inactive</MenuItem>
 
-                  <MenuItem value="suspended">
-                    Suspended
-                  </MenuItem>
+                  <MenuItem value="suspended">Suspended</MenuItem>
 
-                  <MenuItem value="locked">
-                    Locked
-                  </MenuItem>
+                  <MenuItem value="locked">Locked</MenuItem>
                 </Select>
               </FormControl>
 
@@ -671,57 +473,30 @@ export default function UserManagementPage() {
                   minWidth: 180,
                 }}
               >
-                <InputLabel>
-                  Role
-                </InputLabel>
+                <InputLabel>Role</InputLabel>
 
                 <Select
                   label="Role"
                   value={roleCode}
-                  onChange={
-                    handleRoleFilter
-                  }
+                  onChange={handleRoleFilter}
                 >
-                  <MenuItem value="">
-                    All roles
-                  </MenuItem>
+                  <MenuItem value="">All roles</MenuItem>
 
                   {roles
-                    .filter(
-                      (role) =>
-                        role.code !==
-                        SYSTEM_ROLE_CODES.DEVELOPER,
-                    )
-                    .map(
-                      (role) => (
-                        <MenuItem
-                          key={
-                            role.code
-                          }
-                          value={
-                            role.code
-                          }
-                        >
-                          {role.name ??
-                            role.code}
-                        </MenuItem>
-                      ),
-                    )}
+                    .filter((role) => role.code !== SYSTEM_ROLE_CODES.DEVELOPER)
+                    .map((role) => (
+                      <MenuItem key={role.code} value={role.code}>
+                        {role.name ?? role.code}
+                      </MenuItem>
+                    ))}
                 </Select>
               </FormControl>
 
               <Button
                 variant="text"
-                startIcon={
-                  <RestartAltOutlinedIcon />
-                }
-                disabled={
-                  !hasFilters &&
-                  !searchInput
-                }
-                onClick={
-                  handleResetFilters
-                }
+                startIcon={<RestartAltOutlinedIcon />}
+                disabled={!hasFilters && !searchInput}
+                onClick={handleResetFilters}
               >
                 Reset
               </Button>
@@ -730,70 +505,73 @@ export default function UserManagementPage() {
             <UserTable
               users={users}
               loading={loading}
-              pagination={
-                pagination
-              }
-              paginationModel={
-                paginationModel
-              }
-              onPaginationModelChange={(
-                model,
-              ) => {
-                setPaginationModel(
-                  model,
-                );
+              pagination={pagination}
+              paginationModel={paginationModel}
+              onPaginationModelChange={(model) => {
+                setPaginationModel(model);
               }}
-              canUpdate={
-                canUpdate
-              }
-              canDelete={
-                canDelete
-              }
-              currentUserIsDeveloper={
-                currentUserIsDeveloper
-              }
-              onEdit={
-                handleOpenEdit
-              }
-              onStatusChange={
-                handleStatusChange
-              }
-              onDelete={
-                handleDelete
-              }
+              canUpdate={canUpdate}
+              canDelete={canDelete}
+              currentUserIsDeveloper={currentUserIsDeveloper}
+              onEdit={handleOpenEdit}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDelete}
             />
           </Stack>
         </CardContent>
       </Card>
 
-      {canCreate ||
-      canUpdate ? (
+      {canCreate || canUpdate ? (
         <UserFormDialog
           open={dialogOpen}
           onClose={() => {
-            setDialogOpen(
-              false,
-            );
-            setEditingUser(
-              null,
-            );
+            setDialogOpen(false);
+            setEditingUser(null);
           }}
-          onSubmit={
-            handleSave
-          }
-          roleOptions={
-            roleOptions
-          }
-          user={
-            editingUser
-          }
-          canEdit={
-            editingUser
-              ? canUpdate
-              : canCreate
-          }
+          onSubmit={handleSave}
+          roleOptions={roleOptions}
+          user={editingUser}
+          canEdit={editingUser ? canUpdate : canCreate}
         />
       ) : null}
+
+      <ConfirmationDialog
+        open={Boolean(userToBlock)}
+        title="Block User"
+        message={
+          userToBlock
+            ? `Block "${userToBlock.username}"? This will prevent the user from accessing the application. The account and its ticket history will be retained.`
+            : "Block this user?"
+        }
+        confirmLabel="Block User"
+        confirmColor="warning"
+        loading={blocking}
+        onCancel={() => {
+          if (!blocking) {
+            setUserToBlock(null);
+          }
+        }}
+        onConfirm={handleConfirmBlock}
+      />
+
+      <ConfirmationDialog
+        open={Boolean(userToDelete)}
+        title="Delete User"
+        message={
+          userToDelete
+            ? `Permanently delete "${userToDelete.username}"? This action cannot be undone. If tickets or other records reference this user, deletion will be rejected and an explanation will be shown.`
+            : "Permanently delete this user?"
+        }
+        confirmLabel="Delete User"
+        confirmColor="error"
+        loading={deleting}
+        onCancel={() => {
+          if (!deleting) {
+            setUserToDelete(null);
+          }
+        }}
+        onConfirm={handleConfirmDelete}
+      />
     </Stack>
   );
 }

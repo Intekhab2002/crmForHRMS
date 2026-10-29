@@ -22,6 +22,7 @@ const {
   CONTACT_CREATE,
   CONTACT_UPDATE,
   CONTACT_DELETE,
+   CONTACT_RESTORE,
 } = RBAC_PERMISSIONS;
 
 const router = Router();
@@ -79,6 +80,14 @@ router.delete(
   requirePermission(CONTACT_DELETE),
   validateParams(contactValidator.contactIdParamSchema),
   contactController.deleteContact,
+);
+// Reactivate an inactive contact.
+router.post(
+  "/:contactId/reactivate",
+  authenticate,
+  requirePermission(CONTACT_RESTORE),
+  validateParams(contactValidator.contactIdParamSchema),
+  contactController.reactivateContact,
 );
 
 export default router;

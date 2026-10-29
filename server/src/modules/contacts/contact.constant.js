@@ -9,6 +9,7 @@ export const CONTACT_ERROR_CODES = Object.freeze({
   INVALID_DEPARTMENT: "CONTACT_INVALID_DEPARTMENT",
   INACTIVE: "CONTACT_INACTIVE",
   MOBILE_ORGANIZATION_CONFLICT: "CONTACT_MOBILE_ORGANIZATION_CONFLICT",
+   RESTORE_CONFLICT: "CONTACT_RESTORE_CONFLICT",
 });
 
 export const CONTACT_MESSAGES = Object.freeze({
@@ -17,6 +18,7 @@ export const CONTACT_MESSAGES = Object.freeze({
   CREATE_SUCCESS: "Contact created successfully.",
   UPDATE_SUCCESS: "Contact updated successfully.",
   DELETE_SUCCESS: "Contact deactivated successfully.",
+  REACTIVATE_SUCCESS: "Contact reactivated successfully.",
 });
 
 export default Object.freeze({

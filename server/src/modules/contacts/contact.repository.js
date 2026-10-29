@@ -403,6 +403,27 @@ async function deactivateContact(id, tx = null) {
   return result.rows[0] ? findContactById(id, tx) : null;
 }
 
+async function reactivateContact(id, tx = null) {
+  const executor = getQueryExecutor(tx);
+
+  const result = await executor.query(
+    `
+      UPDATE contacts
+      SET
+        is_active = TRUE,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1::UUID
+        AND is_active = FALSE
+      RETURNING id;
+    `,
+    [id],
+  );
+
+  return result.rows[0]
+    ? findContactById(id, tx)
+    : null;
+}
+
 export default Object.freeze({
   findContactByMobile,
   findContactById,
@@ -418,4 +439,5 @@ export default Object.freeze({
   findActiveDepartmentById,
   updateManagedContact,
   deactivateContact,
+  reactivateContact,
 });

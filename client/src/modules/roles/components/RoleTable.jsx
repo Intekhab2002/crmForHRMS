@@ -5,7 +5,8 @@ import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutline";
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import SecurityOutlinedIcon from "@mui/icons-material/SecurityOutlined";
 
-import { DataGrid } from "@mui/x-data-grid";
+import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
+import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
 
 import {
   canManageRole,
@@ -33,6 +34,7 @@ export default function RoleTable({
   onPaginationModelChange,
   onEdit,
   onDelete,
+  onStatusChange,
   onPermissions,
   onUsers,
   canUpdate = false,
@@ -120,6 +122,27 @@ export default function RoleTable({
               <Tooltip title="Permissions">
                 <IconButton size="small" onClick={() => onPermissions(row)}>
                   <SecurityOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            ) : null}
+
+            {manageable && canUpdate && !superAdmin ? (
+              <Tooltip
+                title={row.is_active ? "Deactivate role" : "Activate role"}
+              >
+                <IconButton
+                  size="small"
+                  color={row.is_active ? "warning" : "success"}
+                  aria-label={
+                    row.is_active ? "Deactivate role" : "Activate role"
+                  }
+                  onClick={() => onStatusChange(row)}
+                >
+                  {row.is_active ? (
+                    <BlockOutlinedIcon fontSize="small" />
+                  ) : (
+                    <CheckCircleOutlineOutlinedIcon fontSize="small" />
+                  )}
                 </IconButton>
               </Tooltip>
             ) : null}

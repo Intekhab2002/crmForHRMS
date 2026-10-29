@@ -148,9 +148,17 @@ export default function UserTable({
                 </Tooltip>
 
                 <Tooltip
-                  title={row.status === "active" ? "Deactivate" : "Activate"}
+                  title={
+                    row.status === "active" ? "Block user" : "Activate user"
+                  }
                 >
-                  <IconButton size="small" onClick={() => onStatusChange(row)}>
+                  <IconButton
+                    size="small"
+                    onClick={() => onStatusChange(row)}
+                    aria-label={
+                      row.status === "active" ? "Block user" : "Activate user"
+                    }
+                  >
                     {row.status === "active" ? (
                       <BlockOutlinedIcon fontSize="small" />
                     ) : (

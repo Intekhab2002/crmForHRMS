@@ -12,9 +12,8 @@ import {
 import FormTextField from "../../../components/forms/FormTextField";
 import FormSubmitButton from "../../../components/forms/FormSubmitButton";
 
-import {
-  ROLE_FORM_FIELDS,
-} from "../roles.config";
+import { ROLE_FORM_FIELDS } from "../roles.config";
+import { useNotification } from "../../../components/feedback/useNotification";
 
 export default function RoleFormDialog({
   open,
@@ -23,55 +22,39 @@ export default function RoleFormDialog({
   role = null,
   canEdit = true,
 }) {
-  const isEdit =
-    Boolean(role);
+  const notification = useNotification();
+  const isEdit = Boolean(role);
 
   const fields = isEdit
-    ? ROLE_FORM_FIELDS.filter(
-        (field) =>
-          field.name !== "code",
-      )
+    ? ROLE_FORM_FIELDS.filter((field) => field.name !== "code")
     : ROLE_FORM_FIELDS;
 
   const formik = useFormik({
     enableReinitialize: true,
 
     initialValues: {
-      code:
-        role?.code ?? "",
+      code: role?.code ?? "",
 
-      name:
-        role?.name ?? "",
+      name: role?.name ?? "",
 
-      description:
-        role?.description ?? "",
+      description: role?.description ?? "",
     },
 
     validate: (values) => {
       const errors = {};
 
-      if (
-        !isEdit &&
-        !values.code.trim()
-      ) {
-        errors.code =
-          "Role code is required.";
+      if (!isEdit && !values.code.trim()) {
+        errors.code = "Role code is required.";
       }
 
-      if (
-        !values.name.trim()
-      ) {
-        errors.name =
-          "Role name is required.";
+      if (!values.name.trim()) {
+        errors.name = "Role name is required.";
       }
 
       return errors;
     },
 
-    onSubmit: async (
-      values,
-      helpers,
-    ) => {
+    onSubmit: async (values, helpers) => {
       try {
         const payload = {
           ...values,
@@ -81,18 +64,18 @@ export default function RoleFormDialog({
           delete payload.code;
         }
 
-        await onSubmit(
-          payload,
-        );
+        await onSubmit(payload);
 
         helpers.resetForm();
       } catch (error) {
-        helpers.setStatus(
-          error?.response?.data
-            ?.message ??
+        notification.error(
+          error?.response?.data?.message ??
+            error?.response?.data?.error?.message ??
             error?.message ??
             "Unable to save role.",
         );
+      } finally {
+        helpers.setSubmitting(false);
       }
     },
   });
@@ -100,52 +83,23 @@ export default function RoleFormDialog({
   return (
     <Dialog
       open={open}
-      onClose={
-        formik.isSubmitting
-          ? undefined
-          : onClose
-      }
+      onClose={formik.isSubmitting ? undefined : onClose}
       fullWidth
       maxWidth="sm"
     >
-      <form
-        onSubmit={
-          formik.handleSubmit
-        }
-        noValidate
-      >
-        <DialogTitle>
-          {isEdit
-            ? "Edit role"
-            : "Create role"}
-        </DialogTitle>
+      <form onSubmit={formik.handleSubmit} noValidate>
+        <DialogTitle>{isEdit ? "Edit role" : "Create role"}</DialogTitle>
 
         <DialogContent dividers>
-          <Stack
-            spacing={2.5}
-            sx={{ pt: 1 }}
-          >
-            {formik.status ? (
-              <Alert severity="error">
-                {formik.status}
-              </Alert>
-            ) : null}
-
-            {fields.map(
-              (field) => (
-                <FormTextField
-                  key={
-                    field.name
-                  }
-                  field={field}
-                  formik={formik}
-                  disabled={
-                    !canEdit ||
-                    formik.isSubmitting
-                  }
-                />
-              ),
-            )}
+          <Stack spacing={2.5} sx={{ pt: 1 }}>
+            {fields.map((field) => (
+              <FormTextField
+                key={field.name}
+                field={field}
+                formik={formik}
+                disabled={!canEdit || formik.isSubmitting}
+              />
+            ))}
           </Stack>
         </DialogContent>
 
@@ -157,14 +111,10 @@ export default function RoleFormDialog({
         >
           <FormSubmitButton
             variant="contained"
-            loading={
-              formik.isSubmitting
-            }
+            loading={formik.isSubmitting}
             disabled={!canEdit}
           >
-            {isEdit
-              ? "Save changes"
-              : "Create role"}
+            {isEdit ? "Save changes" : "Create role"}
           </FormSubmitButton>
         </DialogActions>
       </form>

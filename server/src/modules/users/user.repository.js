@@ -640,6 +640,59 @@ async function findDepartmentById(departmentId, transactionContext = null) {
  * ============================================================================
  */
 
+/**
+ * Count tickets that reference a user.
+ *
+ * Counts distinct ticket rows, even if the user occupies more than
+ * one user-related role on the same ticket.
+ *
+ * @param {string} userId
+ * @param {object|null} transactionContext
+ * @returns {Promise<{
+ *   ticketCount: number,
+ *   requesterCount: number,
+ *   creatorCount: number,
+ *   assigneeCount: number,
+ * }>}
+ */
+async function countUserTicketReferences(userId, transactionContext = null) {
+  const executor = getExecutor(transactionContext);
+
+  const result = await executor.query(
+    `
+      SELECT
+        COUNT(*)::INTEGER AS ticket_count,
+
+        COUNT(*) FILTER (
+          WHERE requester_user_id = $1::UUID
+        )::INTEGER AS requester_count,
+
+        COUNT(*) FILTER (
+          WHERE created_by_user_id = $1::UUID
+        )::INTEGER AS creator_count,
+
+        COUNT(*) FILTER (
+          WHERE assigned_user_id = $1::UUID
+        )::INTEGER AS assignee_count
+
+      FROM tickets
+      WHERE requester_user_id = $1::UUID
+         OR created_by_user_id = $1::UUID
+         OR assigned_user_id = $1::UUID;
+    `,
+    [userId],
+  );
+
+  const row = result.rows[0] ?? {};
+
+  return {
+    ticketCount: Number(row.ticket_count ?? 0),
+    requesterCount: Number(row.requester_count ?? 0),
+    creatorCount: Number(row.creator_count ?? 0),
+    assigneeCount: Number(row.assignee_count ?? 0),
+  };
+}
+
 const userRepository = Object.freeze({
   findUserById,
   findUserByUsername,
@@ -655,6 +708,7 @@ const userRepository = Object.freeze({
 
   findDepartmentById,
   findOrganizationById,
+  countUserTicketReferences,
 });
 
 export default userRepository;

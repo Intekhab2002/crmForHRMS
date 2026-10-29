@@ -664,6 +664,14 @@ const SYSTEM_PERMISSIONS = Object.freeze([
     resource: "contact",
     action: "delete",
   }),
+  Object.freeze({
+  code: "contact:restore",
+  name: "Reactivate Contacts",
+  description:
+    "Reactivate previously deactivated contacts while preserving historical ticket references.",
+  resource: "contact",
+  action: "restore",
+}),
 ]);
 
 /**

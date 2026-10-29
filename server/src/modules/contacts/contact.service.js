@@ -49,6 +49,15 @@ async function findOrCreateContact(data, tx = null) {
   );
 
   if (existingContact) {
+    if (!existingContact.isActive) {
+      throw AppError.conflict(
+        "A contact with this mobile number exists but is inactive. Reactivate the existing contact before creating a ticket.",
+        {
+          code: CONTACT_ERROR_CODES.INACTIVE,
+        },
+      );
+    }
+
     await contactRepository.updateContact(
       existingContact.id,
       {
@@ -286,6 +295,45 @@ async function deactivateManagedContact(contactId) {
   return contact;
 }
 
+async function reactivateManagedContact(contactId) {
+  const contact = await contactRepository.findContactById(contactId);
+
+  if (!contact) {
+    throw AppError.notFound("Contact not found.", {
+      code: CONTACT_ERROR_CODES.NOT_FOUND,
+    });
+  }
+
+  // Make repeated requests safe.
+  if (contact.isActive) {
+    return contact;
+  }
+
+  // Prevent restoring a contact whose required master records
+  // are no longer valid or active.
+  try {
+    await validateContactReferences({
+      organizationId: contact.organizationId,
+      departmentId: contact.departmentId,
+      districtId: contact.district?.id ?? null,
+    });
+
+    return await contactRepository.reactivateContact(contactId);
+  } catch (error) {
+    if (error?.code === "23505") {
+      throw AppError.conflict(
+        "This contact cannot be reactivated because its mobile number conflicts with another contact.",
+        {
+          code: CONTACT_ERROR_CODES.RESTORE_CONFLICT,
+          cause: error,
+        },
+      );
+    }
+
+    throw error;
+  }
+}
+
 export default Object.freeze({
   getContactByMobile,
   findOrCreateContact,
@@ -296,4 +344,5 @@ export default Object.freeze({
   createManagedContact,
   updateManagedContact,
   deactivateManagedContact,
+  reactivateManagedContact,
 });

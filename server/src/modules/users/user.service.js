@@ -701,47 +701,82 @@ async function updateUserStatus(userId, status, actorUserId) {
  * @returns {Promise<object>}
  */
 async function deleteUser(userId, actorUserId) {
-  return executeTransaction(
-    async (transactionContext) => {
-      await assertTargetUserMutable(
-        actorUserId,
-        userId,
-        "delete",
-        transactionContext,
+  try {
+    return await executeTransaction(
+      async (transactionContext) => {
+        // Preserve existing self-delete, role-protection, and RBAC checks.
+        await assertTargetUserMutable(
+          actorUserId,
+          userId,
+          "delete",
+          transactionContext,
+        );
+
+        const user = await userRepository.findUserById(
+          userId,
+          transactionContext,
+        );
+
+        if (!user) {
+          throw AppError.notFound("User not found.", {
+            code: USER_ERROR_CODES.USER_NOT_FOUND,
+          });
+        }
+
+        // Explain the specific reason instead of relying on a raw FK error.
+        const ticketReferences = await userRepository.countUserTicketReferences(
+          userId,
+          transactionContext,
+        );
+
+        if (ticketReferences.ticketCount > 0) {
+          const { ticketCount, creatorCount, assigneeCount } = ticketReferences;
+
+          throw AppError.conflict(
+            `This user cannot be deleted because ${ticketCount} ticket(s) reference the account. ` +
+              `References:  creator ${creatorCount}, ` +
+              `assignee ${assigneeCount}. Block the user instead to preserve ticket history.`,
+            {
+              code: USER_ERROR_CODES.USER_LINKED_TO_TICKETS,
+            },
+          );
+        }
+
+        const deletedUser = await userRepository.deleteUser(
+          userId,
+          transactionContext,
+        );
+
+        if (!deletedUser) {
+          throw AppError.notFound("User not found.", {
+            code: USER_ERROR_CODES.USER_NOT_FOUND,
+          });
+        }
+
+        await authRepository.revokeActiveSessions(userId, transactionContext);
+
+        return deletedUser;
+      },
+      {
+        isolationLevel: "SERIALIZABLE",
+      },
+    );
+  } catch (error) {
+    // A related record can still be inserted or another FK can be involved.
+    // Keep the raw database error out of the client response.
+    if (error?.code === "23503") {
+      throw AppError.conflict(
+        "This user cannot be deleted because related records still reference the account. " +
+          "Block the user instead to preserve existing records.",
+        {
+          code: USER_ERROR_CODES.USER_LINKED_TO_TICKETS,
+        },
       );
+    }
 
-      const user = await userRepository.findUserById(
-        userId,
-        transactionContext,
-      );
-
-      if (!user) {
-        throw AppError.notFound("User not found.", {
-          code: USER_ERROR_CODES.USER_NOT_FOUND,
-        });
-      }
-
-      const deletedUser = await userRepository.deleteUser(
-        userId,
-        transactionContext,
-      );
-
-      if (!deletedUser) {
-        throw AppError.notFound("User not found.", {
-          code: USER_ERROR_CODES.USER_NOT_FOUND,
-        });
-      }
-
-      await authRepository.revokeActiveSessions(userId, transactionContext);
-
-      return deletedUser;
-    },
-    {
-      isolationLevel: "SERIALIZABLE",
-    },
-  );
+    throw error;
+  }
 }
-
 async function validateOrganizationDepartment(
   organizationId,
   departmentId,

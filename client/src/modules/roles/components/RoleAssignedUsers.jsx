@@ -1,5 +1,4 @@
 import {
-  Alert,
   Box,
   Button,
   Card,
@@ -14,13 +13,12 @@ import {
 import { useEffect, useState } from "react";
 
 import { roleService } from "../services/role.service";
+import { useNotification } from "../../../components/feedback/useNotification";
 
 export default function RoleAssignedUsers({ role, open, onClose }) {
   const [users, setUsers] = useState([]);
-
+  const notification = useNotification();
   const [loading, setLoading] = useState(false);
-
-  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!open || !role?.id) {
@@ -31,7 +29,6 @@ export default function RoleAssignedUsers({ role, open, onClose }) {
 
     async function loadUsers() {
       setLoading(true);
-      setError("");
 
       try {
         const response = await roleService.getUsers(role.id);
@@ -47,8 +44,10 @@ export default function RoleAssignedUsers({ role, open, onClose }) {
         }
       } catch (requestError) {
         if (!cancelled) {
-          setError(
+          notification.error(
             requestError?.response?.data?.message ??
+              requestError?.response?.data?.error?.message ??
+              requestError?.message ??
               "Unable to load assigned users.",
           );
         }
@@ -64,7 +63,7 @@ export default function RoleAssignedUsers({ role, open, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [open, role?.id]);
+  }, [open, role?.id, notification]);
 
   if (!open) {
     return null;
@@ -101,8 +100,6 @@ export default function RoleAssignedUsers({ role, open, onClose }) {
               </Button>
             </Box>
           </Stack>
-
-          {error ? <Alert severity="error">{error}</Alert> : null}
 
           {loading ? (
             <Box display="flex" justifyContent="center" py={4}>

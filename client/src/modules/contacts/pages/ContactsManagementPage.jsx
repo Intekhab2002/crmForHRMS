@@ -20,6 +20,7 @@ import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import ArrowCircleRightOutlinedIcon from "@mui/icons-material/ArrowCircleRightOutlined";
+import RestoreOutlinedIcon from "@mui/icons-material/RestoreOutlined";
 import ConfirmationDialog from "../../../components/feedback/ConfirmationDialog";
 import PageHeader from "../../../components/page/PageHeader";
 import { AppDataGrid } from "../../../components/data-grid";
@@ -83,6 +84,7 @@ export default function ContactsManagementPage() {
   const canUpdate = hasPermission(PERMISSIONS.CONTACT_UPDATE);
   const canDelete = hasPermission(PERMISSIONS.CONTACT_DELETE);
   const canReadTickets = hasPermission(PERMISSIONS.TICKET_READ);
+  const canRestore = hasPermission(PERMISSIONS.CONTACT_RESTORE);
 
   const [rows, setRows] = useState([]);
   const [rowCount, setRowCount] = useState(0);
@@ -111,6 +113,8 @@ export default function ContactsManagementPage() {
   const [saving, setSaving] = useState(false);
   const [contactToDeactivate, setContactToDeactivate] = useState(null);
   const [deactivating, setDeactivating] = useState(false);
+  const [contactToReactivate, setContactToReactivate] = useState(null);
+  const [reactivating, setReactivating] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -259,6 +263,26 @@ export default function ContactsManagementPage() {
     }
   };
 
+  const handleReactivate = async () => {
+    if (!contactToReactivate || reactivating) return;
+
+    setReactivating(true);
+
+    try {
+      await contactService.reactivateContact(contactToReactivate.id);
+
+      notification.success("Contact reactivated successfully.");
+      setContactToReactivate(null);
+
+      // Refresh the grid while preserving the selected status filter.
+      setRefreshKey((current) => current + 1);
+    } catch (error) {
+      notification.error(getErrorMessage(error));
+    } finally {
+      setReactivating(false);
+    }
+  };
+
   const handleApplyFilters = (nextFilters) => {
     setFilters(nextFilters);
     setPaginationModel((current) => ({ ...current, page: 0 }));
@@ -333,6 +357,19 @@ export default function ContactsManagementPage() {
                   onClick={() => setContactToDeactivate(params.row)}
                 >
                   <DeleteOutlineOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+
+            {canRestore && !params.row.isActive && (
+              <Tooltip title="Reactivate contact">
+                <IconButton
+                  size="small"
+                  color="success"
+                  aria-label={`Reactivate ${params.row.name}`}
+                  onClick={() => setContactToReactivate(params.row)}
+                >
+                  <RestoreOutlinedIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}
@@ -609,6 +646,24 @@ export default function ContactsManagementPage() {
         loading={deactivating}
         onCancel={() => setContactToDeactivate(null)}
         onConfirm={handleDeactivate}
+      />
+
+      <ConfirmationDialog
+        open={Boolean(contactToReactivate)}
+        title="Reactivate Contact"
+        message={
+          contactToReactivate
+            ? `Reactivate ${contactToReactivate.name}? The existing contact record and its ticket history will be retained.`
+            : "Reactivate this contact?"
+        }
+        confirmLabel="Reactivate"
+        loading={reactivating}
+        onCancel={() => {
+          if (!reactivating) {
+            setContactToReactivate(null);
+          }
+        }}
+        onConfirm={handleReactivate}
       />
     </Stack>
   );

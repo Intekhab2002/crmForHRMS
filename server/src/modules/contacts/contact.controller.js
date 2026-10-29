@@ -85,6 +85,22 @@ async function deleteContact(req, res, next) {
   }
 }
 
+async function reactivateContact(req, res, next) {
+  try {
+    const contact = await contactService.reactivateManagedContact(
+      req.params.contactId,
+    );
+
+    return ApiResponse.success(
+      res,
+      contact,
+      CONTACT_MESSAGES.REACTIVATE_SUCCESS,
+    );
+  } catch (error) {
+    return next(error);
+  }
+}
+
 export default Object.freeze({
   getContactByMobile,
   listContacts,
@@ -92,4 +108,5 @@ export default Object.freeze({
   createContact,
   updateContact,
   deleteContact,
+  reactivateContact,
 });

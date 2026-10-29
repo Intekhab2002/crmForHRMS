@@ -114,6 +114,7 @@ export const RBAC_PERMISSIONS = Object.freeze({
   CONTACT_CREATE: "contact:create",
   CONTACT_UPDATE: "contact:update",
   CONTACT_DELETE: "contact:delete",
+  CONTACT_RESTORE: "contact:restore",
 
   SLA_READ: "sla:read",
   SLA_CREATE: "sla:create",
