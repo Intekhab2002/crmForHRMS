@@ -30,7 +30,7 @@ import database from "./database/postgres.js";
 import registerGracefulShutdown from "./utils/gracefulShutdown.js";
 import registerProcessHandlers from "./utils/processHandlers.js";
 import logStartup from "./utils/startupLogger.js";
-import slaMaintenanceJob from "./modules/sla/slaMaintenance.job.js";
+// import slaMaintenanceJob from "./modules/sla/slaMaintenance.job.js";
 import {
   startReportGenerationJob,
   stopReportGenerationJob,
@@ -56,7 +56,7 @@ async function bootstrap() {
      * --------------------------------------------------------------------
      */
 
-    slaMaintenanceJob.startSlaMaintenanceJob();
+    // slaMaintenanceJob.startSlaMaintenanceJob();
 
     startReportGenerationJob();
 
@@ -76,10 +76,10 @@ async function bootstrap() {
       server,
       logger,
       cleanupTasks: [
-        {
-          name: "SLA Maintenance Worker",
-          handler: slaMaintenanceJob.stopSlaMaintenanceJob,
-        },
+        // {
+        //   name: "SLA Maintenance Worker",
+        //   handler: slaMaintenanceJob.stopSlaMaintenanceJob,
+        // },
         {
           name: "Report Generation Worker",
           handler: stopReportGenerationJob,
