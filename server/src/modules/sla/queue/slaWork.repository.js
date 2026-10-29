@@ -26,7 +26,14 @@ export async function enqueueWork({
        available_at = LEAST(sla_work_items.available_at, EXCLUDED.available_at),
        updated_at = CURRENT_TIMESTAMP
      RETURNING id, status`,
-    [workType, ticketId ?? null, JSON.stringify(payload), priority, maxAttempts, availableAt],
+    [
+      workType,
+      ticketId ?? null,
+      JSON.stringify(payload),
+      priority,
+      maxAttempts,
+      availableAt,
+    ],
   );
   return result.rows[0] ?? null;
 }
@@ -77,32 +84,52 @@ export async function claimWork({ workerId, limit = 25, leaseMs = 120_000 }) {
   return result.rows;
 }
 
+const COMPLETION_STATUSES = new Set(["SUCCEEDED", "MANUAL_REVIEW", "FAILED"]);
+
 export async function completeWork({ id, leaseToken, status = "SUCCEEDED" }) {
+  if (!COMPLETION_STATUSES.has(status)) {
+    throw new Error(`Invalid SLA work completion status: ${status}`);
+  }
+
   const result = await query(
     `UPDATE sla_work_items
-        SET status = $3,
-            completed_at = CASE WHEN $3 IN ('SUCCEEDED', 'MANUAL_REVIEW', 'FAILED')
-                                THEN CURRENT_TIMESTAMP ELSE NULL END,
+        SET status = $3::varchar,
+            completed_at = CASE
+              WHEN $3::varchar IN ('SUCCEEDED', 'MANUAL_REVIEW', 'FAILED')
+              THEN CURRENT_TIMESTAMP
+              ELSE NULL
+            END,
             lease_owner = NULL,
             lease_token = NULL,
             lease_expires_at = NULL,
-            last_error = CASE WHEN $3 = 'SUCCEEDED' THEN NULL ELSE last_error END,
+            last_error = CASE
+              WHEN $3::varchar = 'SUCCEEDED' THEN NULL
+              ELSE last_error
+            END,
             updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1 AND lease_token = $2::uuid AND status = 'PROCESSING'
+      WHERE id = $1::uuid
+        AND lease_token = $2::uuid
+        AND status = 'PROCESSING'
       RETURNING id`,
     [id, leaseToken, status],
   );
+
   return result.rowCount === 1;
 }
 
 function retryDelayMs(attempt, baseMs, maxMs) {
-  const exp = Math.min(maxMs, baseMs * (2 ** Math.max(0, attempt - 1)));
+  const exp = Math.min(maxMs, baseMs * 2 ** Math.max(0, attempt - 1));
   return Math.floor(exp * (0.75 + Math.random() * 0.5));
 }
 
 export async function failWork({
-  id, leaseToken, attempts, maxAttempts, error,
-  baseDelayMs = 2_000, maxDelayMs = 300_000,
+  id,
+  leaseToken,
+  attempts,
+  maxAttempts,
+  error,
+  baseDelayMs = 2_000,
+  maxDelayMs = 300_000,
 }) {
   const terminal = attempts >= maxAttempts;
   const delay = retryDelayMs(attempts, baseDelayMs, maxDelayMs);
@@ -118,7 +145,13 @@ export async function failWork({
             updated_at = CURRENT_TIMESTAMP
       WHERE id = $1 AND lease_token = $2::uuid AND status = 'PROCESSING'
       RETURNING id, status, available_at`,
-    [id, leaseToken, terminal, delay, String(error?.stack || error?.message || error)],
+    [
+      id,
+      leaseToken,
+      terminal,
+      delay,
+      String(error?.stack || error?.message || error),
+    ],
   );
   return result.rows[0] ?? null;
 }

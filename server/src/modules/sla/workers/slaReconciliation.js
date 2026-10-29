@@ -10,13 +10,15 @@ const workerId = `sla-reconcile:${os.hostname()}:${process.pid}:${randomUUID().s
 
 async function main() {
   if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 5000) {
-    throw new Error("SLA_RECONCILIATION_BATCH_SIZE must be between 1 and 5000.");
+    throw new Error(
+      "SLA_RECONCILIATION_BATCH_SIZE must be between 1 and 5000.",
+    );
   }
   await database.initialize();
   const run = await database.query(
     `INSERT INTO sla_reconciliation_runs(status, notes)
-     VALUES ('RUNNING', jsonb_build_object('workerId', $1))
-     RETURNING id`,
+   VALUES ('RUNNING', jsonb_build_object('workerId', $1::text))
+   RETURNING id`,
     [workerId],
   );
   const runId = run.rows[0].id;
@@ -65,7 +67,12 @@ async function main() {
           WHERE id = $1`,
         [runId, scanned, queued, cursor],
       );
-      logger.info("SLA reconciliation batch queued.", { runId, scanned, queued, cursor });
+      logger.info("SLA reconciliation batch queued.", {
+        runId,
+        scanned,
+        queued,
+        cursor,
+      });
     }
     await database.query(
       `UPDATE sla_reconciliation_runs
@@ -74,7 +81,12 @@ async function main() {
         WHERE id = $1`,
       [runId, scanned, queued, cursor],
     );
-    logger.info("SLA reconciliation scan completed.", { runId, scanned, queued, batches });
+    logger.info("SLA reconciliation scan completed.", {
+      runId,
+      scanned,
+      queued,
+      batches,
+    });
   } catch (error) {
     await database.query(
       `UPDATE sla_reconciliation_runs
@@ -91,6 +103,9 @@ async function main() {
 }
 
 main().catch((error) => {
-  logger.error("SLA reconciliation failed.", { error: error.message, stack: error.stack });
+  logger.error("SLA reconciliation failed.", {
+    error: error.message,
+    stack: error.stack,
+  });
   process.exitCode = 1;
 });
