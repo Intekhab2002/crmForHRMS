@@ -11,6 +11,11 @@ import { alpha, useTheme } from "@mui/material/styles";
 import MetricInfo from "./MetricInfo";
 import { getMetricStatus, getMetricStatusColor } from "../utils/metricStatus";
 
+import {
+  formatMetricNumber,
+  formatMetricPercentage,
+} from "../../../utils/metricFormatters.js";
+
 export default function MetricCard({ metric, onClick }) {
   const theme = useTheme();
 
@@ -22,7 +27,9 @@ export default function MetricCard({ metric, onClick }) {
     metric?.value == null || metric.value === "" ? "—" : metric.value;
 
   const displayValue =
-    metric?.unit === "percent" && metric?.value != null ? `${value}%` : value;
+    metric?.unit === "percent"
+      ? formatMetricPercentage(metric?.value)
+      : formatMetricNumber(metric?.value);
 
   const statusLabel =
     {

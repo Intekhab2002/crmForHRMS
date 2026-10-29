@@ -15,8 +15,6 @@ const COMMON_TICKET_FILTERS = Object.freeze([
   "status",
 ]);
 
-
-
 const KPI_THRESHOLDS = Object.freeze({
   // Informational ticket counts: intentionally no status threshold.
   "tickets.total": null,
@@ -51,7 +49,7 @@ const KPI_THRESHOLDS = Object.freeze({
     target: 0,
     unit: "count",
   },
-  "M041": {
+  M041: {
     direction: "lower",
     good: 0,
     warning: 0,
@@ -60,7 +58,7 @@ const KPI_THRESHOLDS = Object.freeze({
     target: 0,
     unit: "count",
   },
-  "M042": {
+  M042: {
     direction: "lower",
     good: 0,
     warning: 0,
@@ -69,7 +67,7 @@ const KPI_THRESHOLDS = Object.freeze({
     target: 0,
     unit: "count",
   },
-  "M043": {
+  M043: {
     direction: "lower",
     good: 0,
     warning: 0,
@@ -134,7 +132,6 @@ const KPI_THRESHOLDS = Object.freeze({
   M039: null,
   M040: null,
 });
-
 
 const METRIC_REGISTRY = Object.freeze([
   {
@@ -404,14 +401,40 @@ const METRIC_REGISTRY = Object.freeze([
     name: "Service Performance Index",
     dashboardTypes: ["management"],
     permission: "sla:read",
+
     description:
-      "Composite service performance score based on SLA compliance and operational performance.",
+      "A composite score measuring overall service delivery effectiveness using SLA compliance, backlog health, and ticket throughput.",
+
     timePeriod: "activated_at",
     filters: COMMON_TICKET_FILTERS,
     visualization: "kpi",
     queryKey: "servicePerformanceIndex",
     drillDown: false,
+
+    calculation:
+      "SPI = (SLA Compliance × 0.50) + (Backlog Health × 0.25) + (Throughput Health × 0.25). The final score is rounded to two decimal places.",
+
+    interpretation:
+      "The Service Performance Index combines three operational indicators into a single score on a nominal 0–100 scale. SLA compliance contributes 50%, backlog health contributes 25%, and ticket throughput contributes 25%. A higher score indicates stronger performance across these dimensions. The score is a management indicator, not a direct percentage of tickets resolved successfully.",
+
+    dataSource:
+      "Historical SLA run records, current ticket backlog and at-risk ticket counts, and ticket throughput for the latest available reporting period.",
+
+    direction: "higher is better",
+
+    idealValue: 100,
+
+    minimum: null,
+    maximum: 100,
+    target: null,
+
+    belowTarget:
+      "Review SLA breaches, inspect the number and proportion of at-risk backlog tickets, and compare tickets created with tickets resolved in the latest available period. Investigate which component is contributing most to the reduced score.",
+
+    aboveTarget:
+      "Verify the selected reporting period, eligible SLA run counts, backlog risk classification, and latest-period ticket creation and resolution counts. Confirm that the component values and configured weights reflect actual operational performance.",
   },
+
   {
     code: "M002",
     name: "SLA Compliance %",
@@ -489,30 +512,83 @@ const METRIC_REGISTRY = Object.freeze([
     queryKey: "slaBreachTrend",
     drillDown: false,
   },
+
   {
     code: "M006",
     name: "Average Resolution Time",
     dashboardTypes: ["management"],
     permission: "sla:read",
-    description: "Average resolution duration for completed SLA runs.",
+
+    description:
+      "The average time taken to resolve completed SLA runs within the selected reporting period.",
+
     timePeriod: "activated_at",
     filters: COMMON_TICKET_FILTERS,
     visualization: "kpi",
     queryKey: "averageResolutionTime",
     drillDown: false,
+
+    calculation:
+      "Average Resolution Time = Sum of resolution durations for eligible completed SLA runs / Number of eligible completed SLA runs.",
+
+    interpretation:
+      "This metric indicates the average duration required to resolve eligible SLA runs. A lower value generally indicates faster resolution, while a higher value may indicate complex tickets, operational delays, or a small number of unusually long-running cases. Interpret this metric alongside Median Resolution Time and SLA Compliance to understand overall service performance.",
+
+    dataSource:
+      "Historical SLA run records used by the management dashboard, restricted by the selected reporting period and applicable filters.",
+
+    direction: "lower is better",
+
+    idealValue: null,
+    minimum: null,
+    maximum: null,
+    target: null,
+
+    belowTarget:
+      "Review the reporting period, eligible completed SLA runs, and resolution duration distribution. Compare the average with the median to determine whether a small number of long-running cases are influencing the result.",
+
+    aboveTarget:
+      "Investigate tickets with unusually long resolution durations, compare performance across severity levels and departments, and review SLA policies and operational bottlenecks. Confirm that the reporting scope and duration units are consistent.",
   },
+
   {
     code: "M007",
     name: "Median Resolution Time",
     dashboardTypes: ["management"],
     permission: "sla:read",
-    description: "Median resolution duration for completed SLA runs.",
+
+    description:
+      "The median time taken to resolve eligible SLA runs within the selected reporting period.",
+
     timePeriod: "activated_at",
     filters: COMMON_TICKET_FILTERS,
     visualization: "kpi",
     queryKey: "medianResolutionTime",
     drillDown: false,
+
+    calculation:
+      "Median Resolution Time = The middle resolution duration when eligible completed SLA runs are ordered from shortest to longest. For an even number of runs, the median is the average of the two middle durations.",
+
+    interpretation:
+      "This metric represents the typical resolution duration by identifying the midpoint of the eligible resolution-time distribution. Unlike the average, the median is less affected by a small number of unusually long-running cases. A lower median generally indicates faster typical resolution. Compare it with Average Resolution Time to identify potential outliers or a skewed distribution.",
+
+    dataSource:
+      "Historical SLA run records used by the management dashboard, restricted by the selected reporting period and applicable filters.",
+
+    direction: "lower is better",
+
+    idealValue: null,
+    minimum: null,
+    maximum: null,
+    target: null,
+
+    belowTarget:
+      "Review the reporting period, eligible completed SLA runs, and the distribution of resolution durations. Compare the median with the average to understand typical resolution performance.",
+
+    aboveTarget:
+      "Investigate recurring delays affecting typical ticket resolution. Break down resolution durations by severity, department, and applicable SLA policy, and compare the results with Average Resolution Time to distinguish widespread delays from isolated outliers.",
   },
+
   {
     code: "M008",
     name: "Resolution Time Variance",
@@ -566,19 +642,45 @@ const METRIC_REGISTRY = Object.freeze([
     drillDown: false,
   },
 
-  {
-    code: "M011",
-    name: "Average Breach Duration",
-    dashboardTypes: ["management"],
-    permission: "sla:read",
-    description:
-      "Average duration by which breached SLA runs exceeded their target.",
-    timePeriod: "activated_at",
-    filters: COMMON_TICKET_FILTERS,
-    visualization: "kpi",
-    queryKey: "averageBreachDuration",
-    drillDown: false,
-  },
+
+{
+  code: "M011",
+  name: "Average Breach Duration",
+  dashboardTypes: ["management"],
+  permission: "sla:read",
+
+  description:
+    "The average duration by which breached SLA runs exceeded their configured resolution targets during the selected reporting period.",
+
+  timePeriod: "activated_at",
+  filters: COMMON_TICKET_FILTERS,
+  visualization: "kpi",
+  queryKey: "averageBreachDuration",
+  drillDown: false,
+
+  calculation:
+    "Average Breach Duration = Total breach duration across eligible breached SLA runs / Number of eligible breached SLA runs. Breach duration represents the time exceeded beyond the configured SLA target.",
+
+  interpretation:
+    "This metric measures the average extent to which breached SLA runs exceeded their configured targets. A lower value generally indicates that SLA breaches are being resolved closer to their deadlines, while a higher value indicates more substantial delays. Interpret this metric alongside SLA Breach Rate and Maximum Breach Duration to distinguish frequent minor breaches from fewer but more severe delays.",
+
+  dataSource:
+    "Historical breached SLA run records used by the management dashboard, restricted by the selected reporting period and applicable filters.",
+
+  direction: "lower is better",
+
+  idealValue: 0,
+  minimum: 0,
+  maximum: null,
+  target: null,
+
+  belowTarget:
+    "Review the breached-run population, reporting period, and breach-duration calculation. Identify whether the average is improving and whether breaches are being resolved closer to their configured targets.",
+
+  aboveTarget:
+    "Investigate breached tickets with substantial delays. Review severity, SLA policy targets, dependency transitions, business calendars, and operational bottlenecks. Compare average breach duration with maximum breach duration to identify extreme cases.",
+},
+
   {
     code: "M014",
     name: "SLA Performance by Severity",
@@ -841,49 +943,30 @@ export function getMetricsForDashboard(dashboardType) {
   );
 }
 
-
 function getMetricExplanation(definition) {
   const thresholds =
-    definition?.thresholds ??
-    KPI_THRESHOLDS[definition?.code] ??
-    null;
+    definition?.thresholds ?? KPI_THRESHOLDS[definition?.code] ?? null;
 
   return {
     calculation: definition?.calculation ?? null,
     interpretation: definition?.interpretation ?? null,
     dataSource: definition?.dataSource ?? null,
 
-    idealValue:
-      thresholds?.idealValue ??
-      definition?.idealValue ??
-      null,
+    idealValue: thresholds?.idealValue ?? definition?.idealValue ?? null,
 
-    minimum:
-      thresholds?.minimum ??
-      definition?.minimum ??
-      null,
+    minimum: thresholds?.minimum ?? definition?.minimum ?? null,
 
-    maximum:
-      thresholds?.maximum ??
-      definition?.maximum ??
-      null,
+    maximum: thresholds?.maximum ?? definition?.maximum ?? null,
 
-    target:
-      thresholds?.target ??
-      definition?.target ??
-      null,
+    target: thresholds?.target ?? definition?.target ?? null,
 
-    direction:
-      thresholds?.direction ??
-      definition?.direction ??
-      null,
+    direction: thresholds?.direction ?? definition?.direction ?? null,
 
     belowTarget: definition?.belowTarget ?? null,
     aboveTarget: definition?.aboveTarget ?? null,
     thresholds,
   };
 }
-
 
 export async function executeMetric(metricCode, context) {
   const definition = getMetric(metricCode);

@@ -40,7 +40,7 @@ const TICKET_FILTER_QUERY_KEYS = new Set([
 
     return [filter.queryKey];
   }),
-  "contactId",
+
 ]);
 
 

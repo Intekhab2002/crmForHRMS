@@ -97,10 +97,20 @@ export default function TicketFormContent({
     );
   }, [notification.error]);
 
-  const { isLoading: billReferenceLookupLoading } = useBillReferenceLookup({
+  const handleBillReferenceNotFound = useCallback(
+    (billReferenceNo) => {
+      notification.info(
+        `No existing ticket was found with bill reference number "${billReferenceNo}".`,
+      );
+    },
+    [notification.info],
+  );
+
+  useBillReferenceLookup({
     billReferenceNo: formik.values.bill_reference_no,
     enabled: mode === "create",
     onMatchesFound: handleBillReferenceMatches,
+    onNoMatchesFound: handleBillReferenceNotFound,
     onLookupError: handleBillReferenceLookupError,
   });
 

@@ -19,7 +19,7 @@ import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
-import ArrowCircleRightOutlinedIcon from '@mui/icons-material/ArrowCircleRightOutlined';
+import ArrowCircleRightOutlinedIcon from "@mui/icons-material/ArrowCircleRightOutlined";
 import ConfirmationDialog from "../../../components/feedback/ConfirmationDialog";
 import PageHeader from "../../../components/page/PageHeader";
 import { AppDataGrid } from "../../../components/data-grid";
@@ -28,7 +28,9 @@ import { useAuth } from "../../../context/useAuth";
 import { PERMISSIONS } from "../../../config/permission.config";
 import ContactFilters from "../components/ContactFilters";
 import ContactFormDialog from "../components/ContactFormDialog";
-import contactService, { getContactErrorMessage } from "../services/contact.service";
+import contactService, {
+  getContactErrorMessage,
+} from "../services/contact.service";
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -44,12 +46,14 @@ function normalizeContact(row) {
     ...row,
     organizationId: row.organizationId ?? row.organization_id ?? "",
     organizationName:
-      row.organizationName ?? row.organization_name ?? row.organization?.name ?? "",
+      row.organizationName ??
+      row.organization_name ??
+      row.organization?.name ??
+      "",
     departmentId: row.departmentId ?? row.department_id ?? "",
     departmentName:
       row.departmentName ?? row.department_name ?? row.department?.name ?? "",
-    districtId:
-      row.districtId ?? row.district_id ?? row.district?.id ?? "",
+    districtId: row.districtId ?? row.district_id ?? row.district?.id ?? "",
     districtName:
       row.districtName ?? row.district_name ?? row.district?.name ?? "",
     mobilePhone: row.mobilePhone ?? row.mobile_phone ?? "",
@@ -262,8 +266,17 @@ export default function ContactsManagementPage() {
   };
 
   const handleShowTickets = (contact) => {
-    const query = new URLSearchParams();
-    query.append("contactId[]", contact.id);
+    const mobileNumber = String(contact.mobilePhone ?? "").trim();
+
+    if (!mobileNumber) {
+      notification.warning(
+        "This contact does not have a mobile number, so its tickets cannot be filtered by mobile number.",
+      );
+      return;
+    }
+
+    const query = new URLSearchParams({ mobileNumber });
+
     navigate(`/tickets?${query.toString()}`);
   };
 
@@ -280,8 +293,7 @@ export default function ContactsManagementPage() {
 
   const columns = useMemo(() => {
     const nextColumns = [
-
-            {
+      {
         field: "actions",
         headerName: "Actions",
         minWidth: canReadTickets ? 100 : 80,
@@ -292,7 +304,6 @@ export default function ContactsManagementPage() {
         renderCell: (params) => (
           <Stack direction="row" spacing={0.5} alignItems="center">
             {canReadTickets && (
-
               <Tooltip title="Show Tickets">
                 <IconButton
                   size="small"
@@ -403,7 +414,6 @@ export default function ContactsManagementPage() {
           />
         ),
       },
-
     ];
 
     return nextColumns;

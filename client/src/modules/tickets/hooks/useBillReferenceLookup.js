@@ -9,6 +9,7 @@ export function useBillReferenceLookup({
   billReferenceNo,
   enabled = true,
   onMatchesFound,
+  onNoMatchesFound,
   onLookupError,
 }) {
   const [status, setStatus] = useState("idle");
@@ -17,6 +18,7 @@ export function useBillReferenceLookup({
   const lastLookupKeyRef = useRef("");
 
   const onMatchesFoundRef = useRef(onMatchesFound);
+  const onNoMatchesFoundRef = useRef(onNoMatchesFound);
   const onLookupErrorRef = useRef(onLookupError);
 
   useEffect(() => {
@@ -26,6 +28,10 @@ export function useBillReferenceLookup({
   useEffect(() => {
     onLookupErrorRef.current = onLookupError;
   }, [onLookupError]);
+
+  useEffect(() => {
+  onNoMatchesFoundRef.current = onNoMatchesFound;
+}, [onNoMatchesFound]);
 
   const normalizedReference = String(billReferenceNo ?? "").trim();
   const lookupKey = normalizedReference.toLocaleLowerCase("en-US");
@@ -76,6 +82,7 @@ export function useBillReferenceLookup({
           );
         } else {
           setStatus("not_found");
+        onNoMatchesFoundRef.current?.(normalizedReference);
         }
       } catch (error) {
         if (!active || requestId !== requestIdRef.current) {
