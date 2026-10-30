@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {  useState } from "react";
 import {
   Alert,
   Button,
@@ -11,14 +11,6 @@ import {
   TextField,
 } from "@mui/material";
 
-const EMPTY_FORM = Object.freeze({
-  organizationId: "",
-  departmentId: "",
-  districtId: "",
-  name: "",
-  mobilePhone: "",
-  email: "",
-});
 
 function getId(item) {
   return item?.id ?? item?.value ?? "";

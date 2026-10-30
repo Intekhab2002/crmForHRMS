@@ -143,63 +143,65 @@ export default function ContactsManagementPage() {
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
-  const loadLookups = useCallback(async () => {
-    useEffect(() => {
-      if (!needsLookups || lookupState.status !== "idle") {
-        return undefined;
+useEffect(() => {
+  if (!needsLookups || lookupState.status !== "idle") {
+    return undefined;
+  }
+
+  let active = true;
+
+  const fetchLookups = async () => {
+    const results = await Promise.allSettled([
+      contactService.listOrganizations(),
+      contactService.listDepartments(),
+      contactService.listDistricts(),
+    ]);
+
+    if (!active) return;
+
+    const keys = [
+      "organizations",
+      "departments",
+      "districts",
+    ];
+
+    const next = {};
+    const failures = [];
+
+    results.forEach((result, index) => {
+      const key = keys[index];
+
+      if (result.status === "fulfilled") {
+        next[key] = result.value ?? [];
+      } else {
+        next[key] = [];
+        failures.push(result.reason);
       }
+    });
 
-      let active = true;
+    setLookupState({
+      status: "success",
+      data: next,
+      error: failures.length
+        ? "Some lookup options could not be loaded. Check your access to organizations, departments, and districts."
+        : "",
+    });
+  };
 
-      const fetchLookups = async () => {
-        const results = await Promise.allSettled([
-          contactService.listOrganizations(),
-          contactService.listDepartments(),
-          contactService.listDistricts(),
-        ]);
+  fetchLookups().catch((error) => {
+    if (!active) return;
 
-        if (!active) return;
+    setLookupState({
+      status: "error",
+      data: EMPTY_LOOKUPS,
+      error: getErrorMessage(error),
+    });
+  });
 
-        const keys = ["organizations", "departments", "districts"];
-
-        const next = {};
-        const failures = [];
-
-        results.forEach((result, index) => {
-          const key = keys[index];
-
-          if (result.status === "fulfilled") {
-            next[key] = result.value ?? [];
-          } else {
-            next[key] = [];
-            failures.push(result.reason);
-          }
-        });
-
-        setLookupState({
-          status: "success",
-          data: next,
-          error: failures.length
-            ? "Some lookup options could not be loaded. Check your access to organizations, departments, and districts."
-            : "",
-        });
-      };
-
-      fetchLookups().catch((error) => {
-        if (!active) return;
-
-        setLookupState({
-          status: "error",
-          data: EMPTY_LOOKUPS,
-          error: getErrorMessage(error),
-        });
-      });
-
-      return () => {
-        active = false;
-      };
-    }, [needsLookups, lookupState.status]);
-  }, []);
+  return () => {
+    active = false;
+  };
+}, [needsLookups, lookupState.status]);
 
   useEffect(() => {
     if (!canRead) return;
@@ -593,7 +595,7 @@ const handleShowTickets = useCallback(
         <Button
           variant="outlined"
           startIcon={<FilterAltOutlinedIcon />}
-          onClick={() => setFilterOpen(true)}
+          onClick={handleOpenFilters}
           sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
         >
           Filters

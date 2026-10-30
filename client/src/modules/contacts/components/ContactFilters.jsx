@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Button,
   Dialog,
@@ -28,6 +28,17 @@ function optionLabel(option) {
   return option?.name ?? option?.label ?? option?.title ?? "";
 }
 
+function getInitialFilters(filters) {
+  return {
+    ...EMPTY_FILTERS,
+    ...filters,
+    isActive:
+      typeof filters?.isActive === "boolean"
+        ? String(filters.isActive)
+        : (filters?.isActive ?? "true"),
+  };
+}
+
 export default function ContactFilters({
   open,
   filters,
@@ -37,17 +48,6 @@ export default function ContactFilters({
   onApply,
   onClose,
 }) {
-  function getInitialFilters(filters) {
-    return {
-      ...EMPTY_FILTERS,
-      ...filters,
-      isActive:
-        typeof filters?.isActive === "boolean"
-          ? String(filters.isActive)
-          : (filters?.isActive ?? "true"),
-    };
-  }
-
   const [draft, setDraft] = useState(() => getInitialFilters(filters));
   const update = (key) => (event) => {
     setDraft((current) => ({ ...current, [key]: event.target.value }));
