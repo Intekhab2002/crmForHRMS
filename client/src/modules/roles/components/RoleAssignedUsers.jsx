@@ -13,7 +13,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { roleService } from "../services/role.service";
-import { useNotification } from "../../../components/feedback/useNotification";
+import { useNotification } from "../../../components/feedback";
 
 export default function RoleAssignedUsers({ role, open, onClose }) {
   const [users, setUsers] = useState([]);

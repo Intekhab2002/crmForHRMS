@@ -35,7 +35,7 @@ import TicketAttachmentList from "../components/TicketAttachmentList";
 import TicketLifecycleTimeline from "../components/TicketLifecycleTimeline";
 import { ticketService } from "../services/ticket.service";
 import { useAuth } from "../../../context/useAuth";
-import { getOptionSource } from "../components/TicketForm";
+import { getOptionSource } from "../utils/ticketForm.utils";
 import {
   TICKET_FIELD_CONFIG,
   TICKET_MODULE_CONFIG,
@@ -156,6 +156,13 @@ function getTicketStatusHeaderSx(ticket) {
   };
 }
 
+const QUICK_UPDATE_KEYS = [
+  "status",
+  "assigned_to",
+  "severity",
+  "dependency_category",
+];
+
 export default function TicketLifecyclePage() {
   const { ticketId } = useParams();
   const { user } = useAuth();
@@ -174,12 +181,6 @@ export default function TicketLifecyclePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("activity");
   const [error, setError] = useState("");
-  const QUICK_UPDATE_KEYS = [
-    "status",
-    "assigned_to",
-    "severity",
-    "dependency_category",
-  ];
 
   const [pendingQuickValues, setPendingQuickValues] = useState({});
   const [quickOptions, setQuickOptions] = useState({});
@@ -372,7 +373,7 @@ export default function TicketLifecyclePage() {
             const result = await getOptionSource(field, user);
 
             return [field.key, Array.isArray(result) ? result : []];
-          } catch (requestError) {
+          } catch {
             return [field.key, []];
           }
         }),
@@ -532,19 +533,18 @@ export default function TicketLifecyclePage() {
 
     await Promise.all([loadComments(), loadLifecycle()]);
 
-    setNotice(COMMENT_CONFIG.successMessage);
+    notifySuccess(COMMENT_CONFIG.successMessage);
   };
 
   const handleUpdateComment = async (commentId, comment) => {
     setError("");
-    setNotice("");
 
     try {
       await ticketService.updateComment(ticketId, commentId, comment);
 
       await Promise.all([loadComments(), loadLifecycle()]);
 
-      setNotice("Comment updated successfully.");
+      notifySuccess("Comment updated successfully.");
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ??

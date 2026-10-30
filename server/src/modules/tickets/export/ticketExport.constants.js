@@ -28,10 +28,16 @@ const TICKET_EXPORT_COLUMNS = Object.freeze([
   Object.freeze({ key: "resolutionNote", header: "Resolution Note" }),
   Object.freeze({ key: "assignedAt", header: "Assigned At" }),
   Object.freeze({ key: "closedAt", header: "Closed At" }),
-  Object.freeze({ key: "employeeCurrentOfficeName", header: "Employee Current Office" }),
+  Object.freeze({
+    key: "employeeCurrentOfficeName",
+    header: "Employee Current Office",
+  }),
   Object.freeze({ key: "employeeId", header: "Employee ID" }),
   Object.freeze({ key: "billReferenceNo", header: "Bill Reference No" }),
-  Object.freeze({ key: "expectedResolutionDate", header: "Expected Resolution Date" }),
+  Object.freeze({
+    key: "expectedResolutionDate",
+    header: "Expected Resolution Date",
+  }),
   Object.freeze({ key: "duplicateTicket", header: "Duplicate Ticket" }),
   Object.freeze({ key: "letterNo", header: "Letter No." }),
   Object.freeze({ key: "initialDiagnosis", header: "Initial Diagnosis" }),
@@ -42,11 +48,17 @@ const TICKET_EXPORT_COLUMNS = Object.freeze([
   Object.freeze({ key: "serviceTypeName", header: "Service Type" }),
   Object.freeze({ key: "categoryName", header: "Category" }),
   Object.freeze({ key: "problemStatementName", header: "Problem Statement" }),
-  Object.freeze({ key: "currentBillStatusName", header: "Current Bill Status" }),
+  Object.freeze({
+    key: "currentBillStatusName",
+    header: "Current Bill Status",
+  }),
   Object.freeze({ key: "statusName", header: "Status" }),
   Object.freeze({ key: "severityName", header: "Severity" }),
   Object.freeze({ key: "issueCategoryName", header: "Issue Category" }),
-  Object.freeze({ key: "dependencyCategoryName", header: "Dependency Category" }),
+  Object.freeze({
+    key: "dependencyCategoryName",
+    header: "Dependency Category",
+  }),
 ]);
 
 export {
@@ -63,6 +75,5 @@ export default Object.freeze({
   DEFAULT_TIMEZONE,
   DEFAULT_FILENAME_PREFIX,
   TICKET_EXPORT_COLUMNS,
-    MAX_SELECTED_TICKETS,
-  TICKET_EXPORT_COLUMNS,
+  MAX_SELECTED_TICKETS,
 });

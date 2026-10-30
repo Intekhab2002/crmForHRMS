@@ -32,8 +32,7 @@ function getInitialValues(contact) {
   return {
     organizationId: contact?.organizationId ?? "",
     departmentId: contact?.departmentId ?? "",
-    districtId:
-      contact?.districtId ?? contact?.district?.id ?? "",
+    districtId: contact?.districtId ?? contact?.district?.id ?? "",
     name: contact?.name ?? "",
     mobilePhone: contact?.mobilePhone ?? contact?.mobile_phone ?? "",
     email: contact?.email ?? "",
@@ -50,14 +49,9 @@ export default function ContactFormDialog({
   onClose,
   onSubmit,
 }) {
-  const [values, setValues] = useState({ ...EMPTY_FORM });
-  const [validationError, setValidationError] = useState("");
+  const [values, setValues] = useState(() => getInitialValues(contact));
 
-  useEffect(() => {
-    if (!open) return;
-    setValues(getInitialValues(contact));
-    setValidationError("");
-  }, [contact, open]);
+  const [validationError, setValidationError] = useState("");
 
   const handleChange = (key) => (event) => {
     setValues((current) => ({ ...current, [key]: event.target.value }));

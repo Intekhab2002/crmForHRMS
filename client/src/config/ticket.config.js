@@ -1,5 +1,4 @@
 import { PERMISSIONS } from "./permission.config";
-const option = (value, label = value) => Object.freeze({ value, label });
 
 const apiOptions = (endpoint, valueKey = "id", labelKey = "name") =>
   Object.freeze({

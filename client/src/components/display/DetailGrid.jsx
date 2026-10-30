@@ -7,18 +7,13 @@ export default function DetailGrid({
   sx,
 }) {
   return (
-    <Grid container spacing={spacing} sx={sx}>
+    <Grid container columns={columns} spacing={spacing} sx={sx}>
       {children}
     </Grid>
   );
 }
 
-export function DetailGridItem({
-  children,
-  size,
-  multiline = false,
-  sx,
-}) {
+export function DetailGridItem({ children, size, multiline = false, sx }) {
   const resolvedSize = size ?? {
     xs: 12,
     sm: multiline ? 12 : 6,

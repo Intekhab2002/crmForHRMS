@@ -21,7 +21,7 @@ import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import RestartAltOutlinedIcon from "@mui/icons-material/RestartAltOutlined";
 
 import { roleService } from "../services/role.service";
-import { useNotification } from "../../../components/feedback/useNotification";
+import { useNotification } from "../../../components/feedback";
 
 import PermissionGroupCard from "../components/PermissionGroupCard";
 

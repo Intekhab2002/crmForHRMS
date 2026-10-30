@@ -11,7 +11,6 @@ import {
   Stack,
   TextField,
   Tooltip,
-  Typography,
 } from "@mui/material";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
@@ -24,7 +23,6 @@ import RestoreOutlinedIcon from "@mui/icons-material/RestoreOutlined";
 import ConfirmationDialog from "../../../components/feedback/ConfirmationDialog";
 import PageHeader from "../../../components/page/PageHeader";
 import { AppDataGrid } from "../../../components/data-grid";
-import { useNotification } from "../../../components/feedback/NotificationProvider";
 import { useAuth } from "../../../context/useAuth";
 import { PERMISSIONS } from "../../../config/permission.config";
 import ContactFilters from "../components/ContactFilters";
@@ -32,6 +30,7 @@ import ContactFormDialog from "../components/ContactFormDialog";
 import contactService, {
   getContactErrorMessage,
 } from "../services/contact.service";
+import { useNotification } from "../../../components/feedback";
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -100,13 +99,25 @@ export default function ContactsManagementPage() {
     pageSize: DEFAULT_PAGE_SIZE,
   });
 
-  const [lookups, setLookups] = useState({
+  const EMPTY_LOOKUPS = {
     organizations: [],
     departments: [],
     districts: [],
+  };
+
+  const [lookupState, setLookupState] = useState({
+    status: "idle",
+    data: EMPTY_LOOKUPS,
+    error: "",
   });
-  const [lookupsLoading, setLookupsLoading] = useState(false);
-  const [lookupError, setLookupError] = useState("");
+
+  const lookups = lookupState.data;
+
+  const needsLookups = canRead && (canCreate || canUpdate);
+
+  const lookupsLoading = needsLookups && lookupState.status === "idle";
+
+  const lookupError = lookupState.error;
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
@@ -115,6 +126,13 @@ export default function ContactsManagementPage() {
   const [deactivating, setDeactivating] = useState(false);
   const [contactToReactivate, setContactToReactivate] = useState(null);
   const [reactivating, setReactivating] = useState(false);
+  const [filterDialogKey, setFilterDialogKey] = useState(0);
+  const [formDialogKey, setFormDialogKey] = useState(0);
+
+  const handleOpenFilters = () => {
+    setFilterDialogKey((current) => current + 1);
+    setFilterOpen(true);
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -126,50 +144,68 @@ export default function ContactsManagementPage() {
   }, [searchInput]);
 
   const loadLookups = useCallback(async () => {
-    setLookupsLoading(true);
-    setLookupError("");
-
-    const [organizations, departments, districts] = await Promise.allSettled([
-      contactService.listOrganizations(),
-      contactService.listDepartments(),
-      contactService.listDistricts(),
-    ]);
-
-    const failures = [];
-    const next = {};
-
-    for (const [key, result] of [
-      ["organizations", organizations],
-      ["departments", departments],
-      ["districts", districts],
-    ]) {
-      if (result.status === "fulfilled") {
-        next[key] = result.value;
-      } else {
-        next[key] = [];
-        failures.push(result.reason);
+    useEffect(() => {
+      if (!needsLookups || lookupState.status !== "idle") {
+        return undefined;
       }
-    }
 
-    setLookups(next);
-    setLookupsLoading(false);
+      let active = true;
 
-    if (failures.length) {
-      setLookupError(
-        "Some lookup options could not be loaded. Check your access to organizations, departments, and districts.",
-      );
-    }
+      const fetchLookups = async () => {
+        const results = await Promise.allSettled([
+          contactService.listOrganizations(),
+          contactService.listDepartments(),
+          contactService.listDistricts(),
+        ]);
+
+        if (!active) return;
+
+        const keys = ["organizations", "departments", "districts"];
+
+        const next = {};
+        const failures = [];
+
+        results.forEach((result, index) => {
+          const key = keys[index];
+
+          if (result.status === "fulfilled") {
+            next[key] = result.value ?? [];
+          } else {
+            next[key] = [];
+            failures.push(result.reason);
+          }
+        });
+
+        setLookupState({
+          status: "success",
+          data: next,
+          error: failures.length
+            ? "Some lookup options could not be loaded. Check your access to organizations, departments, and districts."
+            : "",
+        });
+      };
+
+      fetchLookups().catch((error) => {
+        if (!active) return;
+
+        setLookupState({
+          status: "error",
+          data: EMPTY_LOOKUPS,
+          error: getErrorMessage(error),
+        });
+      });
+
+      return () => {
+        active = false;
+      };
+    }, [needsLookups, lookupState.status]);
   }, []);
 
   useEffect(() => {
-    if (!canRead) {
-      setRows([]);
-      setRowCount(0);
-      setLoading(false);
-      return undefined;
-    }
+    if (!canRead) return;
 
     let active = true;
+
     setLoading(true);
     setLoadError("");
 
@@ -217,11 +253,13 @@ export default function ContactsManagementPage() {
 
   const handleOpenCreate = () => {
     setEditingContact(null);
+    setFormDialogKey((current) => current + 1);
     setFormOpen(true);
   };
 
   const handleOpenEdit = (contact) => {
     setEditingContact(contact);
+    setFormDialogKey((current) => current + 1);
     setFormOpen(true);
   };
 
@@ -289,7 +327,8 @@ export default function ContactsManagementPage() {
     setFilterOpen(false);
   };
 
-  const handleShowTickets = (contact) => {
+const handleShowTickets = useCallback(
+  (contact) => {
     const mobileNumber = String(contact.mobilePhone ?? "").trim();
 
     if (!mobileNumber) {
@@ -302,7 +341,9 @@ export default function ContactsManagementPage() {
     const query = new URLSearchParams({ mobileNumber });
 
     navigate(`/tickets?${query.toString()}`);
-  };
+  },
+  [navigate, notification.warning],
+);
 
   const organizationNamesById = useMemo(
     () =>
@@ -608,6 +649,7 @@ export default function ContactsManagementPage() {
       </Box>
 
       <ContactFilters
+        key={filterDialogKey}
         open={filterOpen}
         filters={filters}
         organizations={lookups.organizations}
@@ -618,6 +660,7 @@ export default function ContactsManagementPage() {
       />
 
       <ContactFormDialog
+        key={formDialogKey}
         open={formOpen}
         contact={editingContact}
         organizations={lookups.organizations}

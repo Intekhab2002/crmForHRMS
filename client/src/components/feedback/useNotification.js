@@ -1,4 +1,16 @@
-export {
-  useNotification as default,
-  useNotification,
-} from "./NotificationProvider";
+import { useContext } from "react";
+import { NotificationContext } from "./NotificationContext";
+
+export function useNotification() {
+  const context = useContext(NotificationContext);
+
+  if (!context) {
+    throw new Error(
+      "useNotification must be used inside NotificationProvider.",
+    );
+  }
+
+  return context;
+}
+
+export default useNotification;

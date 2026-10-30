@@ -599,5 +599,4 @@ export default Object.freeze({
   getRun,
   getArtifact,
   listDefinitions,
-  getDefinition,
 });

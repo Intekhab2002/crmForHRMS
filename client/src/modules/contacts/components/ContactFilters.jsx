@@ -37,21 +37,18 @@ export default function ContactFilters({
   onApply,
   onClose,
 }) {
-  const [draft, setDraft] = useState({ ...EMPTY_FILTERS });
-
-  useEffect(() => {
-    if (!open) return;
-
-    setDraft({
+  function getInitialFilters(filters) {
+    return {
       ...EMPTY_FILTERS,
       ...filters,
       isActive:
         typeof filters?.isActive === "boolean"
           ? String(filters.isActive)
-          : filters?.isActive ?? "true",
-    });
-  }, [filters, open]);
+          : (filters?.isActive ?? "true"),
+    };
+  }
 
+  const [draft, setDraft] = useState(() => getInitialFilters(filters));
   const update = (key) => (event) => {
     setDraft((current) => ({ ...current, [key]: event.target.value }));
   };
@@ -160,10 +157,7 @@ export default function ContactFilters({
           justifyContent="space-between"
           width="100%"
         >
-          <Button
-            onClick={clear}
-            startIcon={<RestartAltOutlinedIcon />}
-          >
+          <Button onClick={clear} startIcon={<RestartAltOutlinedIcon />}>
             Reset
           </Button>
           <Stack direction="row" spacing={1}>

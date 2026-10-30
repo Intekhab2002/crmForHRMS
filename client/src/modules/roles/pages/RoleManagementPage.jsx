@@ -9,7 +9,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useNotification } from "../../../components/feedback/useNotification";
+import { useNotification } from "../../../components/feedback";
 import ConfirmationDialog from "../../../components/feedback/ConfirmationDialog";
 
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";

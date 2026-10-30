@@ -13,7 +13,7 @@ import FormTextField from "../../../components/forms/FormTextField";
 import FormSubmitButton from "../../../components/forms/FormSubmitButton";
 
 import { ROLE_FORM_FIELDS } from "../roles.config";
-import { useNotification } from "../../../components/feedback/useNotification";
+import { useNotification } from "../../../components/feedback";
 
 export default function RoleFormDialog({
   open,

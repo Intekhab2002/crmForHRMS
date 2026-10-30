@@ -25,8 +25,8 @@ import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
 import PolicyOutlinedIcon from "@mui/icons-material/PolicyOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
-import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined';
-import ContactsOutlinedIcon from '@mui/icons-material/ContactsOutlined';
+import SummarizeOutlinedIcon from "@mui/icons-material/SummarizeOutlined";
+import ContactsOutlinedIcon from "@mui/icons-material/ContactsOutlined";
 
 import { Link, useLocation } from "react-router";
 
@@ -45,7 +45,6 @@ const ICONS = Object.freeze({
   slaCalendars: CalendarMonthOutlinedIcon,
   reports: SummarizeOutlinedIcon,
   contacts: ContactsOutlinedIcon,
-
 });
 
 function hasActiveDescendant(item, pathname) {
@@ -76,13 +75,18 @@ function NavigationItem({ item, pathname, collapsed, onNavigate, depth = 0 }) {
 
   const descendantActive = hasActiveDescendant(item, pathname);
 
-  const [open, setOpen] = useState(selected || descendantActive);
+  const routeWantsOpen = selected || descendantActive;
 
-  useEffect(() => {
-    if (selected || descendantActive) {
-      setOpen(true);
-    }
-  }, [selected, descendantActive]);
+  const [openOverride, setOpenOverride] = useState(null);
+
+  const open = openOverride ?? routeWantsOpen;
+
+  const handleToggle = () => {
+    setOpenOverride((current) => {
+      const currentOpen = current ?? routeWantsOpen;
+      return !currentOpen;
+    });
+  };
 
   if (collapsed) {
     if (hasChildren) {
@@ -150,9 +154,7 @@ function NavigationItem({ item, pathname, collapsed, onNavigate, depth = 0 }) {
         component={hasChildren ? "button" : Link}
         to={hasChildren ? undefined : item.path}
         selected={selected || descendantActive}
-        onClick={
-          hasChildren ? () => setOpen((current) => !current) : onNavigate
-        }
+        onClick={hasChildren ? handleToggle : onNavigate}
         aria-expanded={hasChildren ? open : undefined}
         aria-haspopup={hasChildren ? "true" : undefined}
         sx={{
@@ -165,18 +167,16 @@ function NavigationItem({ item, pathname, collapsed, onNavigate, depth = 0 }) {
           width: depth === 0 ? "auto" : "100%",
         }}
       >
-        
-          <ListItemIcon
-            sx={{
-              minWidth: depth === 0 ? 36 : 32,
-              mr: depth === 0 ? 0.5 : 0,
-              justifyContent: "center",
-              color: "text.secondary",
-            }}
-          >
-            {Icon ? <Icon fontSize={depth === 0 ? "medium" : "small"} /> : null}
-          </ListItemIcon>
-       
+        <ListItemIcon
+          sx={{
+            minWidth: depth === 0 ? 36 : 32,
+            mr: depth === 0 ? 0.5 : 0,
+            justifyContent: "center",
+            color: "text.secondary",
+          }}
+        >
+          {Icon ? <Icon fontSize={depth === 0 ? "medium" : "small"} /> : null}
+        </ListItemIcon>
 
         <ListItemText
           primary={item.label}
@@ -301,7 +301,7 @@ export default function Sidebar({ onNavigate, collapsed = false, onToggle }) {
       >
         {visibleItems.map((item) => (
           <NavigationItem
-            key={item.id}
+            key={`${item.id}-${location.pathname}`}
             item={item}
             pathname={location.pathname}
             collapsed={collapsed}

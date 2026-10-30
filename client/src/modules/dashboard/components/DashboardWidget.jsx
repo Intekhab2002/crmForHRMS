@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import MetricCard from "./MetricCard";
 import ChartCard from "./ChartCard";
@@ -33,22 +33,14 @@ export default function DashboardWidget({
   isCustomizing = false,
 }) {
   const viewModes = getViewModes(metric);
-  const [viewMode, setViewMode] = useState(() =>
+
+  const [selectedViewMode, setSelectedViewMode] = useState(() =>
     getDefaultView(metric, viewModes),
   );
 
-  useEffect(() => {
-    if (!viewModes.includes(viewMode)) {
-      setViewMode(getDefaultView(metric, viewModes));
-    }
-  }, [
-    metric?.code,
-    metric?.defaultView,
-    metric?.visualization,
-    viewModes,
-    viewMode,
-  ]);
-
+  const viewMode = viewModes.includes(selectedViewMode)
+    ? selectedViewMode
+    : getDefaultView(metric, viewModes);
   let content;
   if (viewMode === "kpi") {
     content = <MetricCard metric={metric} onClick={onDrillDown} />;
@@ -58,7 +50,7 @@ export default function DashboardWidget({
         metric={metric}
         viewMode={viewMode}
         viewModes={viewModes}
-        onViewChange={setViewMode}
+        onViewChange={setSelectedViewMode}
         isCustomizing={isCustomizing}
       />
     );
@@ -68,29 +60,29 @@ export default function DashboardWidget({
         metric={metric}
         viewMode={viewMode}
         viewModes={viewModes}
-        onViewChange={setViewMode}
+        onViewChange={setSelectedViewMode}
         isCustomizing={isCustomizing}
       />
     );
   }
 
-return (
-  <Box
-    sx={{
-      width: "100%",
-      height:  "auto",
-      minWidth: 0,
-      minHeight: 0,
-      display: "flex",
-      flexDirection: "column",
-      flex:  1,
-      "& > *": {
+  return (
+    <Box
+      sx={{
+        width: "100%",
+        height: "auto",
         minWidth: 0,
-         flex: 1 ,
-      },
-    }}
-  >
-    {content}
-  </Box>
-);
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        "& > *": {
+          minWidth: 0,
+          flex: 1,
+        },
+      }}
+    >
+      {content}
+    </Box>
+  );
 }

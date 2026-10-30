@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
-  Box,
   Button,
   Divider,
   FormControlLabel,
@@ -61,10 +60,8 @@ export default function SlaCalendarDetailPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const loadCalendar = async () => {
-    if (isNew || !hasCalendarId) {
-      return;
-    }
+  const loadCalendar = useCallback(async () => {
+    if (isNew || !hasCalendarId) return;
 
     const item = await slaApi.getCalendar(calendarId);
 
@@ -79,22 +76,20 @@ export default function SlaCalendarDetailPage() {
       includeSunday: item.include_sunday,
       isActive: item.is_active,
     });
-  };
+  }, [calendarId, hasCalendarId, isNew]);
 
-  const loadHolidays = async (targetYear = year) => {
-    if (isNew || !hasCalendarId) {
-      return;
-    }
+  const loadHolidays = useCallback(
+    async (targetYear = year) => {
+      if (isNew || !hasCalendarId) return;
 
-    const list = await slaApi.listHolidays(calendarId, targetYear);
+      const list = await slaApi.listHolidays(calendarId, targetYear);
+      setHolidays(list ?? []);
+    },
+    [calendarId, hasCalendarId, isNew, year],
+  );
 
-    setHolidays(list ?? []);
-  };
-
-  const load = async () => {
-    if (isNew || !hasCalendarId) {
-      return;
-    }
+  const load = useCallback(async () => {
+    if (isNew || !hasCalendarId) return;
 
     setError("");
 
@@ -106,24 +101,49 @@ export default function SlaCalendarDetailPage() {
           requestError.message ??
           "Unable to load calendar.",
       );
+      throw requestError;
     }
-  };
+  }, [hasCalendarId, isNew, loadCalendar, loadHolidays, year]);
 
   useEffect(() => {
-    load();
-  }, [calendarId]);
+    if (isNew || !hasCalendarId) return;
+
+    let active = true;
+
+    loadCalendar().catch((requestError) => {
+      if (!active) return;
+
+      setError(
+        requestError.response?.data?.message ??
+          requestError.message ??
+          "Unable to load calendar.",
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [isNew, hasCalendarId, loadCalendar]);
 
   useEffect(() => {
-    if (!isNew && hasCalendarId) {
-      loadHolidays(year).catch((requestError) => {
-        setError(
-          requestError.response?.data?.message ??
-            requestError.message ??
-            "Unable to load holidays.",
-        );
-      });
-    }
-  }, [year, calendarId]);
+    if (isNew || !hasCalendarId) return;
+
+    let active = true;
+
+    loadHolidays(year).catch((requestError) => {
+      if (!active) return;
+
+      setError(
+        requestError.response?.data?.message ??
+          requestError.message ??
+          "Unable to load holidays.",
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [isNew, hasCalendarId, loadHolidays, year]);
 
   const handleMonthChange = (offset) => {
     const next = moveMonth(year, monthIndex, offset);
