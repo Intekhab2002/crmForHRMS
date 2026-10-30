@@ -662,7 +662,8 @@ async function findContact(id, tx = null) {
         SELECT
             id,
             organization_id,
-            department_id
+            department_id,
+            is_active
         FROM contacts
         WHERE id = $1::UUID
         LIMIT 1;

@@ -258,7 +258,7 @@ async function validateReferences(data, tx) {
       });
     }
 
-    if (!contact.isActive) {
+    if (contact.is_active === false) {
       throw AppError.conflict(
         "This contact is inactive. You cannot create a ticket against this contact.",
         { code: "CONTACT_INACTIVE" },
@@ -700,9 +700,7 @@ async function findTicketsByBillReferenceNo(billReferenceNo) {
     return [];
   }
 
-  return ticketRepository.findTicketsByBillReferenceNo(
-    normalizedReference,
-  );
+  return ticketRepository.findTicketsByBillReferenceNo(normalizedReference);
 }
 
 export default Object.freeze({
