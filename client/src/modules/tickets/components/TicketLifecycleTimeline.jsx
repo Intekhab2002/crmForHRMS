@@ -531,7 +531,6 @@ export default function TicketLifecycleTimeline({
   loading = false,
 }) {
   // console.log("events",events)
-  const [selectedChange, setSelectedChange] = useState(null);
 
   const [selectedActivity, setSelectedActivity] = useState(null);
 
@@ -844,7 +843,9 @@ export default function TicketLifecycleTimeline({
                                           "—"
                                         }
                                         fallback={fallback}
-                                        onOpen={() => setSelectedChange(change)}
+                                        onOpen={() =>
+                                          setSelectedActivity(change)
+                                        }
                                       />
                                     </Box>
 
@@ -873,7 +874,9 @@ export default function TicketLifecycleTimeline({
                                           "—"
                                         }
                                         fallback={fallback}
-                                        onOpen={() => setSelectedChange(change)}
+                                        onOpen={() =>
+                                          setSelectedActivity(change)
+                                        }
                                       />
                                     </Box>
                                   </Stack>

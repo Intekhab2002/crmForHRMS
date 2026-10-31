@@ -35,7 +35,6 @@ function WorkspacePanel({ panel, onModeChange }) {
       sx={{
         display: "flex",
         flexDirection: "column",
-        minWidth: 0,
         minHeight: {
           xs: collapsed ? 0 : quickUpdate ? 0 : "18rem",
           md: collapsed ? 0 : quickUpdate ? "8rem" : "22rem",

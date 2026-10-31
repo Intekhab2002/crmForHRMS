@@ -19,56 +19,62 @@ export default function TicketFormContent({
   onCancel,
   mode,
 }) {
-  const notification = useNotification();
+  const {
+    success: notifySuccess,
+    info: notifyInfo,
+    error: notifyError,
+    warning: notifyWarning,
+  } = useNotification();
+
+  const { setFieldValue, setFieldError, values } = formik;
+
   const handleContactFound = useCallback(
     (contact) => {
-      formik.setFieldValue("name", contact.name ?? "", false);
+      setFieldValue("name", contact.name ?? "", false);
+      setFieldValue("email_id", contact.email ?? "", false);
+      setFieldValue("district", contact.district?.id ?? null, false);
 
-      formik.setFieldValue("email_id", contact.email ?? "", false);
-
-      formik.setFieldValue("district", contact.district?.id ?? null, false);
-
-      formik.setFieldValue(
+      setFieldValue(
         "department",
         contact.department?.id ?? contact.departmentId ?? null,
         false,
       );
 
-      notification.success("Contact found. Details have been populated.");
+      notifySuccess("Contact found. Details have been populated.");
     },
-    [formik.setFieldValue, notification.success],
+    [setFieldValue, notifySuccess],
   );
 
   const handleContactNotFound = useCallback(() => {
-    notification.info(
+    notifyInfo(
       "No contact found. You can continue entering the contact details.",
     );
-  }, [notification.info]);
+  }, [notifyInfo]);
 
   const handleLookupError = useCallback(() => {
-    notification.error(
+    notifyError(
       "Unable to look up the contact. You can continue entering the contact details.",
     );
-  }, [notification.error]);
+  }, [notifyError]);
 
   const handleContactInactive = useCallback(
     (contact) => {
-      formik.setFieldError(
+      setFieldError(
         "mobile_phone",
         "This contact is inactive. You cannot create a ticket using this mobile number.",
       );
 
-      notification.error(
+      notifyError(
         `Contact ${contact.name ?? ""} is inactive. You cannot create a ticket using this mobile number. Contact an authorized user to reactivate it.`,
       );
     },
-    [formik.setFieldError, notification.error],
+    [setFieldError, notifyError],
   );
 
   const { status: contactLookupStatus, isLoading: contactLookupLoading } =
     useContactLookup({
-      organizationId: formik.values.organization,
-      mobilePhone: formik.values.mobile_phone,
+      organizationId: values.organization,
+      mobilePhone: values.mobile_phone,
       enabled: mode === "create",
       onContactFound: handleContactFound,
       onContactNotFound: handleContactNotFound,
@@ -82,32 +88,32 @@ export default function TicketFormContent({
         .map((ticket) => ticket.ticketNumber)
         .filter(Boolean);
 
-      notification.warning(
+      notifyWarning(
         `Bill reference number "${billReferenceNo}" is already associated with ${
           ticketNumbers.length
         } existing ticket(s): ${ticketNumbers.join(", ")}.`,
       );
     },
-    [notification.warning],
+    [notifyWarning],
   );
 
   const handleBillReferenceLookupError = useCallback(() => {
-    notification.error(
+    notifyError(
       "Unable to verify the bill reference number. You can continue entering the ticket details.",
     );
-  }, [notification.error]);
+  }, [notifyError]);
 
   const handleBillReferenceNotFound = useCallback(
     (billReferenceNo) => {
-      notification.info(
+      notifyInfo(
         `No existing ticket was found with bill reference number "${billReferenceNo}".`,
       );
     },
-    [notification.info],
+    [notifyInfo],
   );
 
   useBillReferenceLookup({
-    billReferenceNo: formik.values.bill_reference_no,
+    billReferenceNo: values.bill_reference_no,
     enabled: mode === "create",
     onMatchesFound: handleBillReferenceMatches,
     onNoMatchesFound: handleBillReferenceNotFound,

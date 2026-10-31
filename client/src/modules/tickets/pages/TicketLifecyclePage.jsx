@@ -163,6 +163,27 @@ const QUICK_UPDATE_KEYS = [
   "dependency_category",
 ];
 
+async function fetchTicketSnapshot(ticketId) {
+  const [ticketResult, commentsResult, lifecycleResult, attachmentsResult] =
+    await Promise.all([
+      ticketService.getTicket(ticketId),
+      ticketService.listComments(ticketId),
+      ticketService.listLifecycle(ticketId),
+      ticketService.listAttachments(ticketId),
+    ]);
+
+  if (!ticketResult) {
+    return null;
+  }
+
+  return {
+    ...ticketResult,
+    comments: Array.isArray(commentsResult) ? commentsResult : [],
+    lifecycle: Array.isArray(lifecycleResult) ? lifecycleResult : [],
+    attachments: Array.isArray(attachmentsResult) ? attachmentsResult : [],
+  };
+}
+
 export default function TicketLifecyclePage() {
   const { ticketId } = useParams();
   const { user } = useAuth();
@@ -182,7 +203,23 @@ export default function TicketLifecyclePage() {
   const [activeTab, setActiveTab] = useState("activity");
   const [error, setError] = useState("");
 
-  const [pendingQuickValues, setPendingQuickValues] = useState({});
+  const [pendingQuickState, setPendingQuickState] = useState({
+    ticket: null,
+    values: {},
+  });
+
+  const pendingQuickValues = useMemo(() => {
+    if (!ticket) return {};
+
+    if (pendingQuickState.ticket === ticket) {
+      return pendingQuickState.values;
+    }
+
+    return Object.fromEntries(
+      QUICK_UPDATE_KEYS.map((key) => [key, ticket[key] ?? ""]),
+    );
+  }, [ticket, pendingQuickState]);
+
   const [quickOptions, setQuickOptions] = useState({});
   const [quickOptionsLoading, setQuickOptionsLoading] = useState({
     status: true,
@@ -195,57 +232,31 @@ export default function TicketLifecyclePage() {
   const [createError, setCreateError] = useState("");
 
   const refreshTicket = useCallback(
-    async ({ initial = false, showRefreshing = true } = {}) => {
-      if (initial) setLoading(true);
-      else if (showRefreshing) setRefreshing(true);
+    async ({ showRefreshing = true } = {}) => {
+      if (showRefreshing) {
+        setRefreshing(true);
+      }
 
       setCommentsLoading(true);
       setLifecycleLoading(true);
       setError("");
 
       try {
-        const [
-          ticketResult,
-          commentsResult,
-          lifecycleResult,
-          attachmentsResult,
-        ] = await Promise.all([
-          ticketService.getTicket(ticketId),
-          ticketService.listComments(ticketId),
-          ticketService.listLifecycle(ticketId),
-          ticketService.listAttachments(ticketId),
-        ]);
+        const completeTicket = await fetchTicketSnapshot(ticketId);
 
-        if (!ticketResult) {
+        if (!completeTicket) {
           setTicket(null);
           setComments([]);
           setLifecycle([]);
           setError(TICKET_MODULE_CONFIG.labels.notFound);
+
           return null;
         }
 
-        const normalizedComments = Array.isArray(commentsResult)
-          ? commentsResult
-          : [];
-
-        const normalizedLifecycle = Array.isArray(lifecycleResult)
-          ? lifecycleResult
-          : [];
-
-        const normalizedAttachments = Array.isArray(attachmentsResult)
-          ? attachmentsResult
-          : [];
-
-        const completeTicket = {
-          ...ticketResult,
-          comments: normalizedComments,
-          lifecycle: normalizedLifecycle,
-          attachments: normalizedAttachments,
-        };
-
         setTicket(completeTicket);
-        setComments(normalizedComments);
-        setLifecycle(normalizedLifecycle);
+        setComments(completeTicket.comments);
+        setLifecycle(completeTicket.lifecycle);
+
         return completeTicket;
       } catch (requestError) {
         setError(
@@ -259,10 +270,6 @@ export default function TicketLifecyclePage() {
         setCommentsLoading(false);
         setLifecycleLoading(false);
 
-        if (initial) {
-          setLoading(false);
-        }
-
         if (showRefreshing) {
           setRefreshing(false);
         }
@@ -270,7 +277,6 @@ export default function TicketLifecyclePage() {
     },
     [ticketId],
   );
-
   const loadComments = useCallback(async () => {
     setCommentsLoading(true);
 
@@ -341,19 +347,13 @@ export default function TicketLifecyclePage() {
     }
   }, [ticketId]);
 
-  const loadAll = useCallback(
-    async (initial = false) => {
-      try {
-        await refreshTicket({
-          initial,
-          showRefreshing: !initial,
-        });
-      } catch {
-        // refreshTicket already updates the page error state.
-      }
-    },
-    [refreshTicket],
-  );
+  const loadAll = useCallback(async () => {
+    try {
+      await refreshTicket();
+    } catch {
+      // refreshTicket already updates the page error state.
+    }
+  }, [refreshTicket]);
 
   useEffect(() => {
     let active = true;
@@ -395,8 +395,48 @@ export default function TicketLifecyclePage() {
   }, [user]);
 
   useEffect(() => {
-    loadAll(true);
-  }, [loadAll]);
+    let active = true;
+
+    const loadInitialTicket = async () => {
+      try {
+        const completeTicket = await fetchTicketSnapshot(ticketId);
+
+        if (!active) return;
+
+        if (!completeTicket) {
+          setTicket(null);
+          setComments([]);
+          setLifecycle([]);
+          setError(TICKET_MODULE_CONFIG.labels.notFound);
+          return;
+        }
+
+        setTicket(completeTicket);
+        setComments(completeTicket.comments);
+        setLifecycle(completeTicket.lifecycle);
+      } catch (requestError) {
+        if (!active) return;
+
+        setError(
+          requestError?.response?.data?.message ??
+            requestError?.message ??
+            "Unable to load ticket.",
+        );
+      } finally {
+        if (active) {
+          setLoading(false);
+          setCommentsLoading(false);
+          setLifecycleLoading(false);
+        }
+      }
+    };
+
+    void loadInitialTicket();
+
+    return () => {
+      active = false;
+    };
+  }, [ticketId]);
 
   useEffect(() => {
     if (!ticket) return;
@@ -421,7 +461,6 @@ export default function TicketLifecyclePage() {
       await ticketService.updateTicket(ticketId, values);
 
       await refreshTicket({
-        initial: false,
         showRefreshing: false,
       });
 
@@ -440,20 +479,35 @@ export default function TicketLifecyclePage() {
   };
 
   const handleQuickValueChange = (key, value) => {
-    setPendingQuickValues((current) => ({
-      ...current,
-      [key]: value,
-    }));
+    if (!ticket) return;
+
+    setPendingQuickState((current) => {
+      const currentValues =
+        current.ticket === ticket
+          ? current.values
+          : Object.fromEntries(
+              QUICK_UPDATE_KEYS.map((field) => [field, ticket[field] ?? ""]),
+            );
+
+      return {
+        ticket,
+        values: {
+          ...currentValues,
+          [key]: value,
+        },
+      };
+    });
   };
 
   const handleQuickUpdateReset = () => {
     if (!ticket) return;
 
-    setPendingQuickValues(
-      Object.fromEntries(
+    setPendingQuickState({
+      ticket,
+      values: Object.fromEntries(
         QUICK_UPDATE_KEYS.map((key) => [key, ticket[key] ?? ""]),
       ),
-    );
+    });
   };
 
   const handleQuickUpdateSave = async () => {
@@ -480,7 +534,6 @@ export default function TicketLifecyclePage() {
       await ticketService.updateTicket(ticketId, changedValues);
 
       const refreshedTicket = await refreshTicket({
-        initial: false,
         showRefreshing: false,
       });
 

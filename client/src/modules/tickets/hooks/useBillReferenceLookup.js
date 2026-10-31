@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 
 import { ticketService } from "../services/ticket.service";
@@ -12,7 +11,10 @@ export function useBillReferenceLookup({
   onNoMatchesFound,
   onLookupError,
 }) {
-  const [status, setStatus] = useState("idle");
+  const [lookupState, setLookupState] = useState({
+    key: "",
+    status: "idle",
+  });
 
   const requestIdRef = useRef(0);
   const lastLookupKeyRef = useRef("");
@@ -26,15 +28,22 @@ export function useBillReferenceLookup({
   }, [onMatchesFound]);
 
   useEffect(() => {
+    onNoMatchesFoundRef.current = onNoMatchesFound;
+  }, [onNoMatchesFound]);
+
+  useEffect(() => {
     onLookupErrorRef.current = onLookupError;
   }, [onLookupError]);
 
-  useEffect(() => {
-  onNoMatchesFoundRef.current = onNoMatchesFound;
-}, [onNoMatchesFound]);
-
   const normalizedReference = String(billReferenceNo ?? "").trim();
   const lookupKey = normalizedReference.toLocaleLowerCase("en-US");
+
+  const status =
+    !enabled || !normalizedReference
+      ? "idle"
+      : lookupState.key === lookupKey
+        ? lookupState.status
+        : "waiting";
 
   useEffect(() => {
     const requestId = ++requestIdRef.current;
@@ -42,7 +51,6 @@ export function useBillReferenceLookup({
 
     if (!enabled || !normalizedReference) {
       lastLookupKeyRef.current = "";
-      setStatus("idle");
 
       return () => {
         active = false;
@@ -55,18 +63,17 @@ export function useBillReferenceLookup({
       };
     }
 
-    setStatus("waiting");
-
     const timer = window.setTimeout(async () => {
       if (!active) return;
 
-      setStatus("loading");
+      setLookupState({
+        key: lookupKey,
+        status: "loading",
+      });
 
       try {
         const tickets =
-          await ticketService.findTicketsByBillReferenceNo(
-            normalizedReference,
-          );
+          await ticketService.findTicketsByBillReferenceNo(normalizedReference);
 
         if (!active || requestId !== requestIdRef.current) {
           return;
@@ -75,21 +82,30 @@ export function useBillReferenceLookup({
         lastLookupKeyRef.current = lookupKey;
 
         if (tickets.length > 0) {
-          setStatus("matches");
-          onMatchesFoundRef.current?.(
-            normalizedReference,
-            tickets,
-          );
+          setLookupState({
+            key: lookupKey,
+            status: "matches",
+          });
+
+          onMatchesFoundRef.current?.(normalizedReference, tickets);
         } else {
-          setStatus("not_found");
-        onNoMatchesFoundRef.current?.(normalizedReference);
+          setLookupState({
+            key: lookupKey,
+            status: "not_found",
+          });
+
+          onNoMatchesFoundRef.current?.(normalizedReference);
         }
       } catch (error) {
         if (!active || requestId !== requestIdRef.current) {
           return;
         }
 
-        setStatus("error");
+        setLookupState({
+          key: lookupKey,
+          status: "error",
+        });
+
         onLookupErrorRef.current?.(error);
       }
     }, LOOKUP_DEBOUNCE_MS);

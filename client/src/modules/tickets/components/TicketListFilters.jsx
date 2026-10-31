@@ -49,12 +49,11 @@ export default function TicketListFilters({
   const loadedKeysRef = useRef(new Set());
   const loadingKeysRef = useRef(new Set());
 
-  useEffect(() => {
-    if (!open) return;
-
+  const handleClose = () => {
     setDraftFilters(createInitialValues(filters));
     setLoadError("");
-  }, [filters, open]);
+    onClose();
+  };
 
   const lookupFilters = useMemo(
     () =>
@@ -152,7 +151,7 @@ export default function TicketListFilters({
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       fullWidth
       maxWidth="md"
       aria-labelledby="ticket-list-filter-dialog-title"
@@ -448,7 +447,7 @@ export default function TicketListFilters({
 
         <Box sx={{ flex: 1 }} />
 
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={handleClose}>Cancel</Button>
 
         <Button
           variant="contained"

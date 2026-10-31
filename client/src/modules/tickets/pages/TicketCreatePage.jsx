@@ -19,38 +19,49 @@ export default function TicketCreatePage() {
   const [searchParams] = useSearchParams();
   const duplicateFrom = searchParams.get("duplicateFrom");
 
-  const [duplicateInitialValues, setDuplicateInitialValues] = useState(null);
-  const [loadingDuplicateSource, setLoadingDuplicateSource] = useState(false);
+  const [duplicateRequest, setDuplicateRequest] = useState({
+    sourceId: null,
+    initialValues: null,
+  });
+
+  const isDuplicateRequestCurrent = duplicateRequest.sourceId === duplicateFrom;
+
+  const duplicateInitialValues = isDuplicateRequestCurrent
+    ? duplicateRequest.initialValues
+    : null;
+
+  const loadingDuplicateSource =
+    Boolean(duplicateFrom) && !isDuplicateRequestCurrent;
 
   useEffect(() => {
-    let active = true;
-
     if (!duplicateFrom) {
-      setDuplicateInitialValues(null);
-      setLoadingDuplicateSource(false);
-
-      return () => {
-        active = false;
-      };
+      return undefined;
     }
 
-    async function loadSourceTicket() {
-      setLoadingDuplicateSource(true);
-      setDuplicateInitialValues(null);
+    let active = true;
 
+    const loadSourceTicket = async () => {
       try {
         const source = await ticketService.getTicket(duplicateFrom);
 
         if (!active) return;
 
         if (!source) {
+          setDuplicateRequest({
+            sourceId: duplicateFrom,
+            initialValues: null,
+          });
+
           notifyError("The source ticket could not be found.");
           return;
         }
 
         const initialValues = buildDuplicateTicketValues(source);
 
-        setDuplicateInitialValues(initialValues);
+        setDuplicateRequest({
+          sourceId: duplicateFrom,
+          initialValues,
+        });
 
         info(
           `Details copied from ticket ${
@@ -60,19 +71,20 @@ export default function TicketCreatePage() {
       } catch (requestError) {
         if (!active) return;
 
+        setDuplicateRequest({
+          sourceId: duplicateFrom,
+          initialValues: null,
+        });
+
         notifyError(
           requestError?.response?.data?.message ??
             requestError?.message ??
             "Unable to load the source ticket.",
         );
-      } finally {
-        if (active) {
-          setLoadingDuplicateSource(false);
-        }
       }
-    }
+    };
 
-    loadSourceTicket();
+    void loadSourceTicket();
 
     return () => {
       active = false;

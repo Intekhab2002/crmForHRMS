@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import {useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -86,13 +86,17 @@ export default function TicketAttachmentList({ ticketId, onLifecycleChange }) {
   const { attachment: attachmentPermissions } =
     TICKET_MODULE_CONFIG.permissions;
 
-  const loadAttachments = async () => {
+  const fetchAttachments = useCallback(
+    () => ticketService.listAttachments(ticketId),
+    [ticketId],
+  );
+
+  const loadAttachments = useCallback(async () => {
     setIsLoading(true);
     setError("");
 
     try {
-      const data = await ticketService.listAttachments(ticketId);
-
+      const data = await fetchAttachments();
       setAttachments(Array.isArray(data) ? data : []);
     } catch (loadError) {
       console.error("Failed to load ticket attachments:", loadError);
@@ -103,15 +107,41 @@ export default function TicketAttachmentList({ ticketId, onLifecycleChange }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchAttachments]);
 
   useEffect(() => {
-    if (!ticketId) {
-      return;
+    let active = true;
+
+    const fetchInitialAttachments = async () => {
+      try {
+        const data = await fetchAttachments();
+
+        if (!active) return;
+
+        setAttachments(Array.isArray(data) ? data : []);
+      } catch (loadError) {
+        if (!active) return;
+
+        console.error("Failed to load ticket attachments:", loadError);
+
+        setError(
+          loadError.response?.data?.message || "Unable to load attachments.",
+        );
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    if (ticketId) {
+      void fetchInitialAttachments();
     }
 
-    loadAttachments();
-  }, [ticketId]);
+    return () => {
+      active = false;
+    };
+  }, [fetchAttachments, ticketId]);
 
   const handleSelectFiles = async (event) => {
     const files = Array.from(event.target.files ?? []);

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Box, Divider, Paper, Stack } from "@mui/material";
+import { Box } from "@mui/material";
 
 import OptionChip from "../../../components/display/OptionChip";
 import DetailField from "../../../components/display/DetailField";
@@ -94,7 +94,6 @@ export default function TicketOverview({
   ticket,
   fields = [],
   fieldNames = [],
-  title,
   fallback = "Not available",
   enforcePermissions = true,
 }) {

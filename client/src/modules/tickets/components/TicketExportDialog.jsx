@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Button,
   Dialog,
@@ -29,31 +29,22 @@ export default function TicketExportDialog({
   filters = {},
   rowCount = 0,
 }) {
-  const [mode, setMode] = useState(DEFAULT_MODE);
+  const hasSelection = selectedTicketIds.length > 0;
+
+  const [modeOverride, setModeOverride] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+
+  const mode = modeOverride ?? (hasSelection ? "selected" : DEFAULT_MODE);
 
   const { success, error: notifyError } = useNotification();
 
-  const hasSelection = selectedTicketIds.length > 0;
-
-  const currentFilteredCount = useMemo(
-    () => Number(rowCount ?? 0),
-    [rowCount],
-  );
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    setMode(hasSelection ? "selected" : DEFAULT_MODE);
-    setIsExporting(false);
-  }, [open, hasSelection]);
+  const currentFilteredCount = useMemo(() => Number(rowCount ?? 0), [rowCount]);
 
   const handleClose = () => {
-    if (!isExporting) {
-      onClose();
-    }
+    if (isExporting) return;
+
+    setModeOverride(null);
+    onClose();
   };
 
   const handleModeChange = (nextMode) => {
@@ -61,7 +52,7 @@ export default function TicketExportDialog({
       return;
     }
 
-    setMode(nextMode);
+    setModeOverride(nextMode);
   };
 
   const handleExport = async () => {
@@ -82,12 +73,10 @@ export default function TicketExportDialog({
 
       const result = await ticketService.exportTickets(payload);
 
-      triggerBlobDownload(
-        result.blob,
-        result.filename || "tickets-export.csv",
-      );
+      triggerBlobDownload(result.blob, result.filename || "tickets-export.csv");
 
       success("Ticket export downloaded successfully.");
+      setModeOverride(null);
       onClose();
     } catch (requestError) {
       const message =
@@ -167,9 +156,7 @@ export default function TicketExportDialog({
 
         <Button
           variant="contained"
-          startIcon={
-            isExporting ? undefined : <DownloadOutlinedIcon />
-          }
+          startIcon={isExporting ? undefined : <DownloadOutlinedIcon />}
           onClick={handleExport}
           disabled={isExporting}
         >
