@@ -1,28 +1,55 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 export function useSlaCountdown(sla) {
-  const initial = Number(sla?.remaining_business_minutes);
-  const [seconds, setSeconds] = useState(Number.isFinite(initial) ? Math.max(0, Math.round(initial * 60)) : null);
+  const [now, setNow] = useState(() => Date.now());
+
+  const isRunning = sla?.status === "RUNNING";
+
+  const remainingMinutes = Number(
+    sla?.remaining_business_minutes,
+  );
+
+  const baseSeconds = Number.isFinite(remainingMinutes)
+    ? Math.max(0, Math.round(remainingMinutes * 60))
+    : null;
+
+  const calculatedAt = sla?.last_calculated_at
+    ? new Date(sla.last_calculated_at).getTime()
+    : null;
+
+  const elapsedSeconds =
+    isRunning &&
+    calculatedAt != null &&
+    Number.isFinite(calculatedAt)
+      ? Math.max(0, Math.floor((now - calculatedAt) / 1000))
+      : 0;
+
+  const seconds =
+    baseSeconds == null
+      ? null
+      : Math.max(0, baseSeconds - elapsedSeconds);
 
   useEffect(() => {
-    const value = Number(sla?.remaining_business_minutes);
-    setSeconds(Number.isFinite(value) ? Math.max(0, Math.round(value * 60)) : null);
-  }, [sla?.id, sla?.remaining_business_minutes, sla?.last_calculated_at]);
+    if (!isRunning) {
+      return undefined;
+    }
 
-  useEffect(() => {
-    if (seconds == null || sla?.status !== "RUNNING") return undefined;
     const timer = window.setInterval(() => {
-      setSeconds((current) => (current == null ? current : Math.max(0, current - 1)));
+      setNow(Date.now());
     }, 1000);
-    return () => window.clearInterval(timer);
-  }, [sla?.status, seconds == null]);
 
-  return useMemo(() => {
-    if (seconds == null) return null;
-    return {
-      seconds,
-      minutes: seconds / 60,
-      hours: seconds / 3600,
+    return () => {
+      window.clearInterval(timer);
     };
-  }, [seconds]);
+  }, [isRunning]);
+
+  if (seconds == null) {
+    return null;
+  }
+
+  return {
+    seconds,
+    minutes: seconds / 60,
+    hours: seconds / 3600,
+  };
 }

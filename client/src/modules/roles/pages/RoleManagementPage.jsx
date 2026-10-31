@@ -1,12 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import {
-  Button,
-  Card,
-  CardContent,
-  Stack,
-  TextField,
-} from "@mui/material";
+import { Button, Card, CardContent, Stack, TextField } from "@mui/material";
 import { useNotification } from "../../../components/feedback";
 import ConfirmationDialog from "../../../components/feedback/ConfirmationDialog";
 
@@ -53,7 +47,7 @@ function getErrorMessage(error) {
 export default function RoleManagementPage() {
   const { roles: currentRoles, hasPermission } = useAuth();
 
-  const notification = useNotification();
+  const { success: notifySuccess, error: notifyError } = useNotification();
 
   const [roleToDeactivate, setRoleToDeactivate] = useState(null);
   const [roleToDelete, setRoleToDelete] = useState(null);
@@ -76,15 +70,43 @@ export default function RoleManagementPage() {
 
   const canDelete = hasPermission(PERMISSIONS.ROLE_DELETE);
 
-  const [roles, setRoles] = useState([]);
+  // const [roles, setRoles] = useState([]);
 
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
 
   const [searchInput, setSearchInput] = useState("");
 
   const [search, setSearch] = useState("");
 
-  const [pagination, setPagination] = useState(EMPTY_PAGINATION);
+  // const [pagination, setPagination] = useState(EMPTY_PAGINATION);
+
+  const [requestVersion, setRequestVersion] = useState(0);
+
+  const [rolesRequest, setRolesRequest] = useState({
+    requestKey: null,
+    paramsKey: null,
+    roles: [],
+    pagination: EMPTY_PAGINATION,
+  });
+
+  const paramsKey = JSON.stringify({
+    canRead,
+    page: paginationModel.page + 1,
+    limit: paginationModel.pageSize,
+    search,
+  });
+
+  const requestKey = JSON.stringify([paramsKey, requestVersion]);
+
+  const hasCurrentParams = rolesRequest.paramsKey === paramsKey;
+
+  const roles = canRead && hasCurrentParams ? rolesRequest.roles : [];
+
+  const pagination = hasCurrentParams
+    ? rolesRequest.pagination
+    : EMPTY_PAGINATION;
+
+  const loading = canRead && rolesRequest.requestKey !== requestKey;
 
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
@@ -99,47 +121,64 @@ export default function RoleManagementPage() {
 
   const [usersRole, setUsersRole] = useState(null);
 
-  const loadRoles = useCallback(async () => {
-    if (!canRead) {
-      setRoles([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await roleService.list({
-        page: paginationModel.page + 1,
-
-        limit: paginationModel.pageSize,
-
-        search: search || undefined,
-
-        /*
-         * Developer must never appear
-         * in the normal role-management UI.
-         */
-        isSystem: undefined,
-      });
-
-      const data = Array.isArray(response?.data) ? response.data : [];
-
-      setRoles(data.filter((role) => !isDeveloperRole(role)));
-
-      setPagination(response?.pagination ?? EMPTY_PAGINATION);
-    } catch (requestError) {
-      notification.error(getErrorMessage(requestError));
-
-      setRoles([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [canRead, paginationModel, search]);
+  const loadRoles = useCallback(() => {
+    setRequestVersion((current) => current + 1);
+  }, []);
 
   useEffect(() => {
-    void loadRoles();
-  }, [loadRoles]);
+    if (!canRead) {
+      return undefined;
+    }
+
+    let active = true;
+
+    const fetchRoles = async () => {
+      try {
+        const response = await roleService.list({
+          page: paginationModel.page + 1,
+          limit: paginationModel.pageSize,
+          search: search || undefined,
+          isSystem: undefined,
+        });
+
+        if (!active) return;
+
+        const data = Array.isArray(response?.data) ? response.data : [];
+
+        setRolesRequest({
+          requestKey,
+          paramsKey,
+          roles: data.filter((role) => !isDeveloperRole(role)),
+          pagination: response?.pagination ?? EMPTY_PAGINATION,
+        });
+      } catch (requestError) {
+        if (!active) return;
+
+        setRolesRequest({
+          requestKey,
+          paramsKey,
+          roles: [],
+          pagination: EMPTY_PAGINATION,
+        });
+
+        notifyError(getErrorMessage(requestError));
+      }
+    };
+
+    void fetchRoles();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    canRead,
+    paginationModel.page,
+    paginationModel.pageSize,
+    search,
+    requestKey,
+    paramsKey,
+    notifyError,
+  ]);
 
   const handleSearch = () => {
     setSearch(searchInput.trim());
@@ -182,23 +221,18 @@ export default function RoleManagementPage() {
     setFormOpen(true);
   };
   const handleSave = async (payload) => {
-    try {
-      if (editingRole) {
-        await roleService.update(editingRole.id, payload);
-        notification.success("Role updated successfully.");
-      } else {
-        await roleService.create(payload);
-        notification.success("Role created successfully.");
-      }
-
-      setFormOpen(false);
-      setEditingRole(null);
-
-      await loadRoles();
-    } catch (requestError) {
-      // RoleFormDialog displays API submission errors globally.
-      throw requestError;
+    if (editingRole) {
+      await roleService.update(editingRole.id, payload);
+      notifySuccess("Role updated successfully.");
+    } else {
+      await roleService.create(payload);
+      notifySuccess("Role created successfully.");
     }
+
+    setFormOpen(false);
+    setEditingRole(null);
+
+    loadRoles();
   };
 
   const handleDelete = (role) => {
@@ -224,7 +258,7 @@ export default function RoleManagementPage() {
 
     // System roles must not be deactivated through normal role management.
     if (!nextIsActive && (isDeveloperRole(role) || isSuperAdminRole(role))) {
-      notification.error("This system role cannot be deactivated.");
+      notifyError("This system role cannot be deactivated.");
       return;
     }
 
@@ -235,16 +269,16 @@ export default function RoleManagementPage() {
         isActive: nextIsActive,
       });
 
-      notification.success(
+      notifySuccess(
         nextIsActive
           ? "Role activated successfully."
           : "Role deactivated successfully.",
       );
 
       setRoleToDeactivate(null);
-      await loadRoles();
+      loadRoles();
     } catch (requestError) {
-      notification.error(getErrorMessage(requestError));
+      notifyError(getErrorMessage(requestError));
     } finally {
       setUpdatingStatus(false);
     }
@@ -256,7 +290,7 @@ export default function RoleManagementPage() {
     }
 
     if (isDeveloperRole(role) || isSuperAdminRole(role)) {
-      notification.error("This system role cannot be deactivated.");
+      notifyError("This system role cannot be deactivated.");
       return;
     }
 
@@ -287,12 +321,12 @@ export default function RoleManagementPage() {
     try {
       await roleService.remove(roleToDelete.id);
 
-      notification.success("Role deleted successfully.");
+      notifySuccess("Role deleted successfully.");
       setRoleToDelete(null);
 
-      await loadRoles();
+      loadRoles();
     } catch (requestError) {
-      notification.error(getErrorMessage(requestError));
+      notifyError(getErrorMessage(requestError));
     } finally {
       setDeleting(false);
     }
@@ -317,16 +351,6 @@ export default function RoleManagementPage() {
   };
 
   const hasSearch = Boolean(search);
-
-  const pageTitle = useMemo(
-    () =>
-      matrixRole
-        ? `Permissions — ${matrixRole.name}`
-        : usersRole
-          ? `Assigned Users — ${usersRole.name}`
-          : "Role Management",
-    [matrixRole, usersRole],
-  );
 
   return (
     <Stack spacing={3}>

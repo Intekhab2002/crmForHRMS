@@ -46,8 +46,25 @@ const toIso = (value) => {
 function PolicyFormBody({ formik, calendars }) {
   const { values, errors, touched, handleChange, handleBlur, setFieldValue } =
     formik;
-  const [triggerOptions, setTriggerOptions] = useState([]);
-  const [durationOptions, setDurationOptions] = useState([]);
+  const [triggerOptionsState, setTriggerOptionsState] = useState({
+    fieldKey: null,
+    options: [],
+  });
+
+  const [durationOptionsState, setDurationOptionsState] = useState({
+    fieldKey: null,
+    options: [],
+  });
+
+  const triggerOptions =
+    triggerOptionsState.fieldKey === selectedTrigger?.key
+      ? triggerOptionsState.options
+      : [];
+
+  const durationOptions =
+    durationOptionsState.fieldKey === selectedDuration?.key
+      ? durationOptionsState.options
+      : [];
 
   const selectedTrigger = SLA_FIELDS.find(
     (item) => item.key === values.triggerFieldKey,
@@ -57,47 +74,57 @@ function PolicyFormBody({ formik, calendars }) {
   );
 
   useEffect(() => {
-    let active = true;
     if (!selectedTrigger) return undefined;
-    apiClient
-      .get(selectedTrigger.endpoint)
-      .then((response) => {
+
+    let active = true;
+
+    const fetchTriggerOptions = async () => {
+      try {
+        const response = await apiClient.get(selectedTrigger.endpoint);
+
         if (!active) return;
+
         const rows = response.data?.data ?? response.data ?? [];
-        setTriggerOptions(
-          rows.map((item) => ({
+
+        setTriggerOptionsState({
+          fieldKey: selectedTrigger.key,
+          options: rows.map((item) => ({
             value: item.code ?? item.id,
             label: item.name ?? item.code,
           })),
-        );
-      })
-      .catch(() => {
-        if (active) setTriggerOptions([]);
-      });
+        });
+      } catch {
+        if (!active) return;
+
+        setTriggerOptionsState({
+          fieldKey: selectedTrigger.key,
+          options: [],
+        });
+      }
+    };
+
+    void fetchTriggerOptions();
+
     return () => {
       active = false;
     };
-  }, [selectedTrigger?.key]);
+  }, [selectedTrigger]);
 
   useEffect(() => {
-    let active = true;
+    if (!selectedDuration) return undefined;
 
-    const durationField = selectedDuration;
-
-    if (!durationField) {
-      setDurationOptions([]);
+    // Avoid refetching when the rules change after options have loaded.
+    if (durationOptionsState.fieldKey === selectedDuration.key) {
       return undefined;
     }
 
-    // Remove values belonging to the previous duration field immediately.
-    setDurationOptions([]);
+    let active = true;
 
-    apiClient
-      .get(durationField.endpoint)
-      .then((response) => {
-        if (!active) {
-          return;
-        }
+    const fetchDurationOptions = async () => {
+      try {
+        const response = await apiClient.get(selectedDuration.endpoint);
+
+        if (!active) return;
 
         const rows = response.data?.data ?? response.data ?? [];
 
@@ -108,18 +135,15 @@ function PolicyFormBody({ formik, calendars }) {
           }))
           .filter((option) => option.value);
 
-        setDurationOptions(options);
+        setDurationOptionsState({
+          fieldKey: selectedDuration.key,
+          options,
+        });
 
         /*
-         * Generate rules only when this duration field has no rules.
-         *
-         * For create:
-         *   rules = []
-         *   -> generate rules from current API response.
-         *
-         * For edit:
-         *   rules already contain database rules.
-         *   -> preserve them.
+         * Preserve existing rules in edit mode.
+         * Generate default rules only when the selected duration
+         * field has no configured rules.
          */
         if ((values.rules ?? []).length === 0) {
           setFieldValue(
@@ -131,19 +155,27 @@ function PolicyFormBody({ formik, calendars }) {
             })),
           );
         }
-      })
-      .catch(() => {
-        if (!active) {
-          return;
-        }
+      } catch {
+        if (!active) return;
 
-        setDurationOptions([]);
-      });
+        setDurationOptionsState({
+          fieldKey: selectedDuration.key,
+          options: [],
+        });
+      }
+    };
+
+    void fetchDurationOptions();
 
     return () => {
       active = false;
     };
-  }, [selectedDuration?.key, selectedDuration?.endpoint, setFieldValue]);
+  }, [
+    selectedDuration,
+    durationOptionsState.fieldKey,
+    values.rules,
+    setFieldValue,
+  ]);
 
   return (
     <Stack spacing={3}>

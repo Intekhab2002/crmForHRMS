@@ -87,63 +87,114 @@ export default function SlaCalendarDetailPage() {
     },
     [calendarId, hasCalendarId, isNew, year],
   );
-
   const load = useCallback(async () => {
     if (isNew || !hasCalendarId) return;
 
     setError("");
 
     try {
-      await Promise.all([loadCalendar(), loadHolidays(year)]);
+      const [item, holidayList] = await Promise.all([
+        slaApi.getCalendar(calendarId),
+        slaApi.listHolidays(calendarId, year),
+      ]);
+
+      setCalendar({
+        code: item.code,
+        name: item.name,
+        timezone: item.timezone,
+        businessHoursPerDay: Number(item.business_hours_per_day),
+        workdayStartTime: item.workday_start_time?.slice(0, 5) ?? "09:00",
+        workdayEndTime: item.workday_end_time?.slice(0, 5) ?? "17:00",
+        includeSaturday: item.include_saturday,
+        includeSunday: item.include_sunday,
+        isActive: item.is_active,
+      });
+
+      setHolidays(holidayList ?? []);
     } catch (requestError) {
       setError(
         requestError.response?.data?.message ??
           requestError.message ??
           "Unable to load calendar.",
       );
+
       throw requestError;
     }
-  }, [hasCalendarId, isNew, loadCalendar, loadHolidays, year]);
+  }, [calendarId, hasCalendarId, isNew, year]);
 
   useEffect(() => {
-    if (isNew || !hasCalendarId) return;
+    if (isNew || !hasCalendarId) {
+      return undefined;
+    }
 
     let active = true;
 
-    loadCalendar().catch((requestError) => {
-      if (!active) return;
+    const fetchCalendar = async () => {
+      try {
+        const item = await slaApi.getCalendar(calendarId);
 
-      setError(
-        requestError.response?.data?.message ??
-          requestError.message ??
-          "Unable to load calendar.",
-      );
-    });
+        if (!active) return;
+
+        setCalendar({
+          code: item.code,
+          name: item.name,
+          timezone: item.timezone,
+          businessHoursPerDay: Number(item.business_hours_per_day),
+          workdayStartTime: item.workday_start_time?.slice(0, 5) ?? "09:00",
+          workdayEndTime: item.workday_end_time?.slice(0, 5) ?? "17:00",
+          includeSaturday: item.include_saturday,
+          includeSunday: item.include_sunday,
+          isActive: item.is_active,
+        });
+      } catch (requestError) {
+        if (!active) return;
+
+        setError(
+          requestError.response?.data?.message ??
+            requestError.message ??
+            "Unable to load calendar.",
+        );
+      }
+    };
+
+    void fetchCalendar();
 
     return () => {
       active = false;
     };
-  }, [isNew, hasCalendarId, loadCalendar]);
+  }, [calendarId, isNew, hasCalendarId]);
 
   useEffect(() => {
-    if (isNew || !hasCalendarId) return;
+    if (isNew || !hasCalendarId) {
+      return undefined;
+    }
 
     let active = true;
 
-    loadHolidays(year).catch((requestError) => {
-      if (!active) return;
+    const fetchHolidays = async () => {
+      try {
+        const list = await slaApi.listHolidays(calendarId, year);
 
-      setError(
-        requestError.response?.data?.message ??
-          requestError.message ??
-          "Unable to load holidays.",
-      );
-    });
+        if (!active) return;
+
+        setHolidays(list ?? []);
+      } catch (requestError) {
+        if (!active) return;
+
+        setError(
+          requestError.response?.data?.message ??
+            requestError.message ??
+            "Unable to load holidays.",
+        );
+      }
+    };
+
+    void fetchHolidays();
 
     return () => {
       active = false;
     };
-  }, [isNew, hasCalendarId, loadHolidays, year]);
+  }, [calendarId, isNew, hasCalendarId, year]);
 
   const handleMonthChange = (offset) => {
     const next = moveMonth(year, monthIndex, offset);

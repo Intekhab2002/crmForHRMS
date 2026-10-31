@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Button,
@@ -25,43 +25,84 @@ import { formatDurationMinutes } from "../utils/slaFormatters";
 export default function SlaPolicyDetailPage() {
   const { policyId } = useParams();
   const navigate = useNavigate();
-  const [policy, setPolicy] = useState(null);
-  const [rules, setRules] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  // const [policy, setPolicy] = useState(null);
+  // const [rules, setRules] = useState([]);
+  const [requestVersion, setRequestVersion] = useState(0);
+
+  const [policyRequest, setPolicyRequest] = useState({
+    requestKey: null,
+    policy: null,
+    rules: [],
+    error: "",
+  });
+
+  const requestKey = JSON.stringify([policyId, requestVersion]);
+
+  const loading = policyRequest.requestKey !== requestKey;
+
+  const policy =
+    policyRequest.requestKey === requestKey ? policyRequest.policy : null;
+
+  const rules =
+    policyRequest.requestKey === requestKey ? policyRequest.rules : [];
+
+  const error =
+    policyRequest.requestKey === requestKey ? policyRequest.error : "";
   const [testOpen, setTestOpen] = useState(false);
   const [tab, setTab] = useState(0);
 
-  const load = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const [nextPolicy, nextRules] = await Promise.all([
-        slaApi.getPolicy(policyId),
-        slaApi.listRules(policyId),
-      ]);
-      setPolicy(nextPolicy);
-      const mappedRules = (nextRules ?? []).map((rule) => ({
-        fieldValueKey: rule.field_value_key,
-        resolutionMinutes: rule.resolution_minutes,
-        isEnabled: rule.is_enabled,
-        id: rule.id,
-      }));
+  const load = useCallback(() => {
+    setRequestVersion((current) => current + 1);
+  }, []);
 
-      console.log("SLA rules from API:", nextRules);
-      console.log("SLA mapped rules:", mappedRules);
+  useEffect(() => {
+    if (!policyId) return undefined;
 
-      setRules(mappedRules);
-    } catch (requestError) {
-      setError(
-        requestError.response?.data?.message ??
-          requestError.message ??
-          "Unable to load policy.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    let active = true;
+
+    const fetchPolicy = async () => {
+      try {
+        const [nextPolicy, nextRules] = await Promise.all([
+          slaApi.getPolicy(policyId),
+          slaApi.listRules(policyId),
+        ]);
+
+        if (!active) return;
+
+        const mappedRules = (nextRules ?? []).map((rule) => ({
+          fieldValueKey: rule.field_value_key,
+          resolutionMinutes: rule.resolution_minutes,
+          isEnabled: rule.is_enabled,
+          id: rule.id,
+        }));
+
+        setPolicyRequest({
+          requestKey,
+          policy: nextPolicy,
+          rules: mappedRules,
+          error: "",
+        });
+      } catch (requestError) {
+        if (!active) return;
+
+        setPolicyRequest({
+          requestKey,
+          policy: null,
+          rules: [],
+          error:
+            requestError.response?.data?.message ??
+            requestError.message ??
+            "Unable to load policy.",
+        });
+      }
+    };
+
+    void fetchPolicy();
+
+    return () => {
+      active = false;
+    };
+  }, [policyId, requestKey]);
 
   useEffect(() => {
     load();
@@ -105,14 +146,14 @@ export default function SlaPolicyDetailPage() {
       isActive: values.isActive,
     });
     const existing = new Map(rules.map((rule) => [rule.id, rule]));
-    console.table(
-      (values.rules ?? []).map((rule) => ({
-        id: rule.id,
-        fieldValueKey: rule.fieldValueKey,
-        resolutionMinutes: rule.resolutionMinutes,
-        isEnabled: rule.isEnabled,
-      })),
-    );
+    // console.table(
+    //   (values.rules ?? []).map((rule) => ({
+    //     id: rule.id,
+    //     fieldValueKey: rule.fieldValueKey,
+    //     resolutionMinutes: rule.resolutionMinutes,
+    //     isEnabled: rule.isEnabled,
+    //   })),
+    // );
 
     for (const rule of values.rules ?? []) {
       if (rule.id) {
@@ -133,7 +174,7 @@ export default function SlaPolicyDetailPage() {
     for (const stale of existing.values()) {
       await slaApi.deleteRule(policyId, stale.id);
     }
-    await load();
+    load();
   };
 
   if (loading) return <Typography>Loading SLA policy…</Typography>;
@@ -176,7 +217,7 @@ export default function SlaPolicyDetailPage() {
                 onClick={async () => {
                   if (policy.is_active) await slaApi.deactivatePolicy(policyId);
                   else await slaApi.activatePolicy(policyId);
-                  await load();
+                  load();
                 }}
               >
                 {policy.is_active ? "Deactivate" : "Activate"}
