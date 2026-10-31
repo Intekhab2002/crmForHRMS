@@ -86,6 +86,7 @@ const DEFAULT_FILTERS = Object.freeze({
 export default function ContactsManagementPage() {
   const navigate = useNavigate();
   const notification = useNotification();
+  const { warning } = notification;
   const { hasPermission } = useAuth();
 
   const canRead = hasPermission(PERMISSIONS.CONTACT_READ);
@@ -95,10 +96,18 @@ export default function ContactsManagementPage() {
   const canReadTickets = hasPermission(PERMISSIONS.TICKET_READ);
   const canRestore = hasPermission(PERMISSIONS.CONTACT_RESTORE);
 
-  const [rows, setRows] = useState([]);
-  const [rowCount, setRowCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  // const [rows, setRows] = useState([]);
+  // const [rowCount, setRowCount] = useState(0);
+  // const [loading, setLoading] = useState(true);
+  // const [loadError, setLoadError] = useState("");
+
+  const [contactsRequest, setContactsRequest] = useState({
+    key: null,
+    status: "idle",
+    rows: [],
+    rowCount: 0,
+    error: "",
+  });
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
@@ -137,6 +146,35 @@ export default function ContactsManagementPage() {
     setFilterDialogKey((current) => current + 1);
     setFilterOpen(true);
   };
+
+  const contactRequestParams = useMemo(
+    () => ({
+      page: paginationModel.page + 1,
+      limit: paginationModel.pageSize,
+      search,
+      ...filters,
+    }),
+    [paginationModel.page, paginationModel.pageSize, search, filters],
+  );
+
+  const contactRequestKey = useMemo(
+    () =>
+      JSON.stringify({
+        canRead,
+        ...contactRequestParams,
+        refreshKey,
+      }),
+    [canRead, contactRequestParams, refreshKey],
+  );
+
+  const currentContactsRequest =
+    contactsRequest.key === contactRequestKey ? contactsRequest : null;
+
+  const rows = currentContactsRequest?.rows ?? [];
+  const rowCount = currentContactsRequest?.rowCount ?? 0;
+
+  const loading = canRead && currentContactsRequest === null;
+  const loadError = currentContactsRequest?.error ?? "";
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -229,39 +267,39 @@ export default function ContactsManagementPage() {
   }, [needsLookups, loadLookups, lookupRetryKey]);
 
   useEffect(() => {
-    if (!canRead) return;
+    if (!canRead) return undefined;
 
     let active = true;
 
-    setLoading(true);
-    setLoadError("");
-
     contactService
-      .listContacts({
-        page: paginationModel.page + 1,
-        limit: paginationModel.pageSize,
-        search,
-        ...filters,
-      })
+      .listContacts(contactRequestParams)
       .then((result) => {
         if (!active) return;
-        setRows((result.rows ?? []).map(normalizeContact));
-        setRowCount(Number(result.total ?? 0));
+
+        setContactsRequest({
+          key: contactRequestKey,
+          status: "success",
+          rows: (result.rows ?? []).map(normalizeContact),
+          rowCount: Number(result.total ?? 0),
+          error: "",
+        });
       })
       .catch((error) => {
         if (!active) return;
-        setRows([]);
-        setRowCount(0);
-        setLoadError(getErrorMessage(error));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
+
+        setContactsRequest({
+          key: contactRequestKey,
+          status: "error",
+          rows: [],
+          rowCount: 0,
+          error: getErrorMessage(error),
+        });
       });
 
     return () => {
       active = false;
     };
-  }, [canRead, filters, paginationModel, refreshKey, search]);
+  }, [canRead, contactRequestKey, contactRequestParams]);
 
   const handlePaginationChange = (nextModel) => {
     setPaginationModel((current) => {
@@ -352,7 +390,7 @@ export default function ContactsManagementPage() {
       const mobileNumber = String(contact.mobilePhone ?? "").trim();
 
       if (!mobileNumber) {
-        notification.warning(
+        warning(
           "This contact does not have a mobile number, so its tickets cannot be filtered by mobile number.",
         );
         return;
@@ -362,7 +400,7 @@ export default function ContactsManagementPage() {
 
       navigate(`/tickets?${query.toString()}`);
     },
-    [navigate, notification.warning],
+    [navigate, warning],
   );
 
   const organizationNamesById = useMemo(
