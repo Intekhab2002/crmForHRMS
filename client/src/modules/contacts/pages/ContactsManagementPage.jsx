@@ -32,8 +32,6 @@ import contactService, {
 } from "../services/contact.service";
 import { useNotification } from "../../../components/feedback";
 
-const DEFAULT_PAGE_SIZE = 20;
-
 function getOptionLabel(value, fallback = "—") {
   if (value && typeof value === "object") {
     return value.name ?? value.label ?? fallback;
@@ -73,6 +71,18 @@ function getErrorMessage(error) {
   return getContactErrorMessage(error);
 }
 
+const DEFAULT_PAGE_SIZE = 20;
+
+const EMPTY_LOOKUPS = Object.freeze({
+  organizations: [],
+  departments: [],
+  districts: [],
+});
+
+const DEFAULT_FILTERS = Object.freeze({
+  isActive: true,
+});
+
 export default function ContactsManagementPage() {
   const navigate = useNavigate();
   const notification = useNotification();
@@ -91,19 +101,13 @@ export default function ContactsManagementPage() {
   const [loadError, setLoadError] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ isActive: true });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [filterOpen, setFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
     pageSize: DEFAULT_PAGE_SIZE,
   });
-
-  const EMPTY_LOOKUPS = {
-    organizations: [],
-    departments: [],
-    districts: [],
-  };
 
   const [lookupState, setLookupState] = useState({
     status: "idle",
@@ -136,72 +140,93 @@ export default function ContactsManagementPage() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPaginationModel((current) => ({ ...current, page: 0 }));
+      const nextSearch = searchInput.trim();
+
+      setSearch((current) => (current === nextSearch ? current : nextSearch));
+
+      setPaginationModel((current) =>
+        current.page === 0 ? current : { ...current, page: 0 },
+      );
     }, 350);
 
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
-useEffect(() => {
-  if (!needsLookups || lookupState.status !== "idle") {
-    return undefined;
-  }
+  const [lookupRetryKey, setLookupRetryKey] = useState(0);
 
-  let active = true;
-
-  const fetchLookups = async () => {
-    const results = await Promise.allSettled([
+  const loadLookups = useCallback(async () => {
+    return Promise.allSettled([
       contactService.listOrganizations(),
       contactService.listDepartments(),
       contactService.listDistricts(),
     ]);
+  }, []);
 
-    if (!active) return;
+  const handleRetryLookups = useCallback(() => {
+    setLookupState((current) => ({
+      ...current,
+      status: "idle",
+      error: "",
+    }));
 
-    const keys = [
-      "organizations",
-      "departments",
-      "districts",
-    ];
+    setLookupRetryKey((current) => current + 1);
+  }, []);
 
-    const next = {};
-    const failures = [];
+  useEffect(() => {
+    if (!needsLookups) return undefined;
 
-    results.forEach((result, index) => {
-      const key = keys[index];
+    let active = true;
 
-      if (result.status === "fulfilled") {
-        next[key] = result.value ?? [];
-      } else {
-        next[key] = [];
-        failures.push(result.reason);
+    const load = async () => {
+      try {
+        const results = await loadLookups();
+
+        if (!active) return;
+
+        const keys = ["organizations", "departments", "districts"];
+
+        const data = { ...EMPTY_LOOKUPS };
+        const failures = [];
+
+        results.forEach((result, index) => {
+          const key = keys[index];
+
+          if (result.status === "fulfilled") {
+            data[key] = result.value ?? [];
+          } else {
+            failures.push(result.reason);
+          }
+        });
+
+        const successfulCount = results.filter(
+          (result) => result.status === "fulfilled",
+        ).length;
+
+        setLookupState({
+          status: successfulCount > 0 ? "success" : "error",
+          data,
+          error:
+            failures.length > 0
+              ? "Some lookup options could not be loaded. Please retry."
+              : "",
+        });
+      } catch (error) {
+        if (!active) return;
+
+        setLookupState({
+          status: "error",
+          data: EMPTY_LOOKUPS,
+          error: getErrorMessage(error),
+        });
       }
-    });
+    };
 
-    setLookupState({
-      status: "success",
-      data: next,
-      error: failures.length
-        ? "Some lookup options could not be loaded. Check your access to organizations, departments, and districts."
-        : "",
-    });
-  };
+    void load();
 
-  fetchLookups().catch((error) => {
-    if (!active) return;
-
-    setLookupState({
-      status: "error",
-      data: EMPTY_LOOKUPS,
-      error: getErrorMessage(error),
-    });
-  });
-
-  return () => {
-    active = false;
-  };
-}, [needsLookups, lookupState.status]);
+    return () => {
+      active = false;
+    };
+  }, [needsLookups, loadLookups, lookupRetryKey]);
 
   useEffect(() => {
     if (!canRead) return;
@@ -238,12 +263,6 @@ useEffect(() => {
     };
   }, [canRead, filters, paginationModel, refreshKey, search]);
 
-  useEffect(() => {
-    if (canRead && (canCreate || canUpdate)) {
-      void loadLookups();
-    }
-  }, [canCreate, canRead, canUpdate, loadLookups]);
-
   const handlePaginationChange = (nextModel) => {
     setPaginationModel((current) => {
       if (nextModel.pageSize !== current.pageSize) {
@@ -259,12 +278,11 @@ useEffect(() => {
     setFormOpen(true);
   };
 
-  const handleOpenEdit = (contact) => {
+  const handleOpenEdit = useCallback((contact) => {
     setEditingContact(contact);
     setFormDialogKey((current) => current + 1);
     setFormOpen(true);
-  };
-
+  }, []);
   const handleSaveContact = async (payload) => {
     setSaving(true);
     try {
@@ -329,23 +347,23 @@ useEffect(() => {
     setFilterOpen(false);
   };
 
-const handleShowTickets = useCallback(
-  (contact) => {
-    const mobileNumber = String(contact.mobilePhone ?? "").trim();
+  const handleShowTickets = useCallback(
+    (contact) => {
+      const mobileNumber = String(contact.mobilePhone ?? "").trim();
 
-    if (!mobileNumber) {
-      notification.warning(
-        "This contact does not have a mobile number, so its tickets cannot be filtered by mobile number.",
-      );
-      return;
-    }
+      if (!mobileNumber) {
+        notification.warning(
+          "This contact does not have a mobile number, so its tickets cannot be filtered by mobile number.",
+        );
+        return;
+      }
 
-    const query = new URLSearchParams({ mobileNumber });
+      const query = new URLSearchParams({ mobileNumber });
 
-    navigate(`/tickets?${query.toString()}`);
-  },
-  [navigate, notification.warning],
-);
+      navigate(`/tickets?${query.toString()}`);
+    },
+    [navigate, notification.warning],
+  );
 
   const organizationNamesById = useMemo(
     () =>
@@ -497,7 +515,15 @@ const handleShowTickets = useCallback(
     ];
 
     return nextColumns;
-  }, [canDelete, canReadTickets, canUpdate, organizationNamesById]);
+  }, [
+    canDelete,
+    canReadTickets,
+    canRestore,
+    canUpdate,
+    handleOpenEdit,
+    handleShowTickets,
+    organizationNamesById,
+  ]);
 
   if (!canRead) {
     return (
@@ -561,7 +587,20 @@ const handleShowTickets = useCallback(
       ) : null}
 
       {lookupError && (canCreate || canUpdate) ? (
-        <Alert severity="warning" onClose={() => setLookupError("")}>
+        <Alert
+          severity="warning"
+          onClose={() =>
+            setLookupState((current) => ({
+              ...current,
+              error: "",
+            }))
+          }
+          action={
+            <Button color="inherit" size="small" onClick={handleRetryLookups}>
+              Retry
+            </Button>
+          }
+        >
           {lookupError}
         </Alert>
       ) : null}
@@ -608,7 +647,7 @@ const handleShowTickets = useCallback(
           <Button
             color="inherit"
             onClick={() => {
-              setFilters({});
+              setFilters(DEFAULT_FILTERS);
               setPaginationModel((current) => ({ ...current, page: 0 }));
             }}
             sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
