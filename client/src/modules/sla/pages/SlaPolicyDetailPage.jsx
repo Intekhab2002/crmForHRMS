@@ -22,11 +22,11 @@ import slaApi from "../services/sla.api";
 import { SLA_PERMISSIONS, SLA_ROUTES } from "../config/sla.config";
 import { formatDurationMinutes } from "../utils/slaFormatters";
 
+const EMPTY_RULES = Object.freeze([]);
+
 export default function SlaPolicyDetailPage() {
   const { policyId } = useParams();
   const navigate = useNavigate();
-  // const [policy, setPolicy] = useState(null);
-  // const [rules, setRules] = useState([]);
   const [requestVersion, setRequestVersion] = useState(0);
 
   const [policyRequest, setPolicyRequest] = useState({
@@ -43,8 +43,13 @@ export default function SlaPolicyDetailPage() {
   const policy =
     policyRequest.requestKey === requestKey ? policyRequest.policy : null;
 
-  const rules =
-    policyRequest.requestKey === requestKey ? policyRequest.rules : [];
+  const rules = useMemo(
+    () =>
+      policyRequest.requestKey === requestKey
+        ? policyRequest.rules
+        : EMPTY_RULES,
+    [policyRequest.requestKey, policyRequest.rules, requestKey],
+  );
 
   const error =
     policyRequest.requestKey === requestKey ? policyRequest.error : "";
@@ -103,10 +108,6 @@ export default function SlaPolicyDetailPage() {
       active = false;
     };
   }, [policyId, requestKey]);
-
-  useEffect(() => {
-    load();
-  }, [policyId]);
 
   const initialValues = useMemo(
     () =>

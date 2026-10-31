@@ -60,24 +60,6 @@ export default function SlaCalendarDetailPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const loadCalendar = useCallback(async () => {
-    if (isNew || !hasCalendarId) return;
-
-    const item = await slaApi.getCalendar(calendarId);
-
-    setCalendar({
-      code: item.code,
-      name: item.name,
-      timezone: item.timezone,
-      businessHoursPerDay: Number(item.business_hours_per_day),
-      workdayStartTime: item.workday_start_time?.slice(0, 5) ?? "09:00",
-      workdayEndTime: item.workday_end_time?.slice(0, 5) ?? "17:00",
-      includeSaturday: item.include_saturday,
-      includeSunday: item.include_sunday,
-      isActive: item.is_active,
-    });
-  }, [calendarId, hasCalendarId, isNew]);
-
   const loadHolidays = useCallback(
     async (targetYear = year) => {
       if (isNew || !hasCalendarId) return;
