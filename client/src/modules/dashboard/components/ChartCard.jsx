@@ -9,7 +9,6 @@ export default function ChartCard({
   viewMode,
   viewModes,
   onViewChange,
-  isCustomizing = false,
 }) {
   const data = Array.isArray(metric?.data) ? metric.data : [];
   const error = metric?.metadata?.error;

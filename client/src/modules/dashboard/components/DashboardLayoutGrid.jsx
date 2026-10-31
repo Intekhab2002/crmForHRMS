@@ -159,15 +159,33 @@ export default function DashboardLayoutGrid({
     [layout?.widgets, metricMap],
   );
 
-  const gridLayout = useMemo(() => {
-    let mobileY = 0;
-    return visibleWidgets.map((widget) => {
-      const metric = metricMap.get(widget.id);
-      const item = toGridItem(widget, metric, columns, isCustomizing, mobileY);
-      if (columns === 1) mobileY += item.h;
-      return item;
-    });
-  }, [visibleWidgets, metricMap, columns, isCustomizing]);
+  const gridLayout = useMemo(
+    () =>
+      visibleWidgets.map((widget, index) => {
+        const metric = metricMap.get(widget.id);
+
+        const mobileY =
+          columns === 1
+            ? visibleWidgets.slice(0, index).reduce((total, previousWidget) => {
+                const previousMetric = metricMap.get(previousWidget.id);
+
+                if (!previousMetric) return total;
+
+                const minH = getEffectiveMinHeight(
+                  previousWidget,
+                  previousMetric,
+                );
+
+                const height = Math.max(Number(previousWidget.h) || 1, minH);
+
+                return total + height;
+              }, 0)
+            : 0;
+
+        return toGridItem(widget, metric, columns, isCustomizing, mobileY);
+      }),
+    [visibleWidgets, metricMap, columns, isCustomizing],
+  );
 
   const handleLayoutChange = useCallback(
     (nextGridLayout) => {

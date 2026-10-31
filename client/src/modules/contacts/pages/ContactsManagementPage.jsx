@@ -95,12 +95,6 @@ export default function ContactsManagementPage() {
   const canDelete = hasPermission(PERMISSIONS.CONTACT_DELETE);
   const canReadTickets = hasPermission(PERMISSIONS.TICKET_READ);
   const canRestore = hasPermission(PERMISSIONS.CONTACT_RESTORE);
-
-  // const [rows, setRows] = useState([]);
-  // const [rowCount, setRowCount] = useState(0);
-  // const [loading, setLoading] = useState(true);
-  // const [loadError, setLoadError] = useState("");
-
   const [contactsRequest, setContactsRequest] = useState({
     key: null,
     status: "idle",
@@ -609,7 +603,13 @@ export default function ContactsManagementPage() {
       {loadError ? (
         <Alert
           severity="error"
-          onClose={() => setLoadError("")}
+          onClose={() => {
+            setContactsRequest((current) =>
+              current.key === contactRequestKey
+                ? { ...current, error: "" }
+                : current,
+            );
+          }}
           action={
             <Button
               color="inherit"

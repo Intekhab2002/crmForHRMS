@@ -61,7 +61,6 @@ export default function DashboardWidget({
         viewMode={viewMode}
         viewModes={viewModes}
         onViewChange={setSelectedViewMode}
-        isCustomizing={isCustomizing}
       />
     );
   }

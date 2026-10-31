@@ -1,44 +1,112 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
 import dashboardApi from "../services/dashboardApi";
 import { normalizeMetric } from "../config/metricRegistry";
 
-export function useDashboard(dashboardType, filters = {}) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
+const EMPTY_FILTERS = Object.freeze({});
 
-  const load = useCallback(async ({ silent = false } = {}) => {
-    if (!dashboardType) return;
+const INITIAL_REQUEST_STATE = {
+  requestKey: null,
+  dataKey: null,
+  data: null,
+  error: null,
+};
 
-    if (silent) setRefreshing(true);
-    else setLoading(true);
+export function useDashboard(dashboardType, filters = EMPTY_FILTERS) {
+  const [refreshKey, setRefreshKey] = useState(0);
 
-    setError(null);
+  const [requestState, setRequestState] = useState(INITIAL_REQUEST_STATE);
 
-    try {
-      const result = await dashboardApi.getDashboard(dashboardType, filters);
-      setData({
-        ...result,
-        metrics: (result.metrics || []).map(normalizeMetric),
-      });
-    } catch (requestError) {
-      setError(requestError);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [dashboardType, JSON.stringify(filters)]);
+  /**
+   * Create a stable representation of the filters.
+   *
+   * This prevents unnecessary requests when callers pass an equivalent
+   * filter object with a different reference.
+   */
+  const filtersKey = JSON.stringify(filters ?? {}) ?? "{}";
+
+  const requestFilters = useMemo(() => JSON.parse(filtersKey), [filtersKey]);
+
+  /**
+   * dataKey identifies the dashboard and its applied filters.
+   * requestKey additionally identifies a particular refresh operation.
+   */
+  const dataKey = JSON.stringify([dashboardType ?? null, filtersKey]);
+
+  const requestKey = JSON.stringify([
+    dashboardType ?? null,
+    filtersKey,
+    refreshKey,
+  ]);
+
+  const hasCurrentData =
+    requestState.dataKey === dataKey && requestState.data !== null;
+
+  const requestIsCurrent = requestState.requestKey === requestKey;
+
+  const data = hasCurrentData ? requestState.data : null;
+
+  const loading =
+    Boolean(dashboardType) && !hasCurrentData && !requestIsCurrent;
+
+  const refreshing =
+    Boolean(dashboardType) && hasCurrentData && !requestIsCurrent;
+
+  const error = requestIsCurrent ? requestState.error : null;
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!dashboardType) return undefined;
+
+    let active = true;
+
+    const fetchDashboard = async () => {
+      try {
+        const result = await dashboardApi.getDashboard(
+          dashboardType,
+          requestFilters,
+        );
+
+        if (!active) return;
+
+        const normalizedData = {
+          ...result,
+          metrics: (result.metrics ?? []).map(normalizeMetric),
+        };
+
+        setRequestState({
+          requestKey,
+          dataKey,
+          data: normalizedData,
+          error: null,
+        });
+      } catch (requestError) {
+        if (!active) return;
+
+        setRequestState((current) => ({
+          requestKey,
+          dataKey,
+          data: current.dataKey === dataKey ? current.data : null,
+          error: requestError,
+        }));
+      }
+    };
+
+    void fetchDashboard();
+
+    return () => {
+      active = false;
+    };
+  }, [dashboardType, requestFilters, requestKey, dataKey]);
+
+  const reload = useCallback(() => {
+    setRefreshKey((current) => current + 1);
+  }, []);
 
   return {
     data,
     loading,
     refreshing,
     error,
-    reload: () => load({ silent: true }),
+    reload,
   };
 }

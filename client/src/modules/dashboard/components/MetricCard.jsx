@@ -23,9 +23,6 @@ export default function MetricCard({ metric, onClick }) {
   const status = getMetricStatus(metric);
   const tone = getMetricStatusColor(status, theme);
 
-  const value =
-    metric?.value == null || metric.value === "" ? "—" : metric.value;
-
   const displayValue =
     metric?.unit === "percent"
       ? formatMetricPercentage(metric?.value)
