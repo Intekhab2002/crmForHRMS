@@ -438,16 +438,6 @@ export default function TicketLifecyclePage() {
     };
   }, [ticketId]);
 
-  useEffect(() => {
-    if (!ticket) return;
-
-    setPendingQuickValues(
-      Object.fromEntries(
-        QUICK_UPDATE_KEYS.map((key) => [key, ticket[key] ?? ""]),
-      ),
-    );
-  }, [ticket]);
-
   const updateValues = useMemo(
     () => (ticket ? buildUpdateValues(ticket) : {}),
     [ticket],

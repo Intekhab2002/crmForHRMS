@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
-  Alert,
   Button,
   Card,
   CardContent,
@@ -57,10 +56,42 @@ function getErrorMessage(error) {
   );
 }
 
+async function fetchUsers({ paginationModel, search, status, roleCode }) {
+  const response = await userService.list({
+    page: paginationModel.page + 1,
+    limit: paginationModel.pageSize,
+    search,
+    status: status || undefined,
+    roleCode: roleCode || undefined,
+  });
+
+  const data = Array.isArray(response?.data) ? response.data : [];
+
+  // Developer accounts must not appear as ordinary user-management rows.
+  const visibleUsers = data.filter((user) => !isDeveloper(user));
+
+  return {
+    users: visibleUsers.map((user) => ({
+      ...user,
+      role: user.role ?? getPrimaryRoleObject(user),
+    })),
+    pagination: response?.pagination ?? EMPTY_PAGINATION,
+  };
+}
+
+async function fetchRoles() {
+  const response = await roleService.list({
+    page: 1,
+    limit: 100,
+    isActive: "true",
+  });
+
+  return Array.isArray(response?.data) ? response.data : [];
+}
+
 export default function UserManagementPage() {
   const { user: currentUser, roles: currentRoles, hasPermission } = useAuth();
-  const notification = useNotification();
-
+  const { success: notifySuccess, error: notifyError } = useNotification();
   const [userToBlock, setUserToBlock] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
 
@@ -86,8 +117,7 @@ export default function UserManagementPage() {
 
   const [loading, setLoading] = useState(true);
 
-  const [rolesLoading, setRolesLoading] = useState(false);
-
+  const [rolesLoading, setRolesLoading] = useState(canCreate || canUpdate);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const [editingUser, setEditingUser] = useState(null);
@@ -117,78 +147,96 @@ export default function UserManagementPage() {
     [roles, editingUser, currentUserIsDeveloper],
   );
 
-  const loadRoles = useCallback(async () => {
-    if (!canCreate && !canUpdate) {
-      setRoles([]);
-      return;
-    }
-
-    setRolesLoading(true);
-
-    try {
-      const response = await roleService.list({
-        page: 1,
-        limit: 100,
-        isActive: "true",
-      });
-
-      setRoles(Array.isArray(response?.data) ? response.data : []);
-    } catch (requestError) {
-      notification.error(getErrorMessage(requestError));
-    } finally {
-      setRolesLoading(false);
-    }
-  }, [canCreate, canUpdate]);
-
   const loadUsers = useCallback(async () => {
     setLoading(true);
 
     try {
-      const response = await userService.list({
-        page: paginationModel.page + 1,
-
-        limit: paginationModel.pageSize,
-
+      const result = await fetchUsers({
+        paginationModel,
         search,
-
-        status: status || undefined,
-
-        roleCode: roleCode || undefined,
+        status,
+        roleCode,
       });
 
-      const data = Array.isArray(response?.data) ? response.data : [];
-
-      /*
-       * Developer must never be presented
-       * as an ordinary user-management row.
-       */
-      const visibleUsers = data.filter((user) => !isDeveloper(user));
-
-      setUsers(
-        visibleUsers.map((user) => ({
-          ...user,
-          role: user.role ?? getPrimaryRoleObject(user),
-        })),
-      );
-
-      setPagination(response?.pagination ?? EMPTY_PAGINATION);
+      setUsers(result.users);
+      setPagination(result.pagination);
     } catch (requestError) {
-      notification.error(getErrorMessage(requestError));
+      notifyError(getErrorMessage(requestError));
       setUsers([]);
     } finally {
       setLoading(false);
     }
-  }, [paginationModel, search, status, roleCode]);
+  }, [paginationModel, search, status, roleCode, notifyError]);
 
   useEffect(() => {
-    void loadUsers();
-  }, [loadUsers]);
+    let active = true;
+
+    const loadInitialUsers = async () => {
+      try {
+        const result = await fetchUsers({
+          paginationModel,
+          search,
+          status,
+          roleCode,
+        });
+
+        if (!active) return;
+
+        setUsers(result.users);
+        setPagination(result.pagination);
+      } catch (requestError) {
+        if (!active) return;
+
+        notifyError(getErrorMessage(requestError));
+        setUsers([]);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadInitialUsers();
+
+    return () => {
+      active = false;
+    };
+  }, [paginationModel, search, status, roleCode, notifyError]);
 
   useEffect(() => {
-    void loadRoles();
-  }, [loadRoles]);
+    if (!canCreate && !canUpdate) {
+      return undefined;
+    }
+
+    let active = true;
+
+    const loadInitialRoles = async () => {
+      try {
+        const result = await fetchRoles();
+
+        if (!active) return;
+
+        setRoles(result);
+      } catch (requestError) {
+        if (!active) return;
+
+        notifyError(getErrorMessage(requestError));
+      } finally {
+        if (active) {
+          setRolesLoading(false);
+        }
+      }
+    };
+
+    void loadInitialRoles();
+
+    return () => {
+      active = false;
+    };
+  }, [canCreate, canUpdate, notifyError]);
 
   const handleSearch = () => {
+    setLoading(true);
     setPaginationModel((current) => ({
       ...current,
       page: 0,
@@ -205,6 +253,7 @@ export default function UserManagementPage() {
   };
 
   const handleStatusFilter = (event) => {
+    setLoading(true);
     setStatus(event.target.value);
 
     setPaginationModel((current) => ({
@@ -214,6 +263,7 @@ export default function UserManagementPage() {
   };
 
   const handleRoleFilter = (event) => {
+    setLoading(true);
     setRoleCode(event.target.value);
 
     setPaginationModel((current) => ({
@@ -223,6 +273,7 @@ export default function UserManagementPage() {
   };
 
   const handleResetFilters = () => {
+    setLoading(true);
     setSearchInput("");
     setSearch("");
     setStatus("");
@@ -257,23 +308,18 @@ export default function UserManagementPage() {
   };
 
   const handleSave = async (values) => {
-    try {
-      if (editingUser) {
-        await userService.update(editingUser.id, values);
-        notification.success("User updated successfully.");
-      } else {
-        await userService.create(values);
-        notification.success("User created successfully.");
-      }
-
-      setDialogOpen(false);
-      setEditingUser(null);
-
-      await loadUsers();
-    } catch (requestError) {
-      // Keep form-level validation/server errors available to UserFormDialog.
-      throw requestError;
+    if (editingUser) {
+      await userService.update(editingUser.id, values);
+      notifySuccess("User updated successfully.");
+    } else {
+      await userService.create(values);
+      notifySuccess("User created successfully.");
     }
+
+    setDialogOpen(false);
+    setEditingUser(null);
+
+    await loadUsers();
   };
 
   const applyStatusChange = async (user, nextStatus) => {
@@ -290,7 +336,7 @@ export default function UserManagementPage() {
     }
 
     if (user.id === currentUser?.id && nextStatus !== "active") {
-      notification.error("You cannot block your own user account.");
+      notifyError("You cannot block your own user account.");
       return;
     }
 
@@ -299,7 +345,7 @@ export default function UserManagementPage() {
     try {
       await userService.updateStatus(user.id, nextStatus);
 
-      notification.success(
+      notifySuccess(
         nextStatus === "inactive"
           ? "User blocked successfully."
           : "User activated successfully.",
@@ -308,7 +354,7 @@ export default function UserManagementPage() {
       setUserToBlock(null);
       await loadUsers();
     } catch (requestError) {
-      notification.error(getErrorMessage(requestError));
+      notifyError(getErrorMessage(requestError));
     } finally {
       setBlocking(false);
     }
@@ -351,7 +397,7 @@ export default function UserManagementPage() {
     }
 
     if (user.id === currentUser?.id) {
-      notification.error("You cannot delete your own user account.");
+      notifyError("You cannot delete your own user account.");
       return;
     }
 
@@ -368,12 +414,12 @@ export default function UserManagementPage() {
     try {
       await userService.remove(userToDelete.id);
 
-      notification.success("User deleted successfully.");
+      notifySuccess("User deleted successfully.");
       setUserToDelete(null);
 
       await loadUsers();
     } catch (requestError) {
-      notification.error(getErrorMessage(requestError));
+      notifyError(getErrorMessage(requestError));
     } finally {
       setDeleting(false);
     }
@@ -508,6 +554,7 @@ export default function UserManagementPage() {
               pagination={pagination}
               paginationModel={paginationModel}
               onPaginationModelChange={(model) => {
+                setLoading(true);
                 setPaginationModel(model);
               }}
               canUpdate={canUpdate}
