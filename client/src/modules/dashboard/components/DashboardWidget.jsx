@@ -1,9 +1,9 @@
-import { Box } from "@mui/material";
-import { useState } from "react";
+import { Box, CircularProgress } from "@mui/material";
+import { useState, lazy, Suspense } from "react";
 
 import MetricCard from "./MetricCard";
-import ChartCard from "./ChartCard";
-import DataTableCard from "./DataTableCard";
+const ChartCard = lazy(() => import("./ChartCard"));
+const DataTableCard = lazy(() => import("./DataTableCard"));
 
 function getViewModes(metric) {
   if (Array.isArray(metric?.viewModes) && metric.viewModes.length) {
@@ -25,6 +25,23 @@ function getDefaultView(metric, viewModes) {
   if (metric?.visualization === "table") return "table";
 
   return viewModes.includes("graph") ? "graph" : viewModes[0];
+}
+
+function DashboardWidgetFallback() {
+  return (
+    <Box
+      role="status"
+      aria-label="Loading dashboard widget"
+      sx={{
+        minHeight: 240,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <CircularProgress size={24} />
+    </Box>
+  );
 }
 
 export default function DashboardWidget({
@@ -81,7 +98,7 @@ export default function DashboardWidget({
         },
       }}
     >
-      {content}
+      <Suspense fallback={<DashboardWidgetFallback />}>{content}</Suspense>
     </Box>
   );
 }
