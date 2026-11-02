@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button, Card, CardContent, Stack, TextField } from "@mui/material";
 import { useNotification } from "../../../components/feedback";
@@ -70,15 +70,9 @@ export default function RoleManagementPage() {
 
   const canDelete = hasPermission(PERMISSIONS.ROLE_DELETE);
 
-  // const [roles, setRoles] = useState([]);
-
-  // const [loading, setLoading] = useState(true);
-
   const [searchInput, setSearchInput] = useState("");
 
   const [search, setSearch] = useState("");
-
-  // const [pagination, setPagination] = useState(EMPTY_PAGINATION);
 
   const [requestVersion, setRequestVersion] = useState(0);
 
@@ -87,6 +81,11 @@ export default function RoleManagementPage() {
     paramsKey: null,
     roles: [],
     pagination: EMPTY_PAGINATION,
+  });
+
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: DEFAULT_PAGE_SIZE,
   });
 
   const paramsKey = JSON.stringify({
@@ -108,11 +107,6 @@ export default function RoleManagementPage() {
 
   const loading = canRead && rolesRequest.requestKey !== requestKey;
 
-  const [paginationModel, setPaginationModel] = useState({
-    page: 0,
-    pageSize: DEFAULT_PAGE_SIZE,
-  });
-
   const [formOpen, setFormOpen] = useState(false);
 
   const [editingRole, setEditingRole] = useState(null);
@@ -121,9 +115,9 @@ export default function RoleManagementPage() {
 
   const [usersRole, setUsersRole] = useState(null);
 
-  const loadRoles = useCallback(() => {
+  const loadRoles = () => {
     setRequestVersion((current) => current + 1);
-  }, []);
+  };
 
   useEffect(() => {
     if (!canRead) {

@@ -17,7 +17,6 @@ import PageHeader from "../../../components/page/PageHeader";
 import ConfirmationDialog from "../../../components/feedback/ConfirmationDialog";
 import CanAccess from "../../../components/rbac/CanAccess";
 
-import { useNotification } from "../../../components/feedback/NotificationProvider";
 
 import { useAuth } from "../../../context/useAuth";
 
@@ -30,6 +29,7 @@ import OptionFormDialog from "../components/OptionFormDialog";
 import { getOptionConfig } from "../options.config";
 
 import { optionService } from "../services/option.service";
+import { useNotification } from "../../../components/feedback";
 
 const DEFAULT_PAGE_SIZE = 20;
 

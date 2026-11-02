@@ -16,8 +16,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { useAuth } from "../../../context/useAuth";
 import { TICKET_FIELD_CONFIG } from "../../../config/ticket.config";
 import FieldRenderer from "./FieldRenderer";
-import { getOptionSource } from "./TicketForm";
-
+import { getOptionSource } from "../utils/ticketForm.utils";
 const BULK_EDIT_FIELDS = TICKET_FIELD_CONFIG.filter(
   (field) =>
     field.entity === "ticket" &&
@@ -47,8 +46,7 @@ export default function BulkEditTicketDrawer({
   const optionFields = useMemo(
     () =>
       BULK_EDIT_FIELDS.filter(
-        (field) =>
-          field.type === "select" || field.type === "autocomplete",
+        (field) => field.type === "select" || field.type === "autocomplete",
       ),
     [],
   );
@@ -118,14 +116,16 @@ export default function BulkEditTicketDrawer({
 
       const value = values[field.key];
 
-      if (field.required && (value === "" || value === null || value === undefined)) {
+      if (
+        field.required &&
+        (value === "" || value === null || value === undefined)
+      ) {
         formikHelpers.setFieldTouched(field.key, true, false);
         formikHelpers.setFieldError(field.key, `${field.label} is required.`);
         return;
       }
 
-      changes[field.key] =
-        value === "" || value === undefined ? null : value;
+      changes[field.key] = value === "" || value === undefined ? null : value;
     }
 
     if (Object.keys(changes).length === 0) {
@@ -191,14 +191,19 @@ export default function BulkEditTicketDrawer({
 
       <Box sx={{ flex: 1, overflowY: "auto", p: 2.5 }}>
         {optionsError ? (
-          <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setOptionsError("")}>
+          <Alert
+            severity="warning"
+            sx={{ mb: 2 }}
+            onClose={() => setOptionsError("")}
+          >
             {optionsError}
           </Alert>
         ) : null}
 
         <Alert severity="info" sx={{ mb: 2 }}>
           Only checked fields are sent to the server. Each ticket is validated
-          and updated independently; failures do not roll back successful tickets.
+          and updated independently; failures do not roll back successful
+          tickets.
         </Alert>
 
         <Formik
@@ -207,7 +212,11 @@ export default function BulkEditTicketDrawer({
           onSubmit={handleSubmit}
         >
           {(formik) => (
-            <form id="bulk-edit-ticket-form" onSubmit={formik.handleSubmit} noValidate>
+            <form
+              id="bulk-edit-ticket-form"
+              onSubmit={formik.handleSubmit}
+              noValidate
+            >
               <Stack spacing={2}>
                 {BULK_EDIT_FIELDS.map((field) => {
                   const enabled = enabledFields.includes(field.key);
