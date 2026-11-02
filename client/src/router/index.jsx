@@ -1,5 +1,5 @@
 import { Outlet, createBrowserRouter } from "react-router";
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 
 import PublicLayout from "../layouts/PublicLayout/PublicLayout";
 import AuthLayout from "../layouts/AuthLayout/AuthLayout";
@@ -13,7 +13,38 @@ import RouteErrorPage from "../components/feedback/RouteErrorPage";
 import RouteLoadingFallback from "../components/feedback/RouteLoadingFallback";
 
 import { APP_MODULE_CONFIG, SYSTEM_ROUTES } from "../config/module.config";
-const LandingPage = lazy(() => import("../pages/public/LandingPage"));
+
+import {
+  LandingPage,
+  HomePage,
+  AboutPage,
+  ContactPage,
+  LoginPage,
+  DashboardPage,
+  UserManagementPage,
+  RoleManagementPage,
+  PublicTicketStatusPage,
+  TicketsListPage,
+  TicketCreatePage,
+  TicketLifecyclePage,
+  ForbiddenPage,
+  NotFoundPage,
+  OptionManagementPage,
+  ContactsManagementPage,
+  SlaPoliciesPage,
+  SlaPolicyCreatePage,
+  SlaPolicyDetailPage,
+  SlaCalendarsPage,
+  SlaCalendarDetailPage,
+  ReportsPage,
+  DashboardModulePage,
+  DashboardIndexRedirect,
+  OperationalDashboard,
+  ManagementDashboard,
+  ProfessionalDashboard,
+  ExecutiveDashboard,
+  AuditDashboard,
+} from "./routeComponents";
 
 const LAYOUTS = Object.freeze({
   public: PublicLayout,
@@ -27,87 +58,42 @@ const GUARDS = Object.freeze({
 });
 
 const COMPONENTS = Object.freeze({
-  home: lazy(() => import("../pages/public/HomePage")),
-  about: lazy(() => import("../pages/public/AboutPage")),
-  contact: lazy(() => import("../pages/public/ContactPage")),
+  home: HomePage,
+  about: AboutPage,
+  contact: ContactPage,
 
-  login: lazy(() => import("../modules/auth/pages/LoginPage")),
+  login: LoginPage,
+  dashboard: DashboardPage,
 
-  dashboard: lazy(() => import("../pages/dashboard/DashboardPage")),
+  users: UserManagementPage,
+  roles: RoleManagementPage,
 
-  users: lazy(() => import("../modules/users/pages/UserManagementPage")),
+  publicTicketStatus: PublicTicketStatusPage,
+  ticketsList: TicketsListPage,
+  ticketCreate: TicketCreatePage,
+  ticketLifecycle: TicketLifecyclePage,
 
-  roles: lazy(() => import("../modules/roles/pages/RoleManagementPage")),
+  forbidden: ForbiddenPage,
+  notFound: NotFoundPage,
 
-  publicTicketStatus: lazy(
-    () => import("../modules/tickets/pages/PublicTicketStatusPage"),
-  ),
+  options: OptionManagementPage,
+  contacts: ContactsManagementPage,
 
-  ticketsList: lazy(() => import("../modules/tickets/pages/TicketsListPage")),
+  slaPolicies: SlaPoliciesPage,
+  slaPolicyCreate: SlaPolicyCreatePage,
+  slaPolicyDetail: SlaPolicyDetailPage,
+  slaCalendars: SlaCalendarsPage,
+  slaCalendarDetail: SlaCalendarDetailPage,
 
-  ticketCreate: lazy(() => import("../modules/tickets/pages/TicketCreatePage")),
+  reports: ReportsPage,
 
-  ticketLifecycle: lazy(
-    () => import("../modules/tickets/pages/TicketLifecyclePage"),
-  ),
-
-  forbidden: lazy(() => import("../pages/common/ForbiddenPage")),
-
-  notFound: lazy(() => import("../pages/common/NotFoundPage")),
-
-  defaultEntry: lazy(() => import("../pages/common/DefaultEntryPage")),
-
-  options: lazy(() => import("../modules/options/pages/OptionManagementPage")),
-
-  contacts: lazy(
-    () => import("../modules/contacts/pages/ContactsManagementPage"),
-  ),
-
-  slaPolicies: lazy(() => import("../modules/sla/pages/SlaPoliciesPage")),
-
-  slaPolicyCreate: lazy(
-    () => import("../modules/sla/pages/SlaPolicyCreatePage"),
-  ),
-
-  slaPolicyDetail: lazy(
-    () => import("../modules/sla/pages/SlaPolicyDetailPage"),
-  ),
-
-  slaCalendars: lazy(() => import("../modules/sla/pages/SlaCalendarsPage")),
-
-  slaCalendarDetail: lazy(
-    () => import("../modules/sla/pages/SlaCalendarDetailPage"),
-  ),
-
-  reports: lazy(() => import("../modules/reports/pages/ReportsPage")),
-
-  dashboardModule: lazy(
-    () => import("../modules/dashboard/pages/DashboardPage"),
-  ),
-
-  dashboardIndexRedirect: lazy(
-    () => import("../modules/dashboard/pages/DashboardIndexRedirect"),
-  ),
-
-  dashboardOperational: lazy(
-    () => import("../modules/dashboard/pages/OperationalDashboard"),
-  ),
-
-  dashboardManagement: lazy(
-    () => import("../modules/dashboard/pages/ManagementDashboard"),
-  ),
-
-  dashboardProfessional: lazy(
-    () => import("../modules/dashboard/pages/ProfessionalDashboard"),
-  ),
-
-  dashboardExecutive: lazy(
-    () => import("../modules/dashboard/pages/ExecutiveDashboard"),
-  ),
-
-  dashboardAudit: lazy(
-    () => import("../modules/dashboard/pages/AuditDashboard"),
-  ),
+  dashboardModule: DashboardModulePage,
+  dashboardIndexRedirect: DashboardIndexRedirect,
+  dashboardOperational: OperationalDashboard,
+  dashboardManagement: ManagementDashboard,
+  dashboardProfessional: ProfessionalDashboard,
+  dashboardExecutive: ExecutiveDashboard,
+  dashboardAudit: AuditDashboard,
 });
 
 function applyPermissionGuard(route, element) {
