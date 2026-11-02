@@ -8,6 +8,7 @@ import {
   mapCommentsFromApi,
 } from "../utils/ticketMappers";
 import { getExportFilename } from "../utils/ticketExport";
+import { getTicketFields } from "../../../config/ticket.config";
 
 function getErrorMessage(error, fallback) {
   return error?.response?.data?.message ?? error?.message ?? fallback;
@@ -15,8 +16,6 @@ function getErrorMessage(error, fallback) {
 
 export const ticketService = {
   async getFields(context) {
-    const { getTicketFields } = await import("../../../config/ticket.config");
-
     return getTicketFields(context);
   },
 
