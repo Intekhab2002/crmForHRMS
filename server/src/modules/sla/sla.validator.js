@@ -70,6 +70,36 @@ export const createPolicySchema = z.object({
 export const updatePolicySchema = createPolicySchema
   .partial()
   .refine((v) => Object.keys(v).length > 0, "At least one field is required.");
+
+const policyConfigurationRuleSchema = z.object({
+  id: uuid.optional(),
+  fieldValueKey: z.string().trim().min(1).max(100),
+  resolutionMinutes: z.number().int().min(1).nullable(),
+  isEnabled: z.boolean(),
+});
+
+export const policyConfigurationSchema = createPolicySchema.extend({
+  rules: z
+    .array(policyConfigurationRuleSchema)
+    .default([])
+    .superRefine((rules, ctx) => {
+      const seen = new Set();
+
+      rules.forEach((rule, index) => {
+        const key = rule.fieldValueKey.trim().toLowerCase();
+
+        if (seen.has(key)) {
+          ctx.addIssue({
+            code: "custom",
+            path: [index, "fieldValueKey"],
+            message: `Duplicate SLA rule value: ${key}`,
+          });
+        }
+
+        seen.add(key);
+      });
+    }),
+});
 export const createRuleSchema = z.object({
   fieldValueKey: z.string().trim().min(1).max(100),
   resolutionMinutes: z.number().int().min(1).nullable(),
@@ -108,11 +138,12 @@ export default Object.freeze({
   updateCalendarSchema,
   createPolicySchema,
   updatePolicySchema,
+  policyConfigurationSchema,
   createRuleSchema,
   updateRuleSchema,
   createHolidaySchema,
   updateHolidaySchema,
   previewSchema,
   policyParamSchema,
-  holidayImportQuerySchema
+  holidayImportQuerySchema,
 });

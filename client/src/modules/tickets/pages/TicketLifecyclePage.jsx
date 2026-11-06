@@ -131,7 +131,7 @@ function getTicketStatusHeaderSx(ticket) {
     return {
       bgcolor: "warning.light",
       borderColor: "warning.main",
-      ...textStyles("text.dark"),
+      ...textStyles("secondary.contrastText"),
     };
   }
 
@@ -139,7 +139,7 @@ function getTicketStatusHeaderSx(ticket) {
     return {
       bgcolor: "info.light",
       borderColor: "info.main",
-      ...textStyles("text.dark"),
+      ...textStyles("secondary.contrastText"),
     };
   }
 

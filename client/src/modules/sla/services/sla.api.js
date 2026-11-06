@@ -15,54 +15,105 @@ export const slaApi = Object.freeze({
     return paginated(await apiClient.get("/sla/policies", { params }));
   },
   async getPolicy(id) {
-    return unwrap(await apiClient.get(`/sla/policies/${encodeURIComponent(id)}`));
+    return unwrap(
+      await apiClient.get(`/sla/policies/${encodeURIComponent(id)}`),
+    );
   },
   async createPolicy(payload) {
     return unwrap(await apiClient.post("/sla/policies", payload));
   },
+
+  async createPolicyConfiguration(payload) {
+    return unwrap(await apiClient.post("/sla/policies/configuration", payload));
+  },
+
+  async updatePolicyConfiguration(id, payload) {
+    return unwrap(
+      await apiClient.put(
+        `/sla/policies/${encodeURIComponent(id)}/configuration`,
+        payload,
+      ),
+    );
+  },
   async updatePolicy(id, payload) {
-    return unwrap(await apiClient.patch(`/sla/policies/${encodeURIComponent(id)}`, payload));
+    return unwrap(
+      await apiClient.patch(`/sla/policies/${encodeURIComponent(id)}`, payload),
+    );
   },
   async activatePolicy(id) {
-    return unwrap(await apiClient.post(`/sla/policies/${encodeURIComponent(id)}/activate`));
+    return unwrap(
+      await apiClient.post(`/sla/policies/${encodeURIComponent(id)}/activate`),
+    );
   },
   async deactivatePolicy(id) {
-    return unwrap(await apiClient.post(`/sla/policies/${encodeURIComponent(id)}/deactivate`));
+    return unwrap(
+      await apiClient.post(
+        `/sla/policies/${encodeURIComponent(id)}/deactivate`,
+      ),
+    );
   },
   async listRules(policyId) {
-    return unwrap(await apiClient.get(`/sla/policies/${encodeURIComponent(policyId)}/rules`)) ?? [];
+    return (
+      unwrap(
+        await apiClient.get(
+          `/sla/policies/${encodeURIComponent(policyId)}/rules`,
+        ),
+      ) ?? []
+    );
   },
   async createRule(policyId, payload) {
-    return unwrap(await apiClient.post(`/sla/policies/${encodeURIComponent(policyId)}/rules`, payload));
+    return unwrap(
+      await apiClient.post(
+        `/sla/policies/${encodeURIComponent(policyId)}/rules`,
+        payload,
+      ),
+    );
   },
   async updateRule(policyId, ruleId, payload) {
-    return unwrap(await apiClient.patch(
-      `/sla/policies/${encodeURIComponent(policyId)}/rules/${encodeURIComponent(ruleId)}`,
-      payload,
-    ));
+    return unwrap(
+      await apiClient.patch(
+        `/sla/policies/${encodeURIComponent(policyId)}/rules/${encodeURIComponent(ruleId)}`,
+        payload,
+      ),
+    );
   },
   async deleteRule(policyId, ruleId) {
-    return unwrap(await apiClient.delete(
-      `/sla/policies/${encodeURIComponent(policyId)}/rules/${encodeURIComponent(ruleId)}`,
-    ));
+    return unwrap(
+      await apiClient.delete(
+        `/sla/policies/${encodeURIComponent(policyId)}/rules/${encodeURIComponent(ruleId)}`,
+      ),
+    );
   },
   async listCalendars(params = {}) {
     return paginated(await apiClient.get("/sla/calendars", { params }));
   },
   async getCalendar(id) {
-    return unwrap(await apiClient.get(`/sla/calendars/${encodeURIComponent(id)}`));
+    return unwrap(
+      await apiClient.get(`/sla/calendars/${encodeURIComponent(id)}`),
+    );
   },
   async createCalendar(payload) {
     return unwrap(await apiClient.post("/sla/calendars", payload));
   },
   async updateCalendar(id, payload) {
-    return unwrap(await apiClient.patch(`/sla/calendars/${encodeURIComponent(id)}`, payload));
+    return unwrap(
+      await apiClient.patch(
+        `/sla/calendars/${encodeURIComponent(id)}`,
+        payload,
+      ),
+    );
   },
   async activateCalendar(id) {
-    return unwrap(await apiClient.post(`/sla/calendars/${encodeURIComponent(id)}/activate`));
+    return unwrap(
+      await apiClient.post(`/sla/calendars/${encodeURIComponent(id)}/activate`),
+    );
   },
   async deactivateCalendar(id) {
-    return unwrap(await apiClient.post(`/sla/calendars/${encodeURIComponent(id)}/deactivate`));
+    return unwrap(
+      await apiClient.post(
+        `/sla/calendars/${encodeURIComponent(id)}/deactivate`,
+      ),
+    );
   },
   async listHolidays(calendarId, year) {
     const response = await apiClient.get(
@@ -72,64 +123,80 @@ export const slaApi = Object.freeze({
     return unwrap(response) ?? [];
   },
   async createHoliday(calendarId, payload) {
-    return unwrap(await apiClient.post(
-      `/sla/calendars/${encodeURIComponent(calendarId)}/holidays`,
-      payload,
-    ));
+    return unwrap(
+      await apiClient.post(
+        `/sla/calendars/${encodeURIComponent(calendarId)}/holidays`,
+        payload,
+      ),
+    );
   },
   async updateHoliday(calendarId, holidayId, payload) {
-    return unwrap(await apiClient.patch(
-      `/sla/calendars/${encodeURIComponent(calendarId)}/holidays/${encodeURIComponent(holidayId)}`,
-      payload,
-    ));
+    return unwrap(
+      await apiClient.patch(
+        `/sla/calendars/${encodeURIComponent(calendarId)}/holidays/${encodeURIComponent(holidayId)}`,
+        payload,
+      ),
+    );
   },
   async deleteHoliday(calendarId, holidayId) {
-    return unwrap(await apiClient.delete(
-      `/sla/calendars/${encodeURIComponent(calendarId)}/holidays/${encodeURIComponent(holidayId)}`,
-    ));
+    return unwrap(
+      await apiClient.delete(
+        `/sla/calendars/${encodeURIComponent(calendarId)}/holidays/${encodeURIComponent(holidayId)}`,
+      ),
+    );
   },
 
   async downloadHolidayTemplate(calendarId, year) {
-  return apiClient.get(
-    `/sla/calendars/${encodeURIComponent(calendarId)}/holidays/template`,
-    {
-      params: { year },
-      responseType: "blob",
-    },
-  );
-},
-
-async importHolidays(calendarId, year, file) {
-  const formData = new FormData();
-
-  formData.append("file", file);
-
-  const response = await apiClient.post(
-    `/sla/calendars/${encodeURIComponent(calendarId)}/holidays/import`,
-    formData,
-    {
-       params: {
-        year,
+    return apiClient.get(
+      `/sla/calendars/${encodeURIComponent(calendarId)}/holidays/template`,
+      {
+        params: { year },
+        responseType: "blob",
       },
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    },
-  );
+    );
+  },
 
-  return unwrap(response);
-},
+  async importHolidays(calendarId, year, file) {
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    const response = await apiClient.post(
+      `/sla/calendars/${encodeURIComponent(calendarId)}/holidays/import`,
+      formData,
+      {
+        params: {
+          year,
+        },
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+
+    return unwrap(response);
+  },
   async preview(payload) {
     return unwrap(await apiClient.post("/sla/preview", payload));
   },
   async getTicketSla(ticketId) {
-    return unwrap(await apiClient.get(`/tickets/${encodeURIComponent(ticketId)}/sla`));
+    return unwrap(
+      await apiClient.get(`/tickets/${encodeURIComponent(ticketId)}/sla`),
+    );
   },
   async getTicketSlaHistory(ticketId) {
-    return unwrap(await apiClient.get(`/tickets/${encodeURIComponent(ticketId)}/sla/history`));
+    return unwrap(
+      await apiClient.get(
+        `/tickets/${encodeURIComponent(ticketId)}/sla/history`,
+      ),
+    );
   },
   async recalculateTicketSla(ticketId) {
-    return unwrap(await apiClient.post(`/tickets/${encodeURIComponent(ticketId)}/sla/recalculate`));
+    return unwrap(
+      await apiClient.post(
+        `/tickets/${encodeURIComponent(ticketId)}/sla/recalculate`,
+      ),
+    );
   },
 });
 

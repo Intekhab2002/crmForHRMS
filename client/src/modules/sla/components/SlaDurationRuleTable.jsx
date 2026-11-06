@@ -19,8 +19,6 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { formatDurationMinutes } from "../utils/slaFormatters";
 
 export default function SlaDurationRuleTable({ values, options, onChange }) {
-  console.log("SlaDurationRuleTable values:", values);
-  console.log("SlaDurationRuleTable options:", options);
   const rows = useMemo(() => {
     const optionMap = new Map(
       (options ?? []).map((option) => {

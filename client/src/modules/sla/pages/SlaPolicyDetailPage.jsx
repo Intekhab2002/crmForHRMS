@@ -131,50 +131,31 @@ export default function SlaPolicyDetailPage() {
   );
 
   const save = async (values) => {
-    await slaApi.updatePolicy(policyId, {
+    await slaApi.updatePolicyConfiguration(policyId, {
       code: values.code,
       name: values.name,
       description: values.description || null,
+
       triggerFieldKey: values.triggerFieldKey,
       triggerValueKey: values.triggerValueKey,
       durationFieldKey: values.durationFieldKey,
+
       calendarId: values.calendarId,
       priority: Number(values.priority),
-      effectiveFrom: new Date(values.effectiveFrom).toISOString(),
-      effectiveTo: values.effectiveTo
-        ? new Date(values.effectiveTo).toISOString()
-        : null,
-      isActive: values.isActive,
-    });
-    const existing = new Map(rules.map((rule) => [rule.id, rule]));
-    // console.table(
-    //   (values.rules ?? []).map((rule) => ({
-    //     id: rule.id,
-    //     fieldValueKey: rule.fieldValueKey,
-    //     resolutionMinutes: rule.resolutionMinutes,
-    //     isEnabled: rule.isEnabled,
-    //   })),
-    // );
 
-    for (const rule of values.rules ?? []) {
-      if (rule.id) {
-        await slaApi.updateRule(policyId, rule.id, {
-          fieldValueKey: rule.fieldValueKey,
-          resolutionMinutes: rule.resolutionMinutes,
-          isEnabled: rule.isEnabled,
-        });
-        existing.delete(rule.id);
-      } else {
-        await slaApi.createRule(policyId, {
-          fieldValueKey: rule.fieldValueKey,
-          resolutionMinutes: rule.resolutionMinutes,
-          isEnabled: rule.isEnabled,
-        });
-      }
-    }
-    for (const stale of existing.values()) {
-      await slaApi.deleteRule(policyId, stale.id);
-    }
+      effectiveFrom: values.effectiveFrom,
+      effectiveTo: values.effectiveTo || null,
+
+      isActive: values.isActive,
+
+      rules: (values.rules ?? []).map((rule) => ({
+        ...(rule.id ? { id: rule.id } : {}),
+        fieldValueKey: rule.fieldValueKey,
+        resolutionMinutes: rule.resolutionMinutes,
+        isEnabled: rule.isEnabled,
+      })),
+    });
+
     load();
   };
 

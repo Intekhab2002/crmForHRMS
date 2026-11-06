@@ -61,6 +61,35 @@ async function updatePolicy(req, res, next) {
     next(e);
   }
 }
+
+async function createPolicyConfiguration(req, res, next) {
+  try {
+    return ApiResponse.created(
+      res,
+      await service.policy.createConfiguration(req.body, req.auth.userId),
+      "SLA policy configuration created successfully.",
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updatePolicyConfiguration(req, res, next) {
+  try {
+    return ApiResponse.updated(
+      res,
+      await service.policy.updateConfiguration(
+        req.params.id,
+        req.body,
+        req.auth.userId,
+      ),
+      "SLA policy configuration updated successfully.",
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function activatePolicy(req, res, next) {
   try {
     return ApiResponse.updated(
@@ -340,6 +369,8 @@ export default Object.freeze({
   policy,
   createPolicy,
   updatePolicy,
+  createPolicyConfiguration,
+  updatePolicyConfiguration,
   activatePolicy,
   deactivatePolicy,
   rules,

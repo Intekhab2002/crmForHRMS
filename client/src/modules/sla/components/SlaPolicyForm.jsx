@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import {
+  Alert,
   Autocomplete,
   Box,
   Button,
@@ -15,7 +16,7 @@ import {
   Typography,
 } from "@mui/material";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
-import { apiClient } from "../../../services/api/apiClient";
+import useSlaFieldOptions from "../hooks/useSlaFieldOptions";
 import slaApi from "../services/sla.api";
 import { SLA_FIELDS } from "../config/sla.config";
 import SlaDurationRuleTable from "./SlaDurationRuleTable";
@@ -43,9 +44,29 @@ const toIso = (value) => {
     : date.toISOString();
 };
 
-function PolicyFormBody({ formik, calendars }) {
+function PolicyFormBody({ formik, calendars, initializeDefaultRules }) {
   const { values, errors, touched, handleChange, handleBlur, setFieldValue } =
     formik;
+
+  const selectedTrigger = SLA_FIELDS.find(
+    (item) => item.key === values.triggerFieldKey,
+  );
+  const selectedDuration = SLA_FIELDS.find(
+    (item) => item.key === values.durationFieldKey,
+  );
+
+  const {
+    options: triggerOptions,
+    loading: triggerLoading,
+    error: triggerError,
+  } = useSlaFieldOptions(selectedTrigger);
+
+  const {
+    options: durationOptions,
+    loading: durationLoading,
+    error: durationError,
+  } = useSlaFieldOptions(selectedDuration);
+
   const [triggerOptionsState, setTriggerOptionsState] = useState({
     fieldKey: null,
     options: [],
@@ -56,126 +77,114 @@ function PolicyFormBody({ formik, calendars }) {
     options: [],
   });
 
-  const triggerOptions =
-    triggerOptionsState.fieldKey === selectedTrigger?.key
-      ? triggerOptionsState.options
-      : [];
-
-  const durationOptions =
-    durationOptionsState.fieldKey === selectedDuration?.key
-      ? durationOptionsState.options
-      : [];
-
-  const selectedTrigger = SLA_FIELDS.find(
-    (item) => item.key === values.triggerFieldKey,
-  );
-  const selectedDuration = SLA_FIELDS.find(
-    (item) => item.key === values.durationFieldKey,
-  );
+  // Track initialization by duration field.
+  // This prevents removed rules from being recreated automatically.
+  const initializedDurationFieldRef = useRef(null);
 
   useEffect(() => {
-    if (!selectedTrigger) return undefined;
-
-    let active = true;
-
-    const fetchTriggerOptions = async () => {
-      try {
-        const response = await apiClient.get(selectedTrigger.endpoint);
-
-        if (!active) return;
-
-        const rows = response.data?.data ?? response.data ?? [];
-
-        setTriggerOptionsState({
-          fieldKey: selectedTrigger.key,
-          options: rows.map((item) => ({
-            value: item.code ?? item.id,
-            label: item.name ?? item.code,
-          })),
-        });
-      } catch {
-        if (!active) return;
-
-        setTriggerOptionsState({
-          fieldKey: selectedTrigger.key,
-          options: [],
-        });
-      }
-    };
-
-    void fetchTriggerOptions();
-
-    return () => {
-      active = false;
-    };
-  }, [selectedTrigger]);
-
-  useEffect(() => {
-    if (!selectedDuration) return undefined;
-
-    // Avoid refetching when the rules change after options have loaded.
-    if (durationOptionsState.fieldKey === selectedDuration.key) {
-      return undefined;
+    if (
+      !initializeDefaultRules ||
+      !selectedDuration ||
+      durationLoading ||
+      durationError ||
+      durationOptions.length === 0
+    ) {
+      return;
     }
 
-    let active = true;
+    if (initializedDurationFieldRef.current === selectedDuration.key) {
+      return;
+    }
 
-    const fetchDurationOptions = async () => {
-      try {
-        const response = await apiClient.get(selectedDuration.endpoint);
+    initializedDurationFieldRef.current = selectedDuration.key;
 
-        if (!active) return;
-
-        const rows = response.data?.data ?? response.data ?? [];
-
-        const options = rows
-          .map((item) => ({
-            value: String(item.code ?? item.id ?? "").trim(),
-            label: item.name ?? item.code ?? String(item.id ?? ""),
-          }))
-          .filter((option) => option.value);
-
-        setDurationOptionsState({
-          fieldKey: selectedDuration.key,
-          options,
-        });
-
-        /*
-         * Preserve existing rules in edit mode.
-         * Generate default rules only when the selected duration
-         * field has no configured rules.
-         */
-        if ((values.rules ?? []).length === 0) {
-          setFieldValue(
-            "rules",
-            options.map((option) => ({
-              fieldValueKey: option.value,
-              resolutionMinutes: null,
-              isEnabled: true,
-            })),
-          );
-        }
-      } catch {
-        if (!active) return;
-
-        setDurationOptionsState({
-          fieldKey: selectedDuration.key,
-          options: [],
-        });
-      }
-    };
-
-    void fetchDurationOptions();
-
-    return () => {
-      active = false;
-    };
+    if ((values.rules ?? []).length === 0) {
+      setFieldValue(
+        "rules",
+        durationOptions.map((option) => ({
+          fieldValueKey: option.value,
+          resolutionMinutes: null,
+          isEnabled: true,
+        })),
+        false,
+      );
+    }
   }, [
+    initializeDefaultRules,
     selectedDuration,
-    durationOptionsState.fieldKey,
+    durationLoading,
+    durationError,
+    durationOptions,
     values.rules,
     setFieldValue,
   ]);
+
+  // useEffect(() => {
+  //   if (!selectedDuration) return undefined;
+
+  //   // Avoid refetching when the rules change after options have loaded.
+  //   if (durationOptionsState.fieldKey === selectedDuration.key) {
+  //     return undefined;
+  //   }
+
+  //   let active = true;
+
+  //   const fetchDurationOptions = async () => {
+  //     try {
+  //       const response = await apiClient.get(selectedDuration.endpoint);
+
+  //       if (!active) return;
+
+  //       const rows = response.data?.data ?? response.data ?? [];
+
+  //       const options = rows
+  //         .map((item) => ({
+  //           value: String(item.code ?? item.id ?? "").trim(),
+  //           label: item.name ?? item.code ?? String(item.id ?? ""),
+  //         }))
+  //         .filter((option) => option.value);
+
+  //       setDurationOptionsState({
+  //         fieldKey: selectedDuration.key,
+  //         options,
+  //       });
+
+  //       /*
+  //        * Preserve existing rules in edit mode.
+  //        * Generate default rules only when the selected duration
+  //        * field has no configured rules.
+  //        */
+  //       if ((values.rules ?? []).length === 0) {
+  //         setFieldValue(
+  //           "rules",
+  //           options.map((option) => ({
+  //             fieldValueKey: option.value,
+  //             resolutionMinutes: null,
+  //             isEnabled: true,
+  //           })),
+  //         );
+  //       }
+  //     } catch {
+  //       if (!active) return;
+
+  //       setDurationOptionsState({
+  //         fieldKey: selectedDuration.key,
+  //         options: [],
+  //       });
+  //     }
+  //   };
+
+  //   void fetchDurationOptions();
+
+  //   return () => {
+  //     active = false;
+  //   };
+  // }, [
+  //   selectedDuration,
+  //   durationOptionsState.fieldKey,
+  //   values.rules,
+  //   setFieldValue,
+  // ]);
 
   return (
     <Stack spacing={3}>
@@ -261,6 +270,10 @@ function PolicyFormBody({ formik, calendars }) {
             <Grid size={{ xs: 12, md: 4 }}>
               <Autocomplete
                 options={triggerOptions}
+                loading={triggerLoading}
+                disabled={
+                  !selectedTrigger || triggerLoading || Boolean(triggerError)
+                }
                 value={
                   triggerOptions.find(
                     (item) => item.value === values.triggerValueKey,
@@ -275,10 +288,14 @@ function PolicyFormBody({ formik, calendars }) {
                     {...params}
                     label="Trigger value"
                     error={
-                      touched.triggerValueKey && Boolean(errors.triggerValueKey)
+                      Boolean(triggerError) ||
+                      (touched.triggerValueKey &&
+                        Boolean(errors.triggerValueKey))
                     }
                     helperText={
-                      touched.triggerValueKey && errors.triggerValueKey
+                      triggerError ||
+                      (touched.triggerValueKey && errors.triggerValueKey) ||
+                      (triggerLoading ? "Loading trigger values..." : "")
                     }
                   />
                 )}
@@ -289,11 +306,7 @@ function PolicyFormBody({ formik, calendars }) {
                 options={SLA_FIELDS}
                 value={selectedDuration ?? null}
                 onChange={(_, option) => {
-                  // Remove rules belonging to the previous duration field immediately.
                   setFieldValue("rules", []);
-
-                  // The duration API effect will populate rules from the newly
-                  // selected field's API response.
                   setFieldValue("durationFieldKey", option?.key ?? "");
                 }}
                 getOptionLabel={(option) => option.label}
@@ -322,6 +335,13 @@ function PolicyFormBody({ formik, calendars }) {
               not SLA-tracked.
             </Typography>
           </Box>
+          {durationLoading ? (
+            <Alert severity="info">Loading available duration values...</Alert>
+          ) : null}
+
+          {durationError ? (
+            <Alert severity="error">{durationError}</Alert>
+          ) : null}
           <SlaDurationRuleTable
             values={values.rules}
             options={durationOptions}
@@ -483,7 +503,11 @@ export default function SlaPolicyForm({
                 {formik.status}
               </Typography>
             ) : null}
-            <PolicyFormBody formik={formik} calendars={calendars} />
+            <PolicyFormBody
+              formik={formik}
+              calendars={calendars}
+              initializeDefaultRules={initialValues == null}
+            />
             <Divider />
             <Stack direction="row" justifyContent="flex-end">
               <Button

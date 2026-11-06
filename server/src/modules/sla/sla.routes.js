@@ -63,6 +63,24 @@ router.patch(
   body(v.updatePolicySchema),
   controller.updatePolicy,
 );
+// Create policy and duration rules atomically.
+router.post(
+  "/policies/configuration",
+  authenticate,
+  requirePermission(RBAC_PERMISSIONS.SLA_CREATE),
+  body(v.policyConfigurationSchema),
+  controller.createPolicyConfiguration,
+);
+
+// Update policy and duration rules atomically.
+router.put(
+  "/policies/:id/configuration",
+  authenticate,
+  requirePermission(RBAC_PERMISSIONS.SLA_UPDATE),
+  params(v.uuidParamSchema),
+  body(v.policyConfigurationSchema),
+  controller.updatePolicyConfiguration,
+);
 router.post(
   "/policies/:id/activate",
   authenticate,
