@@ -47,6 +47,7 @@ import TicketQuickUpdate from "../components/TicketQuickUpdate";
 import TicketCreateDialog from "../components/TicketCreateDialog";
 import { useTicketDetailsLayout } from "../hooks/useTicketDetailsLayout";
 import { useNotification } from "../../../components/feedback";
+import { getTicketErrorMessage } from "../utils/ticketError.utils";
 
 const DETAIL_FIELDS = TICKET_FIELD_CONFIG.filter((field) => field.form?.detail)
   .map((field) => field.key)
@@ -229,7 +230,6 @@ export default function TicketLifecyclePage() {
   });
   const [createOpen, setCreateOpen] = useState(false);
   const [createSubmitting, setCreateSubmitting] = useState(false);
-  const [createError, setCreateError] = useState("");
 
   const refreshTicket = useCallback(
     async ({ showRefreshing = true } = {}) => {
@@ -445,24 +445,25 @@ export default function TicketLifecyclePage() {
 
   const handleUpdate = async (values) => {
     setSaving(true);
-    setError("");
 
     try {
-      await ticketService.updateTicket(ticketId, values);
-
-      await refreshTicket({
-        showRefreshing: false,
-      });
+      try {
+        await ticketService.updateTicket(ticketId, values);
+      } catch (requestError) {
+        notifyError(
+          getTicketErrorMessage(requestError, "Unable to update ticket."),
+        );
+        return;
+      }
 
       setEditOpen(false);
-
       notifySuccess("Ticket updated successfully.");
-    } catch (requestError) {
-      setError(
-        requestError?.response?.data?.message ??
-          requestError?.message ??
-          "Unable to update ticket.",
-      );
+
+      try {
+        await refreshTicket({ showRefreshing: false });
+      } catch {
+        // refreshTicket already updates the page-level error state.
+      }
     } finally {
       setSaving(false);
     }
@@ -518,85 +519,93 @@ export default function TicketLifecyclePage() {
     if (Object.keys(changedValues).length === 0) return;
 
     setSaving(true);
-    setError("");
 
     try {
-      await ticketService.updateTicket(ticketId, changedValues);
-
-      const refreshedTicket = await refreshTicket({
-        showRefreshing: false,
-      });
-
-      if (!refreshedTicket) {
-        throw new Error(
-          "The update was submitted, but the ticket could not be refreshed.",
+      try {
+        await ticketService.updateTicket(ticketId, changedValues);
+      } catch (requestError) {
+        notifyError(
+          getTicketErrorMessage(requestError, "Unable to update ticket."),
         );
+        return;
       }
 
       notifySuccess("Ticket updated successfully.");
-    } catch (requestError) {
-      setError(
-        requestError?.response?.data?.message ??
-          requestError?.message ??
-          "Unable to update ticket.",
-      );
+
+      try {
+        await refreshTicket({ showRefreshing: false });
+      } catch {
+        // refreshTicket already updates the page-level error state.
+      }
     } finally {
       setSaving(false);
     }
   };
+
   const handleCreateTicket = async (values) => {
     setCreateSubmitting(true);
-    setCreateError("");
 
     try {
-      const createdTicket = await ticketService.createTicket(values);
-      if (!createdTicket?.id) {
-        throw new Error(
-          "The ticket was created, but its identifier was not returned.",
+      let createdTicket;
+
+      try {
+        createdTicket = await ticketService.createTicket(values);
+
+        if (!createdTicket?.id) {
+          throw new Error(
+            "The ticket was created, but its identifier was not returned.",
+          );
+        }
+      } catch (requestError) {
+        notifyError(
+          getTicketErrorMessage(requestError, "Unable to create ticket."),
         );
+        return;
       }
 
       setCreateOpen(false);
       notifySuccess("Ticket created successfully.");
-      navigate("/tickets/" + createdTicket.id);
-    } catch (requestError) {
-      const message =
-        requestError?.response?.data?.message ??
-        requestError?.message ??
-        "Unable to create ticket.";
-      setCreateError(message);
-      notifyError(message);
+
+      navigate(`/tickets/${createdTicket.id}`);
     } finally {
       setCreateSubmitting(false);
     }
   };
 
   const handleComment = async (comment) => {
-    await ticketService.addComment(ticketId, comment);
+    try {
+      await ticketService.addComment(ticketId, comment);
+    } catch (requestError) {
+      notifyError(
+        getTicketErrorMessage(requestError, "Unable to add comment."),
+      );
+
+      return false;
+    }
+
+    notifySuccess(COMMENT_CONFIG.successMessage);
 
     await Promise.all([loadComments(), loadLifecycle()]);
 
-    notifySuccess(COMMENT_CONFIG.successMessage);
+    return true;
   };
 
   const handleUpdateComment = async (commentId, comment) => {
-    setError("");
-
     try {
       await ticketService.updateComment(ticketId, commentId, comment);
-
-      await Promise.all([loadComments(), loadLifecycle()]);
-
-      notifySuccess("Comment updated successfully.");
     } catch (requestError) {
-      setError(
-        requestError?.response?.data?.message ??
-          requestError?.message ??
-          "Unable to update comment.",
+      notifyError(
+        getTicketErrorMessage(requestError, "Unable to update comment."),
       );
 
-      throw requestError;
+      return false;
     }
+
+    notifySuccess("Comment updated successfully.");
+
+    await Promise.all([loadComments(), loadLifecycle()]);
+
+    return true;
   };
 
   if (loading) {
@@ -667,7 +676,6 @@ export default function TicketLifecyclePage() {
                   size="small"
                   aria-label="Create new ticket"
                   onClick={() => {
-                    setCreateError("");
                     setCreateOpen(true);
                   }}
                 >
@@ -890,7 +898,6 @@ export default function TicketLifecyclePage() {
         }}
         onSubmit={handleCreateTicket}
         submitting={createSubmitting}
-        error={createError}
       />
     </Stack>
   );

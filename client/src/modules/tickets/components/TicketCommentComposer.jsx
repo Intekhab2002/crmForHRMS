@@ -9,19 +9,8 @@ import {
 } from "@mui/material";
 import AddCommentOutlinedIcon from "@mui/icons-material/AddCommentOutlined";
 import CanAccess from "../../../components/rbac/CanAccess";
-import { useAuth } from "../../../context/useAuth";
 
-export default function TicketCommentComposer({
-  config,
-  onSubmit,
-}) {
- const { hasPermission } = useAuth();
-
-console.log("TicketCommentComposer config:", config);
-console.log(
-  "ticket:comment permission:",
-  hasPermission("ticket:comment"),
-);
+export default function TicketCommentComposer({ config, onSubmit }) {
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,18 +26,19 @@ console.log(
     setIsSubmitting(true);
 
     try {
-      await onSubmit(trimmedComment);
-      setComment("");
+      const submitted = await onSubmit(trimmedComment);
+
+      // Preserve the draft when the parent reports a failed submission.
+      if (submitted !== false) {
+        setComment("");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleKeyDown = (event) => {
-    if (
-      event.key === "Enter" &&
-      (event.ctrlKey || event.metaKey)
-    ) {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
 
       if (trimmedComment && !isSubmitting) {
@@ -66,11 +56,7 @@ console.log(
           borderRadius: 2,
         }}
       >
-        <Stack
-          component="form"
-          onSubmit={handleSubmit}
-          spacing={0}
-        >
+        <Stack component="form" onSubmit={handleSubmit} spacing={0}>
           {/* Header */}
           <Stack
             direction="row"
@@ -84,23 +70,14 @@ console.log(
               backgroundColor: "background.default",
             }}
           >
-            <AddCommentOutlinedIcon
-              color="primary"
-              fontSize="small"
-            />
+            <AddCommentOutlinedIcon color="primary" fontSize="small" />
 
             <Stack spacing={0.25}>
-              <Typography
-                variant="subtitle1"
-                fontWeight={700}
-              >
+              <Typography variant="subtitle1" fontWeight={700}>
                 {config.title}
               </Typography>
 
-              <Typography
-                variant="caption"
-                color="text.secondary"
-              >
+              <Typography variant="caption" color="text.secondary">
                 Add an update or note to this ticket.
               </Typography>
             </Stack>
@@ -144,11 +121,7 @@ console.log(
                   <Typography
                     component="span"
                     variant="caption"
-                    color={
-                      comment.length >= 5000
-                        ? "error"
-                        : "text.secondary"
-                    }
+                    color={comment.length >= 5000 ? "error" : "text.secondary"}
                   >
                     {comment.length}/5000
                   </Typography>
@@ -179,10 +152,7 @@ console.log(
                 variant="contained"
                 startIcon={
                   isSubmitting ? (
-                    <CircularProgress
-                      size={18}
-                      color="inherit"
-                    />
+                    <CircularProgress size={18} color="inherit" />
                   ) : (
                     <AddCommentOutlinedIcon />
                   )

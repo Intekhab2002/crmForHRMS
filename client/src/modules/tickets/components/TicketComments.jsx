@@ -118,7 +118,12 @@ export default function TicketComments({
     setSavingCommentId(editingCommentId);
 
     try {
-      await onUpdateComment(editingCommentId, trimmedComment);
+      const updated = await onUpdateComment(editingCommentId, trimmedComment);
+
+      // Keep the editor and draft open if the update failed.
+      if (updated === false) {
+        return;
+      }
 
       setEditingCommentId(null);
       setEditValue("");

@@ -67,16 +67,6 @@ function PolicyFormBody({ formik, calendars, initializeDefaultRules }) {
     error: durationError,
   } = useSlaFieldOptions(selectedDuration);
 
-  const [triggerOptionsState, setTriggerOptionsState] = useState({
-    fieldKey: null,
-    options: [],
-  });
-
-  const [durationOptionsState, setDurationOptionsState] = useState({
-    fieldKey: null,
-    options: [],
-  });
-
   // Track initialization by duration field.
   // This prevents removed rules from being recreated automatically.
   const initializedDurationFieldRef = useRef(null);
@@ -118,73 +108,6 @@ function PolicyFormBody({ formik, calendars, initializeDefaultRules }) {
     values.rules,
     setFieldValue,
   ]);
-
-  // useEffect(() => {
-  //   if (!selectedDuration) return undefined;
-
-  //   // Avoid refetching when the rules change after options have loaded.
-  //   if (durationOptionsState.fieldKey === selectedDuration.key) {
-  //     return undefined;
-  //   }
-
-  //   let active = true;
-
-  //   const fetchDurationOptions = async () => {
-  //     try {
-  //       const response = await apiClient.get(selectedDuration.endpoint);
-
-  //       if (!active) return;
-
-  //       const rows = response.data?.data ?? response.data ?? [];
-
-  //       const options = rows
-  //         .map((item) => ({
-  //           value: String(item.code ?? item.id ?? "").trim(),
-  //           label: item.name ?? item.code ?? String(item.id ?? ""),
-  //         }))
-  //         .filter((option) => option.value);
-
-  //       setDurationOptionsState({
-  //         fieldKey: selectedDuration.key,
-  //         options,
-  //       });
-
-  //       /*
-  //        * Preserve existing rules in edit mode.
-  //        * Generate default rules only when the selected duration
-  //        * field has no configured rules.
-  //        */
-  //       if ((values.rules ?? []).length === 0) {
-  //         setFieldValue(
-  //           "rules",
-  //           options.map((option) => ({
-  //             fieldValueKey: option.value,
-  //             resolutionMinutes: null,
-  //             isEnabled: true,
-  //           })),
-  //         );
-  //       }
-  //     } catch {
-  //       if (!active) return;
-
-  //       setDurationOptionsState({
-  //         fieldKey: selectedDuration.key,
-  //         options: [],
-  //       });
-  //     }
-  //   };
-
-  //   void fetchDurationOptions();
-
-  //   return () => {
-  //     active = false;
-  //   };
-  // }, [
-  //   selectedDuration,
-  //   durationOptionsState.fieldKey,
-  //   values.rules,
-  //   setFieldValue,
-  // ]);
 
   return (
     <Stack spacing={3}>
@@ -487,11 +410,7 @@ export default function SlaPolicyForm({
             helpers,
           );
         } catch (error) {
-          helpers.setStatus(
-            error.response?.data?.message ??
-              error.message ??
-              "Unable to save SLA policy.",
-          );
+          throw error;
         }
       }}
     >

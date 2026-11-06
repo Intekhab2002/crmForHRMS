@@ -21,12 +21,14 @@ import SlaTestDrawer from "../components/SlaTestDrawer";
 import slaApi from "../services/sla.api";
 import { SLA_PERMISSIONS, SLA_ROUTES } from "../config/sla.config";
 import { formatDurationMinutes } from "../utils/slaFormatters";
+import { useNotification } from "../../../components/feedback";
 
 const EMPTY_RULES = Object.freeze([]);
 
 export default function SlaPolicyDetailPage() {
   const { policyId } = useParams();
   const navigate = useNavigate();
+  const { success, error: notifyError } = useNotification();
   const [requestVersion, setRequestVersion] = useState(0);
 
   const [policyRequest, setPolicyRequest] = useState({
@@ -131,32 +133,39 @@ export default function SlaPolicyDetailPage() {
   );
 
   const save = async (values) => {
-    await slaApi.updatePolicyConfiguration(policyId, {
-      code: values.code,
-      name: values.name,
-      description: values.description || null,
+    try {
+      await slaApi.updatePolicyConfiguration(policyId, {
+        code: values.code,
+        name: values.name,
+        description: values.description || null,
+        triggerFieldKey: values.triggerFieldKey,
+        triggerValueKey: values.triggerValueKey,
+        durationFieldKey: values.durationFieldKey,
+        calendarId: values.calendarId,
+        priority: Number(values.priority),
+        effectiveFrom: values.effectiveFrom,
+        effectiveTo: values.effectiveTo || null,
+        isActive: values.isActive,
+        rules: (values.rules ?? []).map((rule) => ({
+          ...(rule.id ? { id: rule.id } : {}),
+          fieldValueKey: rule.fieldValueKey,
+          resolutionMinutes: rule.resolutionMinutes,
+          isEnabled: rule.isEnabled,
+        })),
+      });
 
-      triggerFieldKey: values.triggerFieldKey,
-      triggerValueKey: values.triggerValueKey,
-      durationFieldKey: values.durationFieldKey,
+      success("SLA policy updated successfully.");
 
-      calendarId: values.calendarId,
-      priority: Number(values.priority),
+      load();
+    } catch (requestError) {
+      notifyError(
+        requestError.response?.data?.message ??
+          requestError.message ??
+          "Unable to update SLA policy.",
+      );
 
-      effectiveFrom: values.effectiveFrom,
-      effectiveTo: values.effectiveTo || null,
-
-      isActive: values.isActive,
-
-      rules: (values.rules ?? []).map((rule) => ({
-        ...(rule.id ? { id: rule.id } : {}),
-        fieldValueKey: rule.fieldValueKey,
-        resolutionMinutes: rule.resolutionMinutes,
-        isEnabled: rule.isEnabled,
-      })),
-    });
-
-    load();
+      throw requestError;
+    }
   };
 
   if (loading) return <Typography>Loading SLA policy…</Typography>;
@@ -197,9 +206,23 @@ export default function SlaPolicyDetailPage() {
                   )
                 }
                 onClick={async () => {
-                  if (policy.is_active) await slaApi.deactivatePolicy(policyId);
-                  else await slaApi.activatePolicy(policyId);
-                  load();
+                  try {
+                    if (policy.is_active) {
+                      await slaApi.deactivatePolicy(policyId);
+                      success("SLA policy deactivated successfully.");
+                    } else {
+                      await slaApi.activatePolicy(policyId);
+                      success("SLA policy activated successfully.");
+                    }
+
+                    load();
+                  } catch (requestError) {
+                    notifyError(
+                      requestError.response?.data?.message ??
+                        requestError.message ??
+                        "Unable to change SLA policy status.",
+                    );
+                  }
                 }}
               >
                 {policy.is_active ? "Deactivate" : "Activate"}

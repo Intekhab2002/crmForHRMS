@@ -4,9 +4,11 @@ import PageHeader from "../../../components/page/PageHeader";
 import SlaPolicyForm from "../components/SlaPolicyForm";
 import slaApi from "../services/sla.api";
 import { SLA_ROUTES } from "../config/sla.config";
+import { useNotification } from "../../../components/feedback";
 
 export default function SlaPolicyCreatePage() {
   const navigate = useNavigate();
+  const { success } = useNotification();
 
   const submit = async (values) => {
     const policy = await slaApi.createPolicyConfiguration({
@@ -14,6 +16,8 @@ export default function SlaPolicyCreatePage() {
       priority: Number(values.priority),
       rules: values.rules ?? [],
     });
+
+    success("SLA policy created successfully.");
 
     navigate(SLA_ROUTES.policyDetail(policy.id), { replace: true });
   };
