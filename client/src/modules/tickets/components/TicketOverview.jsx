@@ -93,7 +93,7 @@ function getFieldValue(field, ticket, fallback) {
 }
 
 function getDisplayField(key, fieldMap) {
-  return fieldMap.get[key] ?? TICKET_DETAIL_SYSTEM_FIELDS[key] ?? null;
+  return fieldMap.get(key) ?? TICKET_DETAIL_SYSTEM_FIELDS[key] ?? null;
 }
 
 function DetailLabel({ children }) {
