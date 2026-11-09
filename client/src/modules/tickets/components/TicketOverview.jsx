@@ -154,69 +154,109 @@ function DetailRow({ field, ticket, fallback }) {
   );
 }
 
-function DetailTable({ fields, ticket, fallback }) {
+function DetailTable({ groups, ticket, fallback }) {
   const rows = [];
 
-  let normalFields = [];
+  for (const group of groups) {
+    // Section heading
+    rows.push(
+      <TableRow
+        key={`group-${group.key}`}
+        sx={{
+          backgroundColor: "action.hover",
+          "& td": {
+            borderBottom: "1px solid",
+            borderColor: "rgba(0, 0, 0, 0.07)",
+            py: 1.25,
+          },
+        }}
+      >
+        <TableCell colSpan={4}>
+          <Typography variant="subtitle2" fontWeight={700}>
+            {group.title}
+          </Typography>
+        </TableCell>
+      </TableRow>,
+    );
 
-  const flushNormalFields = () => {
-    for (let index = 0; index < normalFields.length; index += 2) {
-      const first = normalFields[index];
-      const second = normalFields[index + 1];
+    let normalFields = [];
 
-      rows.push(
-        <TableRow key={first.key}>
-          <DetailLabel>{first.label}</DetailLabel>
-          <DetailValue>{getFieldValue(first, ticket, fallback)}</DetailValue>
+    const flushNormalFields = () => {
+      for (let index = 0; index < normalFields.length; index += 2) {
+        const first = normalFields[index];
+        const second = normalFields[index + 1];
 
-          {second ? (
-            <>
-              <DetailLabel>{second.label}</DetailLabel>
-              <DetailValue>
-                {getFieldValue(second, ticket, fallback)}
-              </DetailValue>
-            </>
-          ) : (
-            <TableCell colSpan={2} />
-          )}
-        </TableRow>,
-      );
+        rows.push(
+          <TableRow key={`${group.key}-${first.key}`}>
+            <DetailLabel>{first.label}</DetailLabel>
+
+            <DetailValue>{getFieldValue(first, ticket, fallback)}</DetailValue>
+
+            {second ? (
+              <>
+                <DetailLabel>{second.label}</DetailLabel>
+
+                <DetailValue>
+                  {getFieldValue(second, ticket, fallback)}
+                </DetailValue>
+              </>
+            ) : (
+              <TableCell colSpan={2} />
+            )}
+          </TableRow>,
+        );
+      }
+
+      normalFields = [];
+    };
+
+    for (const field of group.fields) {
+      if (TICKET_DETAIL_FULL_WIDTH_FIELDS.includes(field.key)) {
+        flushNormalFields();
+
+        rows.push(
+          <DetailRow
+            key={`${group.key}-${field.key}`}
+            field={field}
+            ticket={ticket}
+            fallback={fallback}
+          />,
+        );
+      } else {
+        normalFields.push(field);
+      }
     }
 
-    normalFields = [];
-  };
-
-  for (const field of fields) {
-    if (TICKET_DETAIL_FULL_WIDTH_FIELDS.includes(field.key)) {
-      flushNormalFields();
-
-      rows.push(
-        <DetailRow
-          key={field.key}
-          field={field}
-          ticket={ticket}
-          fallback={fallback}
-        />,
-      );
-    } else {
-      normalFields.push(field);
-    }
+    flushNormalFields();
   }
 
-  flushNormalFields();
-
   return (
-    <TableContainer>
+    <TableContainer
+      sx={{
+        width: "100%",
+        overflowX: "auto",
+        border: "1px solid",
+        borderColor: "rgba(0, 0, 0, 0.07)",
+        borderRadius: 2,
+      }}
+    >
       <Table
         size="small"
-        aria-label="Ticket information"
+        aria-label="Ticket details"
         sx={{
-          tableLayout: "fixed",
           width: "100%",
+          tableLayout: "fixed",
+          borderCollapse: "collapse",
+
           "& td, & th": {
-            borderColor: "divider",
-            px: 1.5,
-            py: 1.25,
+            borderBottom: "1px solid",
+            borderColor: "rgba(0, 0, 0, 0.06)",
+            px: 2,
+            py: 1.5,
+          },
+
+          "& tr:last-child td, & tr:last-child th": {
+            borderBottom: 0,
           },
         }}
       >
@@ -276,36 +316,9 @@ export default function TicketOverview({
       sx={{
         width: "100%",
         minWidth: 0,
-        display: "flex",
-        flexDirection: "column",
-        gap: 2,
       }}
     >
-      {groups.map((group) => (
-        <Paper
-          key={group.key}
-          variant="outlined"
-          sx={{
-            minWidth: 0,
-            overflow: "hidden",
-            borderRadius: 2,
-          }}
-        >
-          <Box sx={{ px: 2, py: 1.5 }}>
-            <Typography variant="subtitle1" fontWeight={700}>
-              {group.title}
-            </Typography>
-          </Box>
-
-          <Divider />
-
-          <DetailTable
-            fields={group.fields}
-            ticket={ticket}
-            fallback={fallback}
-          />
-        </Paper>
-      ))}
+      <DetailTable groups={groups} ticket={ticket} fallback={fallback} />
     </Box>
   );
 }
