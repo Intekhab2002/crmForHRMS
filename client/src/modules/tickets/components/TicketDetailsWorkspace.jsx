@@ -212,7 +212,7 @@ export default function TicketDetailsWorkspace({
   const bothUpperPanelsCollapsed =
     detailsMode === "collapsed" && lifecycleMode === "collapsed";
 
-  let gridTemplateColumns = "minmax(0, 1fr) minmax(0, 1fr)";
+  let gridTemplateColumns = "minmax(0, 1.25fr) minmax(0, 1fr)";
 
   if (bothUpperPanelsCollapsed) {
     gridTemplateColumns = "4rem 4rem minmax(0, 1fr)";

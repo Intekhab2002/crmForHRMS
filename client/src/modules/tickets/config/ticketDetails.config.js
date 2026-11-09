@@ -1,25 +1,13 @@
-
 export const TICKET_DETAIL_GROUPS = Object.freeze([
   {
     key: "overview",
     title: "Ticket Overview",
-    fields: [
-      "ticketNumber",
-      "subject",
-      "status",
-      "priority",
-      "created_by",
-    ],
+    fields: ["ticketNumber", "subject", "status", "priority", "created_by"],
   },
   {
     key: "contact",
     title: "Contact Information",
-    fields: [
-      "name",
-      "mobile_phone",
-      "email_id",
-      "district",
-    ],
+    fields: ["name", "mobile_phone", "email_id", "district"],
   },
   {
     key: "classification",
@@ -36,11 +24,7 @@ export const TICKET_DETAIL_GROUPS = Object.freeze([
   {
     key: "assignment",
     title: "Assignment & Organization",
-    fields: [
-      "organization",
-      "department",
-      "assigned_to",
-    ],
+    fields: ["organization", "department", "assigned_to"],
   },
   {
     key: "employee",
@@ -57,21 +41,12 @@ export const TICKET_DETAIL_GROUPS = Object.freeze([
   {
     key: "description",
     title: "Description & Resolution",
-    fields: [
-      "description",
-      "initial_diagnosis",
-      "solution",
-      "resolution",
-    ],
+    fields: ["description", "initial_diagnosis", "solution", "resolution"],
   },
   {
     key: "audit",
     title: "Dates & Audit Information",
-    fields: [
-      "expected_resolution_date",
-      "createdAt",
-      "updatedAt",
-    ],
+    fields: ["expected_resolution_date", "createdAt", "updatedAt"],
   },
 ]);
 
@@ -83,6 +58,11 @@ export const TICKET_DETAIL_FULL_WIDTH_FIELDS = Object.freeze([
 ]);
 
 export const TICKET_DETAIL_SYSTEM_FIELDS = Object.freeze({
+  priority: {
+    key: "priority",
+    label: "Priority",
+    type: "text",
+  },
   createdAt: {
     key: "createdAt",
     label: "Created At",
