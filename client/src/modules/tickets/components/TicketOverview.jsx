@@ -35,6 +35,7 @@ const DISPLAY_VALUE_FIELDS = Object.freeze({
   assigned_to: "assignedUserName",
   created_by: "createdByName",
   district: "districtName",
+  caller_department: "callerDepartmentName",
   service_type: "serviceTypeName",
   category: "categoryName",
   problem_statement: "problemStatementName",
@@ -92,7 +93,7 @@ function getFieldValue(field, ticket, fallback) {
 }
 
 function getDisplayField(key, fieldMap) {
-  return fieldMap[key] ?? TICKET_DETAIL_SYSTEM_FIELDS[key] ?? null;
+  return fieldMap.get[key] ?? TICKET_DETAIL_SYSTEM_FIELDS[key] ?? null;
 }
 
 function DetailLabel({ children }) {

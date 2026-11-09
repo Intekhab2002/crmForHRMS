@@ -2,7 +2,7 @@ export const TICKET_DETAIL_GROUPS = Object.freeze([
   {
     key: "overview",
     title: "Ticket Overview",
-    fields: ["ticketNumber", "subject", "status", "priority", "created_by"],
+    fields: ["ticketNumber", "subject", "status", "created_by"],
   },
   {
     key: "contact",
@@ -58,11 +58,6 @@ export const TICKET_DETAIL_FULL_WIDTH_FIELDS = Object.freeze([
 ]);
 
 export const TICKET_DETAIL_SYSTEM_FIELDS = Object.freeze({
-  priority: {
-    key: "priority",
-    label: "Priority",
-    type: "text",
-  },
   createdAt: {
     key: "createdAt",
     label: "Created At",
