@@ -49,9 +49,9 @@ import { useTicketDetailsLayout } from "../hooks/useTicketDetailsLayout";
 import { useNotification } from "../../../components/feedback";
 import { getTicketErrorMessage } from "../utils/ticketError.utils";
 
-const DETAIL_FIELDS = TICKET_FIELD_CONFIG.filter((field) => field.form?.detail)
-  .map((field) => field.key)
-  .filter((key) => key !== "ticketNumber");
+const DETAIL_FIELDS = TICKET_FIELD_CONFIG.filter(
+  (field) => field.form?.detail,
+).map((field) => field.key);
 
 const COMMENT_CONFIG = Object.freeze({
   permission: TICKET_MODULE_CONFIG.permissions.comment,
@@ -725,7 +725,7 @@ export default function TicketLifecyclePage() {
                   fieldNames={DETAIL_FIELDS}
                   title="Ticket Information"
                   fallback={TICKET_MODULE_CONFIG.labels.notAvailable}
-                  enforcePermissions={false}
+                  enforcePermissions={true}
                 />
               </Box>
             ),

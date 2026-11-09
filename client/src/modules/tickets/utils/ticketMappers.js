@@ -333,13 +333,6 @@ export function mapTicketFromApi(ticket) {
     nameKey: "status_name",
   });
 
-  const requester = mapLookup(ticket, {
-    nestedKey: "requester",
-    idKey: "requester_user_id",
-    codeKey: "requester_code",
-    nameKey: "requester_name",
-  });
-
   const createdBy = mapLookup(ticket, {
     nestedKey: "createdBy",
     idKey: "created_by_user_id",
@@ -456,25 +449,6 @@ export function mapTicketFromApi(ticket) {
     statusName: status?.name ?? "",
 
     statusOption: status,
-
-    /*
-     * ========================================================================
-     * Requester
-     * ========================================================================
-     */
-
-    requester_user_id: requester?.id ?? "",
-
-    requesterName: requester?.name ?? "",
-
-    requester: mapActor({
-      id: requester?.id,
-      name: requester?.name,
-      username: requester?.username,
-      email: requester?.email,
-      first_name: requester?.first_name,
-      last_name: requester?.last_name,
-    }),
 
     /*
      * ========================================================================

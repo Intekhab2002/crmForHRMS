@@ -1,15 +1,30 @@
 import { useMemo } from "react";
-import { Box } from "@mui/material";
+
+import {
+  Box,
+  Divider,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableRow,
+  Typography,
+} from "@mui/material";
 
 import OptionChip from "../../../components/display/OptionChip";
-import DetailField from "../../../components/display/DetailField";
-import DetailGrid, { DetailGridItem } from "../../../components/display/DetailGrid";
 
 import {
   formatDate,
   formatDateTime,
   formatTicketValue,
 } from "../utils/ticketFormatters";
+
+import {
+  TICKET_DETAIL_GROUPS,
+  TICKET_DETAIL_FULL_WIDTH_FIELDS,
+  TICKET_DETAIL_SYSTEM_FIELDS,
+} from "../config/ticketDetails.config";
 
 import { useAuth } from "../../../context/useAuth";
 
@@ -20,7 +35,6 @@ const DISPLAY_VALUE_FIELDS = Object.freeze({
   assigned_to: "assignedUserName",
   created_by: "createdByName",
   district: "districtName",
-  caller_department: "callerDepartmentName",
   service_type: "serviceTypeName",
   category: "categoryName",
   problem_statement: "problemStatementName",
@@ -38,22 +52,8 @@ function canReadField(field, enforcePermissions, hasPermission) {
   return !permission || hasPermission(permission);
 }
 
-function getDisplayValue(field, ticket) {
-  const displayKey = DISPLAY_VALUE_FIELDS[field.key];
-
-  if (!displayKey) return undefined;
-
-  return ticket[displayKey];
-}
-
-function getFieldValue(field, ticket) {
-  if (!field || !ticket) return undefined;
-
-  return ticket[field.key];
-}
-
-function renderValue(field, ticket, fallback) {
-  const value = getFieldValue(field, ticket);
+function getFieldValue(field, ticket, fallback) {
+  const value = ticket?.[field.key];
 
   if (value === null || value === undefined || value === "") {
     return fallback;
@@ -67,11 +67,12 @@ function renderValue(field, ticket, fallback) {
     return formatDate(value, fallback);
   }
 
-  const displayValue = getDisplayValue(field, ticket);
+  const displayKey = DISPLAY_VALUE_FIELDS[field.key];
+  const displayValue = displayKey ? ticket?.[displayKey] : null;
 
   if (
-    displayValue !== undefined &&
     displayValue !== null &&
+    displayValue !== undefined &&
     displayValue !== ""
   ) {
     return displayValue;
@@ -90,6 +91,140 @@ function renderValue(field, ticket, fallback) {
   return formatTicketValue(field, value, fallback, ticket);
 }
 
+function getDisplayField(key, fieldMap) {
+  return fieldMap[key] ?? TICKET_DETAIL_SYSTEM_FIELDS[key] ?? null;
+}
+
+function DetailLabel({ children }) {
+  return (
+    <TableCell
+      component="th"
+      scope="row"
+      sx={{
+        width: "16%",
+        minWidth: 110,
+        fontWeight: 700,
+        color: "text.secondary",
+        verticalAlign: "top",
+        whiteSpace: "normal",
+        overflowWrap: "anywhere",
+      }}
+    >
+      {children}
+    </TableCell>
+  );
+}
+
+function DetailValue({ children, colSpan = 1 }) {
+  return (
+    <TableCell
+      colSpan={colSpan}
+      sx={{
+        width: colSpan === 3 ? "84%" : "34%",
+        minWidth: 0,
+        verticalAlign: "top",
+        whiteSpace: "pre-wrap",
+        overflowWrap: "anywhere",
+        wordBreak: "normal",
+        lineHeight: 1.6,
+      }}
+    >
+      {children}
+    </TableCell>
+  );
+}
+
+function DetailRow({ field, ticket, fallback }) {
+  const value = getFieldValue(field, ticket, fallback);
+
+  const fullWidth = TICKET_DETAIL_FULL_WIDTH_FIELDS.includes(field.key);
+
+  return (
+    <TableRow
+      sx={{
+        "&:last-child td, &:last-child th": {
+          borderBottom: 0,
+        },
+      }}
+    >
+      <DetailLabel>{field.label}</DetailLabel>
+      <DetailValue colSpan={fullWidth ? 3 : 1}>{value}</DetailValue>
+    </TableRow>
+  );
+}
+
+function DetailTable({ fields, ticket, fallback }) {
+  const rows = [];
+
+  let normalFields = [];
+
+  const flushNormalFields = () => {
+    for (let index = 0; index < normalFields.length; index += 2) {
+      const first = normalFields[index];
+      const second = normalFields[index + 1];
+
+      rows.push(
+        <TableRow key={first.key}>
+          <DetailLabel>{first.label}</DetailLabel>
+          <DetailValue>{getFieldValue(first, ticket, fallback)}</DetailValue>
+
+          {second ? (
+            <>
+              <DetailLabel>{second.label}</DetailLabel>
+              <DetailValue>
+                {getFieldValue(second, ticket, fallback)}
+              </DetailValue>
+            </>
+          ) : (
+            <TableCell colSpan={2} />
+          )}
+        </TableRow>,
+      );
+    }
+
+    normalFields = [];
+  };
+
+  for (const field of fields) {
+    if (TICKET_DETAIL_FULL_WIDTH_FIELDS.includes(field.key)) {
+      flushNormalFields();
+
+      rows.push(
+        <DetailRow
+          key={field.key}
+          field={field}
+          ticket={ticket}
+          fallback={fallback}
+        />,
+      );
+    } else {
+      normalFields.push(field);
+    }
+  }
+
+  flushNormalFields();
+
+  return (
+    <TableContainer>
+      <Table
+        size="small"
+        aria-label="Ticket information"
+        sx={{
+          tableLayout: "fixed",
+          width: "100%",
+          "& td, & th": {
+            borderColor: "divider",
+            px: 1.5,
+            py: 1.25,
+          },
+        }}
+      >
+        <TableBody>{rows}</TableBody>
+      </Table>
+    </TableContainer>
+  );
+}
+
 export default function TicketOverview({
   ticket,
   fields = [],
@@ -99,50 +234,77 @@ export default function TicketOverview({
 }) {
   const { hasPermission } = useAuth();
 
-  const visibleFields = useMemo(() => {
-    const detailFieldKeys = new Set(fieldNames);
+  const fieldMap = useMemo(
+    () => new Map(fields.map((field) => [field.key, field])),
+    [fields],
+  );
 
-    return fields
-      .filter((field) => detailFieldKeys.has(field.key))
-      .filter((field) =>
-        canReadField(field, enforcePermissions, hasPermission),
-      );
-  }, [enforcePermissions, fieldNames, fields, hasPermission]);
+  const allowedFields = useMemo(() => {
+    const allowed = new Set(fieldNames);
+
+    return new Set(
+      fields
+        .filter((field) => allowed.has(field.key))
+        .filter((field) =>
+          canReadField(field, enforcePermissions, hasPermission),
+        )
+        .map((field) => field.key),
+    );
+  }, [fields, fieldNames, enforcePermissions, hasPermission]);
+
+  const groups = useMemo(() => {
+    return TICKET_DETAIL_GROUPS.map((group) => {
+      const groupFields = group.fields
+        .map((key) => getDisplayField(key, fieldMap))
+        .filter(Boolean)
+        .filter(
+          (field) =>
+            TICKET_DETAIL_SYSTEM_FIELDS[field.key] ||
+            allowedFields.has(field.key),
+        );
+
+      return {
+        ...group,
+        fields: groupFields,
+      };
+    }).filter((group) => group.fields.length > 0);
+  }, [fieldMap, allowedFields]);
 
   return (
     <Box
-      // variant="outlined"
       sx={{
-        p: { xs: 1.5, md: 2 },
+        width: "100%",
         minWidth: 0,
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
       }}
     >
-      {/* {title ? (
-        <>
-          <Stack sx={{ mb: 1 }}>
-            <DetailField label={title} value="" empty />
-          </Stack>
-          <Divider sx={{ mb: 1.25 }} />
-        </>
-      ) : null} */}
+      {groups.map((group) => (
+        <Paper
+          key={group.key}
+          variant="outlined"
+          sx={{
+            minWidth: 0,
+            overflow: "hidden",
+            borderRadius: 2,
+          }}
+        >
+          <Box sx={{ px: 2, py: 1.5 }}>
+            <Typography variant="subtitle1" fontWeight={700}>
+              {group.title}
+            </Typography>
+          </Box>
 
-      <DetailGrid spacing={1.25}>
-        {visibleFields.map((field) => {
-          const value = renderValue(field, ticket, fallback);
-          const multiline = field.type === "textarea";
+          <Divider />
 
-          return (
-            <DetailGridItem key={field.key} multiline={multiline}>
-              <DetailField
-                label={field.label}
-                value={value}
-                multiline={multiline}
-                empty={value === fallback}
-              />
-            </DetailGridItem>
-          );
-        })}
-      </DetailGrid>
+          <DetailTable
+            fields={group.fields}
+            ticket={ticket}
+            fallback={fallback}
+          />
+        </Paper>
+      ))}
     </Box>
   );
 }

@@ -4,7 +4,6 @@ import { getQueryExecutor } from "../../database/queryExecutor.js";
 import { getField } from "./ticket.config.js";
 import { buildTicketListWhereClause } from "./ticketListQuery.js";
 
-
 const TICKET_COLUMNS = Object.freeze([
   "id",
   "ticket_number",
@@ -12,7 +11,6 @@ const TICKET_COLUMNS = Object.freeze([
   "description",
   "priority",
   "status_id",
-  "requester_user_id",
   "created_by_user_id",
   "organization_id",
   "department_id",
@@ -51,7 +49,6 @@ const TICKET_SELECT = `
     ticket_status.code AS status_code,
     ticket_status.name AS status_name,
 
-    t.requester_user_id,
 COALESCE(
     NULLIF(
         TRIM(
@@ -164,8 +161,6 @@ const FROM = `
     LEFT JOIN ticket_sla ts
         ON ts.ticket_id = t.id
 
-    INNER JOIN users requester
-        ON requester.id = t.requester_user_id
 
     LEFT JOIN users creator
         ON creator.id = t.created_by_user_id
@@ -235,17 +230,12 @@ function getColumnForField(fieldKey) {
   return field.column;
 }
 
-
-
-
 function buildUpdate(fields) {
   const assignments = fields.map((fieldKey, index) => {
     const column = getColumnForField(fieldKey);
 
     if (!column) {
-      throw new Error(
-        "Ticket configuration contains an invalid update field.",
-      );
+      throw new Error("Ticket configuration contains an invalid update field.");
     }
 
     return `${column} = $${index + 2}`;
@@ -298,7 +288,6 @@ function buildUpdate(fields) {
   `;
 }
 
-
 function toNestedObject(id, code, name) {
   if (!id) {
     return null;
@@ -324,13 +313,6 @@ function mapTicketRow(row) {
     priority: row.priority,
 
     status: toNestedObject(row.status_id, row.status_code, row.status_name),
-
-    requester: row.requester_user_id
-      ? {
-          id: row.requester_user_id,
-          name: row.requester_name ?? null,
-        }
-      : null,
 
     createdBy: row.created_by_user_id
       ? {
@@ -503,7 +485,6 @@ async function findTickets(filters, tx = null) {
     total: Number(countResult.rows[0]?.total ?? 0),
   };
 }
-
 
 async function findTicketsByBillReferenceNo(billReferenceNo, tx = null) {
   const executor = getQueryExecutor(tx);
