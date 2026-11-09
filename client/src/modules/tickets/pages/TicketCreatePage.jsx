@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { CircularProgress, Paper, Stack, Typography } from "@mui/material";
-import { Link, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { buildDuplicateTicketValues } from "../utils/ticketDuplicate";
 
 import PageHeader from "../../../components/page/PageHeader";
@@ -14,6 +14,7 @@ import { ticketService } from "../services/ticket.service";
 import CanAccess from "../../../components/rbac/CanAccess";
 
 export default function TicketCreatePage() {
+  const navigate = useNavigate();
   const { success, error: notifyError, info } = useNotification();
   const [submitting, setSubmitting] = useState(false);
   const [searchParams] = useSearchParams();
@@ -97,8 +98,15 @@ export default function TicketCreatePage() {
     try {
       const ticket = await ticketService.createTicket(values);
 
+      if (!ticket?.id) {
+        throw new Error(
+          "Ticket creation response did not contain a valid ticket identifier.",
+        );
+      }
+
       success("Ticket created successfully.");
-      window.location.assign(`/tickets/${ticket.id}`);
+
+      navigate(`/tickets/${ticket.id}`);
     } catch (requestError) {
       notifyError(
         requestError?.response?.data?.message ??

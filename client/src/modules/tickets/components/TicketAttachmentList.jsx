@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -33,6 +33,8 @@ import {
   isPdfAttachment,
 } from "../utils/attachment.utils";
 import { TICKET_MODULE_CONFIG } from "../../../config/ticket.config";
+import { useNotification } from "../../../components/feedback";
+import { getTicketErrorMessage } from "../utils/ticketError.utils";
 
 function AttachmentIcon({ attachment }) {
   if (isImageAttachment(attachment)) {
@@ -64,6 +66,12 @@ function getDownloadFilename(contentDisposition, fallback) {
 
 export default function TicketAttachmentList({ ticketId, onLifecycleChange }) {
   const inputRef = useRef(null);
+
+  const {
+    success: notifySuccess,
+    error: notifyError,
+    warning: notifyWarning,
+  } = useNotification();
 
   const [attachments, setAttachments] = useState([]);
 
@@ -148,47 +156,101 @@ export default function TicketAttachmentList({ ticketId, onLifecycleChange }) {
 
     event.target.value = "";
 
-    if (!files.length) {
+    if (!files.length || isUploading) {
       return;
     }
 
     setIsUploading(true);
     setUploadProgress(0);
     setError("");
-    setSuccess("");
+
+    const results = [];
 
     try {
+      // Upload sequentially to preserve the existing progress behaviour.
       for (const file of files) {
-        await ticketService.uploadAttachment(
-          ticketId,
-          file,
-          (progressEvent) => {
-            if (!progressEvent.total) {
-              return;
-            }
+        setUploadProgress(0);
 
-            const progress = Math.round(
-              (progressEvent.loaded / progressEvent.total) * 100,
-            );
+        try {
+          await ticketService.uploadAttachment(
+            ticketId,
+            file,
+            (progressEvent) => {
+              if (!progressEvent.total) {
+                return;
+              }
 
-            setUploadProgress(progress);
-          },
-        );
+              const progress = Math.round(
+                (progressEvent.loaded / progressEvent.total) * 100,
+              );
+
+              setUploadProgress(progress);
+            },
+          );
+
+          results.push({
+            file,
+            success: true,
+          });
+        } catch (uploadError) {
+          results.push({
+            file,
+            success: false,
+            error: uploadError,
+          });
+        }
       }
 
-      await loadAttachments();
-      await onLifecycleChange?.();
+      const successfulUploads = results.filter((result) => result.success);
+      const failedUploads = results.filter((result) => !result.success);
 
-      setSuccess(
-        files.length === 1
-          ? "Attachment uploaded successfully."
-          : `${files.length} attachments uploaded successfully.`,
+      // Refresh attachment data only when at least one upload succeeded.
+      if (successfulUploads.length > 0) {
+        await loadAttachments();
+
+        try {
+          await onLifecycleChange?.();
+        } catch (refreshError) {
+          setError(
+            getTicketErrorMessage(
+              refreshError,
+              "Attachments were uploaded, but ticket activity could not be refreshed.",
+            ),
+          );
+        }
+      }
+
+      const successCount = successfulUploads.length;
+      const failureCount = failedUploads.length;
+
+      if (failureCount === 0) {
+        notifySuccess(
+          successCount === 1
+            ? "Attachment uploaded successfully."
+            : `${successCount} attachments uploaded successfully.`,
+        );
+
+        return;
+      }
+
+      const firstFailureMessage = getTicketErrorMessage(
+        failedUploads[0].error,
+        "Some attachments could not be uploaded.",
       );
-    } catch (uploadError) {
-      console.error("Attachment upload failed:", uploadError);
 
-      setError(
-        uploadError.response?.data?.message || "Unable to upload attachment.",
+      if (successCount > 0) {
+        notifyWarning(
+          `${successCount} attachment(s) uploaded successfully. ` +
+            `${failureCount} failed. ${firstFailureMessage}`,
+        );
+
+        return;
+      }
+
+      notifyError(firstFailureMessage);
+    } catch (operationError) {
+      notifyError(
+        getTicketErrorMessage(operationError, "Unable to upload attachments."),
       );
     } finally {
       setIsUploading(false);
@@ -198,8 +260,6 @@ export default function TicketAttachmentList({ ticketId, onLifecycleChange }) {
 
   const handleDownload = async (attachment) => {
     try {
-      setError("");
-
       const result = await ticketService.downloadAttachment(
         ticketId,
         attachment.id,
@@ -222,12 +282,11 @@ export default function TicketAttachmentList({ ticketId, onLifecycleChange }) {
       anchor.remove();
 
       URL.revokeObjectURL(url);
-    } catch (downloadError) {
-      console.error("Attachment download failed:", downloadError);
 
-      setError(
-        downloadError.response?.data?.message ||
-          "Unable to download attachment.",
+      notifySuccess("Attachment downloaded successfully.");
+    } catch (downloadError) {
+      notifyError(
+        getTicketErrorMessage(downloadError, "Unable to download attachment."),
       );
     }
   };
@@ -241,7 +300,6 @@ export default function TicketAttachmentList({ ticketId, onLifecycleChange }) {
 
     setDeletingId(attachment.id);
     setError("");
-    setSuccess("");
 
     try {
       await ticketService.deleteAttachment(ticketId, attachment.id);
@@ -249,13 +307,22 @@ export default function TicketAttachmentList({ ticketId, onLifecycleChange }) {
       setAttachments((current) =>
         current.filter((item) => item.id !== attachment.id),
       );
-      await onLifecycleChange?.();
-      setSuccess("Attachment deleted successfully.");
-    } catch (deleteError) {
-      console.error("Attachment deletion failed:", deleteError);
 
-      setError(
-        deleteError.response?.data?.message || "Unable to delete attachment.",
+      notifySuccess("Attachment deleted successfully.");
+
+      try {
+        await onLifecycleChange?.();
+      } catch (refreshError) {
+        setError(
+          getTicketErrorMessage(
+            refreshError,
+            "Attachment was deleted, but ticket activity could not be refreshed.",
+          ),
+        );
+      }
+    } catch (deleteError) {
+      notifyError(
+        getTicketErrorMessage(deleteError, "Unable to delete attachment."),
       );
     } finally {
       setDeletingId(null);
@@ -360,12 +427,6 @@ export default function TicketAttachmentList({ ticketId, onLifecycleChange }) {
             {error && (
               <Alert severity="error" onClose={() => setError("")}>
                 {error}
-              </Alert>
-            )}
-
-            {success && (
-              <Alert severity="success" onClose={() => setSuccess("")}>
-                {success}
               </Alert>
             )}
 
