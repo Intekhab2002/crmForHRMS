@@ -545,7 +545,13 @@ async function stop(runtime, now, consumedResult, tx = null) {
   );
 }
 
-async function breach(runtime, now, totalConsumed, tx = null) {
+async function breach(
+  runtime,
+  now,
+  totalConsumed,
+  tx = null,
+  actualBreachAt = null,
+) {
   if (
     runtime.status === SLA_STATUS.COMPLETED ||
     runtime.status === SLA_STATUS.STOPPED
@@ -573,7 +579,7 @@ async function breach(runtime, now, totalConsumed, tx = null) {
       status: SLA_STATUS.BREACHED,
 
       // Capture the first breach once. Later calls must not overwrite it.
-      breachedAt: runtime.breached_at ?? now,
+      breachedAt: runtime.breached_at ?? actualBreachAt ?? now,
       breachedElapsedBusinessMinutes: isFirstBreach ? consumed : undefined,
       breachedTargetResolutionMinutes: isFirstBreach ? target : undefined,
 

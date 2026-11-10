@@ -128,7 +128,91 @@ async function calculateRuntimeConsumed(runtime, now, policy, tx) {
     totalConsumed: Math.max(0, total),
     activeSegment,
     activeSegmentConsumed,
+    segments,
+    holidayRows,
   };
+}
+
+/**
+ * Calculates the actual business-time instant at which the cumulative
+ * SLA consumption crossed its resolution target.
+ *
+ * Closed segments contribute their persisted consumed minutes.
+ * Open segments contribute their live business minutes up to `now`.
+ *
+ * Returns null when the segment history cannot establish the crossing.
+ */
+function calculateBreachTimestamp({
+  segments,
+  targetMinutes,
+  now,
+  policy,
+  holidayRows,
+}) {
+  const target = Number(targetMinutes);
+
+  if (
+    !Number.isFinite(target) ||
+    target < 1 ||
+    !Array.isArray(segments) ||
+    segments.length === 0
+  ) {
+    return null;
+  }
+
+  const calendar = calendarFromPolicy(policy);
+
+  const orderedSegments = [...segments].sort(
+    (a, b) =>
+      new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
+  );
+
+  let consumedBeforeSegment = 0;
+
+  for (const segment of orderedSegments) {
+    const baseline = Math.max(0, Number(segment.consumed_minutes ?? 0));
+
+    const segmentConsumed = segment.ended_at
+      ? baseline
+      : baseline +
+        calculateBusinessMinutes({
+          startAt: segment.started_at,
+          endAt: now,
+          calendar,
+          holidays: holidayRows,
+        });
+
+    const requiredInSegment = target - consumedBeforeSegment;
+
+    if (requiredInSegment > 0 && requiredInSegment <= segmentConsumed) {
+      return addBusinessMinutes({
+        startAt: segment.started_at,
+        businessMinutes: Math.ceil(requiredInSegment),
+        calendar,
+        holidays: holidayRows,
+      });
+    }
+
+    consumedBeforeSegment += segmentConsumed;
+
+    if (consumedBeforeSegment >= target) {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+async function markBreached(runtime, consumedResult, target, now, policy, tx) {
+  const breachAt = calculateBreachTimestamp({
+    segments: consumedResult.segments,
+    targetMinutes: target,
+    now,
+    policy,
+    holidayRows: consumedResult.holidayRows,
+  });
+
+  return markBreached(resumed, consumedResult, target, now, policy, tx);
 }
 
 function sameKey(a, b) {
@@ -434,7 +518,14 @@ export async function syncTicket(
     const target = Number(rule.resolution_minutes);
 
     if (target > 0 && consumed >= target) {
-      return ticketSla.breach(resumed, now, consumed, tx);
+      return markBreached(
+        currentRuntime,
+        consumedResult,
+        target,
+        now,
+        policy,
+        tx,
+      );
     }
 
     return resumed;
@@ -446,7 +537,14 @@ export async function syncTicket(
     const target = Number(rule.resolution_minutes);
 
     if (target > 0 && consumed >= target) {
-      return ticketSla.breach(activated, now, consumed, tx);
+      return markBreached(
+        currentRuntime,
+        consumedResult,
+        target,
+        now,
+        policy,
+        tx,
+      );
     }
 
     return activated;
@@ -483,7 +581,14 @@ export async function syncTicket(
    * duration/severity change. It does not close the active segment.
    */
   if (target > 0 && consumed >= target) {
-    return ticketSla.breach(currentRuntime, now, consumed, tx);
+    return markBreached(
+      currentRuntime,
+      consumedResult,
+      target,
+      now,
+      policy,
+      tx,
+    );
   }
 
   /*
