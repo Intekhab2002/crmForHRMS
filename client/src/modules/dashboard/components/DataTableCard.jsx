@@ -84,7 +84,7 @@ export default function DataTableCard({
             initialState={{
               pagination: {
                 paginationModel: {
-                  pageSize: 10,
+                  pageSize: 5,
                   page: 0,
                 },
               },

@@ -84,9 +84,34 @@ export function nextBusinessInstant(value, calendar, holidays = []) {
   throw new Error("Unable to find next business instant.");
 }
 
+export function nextBusinessTransition(value, calendar, holidays = []) {
+  const current = dt(value, calendar.timezone);
+
+  if (!isBusinessDay(current, calendar, holidays)) {
+    return nextBusinessInstant(current, calendar, holidays).toJSDate();
+  }
+
+  const { start, end } = getBusinessWindow(current, calendar);
+
+  if (current < start) {
+    return start.toJSDate();
+  }
+
+  if (current < end) {
+    return end.toJSDate();
+  }
+
+  return nextBusinessInstant(
+    current.plus({ seconds: 1 }),
+    calendar,
+    holidays,
+  ).toJSDate();
+}
+
 export default Object.freeze({
   isBusinessDay,
   getBusinessWindow,
   isBusinessInstant,
   nextBusinessInstant,
+  nextBusinessTransition
 });

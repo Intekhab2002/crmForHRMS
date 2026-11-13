@@ -161,6 +161,8 @@ const FROM = `
     LEFT JOIN ticket_sla ts
         ON ts.ticket_id = t.id
 
+    LEFT JOIN users requester
+        ON requester.id = t.requester_user_id
 
     LEFT JOIN users creator
         ON creator.id = t.created_by_user_id

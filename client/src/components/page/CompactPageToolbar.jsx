@@ -25,7 +25,7 @@ export default function CompactPageToolbar({
     <Paper
       // variant="outlined"
       sx={{
-        p: 1,
+        p: 0.6,
         minWidth: 0,
         flexShrink: 0,
         marginY: 1,

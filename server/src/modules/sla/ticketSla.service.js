@@ -46,6 +46,8 @@ async function get(id) {
 
   const sla = await repository.oneTicketSla(id);
 
+  const calculatedAt = new Date();
+
   if (!sla) {
     return {
       ticketId: id,
@@ -53,6 +55,10 @@ async function get(id) {
       segments: [],
       elapsedBusinessMinutes: 0,
       remainingBusinessMinutes: null,
+      elapsed_business_minutes: 0,
+      remaining_business_minutes: null,
+      calculated_at: calculatedAt.toISOString(),
+      clock_state: "INACTIVE",
     };
   }
 
@@ -65,17 +71,29 @@ async function get(id) {
   const live = runtimeCalculator.calculateLiveRuntime(
     sla,
     currentRunSegments,
-    new Date(),
+    calculatedAt,
   );
 
   return {
     ...sla,
 
+    status: live.status,
+
     elapsed_business_minutes: live.elapsedBusinessMinutes,
 
     remaining_business_minutes: live.remainingBusinessMinutes,
 
-    status: live.status,
+    elapsed_business_seconds: live.elapsedBusinessSeconds,
+
+    remaining_business_seconds: live.remainingBusinessSeconds,
+
+    breached_elapsed_business_seconds: live.breachedElapsedBusinessSeconds,
+
+    calculated_at: live.calculatedAt,
+
+    clock_state: live.clockState,
+
+    next_transition_at: live.nextTransitionAt,
 
     segments,
   };

@@ -749,6 +749,20 @@ async function oneOpenSegmentForRun(ticketSlaId, runNumber, tx = null) {
   return r.rows[0] ?? null;
 }
 
+async function lockTicketForUpdate(ticketId, tx = null) {
+  const result = await ex(tx).query(
+    `
+      SELECT id
+      FROM tickets
+      WHERE id = $1::UUID
+      FOR UPDATE
+    `,
+    [ticketId],
+  );
+
+  return Boolean(result.rows[0]);
+}
+
 export default Object.freeze({
   onePolicy,
   listPolicies,
@@ -783,4 +797,5 @@ export default Object.freeze({
   oneTicketSlaById,
   nextTicketSlaRunNumber,
   oneOpenSegmentForRun,
+  lockTicketForUpdate,
 });

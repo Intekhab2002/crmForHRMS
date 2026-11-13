@@ -36,32 +36,8 @@ function dt(value, timezone) {
   return valueDt;
 }
 
-export function calculateBusinessMinutes({
-  startAt,
-  endAt,
-  calendar,
-  holidays = [],
-}) {
-  const start = dt(startAt, calendar.timezone);
-  const end = dt(endAt, calendar.timezone);
-  if (end <= start) return 0;
-
-  let day = start.setZone(calendar.timezone).startOf("day");
-  let total = 0;
-
-  while (day < end) {
-    if (isBusinessDay(day, calendar, holidays)) {
-      const { start: ws, end: we } = getBusinessWindow(day, calendar);
-      const effectiveStart = start > ws ? start : ws;
-
-      const effectiveEnd = end < we ? end : we;
-      if (effectiveEnd > effectiveStart) {
-        total += effectiveEnd.diff(effectiveStart, "minutes").minutes;
-      }
-    }
-    day = day.plus({ days: 1 }).startOf("day");
-  }
-  return Math.max(0, Math.floor(total));
+export function calculateBusinessMinutes(options) {
+  return Math.floor(calculateBusinessSeconds(options) / 60);
 }
 
 export function addBusinessMinutes({
@@ -112,6 +88,44 @@ export function addBusinessMinutes({
   throw new Error(
     "Unable to calculate business target timestamp within the supported calculation window.",
   );
+}
+
+export function calculateBusinessSeconds({
+  startAt,
+  endAt,
+  calendar,
+  holidays = [],
+}) {
+  const start = dt(startAt, calendar.timezone);
+  const end = dt(endAt, calendar.timezone);
+
+  if (end <= start) {
+    return 0;
+  }
+
+  let day = start.startOf("day");
+  let totalSeconds = 0;
+
+  while (day < end) {
+    if (isBusinessDay(day, calendar, holidays)) {
+      const { start: windowStart, end: windowEnd } = getBusinessWindow(
+        day,
+        calendar,
+      );
+
+      const effectiveStart = start > windowStart ? start : windowStart;
+
+      const effectiveEnd = end < windowEnd ? end : windowEnd;
+
+      if (effectiveEnd > effectiveStart) {
+        totalSeconds += effectiveEnd.diff(effectiveStart, "seconds").seconds;
+      }
+    }
+
+    day = day.plus({ days: 1 }).startOf("day");
+  }
+
+  return Math.max(0, Math.floor(totalSeconds));
 }
 
 export default Object.freeze({ calculateBusinessMinutes, addBusinessMinutes });

@@ -622,7 +622,7 @@ export default function TicketLifecyclePage() {
     <Stack
       spacing={2}
       className="ticket-details-page"
-      sx={{ minWidth: 0, pb: 2 }}
+      sx={{ minWidth: 0, pb: 1 }}
     >
       <CompactPageToolbar
         title={ticket.ticketNumber ?? ticket.reference ?? "Ticket details"}

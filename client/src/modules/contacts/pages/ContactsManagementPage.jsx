@@ -165,7 +165,12 @@ export default function ContactsManagementPage() {
     contactsRequest.key === contactRequestKey ? contactsRequest : null;
 
   const rows = currentContactsRequest?.rows ?? [];
-  const rowCount = currentContactsRequest?.rowCount ?? 0;
+  // Preserve the last known server row count while a new page
+  // or filtered request is being loaded.
+  //
+  // Returning 0 during a page transition can cause MUI DataGrid
+  // to reset the controlled pagination model.
+  const rowCount = contactsRequest.rowCount;
 
   const loading = canRead && currentContactsRequest === null;
   const loadError = currentContactsRequest?.error ?? "";

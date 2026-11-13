@@ -31,14 +31,20 @@ export default function TicketSlaCard({ ticketId }) {
   }
 
   if (error) {
-    return <Alert severity="warning">SLA information is currently unavailable.</Alert>;
+    return (
+      <Alert severity="warning">
+        SLA information is currently unavailable.
+      </Alert>
+    );
   }
 
   if (!sla || sla.status === "NOT_TRACKED") {
     return (
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Stack spacing={0.75}>
-          <Typography variant="subtitle1" fontWeight={700}>SLA</Typography>
+          <Typography variant="subtitle1" fontWeight={700}>
+            SLA
+          </Typography>
           <Typography variant="body2" color="text.secondary">
             This ticket is not currently tracked by an SLA policy.
           </Typography>
@@ -50,21 +56,24 @@ export default function TicketSlaCard({ ticketId }) {
   const target = Number(sla.target_resolution_minutes);
   const remaining = Number(sla.remaining_business_minutes);
   const elapsed = Number(sla.elapsed_business_minutes);
-  const progress = Number.isFinite(target) && target > 0 && Number.isFinite(elapsed)
-    ? Math.min(100, Math.max(0, (elapsed / target) * 100))
-    : 0;
+  const progress =
+    Number.isFinite(target) && target > 0 && Number.isFinite(elapsed)
+      ? Math.min(100, Math.max(0, (elapsed / target) * 100))
+      : 0;
 
   return (
     <>
-      <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
-        <Stack spacing={1.25}>
+      <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
+        <Stack spacing={1}>
           <Stack
             direction={{ xs: "column", sm: "row" }}
             spacing={{ xs: 1, sm: 2 }}
             alignItems={{ xs: "flex-start", sm: "center" }}
             justifyContent="space-between"
           >
-            {sla.status === "RUNNING" ? <SlaCountdown sla={sla} /> : null}
+            {["RUNNING", "BREACHED"].includes(sla.status) ? (
+              <SlaCountdown sla={sla} />
+            ) : null}
 
             <Stack
               direction="row"
@@ -104,7 +113,7 @@ export default function TicketSlaCard({ ticketId }) {
             color={sla.status === "BREACHED" ? "error" : "primary"}
             aria-label={`SLA progress ${Math.round(progress)} percent`}
           />
-          <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, flexWrap: "wrap" }}>
+          {/* <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, flexWrap: "wrap" }}>
             <Typography variant="caption" color="text.secondary">
               {sla.policy_name ?? "Configured SLA policy"}
             </Typography>
@@ -113,7 +122,7 @@ export default function TicketSlaCard({ ticketId }) {
                 Run #{sla.run_number}
               </Typography>
             ) : null}
-          </Box>
+          </Box> */}
         </Stack>
       </Paper>
 

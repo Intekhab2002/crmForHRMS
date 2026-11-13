@@ -6,6 +6,7 @@ import repository from "./sla.repository.js";
 import resolver from "./slaPolicyResolver.service.js";
 import ticketSla from "./ticketSla.service.js";
 import { SLA_STATUS } from "./sla.constants.js";
+import { executeTransaction } from "../../database/transaction.js";
 
 function closed(ticket) {
   const status = String(ticket.status_code ?? "")
@@ -170,24 +171,36 @@ function calculateBreachTimestamp({
   let consumedBeforeSegment = 0;
 
   for (const segment of orderedSegments) {
-    const baseline = Math.max(0, Number(segment.consumed_minutes ?? 0));
+    const persistedConsumed = Math.max(
+      0,
+      Number(segment.consumed_minutes ?? 0),
+    );
 
-    const segmentConsumed = segment.ended_at
-      ? baseline
-      : baseline +
-        calculateBusinessMinutes({
+    const baselineConsumed = segment.ended_at ? 0 : persistedConsumed;
+
+    const liveConsumed = segment.ended_at
+      ? persistedConsumed
+      : calculateBusinessMinutes({
           startAt: segment.started_at,
           endAt: now,
           calendar,
           holidays: holidayRows,
         });
 
+    const segmentConsumed = baselineConsumed + liveConsumed;
+
     const requiredInSegment = target - consumedBeforeSegment;
 
     if (requiredInSegment > 0 && requiredInSegment <= segmentConsumed) {
+      const requiredLiveMinutes = requiredInSegment - baselineConsumed;
+
+      if (requiredLiveMinutes <= 0 || requiredLiveMinutes > liveConsumed) {
+        return null;
+      }
+
       return addBusinessMinutes({
         startAt: segment.started_at,
-        businessMinutes: Math.ceil(requiredInSegment),
+        businessMinutes: Math.ceil(requiredLiveMinutes),
         calendar,
         holidays: holidayRows,
       });
@@ -212,7 +225,13 @@ async function markBreached(runtime, consumedResult, target, now, policy, tx) {
     holidayRows: consumedResult.holidayRows,
   });
 
-  return markBreached(resumed, consumedResult, target, now, policy, tx);
+  return ticketSla.breach(
+    runtime,
+    now,
+    consumedResult.totalConsumed,
+    tx,
+    breachAt,
+  );
 }
 
 function sameKey(a, b) {
@@ -337,7 +356,7 @@ async function ensureActiveBreachedSegment(runtime, policy, now, tx) {
   );
 }
 
-export async function syncTicket(
+export async function syncTicketInTransaction(
   ticketId,
   { now = new Date(), tx = null } = {},
 ) {
@@ -518,14 +537,7 @@ export async function syncTicket(
     const target = Number(rule.resolution_minutes);
 
     if (target > 0 && consumed >= target) {
-      return markBreached(
-        currentRuntime,
-        consumedResult,
-        target,
-        now,
-        policy,
-        tx,
-      );
+      return markBreached(resumed, consumedResult, target, now, policy, tx);
     }
 
     return resumed;
@@ -537,14 +549,7 @@ export async function syncTicket(
     const target = Number(rule.resolution_minutes);
 
     if (target > 0 && consumed >= target) {
-      return markBreached(
-        currentRuntime,
-        consumedResult,
-        target,
-        now,
-        policy,
-        tx,
-      );
+      return markBreached(activated, consumedResult, target, now, policy, tx);
     }
 
     return activated;
@@ -597,6 +602,29 @@ export async function syncTicket(
    * updateTicketSla leaves breached_at unchanged unless supplied.
    */
   return updateRunning(currentRuntime, consumed, target, now, tx);
+}
+
+export async function syncTicket(
+  ticketId,
+  { now = new Date(), tx = null } = {},
+) {
+  if (tx) {
+    await repository.lockTicketForUpdate(ticketId, tx);
+
+    return syncTicketInTransaction(ticketId, {
+      now,
+      tx,
+    });
+  }
+
+  return executeTransaction(async (transaction) => {
+    await repository.lockTicketForUpdate(ticketId, transaction);
+
+    return syncTicketInTransaction(ticketId, {
+      now,
+      tx: transaction,
+    });
+  });
 }
 
 export async function preview({

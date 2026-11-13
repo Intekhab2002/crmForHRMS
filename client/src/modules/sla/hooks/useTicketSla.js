@@ -12,9 +12,7 @@ const INITIAL_REQUEST_STATE = {
 export function useTicketSla(ticketId) {
   const [requestVersion, setRequestVersion] = useState(0);
 
-  const [requestState, setRequestState] = useState(
-    INITIAL_REQUEST_STATE,
-  );
+  const [requestState, setRequestState] = useState(INITIAL_REQUEST_STATE);
 
   const requestIsCurrent =
     requestState.ticketId === ticketId &&
@@ -24,13 +22,9 @@ export function useTicketSla(ticketId) {
 
   const sla = hasCurrentTicket ? requestState.sla : null;
 
-  const loading =
-    Boolean(ticketId) &&
-    !requestIsCurrent;
+  const loading = Boolean(ticketId) && !requestIsCurrent;
 
-  const error = requestIsCurrent
-    ? requestState.error
-    : null;
+  const error = requestIsCurrent ? requestState.error : null;
 
   const reload = useCallback(() => {
     setRequestVersion((current) => current + 1);
@@ -41,38 +35,26 @@ export function useTicketSla(ticketId) {
       return undefined;
     }
 
-    let active = true;
-
-    const fetchTicketSla = async () => {
-      try {
-        const result = await slaApi.getTicketSla(ticketId);
-
-        if (!active) return;
-
-        setRequestState({
-          ticketId,
-          requestVersion,
-          sla: result,
-          error: null,
-        });
-      } catch (requestError) {
-        if (!active) return;
-
-        setRequestState({
-          ticketId,
-          requestVersion,
-          sla: null,
-          error: requestError,
-        });
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") {
+        reload();
       }
     };
 
-    void fetchTicketSla();
+    const timer = window.setInterval(refreshIfVisible, 60000);
+
+    window.addEventListener("focus", refreshIfVisible);
+
+    document.addEventListener("visibilitychange", refreshIfVisible);
 
     return () => {
-      active = false;
+      window.clearInterval(timer);
+
+      window.removeEventListener("focus", refreshIfVisible);
+
+      document.removeEventListener("visibilitychange", refreshIfVisible);
     };
-  }, [ticketId, requestVersion]);
+  }, [ticketId, reload]);
 
   useEffect(() => {
     if (!ticketId) {

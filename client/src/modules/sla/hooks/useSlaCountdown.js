@@ -1,36 +1,61 @@
 import { useEffect, useState } from "react";
 
+const ACTIVE_STATUSES = new Set(["RUNNING", "BREACHED"]);
+
 export function useSlaCountdown(sla) {
   const [now, setNow] = useState(() => Date.now());
 
-  const isRunning = sla?.status === "RUNNING";
+  const calculatedAt = sla?.calculated_at
+    ? new Date(sla.calculated_at).getTime()
+    : null;
 
-  const remainingMinutes = Number(
-    sla?.remaining_business_minutes,
+  const isAdvancing =
+    ACTIVE_STATUSES.has(sla?.status) && sla?.clock_state === "ADVANCING";
+
+  const isBreached = sla?.status === "BREACHED";
+
+  const baseSeconds = Number(
+    isBreached
+      ? sla?.breached_elapsed_business_seconds
+      : sla?.remaining_business_seconds,
   );
 
-  const baseSeconds = Number.isFinite(remainingMinutes)
-    ? Math.max(0, Math.round(remainingMinutes * 60))
+  const hasValidBase = Number.isFinite(baseSeconds) && baseSeconds >= 0;
+
+  const nextTransitionAt = sla?.next_transition_at
+    ? new Date(sla.next_transition_at).getTime()
     : null;
 
-  const calculatedAt = sla?.last_calculated_at
-    ? new Date(sla.last_calculated_at).getTime()
-    : null;
-
-  const elapsedSeconds =
-    isRunning &&
-    calculatedAt != null &&
-    Number.isFinite(calculatedAt)
+  const elapsedWallSeconds =
+    calculatedAt != null && Number.isFinite(calculatedAt)
       ? Math.max(0, Math.floor((now - calculatedAt) / 1000))
       : 0;
 
-  const seconds =
-    baseSeconds == null
-      ? null
-      : Math.max(0, baseSeconds - elapsedSeconds);
+  const allowedAdvanceSeconds =
+    nextTransitionAt != null &&
+    Number.isFinite(nextTransitionAt) &&
+    calculatedAt != null
+      ? Math.max(0, Math.floor((nextTransitionAt - calculatedAt) / 1000))
+      : 0;
+
+  const effectiveAdvanceSeconds = isAdvancing
+    ? Math.min(elapsedWallSeconds, allowedAdvanceSeconds)
+    : 0;
+
+  const seconds = !hasValidBase
+    ? null
+    : isBreached
+      ? baseSeconds + effectiveAdvanceSeconds
+      : Math.max(0, baseSeconds - effectiveAdvanceSeconds);
+
+  const shouldTick =
+    isAdvancing &&
+    calculatedAt != null &&
+    effectiveAdvanceSeconds < allowedAdvanceSeconds &&
+    hasValidBase;
 
   useEffect(() => {
-    if (!isRunning) {
+    if (!shouldTick) {
       return undefined;
     }
 
@@ -41,7 +66,11 @@ export function useSlaCountdown(sla) {
     return () => {
       window.clearInterval(timer);
     };
-  }, [isRunning]);
+  }, [shouldTick]);
+
+  useEffect(() => {
+    setNow(Date.now());
+  }, [sla?.calculated_at, sla?.clock_state, sla?.status]);
 
   if (seconds == null) {
     return null;
@@ -51,5 +80,7 @@ export function useSlaCountdown(sla) {
     seconds,
     minutes: seconds / 60,
     hours: seconds / 3600,
+    mode: isBreached ? "ELAPSED" : "REMAINING",
+    advancing: isAdvancing,
   };
 }
