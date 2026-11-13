@@ -30,6 +30,51 @@ export function useTicketSla(ticketId) {
     setRequestVersion((current) => current + 1);
   }, []);
 
+  /**
+   * Initial fetch and subsequent refresh requests.
+   */
+  useEffect(() => {
+    if (!ticketId) {
+      return undefined;
+    }
+
+    let active = true;
+
+    const fetchTicketSla = async () => {
+      try {
+        const result = await slaApi.getTicketSla(ticketId);
+
+        if (!active) return;
+
+        setRequestState({
+          ticketId,
+          requestVersion,
+          sla: result,
+          error: null,
+        });
+      } catch (requestError) {
+        if (!active) return;
+
+        setRequestState({
+          ticketId,
+          requestVersion,
+          sla: null,
+          error: requestError,
+        });
+      }
+    };
+
+    void fetchTicketSla();
+
+    return () => {
+      active = false;
+    };
+  }, [ticketId, requestVersion]);
+
+  /**
+   * Background refresh.
+   * One interval and one focus listener per mounted ticket.
+   */
   useEffect(() => {
     if (!ticketId) {
       return undefined;
@@ -45,29 +90,10 @@ export function useTicketSla(ticketId) {
 
     window.addEventListener("focus", refreshIfVisible);
 
-    document.addEventListener("visibilitychange", refreshIfVisible);
-
     return () => {
       window.clearInterval(timer);
 
       window.removeEventListener("focus", refreshIfVisible);
-
-      document.removeEventListener("visibilitychange", refreshIfVisible);
-    };
-  }, [ticketId, reload]);
-
-  useEffect(() => {
-    if (!ticketId) {
-      return undefined;
-    }
-
-    const timer = window.setInterval(reload, 60000);
-
-    window.addEventListener("focus", reload);
-
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("focus", reload);
     };
   }, [ticketId, reload]);
 
