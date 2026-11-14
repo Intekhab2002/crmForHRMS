@@ -128,4 +128,51 @@ export function calculateBusinessSeconds({
   return Math.max(0, Math.floor(totalSeconds));
 }
 
-export default Object.freeze({ calculateBusinessMinutes, addBusinessMinutes });
+export function addBusinessSeconds({
+  startAt,
+  businessSeconds,
+  calendar,
+  holidays = [],
+}) {
+  if (!Number.isSafeInteger(businessSeconds) || businessSeconds < 0) {
+    throw new TypeError("businessSeconds must be a non-negative safe integer.");
+  }
+
+  let current = nextBusinessInstant(startAt, calendar, holidays);
+
+  let remainingSeconds = businessSeconds;
+
+  if (remainingSeconds === 0) {
+    return current.toJSDate();
+  }
+
+  for (let guard = 0; guard < 10000; guard += 1) {
+    const { end: businessWindowEnd } = getBusinessWindow(current, calendar);
+
+    const availableSeconds = Math.max(
+      0,
+      Math.floor(businessWindowEnd.diff(current, "seconds").seconds),
+    );
+
+    if (remainingSeconds <= availableSeconds) {
+      return current.plus({ seconds: remainingSeconds }).toJSDate();
+    }
+
+    remainingSeconds -= availableSeconds;
+
+    const nextDay = current.plus({ days: 1 }).startOf("day");
+
+    current = nextBusinessInstant(nextDay, calendar, holidays);
+  }
+
+  throw new Error(
+    "Unable to calculate business timestamp within the supported calculation window.",
+  );
+}
+
+export default Object.freeze({
+  calculateBusinessMinutes,
+  calculateBusinessSeconds,
+  addBusinessMinutes,
+  addBusinessSeconds,
+});

@@ -1,6 +1,6 @@
 import {
-  addBusinessMinutes,
-  calculateBusinessMinutes,
+  addBusinessSeconds,
+  calculateBusinessSeconds,
 } from "./businessTime.service.js";
 import repository from "./sla.repository.js";
 import resolver from "./slaPolicyResolver.service.js";
@@ -42,6 +42,16 @@ async function holidays(policy, tx) {
   return repository.listHolidays(policy.calendar_id, {}, tx);
 }
 
+function persistedSegmentSeconds(segment) {
+  return Math.max(
+    0,
+    Number(
+      segment.consumed_business_seconds ??
+        Number(segment.consumed_minutes ?? 0) * 60,
+    ),
+  );
+}
+
 function policyFromSnapshot(runtime) {
   const p = runtime?.policy_snapshot?.policy;
 
@@ -72,25 +82,27 @@ async function getSegments(runtime, tx) {
 }
 
 async function calculateSegmentConsumed(segment, now, policy, holidayRows) {
+  const baseline = persistedSegmentSeconds(segment);
+
   if (segment.ended_at) {
-    return Math.max(0, Number(segment.consumed_minutes ?? 0));
+    return baseline;
   }
 
-  const baseline = Math.max(0, Number(segment.consumed_minutes ?? 0));
-
-  const elapsedSinceSegmentStart = calculateBusinessMinutes({
+  const liveSeconds = calculateBusinessSeconds({
     startAt: segment.started_at,
     endAt: now,
     calendar: calendarFromPolicy(policy),
     holidays: holidayRows,
   });
 
-  return baseline + elapsedSinceSegmentStart;
+  return baseline + liveSeconds;
 }
 
 async function calculateRuntimeConsumed(runtime, now, policy, tx) {
   const segments = await getSegments(runtime, tx);
+
   const snapshotHolidays = holidaySnapshot(runtime);
+
   const holidayRows =
     snapshotHolidays !== null ? snapshotHolidays : await holidays(policy, tx);
 
@@ -102,34 +114,32 @@ async function calculateRuntimeConsumed(runtime, now, policy, tx) {
     );
   }
 
-  const activeSegment = openSegments[0] ?? null;
-
-  let total = 0;
+  let totalConsumedSeconds = 0;
 
   for (const segment of segments) {
-    if (segment.ended_at) {
-      total += Math.max(0, Number(segment.consumed_minutes ?? 0));
-    }
-  }
-
-  let activeSegmentConsumed = 0;
-
-  if (activeSegment) {
-    activeSegmentConsumed = await calculateSegmentConsumed(
-      activeSegment,
+    totalConsumedSeconds += await calculateSegmentConsumed(
+      segment,
       now,
       policy,
       holidayRows,
     );
-
-    total += activeSegmentConsumed;
   }
 
+  const activeSegment = openSegments[0] ?? null;
+
+  const activeSegmentConsumedSeconds = activeSegment
+    ? await calculateSegmentConsumed(activeSegment, now, policy, holidayRows)
+    : 0;
+
   return {
-    totalConsumed: Math.max(0, total),
-    activeSegment,
-    activeSegmentConsumed,
+    totalConsumedSeconds,
+    totalConsumed: Math.floor(totalConsumedSeconds / 60),
+
+    activeSegmentConsumedSeconds,
+    activeSegmentConsumed: Math.floor(activeSegmentConsumedSeconds / 60),
+
     segments,
+    activeSegment,
     holidayRows,
   };
 }
@@ -149,88 +159,148 @@ function calculateBreachTimestamp({
   now,
   policy,
   holidayRows,
+  durationValueKey,
 }) {
-  const target = Number(targetMinutes);
+  const targetSeconds = Number(targetMinutes) * 60;
 
   if (
-    !Number.isFinite(target) ||
-    target < 1 ||
-    !Array.isArray(segments) ||
-    segments.length === 0
+    !Number.isSafeInteger(targetSeconds) ||
+    targetSeconds < 60 ||
+    !segments.length
   ) {
     return null;
   }
 
   const calendar = calendarFromPolicy(policy);
 
-  const orderedSegments = [...segments].sort(
+  const ordered = [...segments].sort(
     (a, b) =>
       new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
   );
 
-  let consumedBeforeSegment = 0;
+  // Find the latest segment belonging to the current
+  // severity/duration configuration.
+  const activeIndex = ordered.findLastIndex((segment) => !segment.ended_at);
 
-  for (const segment of orderedSegments) {
-    const persistedConsumed = Math.max(
-      0,
-      Number(segment.consumed_minutes ?? 0),
-    );
+  const lastIndex = activeIndex >= 0 ? activeIndex : ordered.length - 1;
 
-    const baselineConsumed = segment.ended_at ? 0 : persistedConsumed;
+  if (
+    normalize(ordered[lastIndex].duration_value_key) !==
+      normalize(durationValueKey) ||
+    Number(ordered[lastIndex].target_minutes) !== Number(targetMinutes)
+  ) {
+    return null;
+  }
 
-    const liveConsumed = segment.ended_at
-      ? persistedConsumed
-      : calculateBusinessMinutes({
+  const currentTarget = Number(ordered[lastIndex].target_minutes);
+
+  if (currentTarget !== Number(targetMinutes)) {
+    return null;
+  }
+
+  // Walk backwards through contiguous segments using
+  // the same duration rule. This includes pause/resume
+  // segments but excludes previous severity configurations.
+  let firstIndex = lastIndex;
+
+  while (firstIndex > 0) {
+    const previous = ordered[firstIndex - 1];
+
+    if (
+      normalize(previous.duration_value_key) !== normalize(durationValueKey) ||
+      Number(previous.target_minutes) !== targetSeconds / 60
+    ) {
+      break;
+    }
+
+    firstIndex -= 1;
+  }
+
+  let consumedBefore = 0;
+
+  for (let i = 0; i < firstIndex; i += 1) {
+    consumedBefore += persistedSegmentSeconds(ordered[i]);
+  }
+
+  for (let i = firstIndex; i <= lastIndex; i += 1) {
+    const segment = ordered[i];
+
+    const baseline = persistedSegmentSeconds(segment);
+
+    const liveSeconds = segment.ended_at
+      ? 0
+      : calculateBusinessSeconds({
           startAt: segment.started_at,
           endAt: now,
           calendar,
           holidays: holidayRows,
         });
 
-    const segmentConsumed = baselineConsumed + liveConsumed;
+    const availableSeconds = baseline + liveSeconds;
 
-    const requiredInSegment = target - consumedBeforeSegment;
+    const requiredSeconds = targetSeconds - consumedBefore;
 
-    if (requiredInSegment > 0 && requiredInSegment <= segmentConsumed) {
-      const requiredLiveMinutes = requiredInSegment - baselineConsumed;
+    if (requiredSeconds <= 0) {
+      return new Date(segment.started_at);
+    }
 
-      if (requiredLiveMinutes <= 0 || requiredLiveMinutes > liveConsumed) {
-        return null;
+    if (requiredSeconds <= availableSeconds) {
+      const requiredLiveSeconds = requiredSeconds - baseline;
+
+      if (requiredLiveSeconds <= 0) {
+        return new Date(segment.started_at);
       }
 
-      return addBusinessMinutes({
+      return addBusinessSeconds({
         startAt: segment.started_at,
-        businessMinutes: Math.ceil(requiredLiveMinutes),
+        businessSeconds: requiredLiveSeconds,
         calendar,
         holidays: holidayRows,
       });
     }
 
-    consumedBeforeSegment += segmentConsumed;
-
-    if (consumedBeforeSegment >= target) {
-      return null;
-    }
+    consumedBefore += availableSeconds;
   }
 
   return null;
 }
 
-async function markBreached(runtime, consumedResult, target, now, policy, tx) {
-  const breachAt = calculateBreachTimestamp({
-    segments: consumedResult.segments,
-    targetMinutes: target,
-    now,
-    policy,
-    holidayRows: consumedResult.holidayRows,
-  });
+async function markBreached(
+  runtime,
+  consumedResult,
+  target,
+  now,
+  policy,
+  tx,
+  options = {},
+) {
+  const breachAt =
+    options.breachAt ??
+    calculateBreachTimestamp({
+      segments: consumedResult.segments,
+      targetMinutes: target,
+      now,
+      policy,
+      holidayRows: consumedResult.holidayRows,
+      durationValueKey: runtime.duration_field_value_key,
+    });
 
-  return ticketSla.breach(
+  if (!breachAt) {
+    throw new Error(
+      `Unable to determine breach timestamp for SLA ${runtime.id}.`,
+    );
+  }
+
+  return ticketSla.reconcileBreach(
     runtime,
-    now,
-    consumedResult.totalConsumed,
+    {
+      now,
+      targetMinutes: target,
+      totalConsumedSeconds: consumedResult.totalConsumedSeconds,
+      breachAt,
+      segmentId: options.segmentId ?? consumedResult.activeSegment?.id ?? null,
+    },
     tx,
-    breachAt,
   );
 }
 
@@ -256,14 +326,13 @@ async function currentRule(policy, ticket, tx) {
   };
 }
 
-async function updateRunning(runtime, consumed, target, now, tx) {
-  return repository.updateTicketSla(
-    runtime.id,
+async function updateRunning(runtime, consumedResult, target, now, tx) {
+  return ticketSla.reconcileBreach(
+    runtime,
     {
-      status: SLA_STATUS.RUNNING,
-      elapsedBusinessMinutes: consumed,
-      remainingBusinessMinutes: Math.max(target - consumed, 0),
-      lastCalculatedAt: now,
+      now,
+      targetMinutes: target,
+      totalConsumedSeconds: consumedResult.totalConsumedSeconds,
     },
     tx,
   );
@@ -321,25 +390,19 @@ async function ensureActiveBreachedSegment(runtime, policy, now, tx) {
     tx,
   );
 
-  const closedConsumed = segments
+  const closedConsumedSeconds = segments
     .filter((segment) => Boolean(segment.ended_at))
-    .reduce(
-      (total, segment) =>
-        total + Math.max(0, Number(segment.consumed_minutes ?? 0)),
-      0,
-    );
+    .reduce((total, segment) => total + persistedSegmentSeconds(segment), 0);
 
-  /*
-   * Restore any total consumption that was recorded on the SLA runtime
-   * but is missing from the closed segments. This is useful for legacy
-   * records whose segment consumption was previously capped.
-   */
-  const baselineConsumed = Math.max(
+  const baselineConsumedSeconds = Math.max(
     0,
-    Number(runtime.elapsed_business_minutes ?? 0) - closedConsumed,
+    Number(
+      runtime.elapsed_business_seconds ??
+        Number(runtime.elapsed_business_minutes ?? 0) * 60,
+    ) - closedConsumedSeconds,
   );
 
-  const startedAt = runtime.breached_at ?? runtime.last_calculated_at ?? now;
+  const startedAt = runtime.last_calculated_at ?? now;
 
   await repository.createSegment(
     {
@@ -349,7 +412,9 @@ async function ensureActiveBreachedSegment(runtime, policy, now, tx) {
       triggerValueKey,
       durationValueKey,
       targetMinutes,
-      consumedMinutes: baselineConsumed,
+      consumedMinutes: Math.floor(baselineConsumedSeconds / 60),
+
+      consumedBusinessSeconds: baselineConsumedSeconds,
       status: SLA_STATUS.BREACHED,
     },
     tx,
@@ -493,7 +558,9 @@ export async function syncTicketInTransaction(
     tx,
   );
 
-  const consumed = consumedResult.totalConsumed;
+  const consumedSeconds = consumedResult.totalConsumedSeconds;
+
+  const consumed = Math.floor(consumedSeconds / 60);
 
   // Resolution/closure takes precedence over breach evaluation.
   if (resolved(ticket)) {
@@ -516,7 +583,12 @@ export async function syncTicketInTransaction(
   if (!rule || !rule.is_enabled || rule.resolution_minutes == null) {
     return ticketSla.setNotTracked(ticket, policy, valueKey, tx, {
       preserveElapsed: consumed,
-      activeSegmentConsumed: consumedResult.activeSegmentConsumed ?? 0,
+      totalConsumedSeconds: consumedSeconds,
+
+      activeSegmentConsumed: consumedResult.activeSegmentConsumed,
+
+      activeSegmentConsumedSeconds: consumedResult.activeSegmentConsumedSeconds,
+
       now,
     });
   }
@@ -530,14 +602,22 @@ export async function syncTicketInTransaction(
       policy,
       rule,
       now,
-      consumed,
+      consumedSeconds,
       tx,
     );
 
     const target = Number(rule.resolution_minutes);
 
-    if (target > 0 && consumed >= target) {
-      return markBreached(resumed, consumedResult, target, now, policy, tx);
+    if (consumedSeconds >= Number(rule.resolution_minutes) * 60) {
+      return markBreached(
+        resumed,
+        consumedResult,
+        Number(rule.resolution_minutes),
+        now,
+        policy,
+        tx,
+        { breachAt: now },
+      );
     }
 
     return resumed;
@@ -572,7 +652,7 @@ export async function syncTicketInTransaction(
       },
       now,
       consumedResult.activeSegmentConsumed ?? 0,
-      consumed,
+      consumedSeconds,
       tx,
     );
   }
@@ -581,11 +661,15 @@ export async function syncTicketInTransaction(
     currentRuntime.target_resolution_minutes ?? rule.resolution_minutes,
   );
 
+  const targetSeconds = target * 60;
+
+  const durationChanged = !sameKey(currentDurationValue, runtimeDurationValue);
+
   /*
    * Breach is evaluated against the CURRENT target after any
    * duration/severity change. It does not close the active segment.
    */
-  if (target > 0 && consumed >= target) {
+  if (consumedSeconds >= targetSeconds) {
     return markBreached(
       currentRuntime,
       consumedResult,
@@ -593,6 +677,11 @@ export async function syncTicketInTransaction(
       now,
       policy,
       tx,
+      {
+        // A newly effective target cannot breach before
+        // its segment becomes effective.
+        breachAt: durationChanged ? now : null,
+      },
     );
   }
 
@@ -601,7 +690,7 @@ export async function syncTicketInTransaction(
    * when its new target is greater than total consumed time.
    * updateTicketSla leaves breached_at unchanged unless supplied.
    */
-  return updateRunning(currentRuntime, consumed, target, now, tx);
+  return updateRunning(currentRuntime, consumedResult, target, now, tx);
 }
 
 export async function syncTicket(

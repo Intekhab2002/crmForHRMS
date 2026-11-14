@@ -414,9 +414,10 @@ async function archiveTicketSlaRun(ticketSlaId, tx = null) {
         completed_at,
         breached_at,
         breached_elapsed_business_minutes,
-breached_target_resolution_minutes,
+        breached_target_resolution_minutes,
         target_resolution_minutes,
         elapsed_business_minutes,
+        elapsed_business_seconds,
         remaining_business_minutes,
         activation_field_key,
         activation_field_value_key,
@@ -439,10 +440,11 @@ breached_target_resolution_minutes,
       breached_at = EXCLUDED.breached_at,
       breached_elapsed_business_minutes =
   EXCLUDED.breached_elapsed_business_minutes,
-breached_target_resolution_minutes =
+      breached_target_resolution_minutes =
   EXCLUDED.breached_target_resolution_minutes,
       target_resolution_minutes = EXCLUDED.target_resolution_minutes,
       elapsed_business_minutes = EXCLUDED.elapsed_business_minutes,
+      elapsed_business_seconds = EXCLUDED.elapsed_business_seconds,
       remaining_business_minutes = EXCLUDED.remaining_business_minutes,
       activation_field_key = EXCLUDED.activation_field_key,
       activation_field_value_key = EXCLUDED.activation_field_value_key,
@@ -465,6 +467,8 @@ breached_target_resolution_minutes =
       runtime.breached_target_resolution_minutes,
       runtime.target_resolution_minutes,
       runtime.elapsed_business_minutes,
+      runtime.elapsed_business_seconds ??
+        Number(runtime.elapsed_business_minutes ?? 0) * 60,
       runtime.remaining_business_minutes,
       runtime.activation_field_key,
       runtime.activation_field_value_key,
@@ -478,8 +482,12 @@ breached_target_resolution_minutes =
 }
 
 async function upsertTicketSla(d, tx = null) {
+  const elapsedSeconds =
+    d.elapsedBusinessSeconds ?? Number(d.elapsedBusinessMinutes ?? 0) * 60;
+
   await ex(tx).query(
-    `INSERT INTO ticket_sla (
+    `
+    INSERT INTO ticket_sla (
       ticket_id,
       run_number,
       sla_policy_id,
@@ -493,6 +501,7 @@ async function upsertTicketSla(d, tx = null) {
       breached_target_resolution_minutes,
       target_resolution_minutes,
       elapsed_business_minutes,
+      elapsed_business_seconds,
       remaining_business_minutes,
       last_calculated_at,
       activation_field_key,
@@ -502,8 +511,8 @@ async function upsertTicketSla(d, tx = null) {
       policy_snapshot
     )
     VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-      $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
+      $12,$13,$14,$15,$16,$17,$18,$19,$20,$21
     )
     ON CONFLICT (ticket_id)
     DO UPDATE SET
@@ -519,16 +528,22 @@ async function upsertTicketSla(d, tx = null) {
         EXCLUDED.breached_elapsed_business_minutes,
       breached_target_resolution_minutes =
         EXCLUDED.breached_target_resolution_minutes,
-      target_resolution_minutes = EXCLUDED.target_resolution_minutes,
-      elapsed_business_minutes = EXCLUDED.elapsed_business_minutes,
-      remaining_business_minutes = EXCLUDED.remaining_business_minutes,
+      target_resolution_minutes =
+        EXCLUDED.target_resolution_minutes,
+      elapsed_business_minutes =
+        EXCLUDED.elapsed_business_minutes,
+      elapsed_business_seconds =
+        EXCLUDED.elapsed_business_seconds,
+      remaining_business_minutes =
+        EXCLUDED.remaining_business_minutes,
       last_calculated_at = EXCLUDED.last_calculated_at,
       activation_field_key = EXCLUDED.activation_field_key,
       activation_field_value_key = EXCLUDED.activation_field_value_key,
       duration_field_key = EXCLUDED.duration_field_key,
       duration_field_value_key = EXCLUDED.duration_field_value_key,
       policy_snapshot = EXCLUDED.policy_snapshot
-    RETURNING id`,
+    RETURNING id
+    `,
     [
       d.ticketId,
       d.runNumber ?? 1,
@@ -543,6 +558,7 @@ async function upsertTicketSla(d, tx = null) {
       d.breachedTargetResolutionMinutes ?? null,
       d.targetResolutionMinutes ?? null,
       d.elapsedBusinessMinutes ?? 0,
+      elapsedSeconds,
       d.remainingBusinessMinutes ?? null,
       d.lastCalculatedAt ?? null,
       d.activationFieldKey ?? null,
@@ -555,6 +571,7 @@ async function upsertTicketSla(d, tx = null) {
 
   return oneTicketSla(d.ticketId, tx);
 }
+
 async function updateTicketSla(id, d, tx = null) {
   const map = [
     ["status", d.status],
@@ -565,6 +582,7 @@ async function updateTicketSla(id, d, tx = null) {
     ["breached_at", d.breachedAt],
     ["target_resolution_minutes", d.targetResolutionMinutes],
     ["elapsed_business_minutes", d.elapsedBusinessMinutes],
+    ["elapsed_business_seconds", d.elapsedBusinessSeconds],
     ["remaining_business_minutes", d.remainingBusinessMinutes],
     ["last_calculated_at", d.lastCalculatedAt],
     ["activation_field_key", d.activationFieldKey],
@@ -590,20 +608,31 @@ async function updateTicketSla(id, d, tx = null) {
   );
   return r.rows[0] ? oneTicketSla(r.rows[0].ticket_id, tx) : null;
 }
+
 async function createSegment(d, tx = null) {
-  const r = await ex(tx).query(
-    `INSERT INTO ticket_sla_segments(
-    ticket_sla_id,
-    run_number,
-    started_at,
-    ended_at,
-    trigger_value_key,
-    duration_value_key,
-    target_minutes,
-    consumed_minutes,
-    status,
-    end_reason
-    ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+  const consumedSeconds =
+    d.consumedBusinessSeconds ?? Number(d.consumedMinutes ?? 0) * 60;
+
+  const result = await ex(tx).query(
+    `
+    INSERT INTO ticket_sla_segments (
+      ticket_sla_id,
+      run_number,
+      started_at,
+      ended_at,
+      trigger_value_key,
+      duration_value_key,
+      target_minutes,
+      consumed_minutes,
+      consumed_business_seconds,
+      status,
+      end_reason
+    )
+    VALUES (
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11
+    )
+    RETURNING *
+    `,
     [
       d.ticketSlaId,
       d.runNumber,
@@ -613,12 +642,15 @@ async function createSegment(d, tx = null) {
       d.durationValueKey,
       d.targetMinutes,
       d.consumedMinutes ?? 0,
+      consumedSeconds,
       d.status ?? "RUNNING",
       d.endReason ?? null,
     ],
   );
-  return r.rows[0];
+
+  return result.rows[0];
 }
+
 async function closeSegment(
   id,
   runNumber,
@@ -627,12 +659,14 @@ async function closeSegment(
   status,
   tx = null,
   endReason = null,
+  consumedBusinessSeconds = null,
 ) {
   const r = await ex(tx).query(
     `UPDATE ticket_sla_segments
 SET
   ended_at=$3,
 consumed_minutes=GREATEST($4,0),
+consumed_business_seconds = GREATEST($7, 0),
   status=$5,
   end_reason=$6
 WHERE id=(
@@ -645,7 +679,15 @@ WHERE id=(
   LIMIT 1
 )
 RETURNING *`,
-    [id, runNumber, endedAt, consumed, status, endReason],
+    [
+      id,
+      runNumber,
+      endedAt,
+      consumed,
+      status,
+      endReason,
+      consumedBusinessSeconds ?? Number(consumed ?? 0) * 60,
+    ],
   );
   return r.rows[0] ?? null;
 }
@@ -749,6 +791,103 @@ async function oneOpenSegmentForRun(ticketSlaId, runNumber, tx = null) {
   return r.rows[0] ?? null;
 }
 
+async function activeBreachEpisode(ticketSlaId, runNumber, tx = null) {
+  const result = await ex(tx).query(
+    `
+      SELECT *
+      FROM ticket_sla_breach_episodes
+      WHERE ticket_sla_id = $1
+        AND run_number = $2
+        AND cleared_at IS NULL
+      LIMIT 1
+      FOR UPDATE
+    `,
+    [ticketSlaId, runNumber],
+  );
+
+  return result.rows[0] ?? null;
+}
+
+async function listBreachEpisodes(ticketSlaId, runNumber = null, tx = null) {
+  const result = await ex(tx).query(
+    `
+      SELECT *
+      FROM ticket_sla_breach_episodes
+      WHERE ticket_sla_id = $1
+        AND ($2::integer IS NULL OR run_number = $2)
+      ORDER BY run_number, episode_number
+    `,
+    [ticketSlaId, runNumber],
+  );
+
+  return result.rows;
+}
+
+async function createBreachEpisode(data, tx = null) {
+  const result = await ex(tx).query(
+    `
+      INSERT INTO ticket_sla_breach_episodes (
+        ticket_sla_id,
+        ticket_id,
+        run_number,
+        episode_number,
+        segment_id,
+        breached_at,
+        target_resolution_minutes,
+        elapsed_business_seconds_at_breach
+      )
+      SELECT
+        $1,
+        $2,
+        $3,
+        COALESCE(MAX(episode_number), 0) + 1,
+        $4,
+        $5,
+        $6,
+        $7
+      FROM ticket_sla_breach_episodes
+      WHERE ticket_sla_id = $1
+        AND run_number = $3
+      RETURNING *
+    `,
+    [
+      data.ticketSlaId,
+      data.ticketId,
+      data.runNumber,
+      data.segmentId ?? null,
+      data.breachedAt,
+      data.targetResolutionMinutes,
+      data.elapsedBusinessSeconds,
+    ],
+  );
+
+  return result.rows[0];
+}
+
+async function clearActiveBreachEpisode(
+  ticketSlaId,
+  runNumber,
+  clearedAt,
+  clearReason,
+  tx = null,
+) {
+  const result = await ex(tx).query(
+    `
+      UPDATE ticket_sla_breach_episodes
+      SET
+        cleared_at = $3,
+        clear_reason = $4
+      WHERE ticket_sla_id = $1
+        AND run_number = $2
+        AND cleared_at IS NULL
+      RETURNING *
+    `,
+    [ticketSlaId, runNumber, clearedAt, clearReason],
+  );
+
+  return result.rows[0] ?? null;
+}
+
 async function lockTicketForUpdate(ticketId, tx = null) {
   const result = await ex(tx).query(
     `
@@ -798,4 +937,8 @@ export default Object.freeze({
   nextTicketSlaRunNumber,
   oneOpenSegmentForRun,
   lockTicketForUpdate,
+  activeBreachEpisode,
+  listBreachEpisodes,
+  createBreachEpisode,
+  clearActiveBreachEpisode,
 });

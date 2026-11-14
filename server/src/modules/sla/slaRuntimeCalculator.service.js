@@ -1,4 +1,3 @@
-
 import { calculateBusinessSeconds } from "./businessTime.service.js";
 
 import {
@@ -72,6 +71,7 @@ export function calculateLiveRuntime(
   runtime,
   segments = [],
   now = new Date(),
+  activeBreachEpisode = null,
 ) {
   const calculatedAt = now instanceof Date ? now : new Date(now);
 
@@ -117,11 +117,7 @@ export function calculateLiveRuntime(
   }
 
   // Terminal SLA states must not continue advancing.
-  if (
-    [SLA_STATUS.STOPPED, SLA_STATUS.COMPLETED].includes(
-      runtime.status,
-    )
-  ) {
+  if ([SLA_STATUS.STOPPED, SLA_STATUS.COMPLETED].includes(runtime.status)) {
     const elapsedMinutes = Math.max(
       0,
       Number(runtime.elapsed_business_minutes ?? 0),
@@ -158,9 +154,7 @@ export function calculateLiveRuntime(
   const holidays = holidaySnapshot(runtime);
 
   // Identify currently open segments.
-  const openSegments = segments.filter(
-    (segment) => !segment.ended_at,
-  );
+  const openSegments = segments.filter((segment) => !segment.ended_at);
 
   // A runtime must never have multiple open segments.
   if (openSegments.length > 1) {
@@ -171,10 +165,9 @@ export function calculateLiveRuntime(
 
   const activeSegment = openSegments[0] ?? null;
 
-  const isActiveStatus = [
-    SLA_STATUS.RUNNING,
-    SLA_STATUS.BREACHED,
-  ].includes(runtime.status);
+  const isActiveStatus = [SLA_STATUS.RUNNING, SLA_STATUS.BREACHED].includes(
+    runtime.status,
+  );
 
   /**
    * Calculate elapsed business seconds.
@@ -191,18 +184,17 @@ export function calculateLiveRuntime(
   let elapsedBusinessSeconds = 0;
 
   for (const segment of segments) {
-    const persistedSeconds =
-      Math.max(
-        0,
-        Number(segment.consumed_minutes ?? 0),
-      ) * 60;
+    const persistedSeconds = Math.max(
+      0,
+      Number(
+        segment.consumed_business_seconds ??
+          Number(segment.consumed_minutes ?? 0) * 60,
+      ),
+    );
 
     elapsedBusinessSeconds += persistedSeconds;
 
-    if (
-      !segment.ended_at &&
-      isActiveStatus
-    ) {
+    if (!segment.ended_at && isActiveStatus) {
       elapsedBusinessSeconds += calculateBusinessSeconds({
         startAt: segment.started_at,
         endAt: calculatedAt,
@@ -212,15 +204,9 @@ export function calculateLiveRuntime(
     }
   }
 
-  elapsedBusinessSeconds = Math.max(
-    0,
-    Math.floor(elapsedBusinessSeconds),
-  );
+  elapsedBusinessSeconds = Math.max(0, Math.floor(elapsedBusinessSeconds));
 
-  // Preserve the existing minute-based response contract.
-  const elapsedBusinessMinutes = Math.floor(
-    elapsedBusinessSeconds / 60,
-  );
+  const elapsedBusinessMinutes = Math.floor(elapsedBusinessSeconds / 60);
 
   const targetMinutes = Math.max(
     0,
@@ -231,45 +217,31 @@ export function calculateLiveRuntime(
 
   const remainingBusinessSeconds =
     targetSeconds > 0
-      ? Math.max(
-          0,
-          targetSeconds - elapsedBusinessSeconds,
-        )
+      ? Math.max(0, targetSeconds - elapsedBusinessSeconds, 0)
       : null;
 
   const remainingBusinessMinutes =
-    targetMinutes > 0
-      ? Math.max(
-          0,
-          targetMinutes - elapsedBusinessMinutes,
-        )
-      : null;
+    targetSeconds > 0 ? Math.floor(remainingBusinessSeconds / 60) : null;
 
   // Determine the live SLA status.
   let liveStatus = runtime.status;
 
   if (isActiveStatus) {
     liveStatus =
-      targetSeconds > 0 &&
-      elapsedBusinessSeconds >= targetSeconds
+      targetSeconds > 0 && elapsedBusinessSeconds >= targetSeconds
         ? SLA_STATUS.BREACHED
         : SLA_STATUS.RUNNING;
   }
 
   // Calculate time elapsed beyond the breach baseline.
-  const breachBaselineMinutes = Number(
-    runtime.breached_elapsed_business_minutes ??
-      runtime.target_resolution_minutes ??
-      0,
+  const breachBaselineSeconds = Number(
+    activeBreachEpisode?.elapsed_business_seconds_at_breach ??
+      Number(runtime.breached_elapsed_business_minutes ?? 0) * 60,
   );
 
   const breachedElapsedBusinessSeconds =
     liveStatus === SLA_STATUS.BREACHED
-      ? Math.max(
-          0,
-          elapsedBusinessSeconds -
-            breachBaselineMinutes * 60,
-        )
+      ? Math.max(0, elapsedBusinessSeconds - breachBaselineSeconds)
       : 0;
 
   // Determine whether the business clock should advance.
@@ -277,21 +249,10 @@ export function calculateLiveRuntime(
 
   if (liveStatus === SLA_STATUS.PAUSED) {
     clockState = "PAUSED";
-  } else if (
-    [SLA_STATUS.COMPLETED, SLA_STATUS.STOPPED].includes(
-      liveStatus,
-    )
-  ) {
+  } else if ([SLA_STATUS.COMPLETED, SLA_STATUS.STOPPED].includes(liveStatus)) {
     clockState = "TERMINAL";
-  } else if (
-    isActiveStatus &&
-    activeSegment
-  ) {
-    clockState = isBusinessInstant(
-      calculatedAt,
-      calendar,
-      holidays,
-    )
+  } else if (isActiveStatus && activeSegment) {
+    clockState = isBusinessInstant(calculatedAt, calendar, holidays)
       ? "ADVANCING"
       : "WAITING_FOR_BUSINESS_HOURS";
   }
@@ -299,11 +260,7 @@ export function calculateLiveRuntime(
   // Identify the next point at which the clock can change state.
   const nextTransitionAt =
     isActiveStatus && activeSegment
-      ? nextBusinessTransition(
-          calculatedAt,
-          calendar,
-          holidays,
-        ).toISOString()
+      ? nextBusinessTransition(calculatedAt, calendar, holidays).toISOString()
       : null;
 
   return {

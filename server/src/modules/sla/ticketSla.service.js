@@ -2,6 +2,7 @@ import AppError from "../../helpers/AppError.js";
 import repository from "./sla.repository.js";
 import { SLA_STATUS, SLA_ERROR_CODES } from "./sla.constants.js";
 import runtimeCalculator from "./slaRuntimeCalculator.service.js";
+import breachEpisodeService from "./slaBreachEpisode.service.js";
 async function requireTicket(id, tx = null) {
   const ticket = await repository.oneTicket(id, tx);
   if (!ticket)
@@ -57,8 +58,25 @@ async function get(id) {
       remainingBusinessMinutes: null,
       elapsed_business_minutes: 0,
       remaining_business_minutes: null,
+      elapsed_business_seconds: live.elapsedBusinessSeconds,
+
+      remaining_business_seconds: live.remainingBusinessSeconds,
+
+      breached_elapsed_business_seconds: live.breachedElapsedBusinessSeconds,
       calculated_at: calculatedAt.toISOString(),
       clock_state: "INACTIVE",
+      breached_at: activeEpisode?.breached_at ?? null,
+
+      breached_elapsed_business_minutes: activeEpisode
+        ? Math.floor(
+            Number(activeEpisode.elapsed_business_seconds_at_breach) / 60,
+          )
+        : null,
+
+      breached_target_resolution_minutes:
+        activeEpisode?.target_resolution_minutes ?? null,
+
+      breach_episodes: episodes,
     };
   }
 
@@ -68,10 +86,18 @@ async function get(id) {
     (segment) => Number(segment.run_number) === Number(sla.run_number),
   );
 
+  const activeEpisode = await repository.activeBreachEpisode(
+    sla.id,
+    sla.run_number,
+  );
+
+  const episodes = await repository.listBreachEpisodes(sla.id);
+
   const live = runtimeCalculator.calculateLiveRuntime(
     sla,
     currentRunSegments,
     calculatedAt,
+    activeEpisode,
   );
 
   return {
@@ -94,6 +120,7 @@ async function get(id) {
     clock_state: live.clockState,
 
     next_transition_at: live.nextTransitionAt,
+    breach_episodes: episodes,
 
     segments,
   };
@@ -109,6 +136,7 @@ async function history(id) {
     ticketId: id,
     status: sla?.status ?? SLA_STATUS.NOT_TRACKED,
     segments: sla ? await repository.listSegments(sla.id) : [],
+    breachEpisodes: sla ? await repository.listBreachEpisodes(sla.id) : [],
   };
 }
 async function setNotTracked(
@@ -123,6 +151,14 @@ async function setNotTracked(
   }
 
   const existing = await repository.oneTicketSla(ticket.id, tx);
+  if (existing) {
+    await breachEpisodeService.clear({
+      runtime: existing,
+      now: options.now ?? new Date(),
+      reason: "RULE_REMOVED",
+      tx,
+    });
+  }
 
   const holidayRows = await repository.listHolidays(policy.calendar_id, {}, tx);
 
@@ -130,6 +166,10 @@ async function setNotTracked(
     options.preserveElapsed ?? existing?.elapsed_business_minutes ?? 0,
   );
 
+  const elapsedSeconds = Math.max(
+    0,
+    Number(options.totalConsumedSeconds ?? elapsed * 60),
+  );
   if (
     existing &&
     [SLA_STATUS.RUNNING, SLA_STATUS.BREACHED].includes(existing.status)
@@ -148,10 +188,19 @@ async function setNotTracked(
         existing.id,
         existing.run_number,
         options.now ?? new Date(),
-        options.activeSegmentConsumed ?? 0,
+        Math.floor(
+          Number(
+            options.activeSegmentConsumedSeconds ??
+              Number(options.activeSegmentConsumed ?? 0) * 60,
+          ) / 60,
+        ),
         SLA_STATUS.PAUSED,
         tx,
         options.endReason ?? "NO_VALID_RULE",
+        Number(
+          options.activeSegmentConsumedSeconds ??
+            Number(options.activeSegmentConsumed ?? 0) * 60,
+        ),
       );
     }
   }
@@ -161,12 +210,12 @@ async function setNotTracked(
       runNumber: existing?.run_number ?? 1,
       slaPolicyId: policy?.id ?? null,
       status: SLA_STATUS.NOT_TRACKED,
-      breachedAt: existing?.breached_at ?? null,
-      breachedElapsedBusinessMinutes:
-        existing?.breached_elapsed_business_minutes ?? null,
-      breachedTargetResolutionMinutes:
-        existing?.breached_target_resolution_minutes ?? null,
+      breachedAt: null,
+      breachedElapsedBusinessMinutes: null,
+      breachedTargetResolutionMinutes: null,
       elapsedBusinessMinutes: elapsed,
+      elapsedBusinessSeconds: elapsedSeconds,
+      elapsedBusinessSeconds: initialConsumedSeconds,
       remainingBusinessMinutes: null,
       lastCalculatedAt: options.now ?? new Date(),
       activationFieldKey: policy?.trigger_field_key ?? null,
@@ -196,9 +245,14 @@ async function activate(ticket, policy, rule, now, tx = null) {
 
   const activationAt = isNewRuntime || isRestart ? now : existing.activated_at;
 
-  const initialConsumed = isRestart
+  const initialConsumedSeconds = isRestart
     ? 0
-    : Number(existing?.elapsed_business_minutes ?? 0);
+    : Number(
+        existing?.elapsed_business_seconds ??
+          Number(existing?.elapsed_business_minutes ?? 0) * 60,
+      );
+
+  const initialConsumed = Math.floor(initialConsumedSeconds / 60);
 
   const targetMinutes = Number(rule.resolution_minutes);
 
@@ -236,6 +290,7 @@ async function activate(ticket, policy, rule, now, tx = null) {
         durationValueKey: rule.field_value_key,
         targetMinutes,
         consumedMinutes: 0,
+        consumedBusinessSeconds: 0,
         status: SLA_STATUS.RUNNING,
       },
       tx,
@@ -260,16 +315,33 @@ async function pause(runtime, now, consumedResult, tx = null) {
     );
   }
 
-  const segmentConsumed = Number(consumedResult.activeSegmentConsumed ?? 0);
+  const segmentConsumedSeconds = Math.max(
+    0,
+    Number(
+      consumedResult.activeSegmentConsumedSeconds ??
+        Number(consumedResult.activeSegmentConsumed ?? 0) * 60,
+    ),
+  );
+
+  const totalConsumedSeconds = Math.max(
+    0,
+    Number(
+      consumedResult.totalConsumedSeconds ??
+        Number(consumedResult.totalConsumed ?? 0) * 60,
+    ),
+  );
+
+  const totalConsumedMinutes = Math.floor(totalConsumedSeconds / 60);
 
   await repository.closeSegment(
     runtime.id,
     runtime.run_number,
     now,
-    segmentConsumed,
+    Math.floor(segmentConsumedSeconds / 60),
     SLA_STATUS.PAUSED,
     tx,
     "TRIGGER_LOST",
+    segmentConsumedSeconds,
   );
 
   return repository.updateTicketSla(
@@ -277,10 +349,11 @@ async function pause(runtime, now, consumedResult, tx = null) {
     {
       status: SLA_STATUS.PAUSED,
       pausedAt: now,
-      elapsedBusinessMinutes: consumedResult.totalConsumed,
-      remainingBusinessMinutes: remaining(
-        runtime.target_resolution_minutes,
-        consumedResult.totalConsumed,
+      elapsedBusinessSeconds: totalConsumedSeconds,
+      elapsedBusinessMinutes: totalConsumedMinutes,
+      remainingBusinessMinutes: Math.max(
+        Number(runtime.target_resolution_minutes) - totalConsumedMinutes,
+        0,
       ),
       lastCalculatedAt: now,
     },
@@ -292,8 +365,8 @@ async function changeDuration(
   runtime,
   { ticket, policy, rule, durationValueKey },
   now,
-  currentSegmentConsumed,
-  totalConsumed,
+  currentSegmentConsumedSeconds,
+  totalConsumedSeconds,
   tx = null,
 ) {
   const existingOpenSegment = await repository.oneOpenSegmentForRun(
@@ -318,10 +391,11 @@ async function changeDuration(
     runtime.id,
     runtime.run_number,
     now,
-    currentSegmentConsumed,
+    Math.floor(currentSegmentConsumedSeconds / 60),
     SLA_STATUS.STOPPED,
     tx,
     "SEVERITY_CHANGED",
+    currentSegmentConsumedSeconds,
   );
 
   await repository.createSegment(
@@ -334,6 +408,8 @@ async function changeDuration(
       targetMinutes: Number(rule.resolution_minutes),
       consumedMinutes: 0,
       status: SLA_STATUS.RUNNING,
+      consumedMinutes: 0,
+      consumedBusinessSeconds: 0,
     },
     tx,
   );
@@ -350,9 +426,15 @@ async function changeDuration(
       pausedAt: null,
       targetResolutionMinutes: Number(rule.resolution_minutes),
       elapsedBusinessMinutes: totalConsumed,
-      remainingBusinessMinutes: Math.max(
-        Number(rule.resolution_minutes) - totalConsumed,
-        0,
+      elapsedBusinessSeconds: totalConsumedSeconds,
+
+      elapsedBusinessMinutes: Math.floor(totalConsumedSeconds / 60),
+
+      remainingBusinessMinutes: Math.floor(
+        Math.max(
+          Number(rule.resolution_minutes) * 60 - totalConsumedSeconds,
+          0,
+        ) / 60,
       ),
       durationFieldValueKey: durationValueKey,
       lastCalculatedAt: now,
@@ -362,7 +444,7 @@ async function changeDuration(
   );
 }
 
-async function resume(ticket, policy, rule, now, consumed, tx = null) {
+async function resume(ticket, policy, rule, now, consumedSeconds, tx = null) {
   const runtime = await repository.oneTicketSla(ticket.id, tx);
   if (!runtime) {
     throw AppError.conflict("Cannot resume SLA because no SLA runtime exists.");
@@ -384,6 +466,8 @@ async function resume(ticket, policy, rule, now, consumed, tx = null) {
       },
     );
   }
+
+  const consumedMinutes = Math.floor(consumedSeconds / 60);
   await repository.createSegment(
     {
       ticketSlaId: runtime.id,
@@ -392,6 +476,7 @@ async function resume(ticket, policy, rule, now, consumed, tx = null) {
       triggerValueKey: policy.trigger_value_key,
       durationValueKey: rule.field_value_key,
       targetMinutes: rule.resolution_minutes,
+      consumedBusinessSeconds: 0,
       status: SLA_STATUS.RUNNING,
     },
     tx,
@@ -402,8 +487,12 @@ async function resume(ticket, policy, rule, now, consumed, tx = null) {
       status: SLA_STATUS.RUNNING,
       pausedAt: null,
       targetResolutionMinutes: rule.resolution_minutes,
-      elapsedBusinessMinutes: consumed,
-      remainingBusinessMinutes: Math.max(rule.resolution_minutes - consumed, 0),
+      elapsedBusinessSeconds: consumedSeconds,
+      elapsedBusinessMinutes: consumedMinutes,
+      remainingBusinessMinutes: Math.floor(
+        Math.max(Number(rule.resolution_minutes) * 60 - consumedSeconds, 0) /
+          60,
+      ),
       durationFieldValueKey: rule.field_value_key,
       lastCalculatedAt: now,
       policySnapshot: snapshot(policy, rule, holidayRows),
@@ -420,6 +509,8 @@ async function terminal(
   status,
   tx = null,
   endReasonOverride = null,
+  totalConsumedSeconds = null,
+  segmentConsumedSeconds = null,
 ) {
   const allowedTerminalStatuses = [SLA_STATUS.COMPLETED, SLA_STATUS.STOPPED];
 
@@ -435,6 +526,18 @@ async function terminal(
     runtime.status === SLA_STATUS.STOPPED &&
     status === SLA_STATUS.COMPLETED &&
     endReasonOverride === "TICKET_CLOSED";
+
+  const totalSeconds = Math.max(
+    0,
+    Number(totalConsumedSeconds ?? Number(totalConsumed ?? 0) * 60),
+  );
+
+  const activeSeconds = Math.max(
+    0,
+    Number(segmentConsumedSeconds ?? Number(segmentConsumed ?? 0) * 60),
+  );
+
+  const totalMinutes = Math.floor(totalSeconds / 60);
 
   // Completed runs are immutable. Stopped runs may only be finalized as
   // completed for the explicit ticket-closure transition.
@@ -472,10 +575,11 @@ async function terminal(
       runtime.id,
       runtime.run_number,
       now,
-      activeConsumed,
+      Math.floor(activeSeconds / 60),
       status,
       tx,
       endReason,
+      activeSeconds,
     );
   }
 
@@ -495,7 +599,8 @@ async function terminal(
       // A terminal transition must never erase the first breach timestamp.
       breachedAt: runtime.breached_at ?? null,
 
-      elapsedBusinessMinutes: total,
+      elapsedBusinessSeconds: totalSeconds,
+      elapsedBusinessMinutes: totalMinutes,
       remainingBusinessMinutes: remaining(
         runtime.target_resolution_minutes,
         total,
@@ -510,6 +615,14 @@ async function terminal(
       code: SLA_ERROR_CODES.INVALID_RUNTIME,
     });
   }
+
+  await breachEpisodeService.clear({
+    runtime,
+    now,
+    reason:
+      endReasonOverride === "TICKET_CLOSED" ? "TICKET_CLOSED" : "SLA_COMPLETED",
+    tx,
+  });
 
   // This must use the same transaction as the runtime/segment writes.
   await repository.archiveTicketSlaRun(updated.id, tx);
@@ -540,6 +653,8 @@ async function complete(
     SLA_STATUS.COMPLETED,
     tx,
     endReason,
+    consumedResult?.totalConsumedSeconds,
+    consumedResult?.activeSegmentConsumedSeconds,
   );
 }
 
@@ -565,48 +680,24 @@ async function stop(runtime, now, consumedResult, tx = null) {
 
 async function breach(
   runtime,
-  now,
-  totalConsumed,
+  {
+    now,
+    targetMinutes,
+    totalConsumedSeconds,
+    breachAt = null,
+    segmentId = null,
+  },
   tx = null,
-  actualBreachAt = null,
 ) {
-  if (
-    runtime.status === SLA_STATUS.COMPLETED ||
-    runtime.status === SLA_STATUS.STOPPED
-  ) {
-    throw AppError.conflict(
-      `Cannot breach an SLA in ${runtime.status} status.`,
-      { code: SLA_ERROR_CODES.INVALID_RUNTIME },
-    );
-  }
-
-  const target = Number(runtime.target_resolution_minutes ?? 0);
-  const consumed = Math.max(0, Number(totalConsumed ?? 0));
-
-  if (!Number.isFinite(target) || target < 1) {
-    throw AppError.conflict("Cannot breach an SLA with an invalid target.", {
-      code: SLA_ERROR_CODES.INVALID_RUNTIME,
-    });
-  }
-
-  const isFirstBreach = runtime.breached_at == null;
-
-  return repository.updateTicketSla(
-    runtime.id,
-    {
-      status: SLA_STATUS.BREACHED,
-
-      // Capture the first breach once. Later calls must not overwrite it.
-      breachedAt: runtime.breached_at ?? actualBreachAt ?? now,
-      breachedElapsedBusinessMinutes: isFirstBreach ? consumed : undefined,
-      breachedTargetResolutionMinutes: isFirstBreach ? target : undefined,
-
-      elapsedBusinessMinutes: consumed,
-      remainingBusinessMinutes: 0,
-      lastCalculatedAt: now,
-    },
+  return breachEpisodeService.reconcile({
+    runtime,
+    now,
+    targetMinutes,
+    elapsedBusinessSeconds: totalConsumedSeconds,
+    breachAt,
+    segmentId,
     tx,
-  );
+  });
 }
 
 export default Object.freeze({
