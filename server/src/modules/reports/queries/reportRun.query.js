@@ -100,14 +100,27 @@ export async function listCurrentUnarchivedRuns(input, tx = null) {
       ts.sla_policy_id,
       COALESCE(ts.policy_snapshot->'policy'->>'code', p.code) AS policy_code,
       COALESCE(ts.policy_snapshot->'policy'->>'name', p.name) AS policy_name,
-      CASE
-        WHEN ts.completed_at IS NOT NULL AND ts.completed_at <= $3::timestamptz THEN 'COMPLETED'
-        WHEN ts.breached_at IS NOT NULL AND ts.breached_at <= $3::timestamptz THEN 'BREACHED'
-        WHEN ts.stopped_at IS NOT NULL AND ts.stopped_at <= $3::timestamptz THEN 'STOPPED'
-        WHEN cutoff_segment.ended_at IS NULL OR cutoff_segment.ended_at > $3::timestamptz THEN 'RUNNING'
-        WHEN cutoff_segment.status = 'PAUSED' THEN 'PAUSED'
-        ELSE 'RUNNING'
-      END AS status,
+CASE
+  WHEN ts.completed_at IS NOT NULL
+    AND ts.completed_at <= $3::timestamptz
+    THEN 'COMPLETED'
+
+  WHEN ts.breached_at IS NOT NULL
+    AND ts.breached_at <= $3::timestamptz
+    THEN 'BREACHED'
+
+  WHEN ts.stopped_at IS NOT NULL
+    AND ts.stopped_at <= $3::timestamptz
+    THEN 'STOPPED'
+
+  WHEN COALESCE(cutoff_segment.open_segment_count, 0) > 0
+    THEN 'RUNNING'
+
+  WHEN cutoff_segment.has_paused_segment
+    THEN 'PAUSED'
+
+  ELSE ts.status
+END AS status,
       ts.activated_at,
       ts.paused_at,
       ts.stopped_at,
@@ -116,14 +129,23 @@ export async function listCurrentUnarchivedRuns(input, tx = null) {
       ts.breached_elapsed_business_minutes,
 ts.breached_target_resolution_minutes,
       ts.target_resolution_minutes,
-      CASE
-        WHEN ts.completed_at IS NOT NULL AND ts.completed_at <= $3::timestamptz THEN ts.elapsed_business_minutes
-        WHEN ts.breached_at IS NOT NULL AND ts.breached_at <= $3::timestamptz THEN ts.elapsed_business_minutes
-        WHEN ts.stopped_at IS NOT NULL AND ts.stopped_at <= $3::timestamptz THEN ts.elapsed_business_minutes
-        WHEN cutoff_segment.ended_at IS NOT NULL AND cutoff_segment.ended_at <= $3::timestamptz
-          THEN cutoff_segment.consumed_minutes
-        ELSE NULL
-      END AS elapsed_business_minutes,
+CASE
+  WHEN ts.completed_at IS NOT NULL
+    AND ts.completed_at <= $3::timestamptz
+    THEN ts.elapsed_business_minutes
+
+  WHEN ts.breached_at IS NOT NULL
+    AND ts.breached_at <= $3::timestamptz
+    THEN ts.elapsed_business_minutes
+
+  WHEN ts.stopped_at IS NOT NULL
+    AND ts.stopped_at <= $3::timestamptz
+    THEN ts.elapsed_business_minutes
+
+  ELSE FLOOR(
+    COALESCE(cutoff_segment.closed_consumed_seconds, 0) / 60
+  )
+END AS elapsed_business_minutes,
       ts.remaining_business_minutes,
       ts.activation_field_key,
       ts.activation_field_value_key,
@@ -143,18 +165,41 @@ ts.breached_target_resolution_minutes,
     LEFT JOIN users u ON u.id = t.assigned_user_id
     LEFT JOIN departments d ON d.id = t.department_id
     LEFT JOIN organizations o ON o.id = t.organization_id
-    LEFT JOIN LATERAL (
-      SELECT
-        seg.status,
-        seg.ended_at,
-        seg.consumed_minutes
-      FROM ticket_sla_segments seg
-      WHERE seg.ticket_sla_id = ts.id
-        AND seg.run_number = ts.run_number
-        AND seg.started_at <= $3::timestamptz
-      ORDER BY seg.started_at DESC
-      LIMIT 1
-    ) cutoff_segment ON TRUE
+LEFT JOIN LATERAL (
+  SELECT
+    COUNT(*) FILTER (
+      WHERE seg.ended_at IS NULL
+        OR seg.ended_at > $3::timestamptz
+    ) AS open_segment_count,
+
+    BOOL_OR(
+      seg.status = 'PAUSED'
+      AND seg.ended_at IS NOT NULL
+      AND seg.ended_at <= $3::timestamptz
+    ) AS has_paused_segment,
+
+    MAX(seg.ended_at) FILTER (
+      WHERE seg.ended_at <= $3::timestamptz
+    ) AS latest_ended_at,
+
+    SUM(
+      CASE
+        WHEN seg.ended_at IS NOT NULL
+          AND seg.ended_at <= $3::timestamptz
+        THEN COALESCE(
+          seg.consumed_business_seconds,
+          seg.consumed_minutes * 60,
+          0
+        )
+        ELSE 0
+      END
+    ) AS closed_consumed_seconds
+
+  FROM ticket_sla_segments seg
+  WHERE seg.ticket_sla_id = ts.id
+    AND seg.run_number = ts.run_number
+    AND seg.started_at <= $3::timestamptz
+) cutoff_segment ON TRUE
     WHERE ${where}
       AND NOT EXISTS (
         SELECT 1

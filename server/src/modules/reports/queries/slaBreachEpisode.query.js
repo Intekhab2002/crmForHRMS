@@ -1,10 +1,19 @@
+
 import { getQueryExecutor } from "../../../database/queryExecutor.js";
 
-export async function fetchBreachEpisodes(runs, tx = null) {
+export async function fetchBreachEpisodes(
+  runs,
+  dataCutoff,
+  tx = null,
+) {
   if (!runs.length) return [];
 
   const pairs = runs
-    .filter((run) => run.ticket_id && run.run_number != null)
+    .filter(
+      (run) =>
+        run.ticket_id &&
+        run.run_number != null,
+    )
     .map((run) => ({
       ticketId: run.ticket_id,
       runNumber: Number(run.run_number),
@@ -40,12 +49,13 @@ export async function fetchBreachEpisodes(runs, tx = null) {
       ) scope
         ON scope.ticket_id = episode.ticket_id
        AND scope.run_number = episode.run_number
+      WHERE episode.breached_at <= $3::timestamptz
       ORDER BY
         episode.ticket_id,
         episode.run_number,
         episode.episode_number
     `,
-    [ticketIds, runNumbers],
+    [ticketIds, runNumbers, dataCutoff],
   );
 
   return result.rows;

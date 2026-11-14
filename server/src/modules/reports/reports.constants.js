@@ -1,12 +1,10 @@
-
 export const REPORT_CODE = Object.freeze({
   SLA_COMPLIANCE: "SLA_COMPLIANCE",
   SLA_TICKET_DETAILS: "SLA_TICKET_DETAILS",
 });
 
-
-export const REPORT_VERSION = "1.0";
-export const CALCULATION_VERSION = "SLA-CALC-1.0";
+export const REPORT_VERSION = "1.1";
+export const CALCULATION_VERSION = "SLA-CALC-2.0";
 
 export const REPORT_STATUS = Object.freeze({
   QUEUED: "QUEUED",

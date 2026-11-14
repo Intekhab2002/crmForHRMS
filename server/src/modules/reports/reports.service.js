@@ -11,7 +11,6 @@ import { fetchComplianceDataset } from "./queries/slaCompliance.query.js";
 import { fetchSeverityPerformance } from "./queries/slaSeverity.query.js";
 import { fetchSegments } from "./queries/slaAuditEvidence.query.js";
 import { buildPolicyPerformance } from "./queries/slaPolicy.query.js";
-import { buildBreachAnalysis } from "./queries/slaBreach.query.js";
 import { buildExceptions } from "./queries/slaException.query.js";
 import { buildMonthlyTrend } from "./queries/slaTrend.query.js";
 import { calculateCompliance } from "./calculators/slaCompliance.calculator.js";
@@ -24,6 +23,7 @@ import { slaTicketDetailsDefinition } from "./definitions/slaTicketDetails.defin
 import { fetchSlaTicketDetailsDataset } from "./queries/slaTicketDetails.query.js";
 import { fetchBreachEpisodes } from "./queries/slaBreachEpisode.query.js";
 import userRepository from "../users/user.repository.js";
+import { buildBreachAnalysis } from "./queries/slaBreach.query.js";
 
 function parseReportDateTime(value) {
   if (value instanceof Date) {
@@ -151,19 +151,28 @@ async function buildComplianceDataset(input) {
   }
 
   const segments = await fetchSegments(filteredRuns);
-  const breachEpisodes = await fetchBreachEpisodes(filteredRuns);
+  const breachEpisodes = await fetchBreachEpisodes(filteredRuns, input.dataCutoff,);
   const compliance = calculateCompliance(filteredRuns);
   const metrics = calculateMetrics(filteredRuns);
   const policyPerformance = buildPolicyPerformance(filteredRuns);
-  const severityPerformance = await fetchSeverityPerformance(filteredRuns);
-  const breachAnalysis = buildBreachAnalysis(filteredRuns, breachEpisodes);
-  const exceptions = buildExceptions(filteredRuns, segments);
+  const severityPerformance = await fetchSeverityPerformance(
+    filteredRuns,
+    breachEpisodes,
+    input.dataCutoff,
+  );
+  const breachAnalysis = buildBreachAnalysis(
+    filteredRuns,
+    breachEpisodes,
+    input.dataCutoff,
+  );
+  const exceptions = buildExceptions(filteredRuns, segments,  breachEpisodes,);
   const trend = buildMonthlyTrend(filteredRuns, input.timezone);
   const reconciliation = reconcile({
     runs: filteredRuns,
     compliance,
     exceptions,
     segments,
+     breachEpisodes,
   });
 
   return {

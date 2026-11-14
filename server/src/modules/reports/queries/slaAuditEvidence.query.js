@@ -18,6 +18,7 @@ export async function fetchSegments(runs, tx = null) {
         seg.duration_value_key,
         seg.target_minutes,
         seg.consumed_minutes,
+        seg.consumed_business_seconds,
         seg.status,
         seg.end_reason
       FROM ticket_sla_segments seg

@@ -9,6 +9,12 @@ export function renderBreach(doc, data) {
     ["Average Breach Duration", format(b.averageBreachDuration)],
     ["Median Breach Duration", format(b.medianBreachDuration)],
     ["Maximum Breach Duration", format(b.maximumBreachDuration)],
+    ["Breached Runs", b.totalBreachedRuns],
+    ["Total Breach Episodes", b.totalBreachEpisodes],
+    ["Active Episodes at Cutoff", b.activeBreachEpisodes],
+    ["Cleared Episodes at Cutoff", b.clearedBreachEpisodes],
+    ["Average Elapsed at Breach", format(b.averageElapsedAtBreach)],
+    ["Average Elapsed at Clearance", format(b.averageElapsedAtClearance)],
   ]);
 }
 

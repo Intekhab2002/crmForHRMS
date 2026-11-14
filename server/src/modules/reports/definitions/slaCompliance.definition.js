@@ -17,9 +17,18 @@ export const slaComplianceDefinition = Object.freeze({
   filters: Object.freeze(["period", "policy", "severity", "status"]),
   methodology: Object.freeze({
     historicalSource: "ticket_sla_run_history",
+    currentSource: "ticket_sla",
     executionEvidence: "ticket_sla_segments",
-    precision: "whole_business_minutes",
-    complianceFormula: "(SLA Met / (SLA Met + SLA Breached)) * 100",
+    breachEventSource: "ticket_sla_breach_episodes",
+    precision: "business_seconds",
+    displayPrecision: "whole_business_minutes",
+    complianceUnit: "sla_run",
+    breachEventUnit: "breach_episode",
+    severityAttribution: "breach_episode_segment_id",
+    historicalCalendarSource: "policy_snapshot",
+    reportingCutoff: "data_cutoff",
+    complianceFormula:
+      "(SLA Met Runs / (SLA Met Runs + SLA Breached Runs)) * 100",
   }),
 });
 

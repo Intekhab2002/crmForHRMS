@@ -63,17 +63,9 @@ async function get(id) {
       elapsed_business_seconds: 0,
       remaining_business_seconds: null,
       breached_elapsed_business_seconds: 0,
-      breached_elapsed_business_minutes: activeEpisode
-        ? Math.floor(
-            Number(activeEpisode.elapsed_business_seconds_at_breach) / 60,
-          )
-        : (sla.breached_elapsed_business_minutes ?? null),
-      breached_target_resolution_minutes:
-        activeEpisode?.target_resolution_minutes ??
-        sla.breached_target_resolution_minutes ??
-        null,
-      breached_at: activeEpisode?.breached_at ?? sla.breached_at ?? null,
-
+      breached_elapsed_business_minutes: null,
+      breached_target_resolution_minutes: null,
+      breached_at: null,
       calculated_at: calculatedAt.toISOString(),
       clock_state: "INACTIVE",
       next_transition_at: null,

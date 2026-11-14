@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import { buildSummarySheet } from "./sheets/summary.sheet.js";
 import { buildPolicySheet } from "./sheets/policy.sheet.js";
 import { buildSeveritySheet } from "./sheets/severity.sheet.js";
-import { buildBreachesSheet } from "./sheets/breaches.sheet.js";
+import { buildBreachEpisodesSheet, buildBreachesSheet } from "./sheets/breaches.sheet.js";
 import { buildSlaRunsSheet } from "./sheets/slaRuns.sheet.js";
 import { buildSegmentsSheet } from "./sheets/segments.sheet.js";
 import { buildExceptionsSheet } from "./sheets/exceptions.sheet.js";
@@ -18,6 +18,7 @@ const REPORT_SHEET_BUILDERS = new Map([
       buildPolicySheet(workbook, data);
       buildSeveritySheet(workbook, data);
       buildBreachesSheet(workbook, data);
+      buildBreachEpisodesSheet(workbook, data);
       buildSlaRunsSheet(workbook, data);
       buildSegmentsSheet(workbook, data);
       buildExceptionsSheet(workbook, data);

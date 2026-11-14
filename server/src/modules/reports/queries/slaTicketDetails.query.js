@@ -1,7 +1,7 @@
 import { listRuns } from "./reportRun.query.js";
 import { getQueryExecutor } from "../../../database/queryExecutor.js";
-import slaRepository from "../../sla/sla.repository.js";
 import { addBusinessMinutes } from "../../sla/businessTime.service.js";
+import { fetchBreachEpisodes } from "./slaBreachEpisode.query.js";
 
 const ex = (tx) => getQueryExecutor(tx);
 
@@ -30,14 +30,18 @@ async function getDueAt(run, cutoff, tx) {
 
   const resolved = calendarFromSnapshot(run.policy_snapshot);
   if (!resolved) return null;
-  let holidays = [];
-  if (resolved.policy.calendarId) {
-    holidays = await slaRepository.listHolidays(
-      resolved.policy.calendarId,
-      {},
-      tx,
-    );
-  }
+const snapshotHolidays = resolved.policy.holidays;
+
+if (!Array.isArray(snapshotHolidays)) {
+  return null;
+}
+
+const holidays = snapshotHolidays.map((holiday) => ({
+  holiday_date:
+    typeof holiday === "string"
+      ? holiday
+      : holiday.holiday_date ?? holiday.holidayDate,
+}));
 
   try {
     return addBusinessMinutes({
@@ -54,6 +58,21 @@ async function getDueAt(run, cutoff, tx) {
 export async function fetchSlaTicketDetailsDataset(input, tx = null) {
   const runs = await listRuns(input, tx);
   if (!runs.length) return [];
+  const breachEpisodes = await fetchBreachEpisodes(
+  runs,
+  input.dataCutoff,
+  tx,
+);
+  const episodesByRun = new Map();
+
+for (const episode of breachEpisodes) {
+  const key = `${episode.ticket_id}:${episode.run_number}`;
+
+  const list = episodesByRun.get(key) || [];
+  list.push(episode);
+
+  episodesByRun.set(key, list);
+}
 
   const ids = [...new Set(runs.map((r) => r.ticket_id).filter(Boolean))];
   const result = await ex(tx).query(

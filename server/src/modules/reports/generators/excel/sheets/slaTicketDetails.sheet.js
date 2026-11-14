@@ -14,6 +14,9 @@ export function buildSlaTicketDetailsSheet(workbook, data) {
     ["Due Time", "dueAt", 24],
     ["Ticket Last Updated Time", "ticketLastUpdatedAt", 26],
     ["SLA Status", "status", 16],
+    ["Breach Count", "breachCount", 14],
+    ["Active Breaches", "activeBreachCount", 16],
+    ["Cleared Breaches", "clearedBreachCount", 16],
   ]);
 
   addRows(
@@ -35,6 +38,9 @@ export function buildSlaTicketDetailsSheet(workbook, data) {
         ? new Date(row.ticketLastUpdatedAt)
         : null,
       status: row.status,
+      breachCount: row.breachCount,
+      activeBreachCount: row.activeBreachCount,
+      clearedBreachCount: row.clearedBreachCount,
     })),
   );
 
