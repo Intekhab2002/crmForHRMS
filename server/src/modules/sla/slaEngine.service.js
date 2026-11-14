@@ -1,5 +1,6 @@
 import {
   addBusinessSeconds,
+  addBusinessMinutes,
   calculateBusinessSeconds,
 } from "./businessTime.service.js";
 import repository from "./sla.repository.js";
@@ -153,6 +154,7 @@ async function calculateRuntimeConsumed(runtime, now, policy, tx) {
  *
  * Returns null when the segment history cannot establish the crossing.
  */
+
 function calculateBreachTimestamp({
   segments,
   targetMinutes,
@@ -178,29 +180,23 @@ function calculateBreachTimestamp({
       new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
   );
 
-  // Find the latest segment belonging to the current
-  // severity/duration configuration.
   const activeIndex = ordered.findLastIndex((segment) => !segment.ended_at);
 
   const lastIndex = activeIndex >= 0 ? activeIndex : ordered.length - 1;
 
+  const latestSegment = ordered[lastIndex];
+
   if (
-    normalize(ordered[lastIndex].duration_value_key) !==
+    normalize(latestSegment.duration_value_key) !==
       normalize(durationValueKey) ||
-    Number(ordered[lastIndex].target_minutes) !== Number(targetMinutes)
+    Number(latestSegment.target_minutes) !== Number(targetMinutes)
   ) {
     return null;
   }
 
-  const currentTarget = Number(ordered[lastIndex].target_minutes);
-
-  if (currentTarget !== Number(targetMinutes)) {
-    return null;
-  }
-
-  // Walk backwards through contiguous segments using
-  // the same duration rule. This includes pause/resume
-  // segments but excludes previous severity configurations.
+  // Include contiguous segments for the current duration rule.
+  // This includes pause/resume segments but excludes earlier
+  // severity or target configurations.
   let firstIndex = lastIndex;
 
   while (firstIndex > 0) {
@@ -208,7 +204,7 @@ function calculateBreachTimestamp({
 
     if (
       normalize(previous.duration_value_key) !== normalize(durationValueKey) ||
-      Number(previous.target_minutes) !== targetSeconds / 60
+      Number(previous.target_minutes) !== Number(targetMinutes)
     ) {
       break;
     }
@@ -216,6 +212,7 @@ function calculateBreachTimestamp({
     firstIndex -= 1;
   }
 
+  // Earlier configurations still contribute to cumulative elapsed time.
   let consumedBefore = 0;
 
   for (let i = 0; i < firstIndex; i += 1) {
@@ -237,26 +234,39 @@ function calculateBreachTimestamp({
         });
 
     const availableSeconds = baseline + liveSeconds;
-
     const requiredSeconds = targetSeconds - consumedBefore;
 
+    // The target was already exceeded before this segment began.
+    // The current duration configuration becomes effective here.
     if (requiredSeconds <= 0) {
-      return new Date(segment.started_at);
+      return {
+        breachedAt: new Date(segment.started_at),
+        elapsedBusinessSecondsAtBreach: consumedBefore,
+      };
     }
 
     if (requiredSeconds <= availableSeconds) {
-      const requiredLiveSeconds = requiredSeconds - baseline;
-
-      if (requiredLiveSeconds <= 0) {
-        return new Date(segment.started_at);
+      // The persisted baseline already exceeds the remaining target.
+      if (requiredSeconds <= baseline) {
+        return {
+          breachedAt: new Date(segment.started_at),
+          elapsedBusinessSecondsAtBreach: consumedBefore + baseline,
+        };
       }
 
-      return addBusinessSeconds({
+      const requiredLiveSeconds = requiredSeconds - baseline;
+
+      const breachedAt = addBusinessSeconds({
         startAt: segment.started_at,
         businessSeconds: requiredLiveSeconds,
         calendar,
         holidays: holidayRows,
       });
+
+      return {
+        breachedAt,
+        elapsedBusinessSecondsAtBreach: targetSeconds,
+      };
     }
 
     consumedBefore += availableSeconds;
@@ -274,22 +284,35 @@ async function markBreached(
   tx,
   options = {},
 ) {
-  const breachAt =
-    options.breachAt ??
-    calculateBreachTimestamp({
-      segments: consumedResult.segments,
-      targetMinutes: target,
-      now,
-      policy,
-      holidayRows: consumedResult.holidayRows,
-      durationValueKey: runtime.duration_field_value_key,
-    });
+  const crossing = options.breachAt
+    ? {
+        breachedAt: options.breachAt,
+        elapsedBusinessSecondsAtBreach:
+          options.elapsedBusinessSecondsAtBreach ??
+          consumedResult.totalConsumedSeconds,
+      }
+    : calculateBreachTimestamp({
+        segments: consumedResult.segments,
+        targetMinutes: target,
+        now,
+        policy,
+        holidayRows: consumedResult.holidayRows,
+        durationValueKey: runtime.duration_field_value_key,
+      });
 
-  if (!breachAt) {
+  if (!crossing?.breachedAt) {
     throw new Error(
       `Unable to determine breach timestamp for SLA ${runtime.id}.`,
     );
   }
+
+  // Do not use consumedResult.activeSegment here.
+  // It may refer to the segment closed by changeDuration().
+  const currentOpenSegment = await repository.oneOpenSegmentForRun(
+    runtime.id,
+    runtime.run_number,
+    tx,
+  );
 
   return ticketSla.reconcileBreach(
     runtime,
@@ -297,8 +320,9 @@ async function markBreached(
       now,
       targetMinutes: target,
       totalConsumedSeconds: consumedResult.totalConsumedSeconds,
-      breachAt,
-      segmentId: options.segmentId ?? consumedResult.activeSegment?.id ?? null,
+      breachAt: crossing.breachedAt,
+      elapsedBusinessSecondsAtBreach: crossing.elapsedBusinessSecondsAtBreach,
+      segmentId: options.segmentId ?? currentOpenSegment?.id ?? null,
     },
     tx,
   );
@@ -607,20 +631,16 @@ export async function syncTicketInTransaction(
     );
 
     const target = Number(rule.resolution_minutes);
+    const targetSeconds = target * 60;
 
-    if (consumedSeconds >= Number(rule.resolution_minutes) * 60) {
-      return markBreached(
-        resumed,
-        consumedResult,
-        Number(rule.resolution_minutes),
-        now,
-        policy,
-        tx,
-        { breachAt: now },
-      );
+    if (consumedSeconds >= targetSeconds) {
+      return markBreached(resumed, consumedResult, target, now, policy, tx, {
+        breachAt: now,
+        elapsedBusinessSecondsAtBreach: consumedSeconds,
+      });
     }
 
-    return resumed;
+    return updateRunning(resumed, consumedResult, target, now, tx);
   }
 
   if (runtime.status === SLA_STATUS.NOT_TRACKED) {
@@ -628,20 +648,40 @@ export async function syncTicketInTransaction(
 
     const target = Number(rule.resolution_minutes);
 
-    if (target > 0 && consumed >= target) {
-      return markBreached(activated, consumedResult, target, now, policy, tx);
+    if (consumedSeconds >= target * 60) {
+      return markBreached(activated, consumedResult, target, now, policy, tx, {
+        breachAt: now,
+        elapsedBusinessSecondsAtBreach: consumedSeconds,
+      });
     }
 
-    return activated;
+    return updateRunning(activated, consumedResult, target, now, tx);
   }
 
   /*
    * A duration-field change creates a new segment.
    * Previously consumed business time remains part of the run.
    */
+
+  /*
+   * A new segment is required when either:
+   * 1. The severity/duration value changes.
+   * 2. The configured resolution target changes.
+   */
+  const durationValueChanged = !sameKey(
+    currentDurationValue,
+    runtimeDurationValue,
+  );
+
+  const targetValueChanged =
+    Number(runtime.target_resolution_minutes) !==
+    Number(rule.resolution_minutes);
+
+  const durationChanged = durationValueChanged || targetValueChanged;
+
   let currentRuntime = runtime;
 
-  if (!sameKey(currentDurationValue, runtimeDurationValue)) {
+  if (durationChanged) {
     currentRuntime = await ticketSla.changeDuration(
       runtime,
       {
@@ -649,9 +689,12 @@ export async function syncTicketInTransaction(
         policy,
         rule,
         durationValueKey: currentDurationValue,
+        endReason: durationValueChanged
+          ? "SEVERITY_CHANGED"
+          : "DURATION_RULE_CHANGED",
       },
       now,
-      consumedResult.activeSegmentConsumed ?? 0,
+      consumedResult.activeSegmentConsumedSeconds,
       consumedSeconds,
       tx,
     );
@@ -663,12 +706,6 @@ export async function syncTicketInTransaction(
 
   const targetSeconds = target * 60;
 
-  const durationChanged = !sameKey(currentDurationValue, runtimeDurationValue);
-
-  /*
-   * Breach is evaluated against the CURRENT target after any
-   * duration/severity change. It does not close the active segment.
-   */
   if (consumedSeconds >= targetSeconds) {
     return markBreached(
       currentRuntime,
@@ -677,19 +714,15 @@ export async function syncTicketInTransaction(
       now,
       policy,
       tx,
-      {
-        // A newly effective target cannot breach before
-        // its segment becomes effective.
-        breachAt: durationChanged ? now : null,
-      },
+      durationChanged
+        ? {
+            breachAt: now,
+            elapsedBusinessSecondsAtBreach: consumedSeconds,
+          }
+        : {},
     );
   }
 
-  /*
-   * This also allows a formerly breached SLA to return to RUNNING
-   * when its new target is greater than total consumed time.
-   * updateTicketSla leaves breached_at unchanged unless supplied.
-   */
   return updateRunning(currentRuntime, consumedResult, target, now, tx);
 }
 

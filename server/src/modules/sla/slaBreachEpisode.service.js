@@ -2,8 +2,28 @@
 import repository from "./sla.repository.js";
 import { SLA_STATUS } from "./sla.constants.js";
 
+function normalizeSeconds(value) {
+  const seconds = Number(value ?? 0);
+
+  if (!Number.isSafeInteger(seconds) || seconds < 0) {
+    throw new TypeError("Business seconds must be a non-negative safe integer.");
+  }
+
+  return seconds;
+}
+
 function toMinutes(seconds) {
-  return Math.floor(Math.max(0, Number(seconds ?? 0)) / 60);
+  return Math.floor(normalizeSeconds(seconds) / 60);
+}
+
+function validateTarget(targetMinutes) {
+  const target = Number(targetMinutes);
+
+  if (!Number.isSafeInteger(target) || target < 1) {
+    throw new TypeError("SLA target must be a positive integer.");
+  }
+
+  return target;
 }
 
 async function reconcile({
@@ -12,21 +32,22 @@ async function reconcile({
   targetMinutes,
   elapsedBusinessSeconds,
   breachAt = null,
+  elapsedBusinessSecondsAtBreach = null,
   segmentId = null,
   tx = null,
 }) {
-  const target = Number(targetMinutes);
-  const elapsed = Math.max(
-    0,
-    Number(elapsedBusinessSeconds),
-  );
+  if (!runtime?.id || !runtime?.ticket_id || !runtime?.run_number) {
+    throw new TypeError("A valid SLA runtime is required.");
+  }
+
+  const target = validateTarget(targetMinutes);
+  const elapsed = normalizeSeconds(elapsedBusinessSeconds);
+  const targetSeconds = target * 60;
 
   if (
-    !Number.isInteger(target) ||
-    target < 1 ||
-    !Number.isSafeInteger(elapsed)
+    [SLA_STATUS.COMPLETED, SLA_STATUS.STOPPED].includes(runtime.status)
   ) {
-    throw new TypeError("Invalid SLA breach reconciliation values.");
+    return runtime;
   }
 
   const activeEpisode = await repository.activeBreachEpisode(
@@ -35,20 +56,18 @@ async function reconcile({
     tx,
   );
 
-  const targetSeconds = target * 60;
-  const isBreached = elapsed >= targetSeconds;
-
-  // -------------------------------------------------------
+  // --------------------------------------------------
   // Current target is no longer breached.
-  // -------------------------------------------------------
+  // --------------------------------------------------
 
-  if (!isBreached) {
+  if (elapsed < targetSeconds) {
     if (activeEpisode) {
       await repository.clearActiveBreachEpisode(
         runtime.id,
         runtime.run_number,
         now,
         "TARGET_INCREASED",
+        elapsed,
         tx,
       );
     }
@@ -62,25 +81,33 @@ async function reconcile({
         breachedTargetResolutionMinutes: null,
         elapsedBusinessSeconds: elapsed,
         elapsedBusinessMinutes: toMinutes(elapsed),
-        remainingBusinessMinutes: toMinutes(
-          targetSeconds - elapsed,
-        ),
+        remainingBusinessMinutes: toMinutes(targetSeconds - elapsed),
         lastCalculatedAt: now,
       },
       tx,
     );
   }
 
-  // -------------------------------------------------------
-  // Already breached: retain the active episode.
-  // -------------------------------------------------------
+  // --------------------------------------------------
+  // Current target is breached.
+  // --------------------------------------------------
 
   let episode = activeEpisode;
 
   if (!episode) {
     if (!breachAt) {
       throw new Error(
-        `Unable to establish breach timestamp for SLA ${runtime.id}.`,
+        `Missing breach timestamp for SLA runtime ${runtime.id}.`,
+      );
+    }
+
+    const crossingSeconds = normalizeSeconds(
+      elapsedBusinessSecondsAtBreach ?? targetSeconds,
+    );
+
+    if (crossingSeconds > elapsed) {
+      throw new Error(
+        "Breach snapshot cannot exceed current elapsed business seconds.",
       );
     }
 
@@ -98,11 +125,20 @@ async function reconcile({
         segmentId: segmentId ?? openSegment?.id ?? null,
         breachedAt: breachAt,
         targetResolutionMinutes: target,
-        elapsedBusinessSeconds: elapsed,
+        elapsedBusinessSecondsAtBreach: crossingSeconds,
       },
       tx,
     );
+
+    if (!episode) {
+      throw new Error(
+        `Unable to create breach episode for SLA ${runtime.id}.`,
+      );
+    }
   }
+
+  // Keep the original episode snapshot immutable.
+  // Repeated worker/API synchronization must not create another episode.
 
   return repository.updateTicketSla(
     runtime.id,
@@ -127,23 +163,35 @@ async function clear({
   runtime,
   now,
   reason = "TARGET_INCREASED",
+  elapsedBusinessSeconds = null,
   tx = null,
 }) {
-  const active = await repository.activeBreachEpisode(
+  if (!runtime?.id || !runtime?.run_number) {
+    return null;
+  }
+
+  const activeEpisode = await repository.activeBreachEpisode(
     runtime.id,
     runtime.run_number,
     tx,
   );
 
-  if (!active) {
+  if (!activeEpisode) {
     return null;
   }
+
+  const elapsed = normalizeSeconds(
+    elapsedBusinessSeconds ??
+      runtime.elapsed_business_seconds ??
+      Number(runtime.elapsed_business_minutes ?? 0) * 60,
+  );
 
   return repository.clearActiveBreachEpisode(
     runtime.id,
     runtime.run_number,
     now,
     reason,
+    elapsed,
     tx,
   );
 }

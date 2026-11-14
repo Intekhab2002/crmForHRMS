@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import {
   calculateBusinessMinutes,
   addBusinessMinutes,
+  calculateBusinessSeconds,
+  addBusinessSeconds,
 } from "../../src/modules/sla/businessTime.service.js";
 
 import {
@@ -56,6 +58,47 @@ test("inside-hours partial day is exact", () => {
     }),
     210,
   );
+});
+
+test("business seconds preserve fractional-minute precision", () => {
+  const result = calculateBusinessSeconds({
+    startAt: "2026-11-13T09:00:00+05:30",
+    endAt: "2026-11-13T09:05:22+05:30",
+    calendar: STANDARD_CALENDAR,
+  });
+
+  assert.equal(result, 322);
+});
+
+test("adding business seconds calculates exact timestamp", () => {
+  const result = addBusinessSeconds({
+    startAt: "2026-11-13T09:00:00+05:30",
+    businessSeconds: 322,
+    calendar: STANDARD_CALENDAR,
+  });
+
+  assert.equal(result.toISOString(), "2026-11-13T03:35:22.000Z");
+});
+
+test("adding business seconds skips weekends", () => {
+  const result = addBusinessSeconds({
+    startAt: "2026-11-13T16:59:00+05:30",
+    businessSeconds: 120,
+    calendar: STANDARD_CALENDAR,
+  });
+
+  assert.equal(result.toISOString(), "2026-11-16T03:31:00.000Z");
+});
+
+test("adding business seconds skips holidays", () => {
+  const result = addBusinessSeconds({
+    startAt: "2026-11-13T16:59:00+05:30",
+    businessSeconds: 120,
+    calendar: STANDARD_CALENDAR,
+    holidays: [holiday("2026-11-16")],
+  });
+
+  assert.equal(result.toISOString(), "2026-11-17T03:31:00.000Z");
 });
 
 test("after-hours same day consumes zero", () => {
@@ -248,7 +291,7 @@ test("add more than one business day rolls into next business day", () => {
     calendar: STANDARD_CALENDAR,
   });
 
-assert.equal(result.toISOString(), "2026-09-21T04:30:00.000Z");
+  assert.equal(result.toISOString(), "2026-09-21T04:30:00.000Z");
 });
 
 test("add business minutes skips weekend", () => {
@@ -258,7 +301,7 @@ test("add business minutes skips weekend", () => {
     calendar: STANDARD_CALENDAR,
   });
 
-assert.equal(result.toISOString(), "2026-09-21T04:30:00.000Z");
+  assert.equal(result.toISOString(), "2026-09-21T04:30:00.000Z");
 });
 
 test("add business minutes skips holiday", () => {
@@ -269,7 +312,7 @@ test("add business minutes skips holiday", () => {
     holidays: [holiday("2026-09-15")],
   });
 
- assert.equal(result.toISOString(), "2026-09-16T04:30:00.000Z");
+  assert.equal(result.toISOString(), "2026-09-16T04:30:00.000Z");
 });
 
 test("negative business minutes are rejected", () => {
@@ -316,4 +359,57 @@ test("very long business duration remains bounded and deterministic", () => {
   });
 
   assertValidDate(result);
+});
+
+test("business seconds preserve partial-minute precision", () => {
+  const seconds = calculateBusinessSeconds({
+    startAt: "2026-11-13T09:00:00+05:30",
+    endAt: "2026-11-13T09:05:22+05:30",
+    calendar: STANDARD_CALENDAR,
+  });
+
+  assert.equal(seconds, 322);
+});
+
+test("adding business seconds preserves exact seconds", () => {
+  const result = addBusinessSeconds({
+    startAt: "2026-11-13T09:00:00+05:30",
+    businessSeconds: 322,
+    calendar: STANDARD_CALENDAR,
+  });
+
+  assert.equal(result.toISOString(), "2026-11-13T03:35:22.000Z");
+});
+
+test("adding business seconds skips weekends", () => {
+  const result = addBusinessSeconds({
+    startAt: "2026-11-13T16:59:00+05:30",
+    businessSeconds: 120,
+    calendar: STANDARD_CALENDAR,
+  });
+
+  assert.equal(result.toISOString(), "2026-11-16T03:31:00.000Z");
+});
+
+test("adding business seconds skips holidays", () => {
+  const result = addBusinessSeconds({
+    startAt: "2026-11-13T16:59:00+05:30",
+    businessSeconds: 120,
+    calendar: STANDARD_CALENDAR,
+    holidays: [holiday("2026-11-16")],
+  });
+
+  assert.equal(result.toISOString(), "2026-11-17T03:31:00.000Z");
+});
+
+test("negative business seconds are rejected", () => {
+  assert.throws(
+    () =>
+      addBusinessSeconds({
+        startAt: "2026-11-13T09:00:00+05:30",
+        businessSeconds: -1,
+        calendar: STANDARD_CALENDAR,
+      }),
+    /non-negative safe integer/,
+  );
 });

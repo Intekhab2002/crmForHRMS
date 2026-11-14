@@ -97,17 +97,21 @@ export function calculateLiveRuntime(
   }
 
   // SLA is not being tracked.
+
   if (runtime.status === SLA_STATUS.NOT_TRACKED) {
-    const elapsedMinutes = Math.max(
+    const elapsedSeconds = Math.max(
       0,
-      Number(runtime.elapsed_business_minutes ?? 0),
+      Number(
+        runtime.elapsed_business_seconds ??
+          Number(runtime.elapsed_business_minutes ?? 0) * 60,
+      ),
     );
 
     return {
       status: SLA_STATUS.NOT_TRACKED,
-      elapsedBusinessMinutes: elapsedMinutes,
+      elapsedBusinessMinutes: Math.floor(elapsedSeconds / 60),
       remainingBusinessMinutes: null,
-      elapsedBusinessSeconds: elapsedMinutes * 60,
+      elapsedBusinessSeconds: elapsedSeconds,
       remainingBusinessSeconds: null,
       breachedElapsedBusinessSeconds: 0,
       clockState: "INACTIVE",
@@ -117,10 +121,14 @@ export function calculateLiveRuntime(
   }
 
   // Terminal SLA states must not continue advancing.
+
   if ([SLA_STATUS.STOPPED, SLA_STATUS.COMPLETED].includes(runtime.status)) {
-    const elapsedMinutes = Math.max(
+    const elapsedSeconds = Math.max(
       0,
-      Number(runtime.elapsed_business_minutes ?? 0),
+      Number(
+        runtime.elapsed_business_seconds ??
+          Number(runtime.elapsed_business_minutes ?? 0) * 60,
+      ),
     );
 
     const remainingMinutes = Math.max(
@@ -130,9 +138,9 @@ export function calculateLiveRuntime(
 
     return {
       status: runtime.status,
-      elapsedBusinessMinutes: elapsedMinutes,
+      elapsedBusinessMinutes: Math.floor(elapsedSeconds / 60),
       remainingBusinessMinutes: remainingMinutes,
-      elapsedBusinessSeconds: elapsedMinutes * 60,
+      elapsedBusinessSeconds: elapsedSeconds,
       remainingBusinessSeconds: remainingMinutes * 60,
       breachedElapsedBusinessSeconds: 0,
       clockState: "TERMINAL",

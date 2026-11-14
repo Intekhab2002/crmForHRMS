@@ -42,11 +42,11 @@ function snapshot(policy, rule, holidays = []) {
     },
   };
 }
+
 async function get(id) {
   await requireTicket(id);
 
   const sla = await repository.oneTicketSla(id);
-
   const calculatedAt = new Date();
 
   if (!sla) {
@@ -54,29 +54,28 @@ async function get(id) {
       ticketId: id,
       status: SLA_STATUS.NOT_TRACKED,
       segments: [],
+      breach_episodes: [],
       elapsedBusinessMinutes: 0,
       remainingBusinessMinutes: null,
       elapsed_business_minutes: 0,
       remaining_business_minutes: null,
-      elapsed_business_seconds: live.elapsedBusinessSeconds,
-
-      remaining_business_seconds: live.remainingBusinessSeconds,
-
-      breached_elapsed_business_seconds: live.breachedElapsedBusinessSeconds,
-      calculated_at: calculatedAt.toISOString(),
-      clock_state: "INACTIVE",
-      breached_at: activeEpisode?.breached_at ?? null,
-
+      elapsed_business_seconds: 0,
+      remaining_business_seconds: null,
+      breached_elapsed_business_seconds: 0,
       breached_elapsed_business_minutes: activeEpisode
         ? Math.floor(
             Number(activeEpisode.elapsed_business_seconds_at_breach) / 60,
           )
-        : null,
-
+        : (sla.breached_elapsed_business_minutes ?? null),
       breached_target_resolution_minutes:
-        activeEpisode?.target_resolution_minutes ?? null,
+        activeEpisode?.target_resolution_minutes ??
+        sla.breached_target_resolution_minutes ??
+        null,
+      breached_at: activeEpisode?.breached_at ?? sla.breached_at ?? null,
 
-      breach_episodes: episodes,
+      calculated_at: calculatedAt.toISOString(),
+      clock_state: "INACTIVE",
+      next_transition_at: null,
     };
   }
 
@@ -86,12 +85,10 @@ async function get(id) {
     (segment) => Number(segment.run_number) === Number(sla.run_number),
   );
 
-  const activeEpisode = await repository.activeBreachEpisode(
-    sla.id,
-    sla.run_number,
-  );
-
-  const episodes = await repository.listBreachEpisodes(sla.id);
+  const [activeEpisode, episodes] = await Promise.all([
+    repository.activeBreachEpisode(sla.id, sla.run_number),
+    repository.listBreachEpisodes(sla.id),
+  ]);
 
   const live = runtimeCalculator.calculateLiveRuntime(
     sla,
@@ -102,29 +99,38 @@ async function get(id) {
 
   return {
     ...sla,
-
     status: live.status,
 
-    elapsed_business_minutes: live.elapsedBusinessMinutes,
+    elapsedBusinessMinutes: live.elapsedBusinessMinutes,
+    remainingBusinessMinutes: live.remainingBusinessMinutes,
 
+    elapsed_business_minutes: live.elapsedBusinessMinutes,
     remaining_business_minutes: live.remainingBusinessMinutes,
 
     elapsed_business_seconds: live.elapsedBusinessSeconds,
-
     remaining_business_seconds: live.remainingBusinessSeconds,
-
     breached_elapsed_business_seconds: live.breachedElapsedBusinessSeconds,
 
-    calculated_at: live.calculatedAt,
+    breached_at: activeEpisode?.breached_at ?? null,
 
-    clock_state: live.clockState,
+    breached_elapsed_business_minutes: activeEpisode
+      ? Math.floor(
+          Number(activeEpisode.elapsed_business_seconds_at_breach) / 60,
+        )
+      : null,
 
-    next_transition_at: live.nextTransitionAt,
+    breached_target_resolution_minutes:
+      activeEpisode?.target_resolution_minutes ?? null,
+
     breach_episodes: episodes,
+    calculated_at: live.calculatedAt,
+    clock_state: live.clockState,
+    next_transition_at: live.nextTransitionAt,
 
     segments,
   };
 }
+
 function remaining(target, consumed) {
   return Math.max(Number(target ?? 0) - Number(consumed ?? 0), 0);
 }
@@ -139,6 +145,7 @@ async function history(id) {
     breachEpisodes: sla ? await repository.listBreachEpisodes(sla.id) : [],
   };
 }
+
 async function setNotTracked(
   ticket,
   policy = null,
@@ -151,82 +158,92 @@ async function setNotTracked(
   }
 
   const existing = await repository.oneTicketSla(ticket.id, tx);
+  const now = options.now ?? new Date();
+
+  const elapsedSeconds = Math.max(
+    0,
+    Number(
+      options.totalConsumedSeconds ??
+        Number(
+          options.preserveElapsed ?? existing?.elapsed_business_minutes ?? 0,
+        ) * 60,
+    ),
+  );
+
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+
   if (existing) {
     await breachEpisodeService.clear({
       runtime: existing,
-      now: options.now ?? new Date(),
+      now,
       reason: "RULE_REMOVED",
+      elapsedBusinessSeconds: elapsedSeconds,
       tx,
     });
   }
 
-  const holidayRows = await repository.listHolidays(policy.calendar_id, {}, tx);
-
-  const elapsed = Number(
-    options.preserveElapsed ?? existing?.elapsed_business_minutes ?? 0,
-  );
-
-  const elapsedSeconds = Math.max(
-    0,
-    Number(options.totalConsumedSeconds ?? elapsed * 60),
-  );
   if (
     existing &&
     [SLA_STATUS.RUNNING, SLA_STATUS.BREACHED].includes(existing.status)
   ) {
-    const segments = await repository.listSegments(
+    const openSegment = await repository.oneOpenSegmentForRun(
       existing.id,
       existing.run_number,
       tx,
     );
-    const activeSegment = segments
-      .filter((segment) => !segment.ended_at)
-      .sort((a, b) => new Date(b.started_at) - new Date(a.started_at))[0];
 
-    if (activeSegment) {
-      await repository.closeSegment(
-        existing.id,
-        existing.run_number,
-        options.now ?? new Date(),
-        Math.floor(
-          Number(
-            options.activeSegmentConsumedSeconds ??
-              Number(options.activeSegmentConsumed ?? 0) * 60,
-          ) / 60,
-        ),
-        SLA_STATUS.PAUSED,
-        tx,
-        options.endReason ?? "NO_VALID_RULE",
+    if (openSegment) {
+      const activeSeconds = Math.max(
+        0,
         Number(
           options.activeSegmentConsumedSeconds ??
             Number(options.activeSegmentConsumed ?? 0) * 60,
         ),
       );
+
+      await repository.closeSegment(
+        existing.id,
+        existing.run_number,
+        now,
+        Math.floor(activeSeconds / 60),
+        SLA_STATUS.PAUSED,
+        tx,
+        options.endReason ?? "NO_VALID_RULE",
+        activeSeconds,
+      );
     }
   }
+
+  const holidayRows = await repository.listHolidays(policy.calendar_id, {}, tx);
+
   return repository.upsertTicketSla(
     {
       ticketId: ticket.id,
       runNumber: existing?.run_number ?? 1,
-      slaPolicyId: policy?.id ?? null,
+      slaPolicyId: policy.id,
       status: SLA_STATUS.NOT_TRACKED,
+
       breachedAt: null,
       breachedElapsedBusinessMinutes: null,
       breachedTargetResolutionMinutes: null,
-      elapsedBusinessMinutes: elapsed,
+
+      elapsedBusinessMinutes: elapsedMinutes,
       elapsedBusinessSeconds: elapsedSeconds,
-      elapsedBusinessSeconds: initialConsumedSeconds,
       remainingBusinessMinutes: null,
-      lastCalculatedAt: options.now ?? new Date(),
-      activationFieldKey: policy?.trigger_field_key ?? null,
-      activationFieldValueKey: policy?.trigger_value_key ?? null,
-      durationFieldKey: policy?.duration_field_key ?? null,
+
+      lastCalculatedAt: now,
+
+      activationFieldKey: policy.trigger_field_key,
+      activationFieldValueKey: policy.trigger_value_key,
+      durationFieldKey: policy.duration_field_key,
       durationFieldValueKey: durationValueKey ?? null,
-      policySnapshot: policy ? snapshot(policy, null, holidayRows) : {},
+
+      policySnapshot: snapshot(policy, null, holidayRows),
     },
     tx,
   );
 }
+
 async function activate(ticket, policy, rule, now, tx = null) {
   const existing = await repository.oneTicketSla(ticket.id, tx);
   const holidayRows = await repository.listHolidays(policy.calendar_id, {}, tx);
@@ -262,14 +279,23 @@ async function activate(ticket, policy, rule, now, tx = null) {
       slaPolicyId: policy.id,
       runNumber,
       status: SLA_STATUS.RUNNING,
+
       activatedAt: activationAt,
       pausedAt: null,
       stoppedAt: null,
       completedAt: null,
+
       breachedAt: null,
+      breachedElapsedBusinessMinutes: null,
+      breachedTargetResolutionMinutes: null,
+
       targetResolutionMinutes: targetMinutes,
+      elapsedBusinessSeconds: initialConsumedSeconds,
       elapsedBusinessMinutes: initialConsumed,
-      remainingBusinessMinutes: Math.max(targetMinutes - initialConsumed, 0),
+      remainingBusinessMinutes: Math.floor(
+        Math.max(targetMinutes * 60 - initialConsumedSeconds, 0) / 60,
+      ),
+
       lastCalculatedAt: now,
       activationFieldKey: policy.trigger_field_key,
       activationFieldValueKey: policy.trigger_value_key,
@@ -299,61 +325,59 @@ async function activate(ticket, policy, rule, now, tx = null) {
 
   return runtime;
 }
+
 async function pause(runtime, now, consumedResult, tx = null) {
-  if (runtime.status === SLA_STATUS.PAUSED) {
-    return repository.updateTicketSla(
+  const totalSeconds = Math.max(
+    0,
+    Number(
+      consumedResult?.totalConsumedSeconds ??
+        Number(consumedResult?.totalConsumed ?? 0) * 60,
+    ),
+  );
+
+  const totalMinutes = Math.floor(totalSeconds / 60);
+
+  const activeSeconds = Math.max(
+    0,
+    Number(
+      consumedResult?.activeSegmentConsumedSeconds ??
+        Number(consumedResult?.activeSegmentConsumed ?? 0) * 60,
+    ),
+  );
+
+  if (runtime.status !== SLA_STATUS.PAUSED) {
+    const openSegment = await repository.oneOpenSegmentForRun(
       runtime.id,
-      {
-        elapsedBusinessMinutes: consumedResult.totalConsumed,
-        remainingBusinessMinutes: remaining(
-          runtime.target_resolution_minutes,
-          consumedResult.totalConsumed,
-        ),
-        lastCalculatedAt: now,
-      },
+      runtime.run_number,
       tx,
     );
+
+    if (openSegment) {
+      await repository.closeSegment(
+        runtime.id,
+        runtime.run_number,
+        now,
+        Math.floor(activeSeconds / 60),
+        SLA_STATUS.PAUSED,
+        tx,
+        "TRIGGER_LOST",
+        activeSeconds,
+      );
+    }
   }
-
-  const segmentConsumedSeconds = Math.max(
-    0,
-    Number(
-      consumedResult.activeSegmentConsumedSeconds ??
-        Number(consumedResult.activeSegmentConsumed ?? 0) * 60,
-    ),
-  );
-
-  const totalConsumedSeconds = Math.max(
-    0,
-    Number(
-      consumedResult.totalConsumedSeconds ??
-        Number(consumedResult.totalConsumed ?? 0) * 60,
-    ),
-  );
-
-  const totalConsumedMinutes = Math.floor(totalConsumedSeconds / 60);
-
-  await repository.closeSegment(
-    runtime.id,
-    runtime.run_number,
-    now,
-    Math.floor(segmentConsumedSeconds / 60),
-    SLA_STATUS.PAUSED,
-    tx,
-    "TRIGGER_LOST",
-    segmentConsumedSeconds,
-  );
 
   return repository.updateTicketSla(
     runtime.id,
     {
       status: SLA_STATUS.PAUSED,
       pausedAt: now,
-      elapsedBusinessSeconds: totalConsumedSeconds,
-      elapsedBusinessMinutes: totalConsumedMinutes,
-      remainingBusinessMinutes: Math.max(
-        Number(runtime.target_resolution_minutes) - totalConsumedMinutes,
-        0,
+      elapsedBusinessSeconds: totalSeconds,
+      elapsedBusinessMinutes: totalMinutes,
+      remainingBusinessMinutes: Math.floor(
+        Math.max(
+          Number(runtime.target_resolution_minutes ?? 0) * 60 - totalSeconds,
+          0,
+        ) / 60,
       ),
       lastCalculatedAt: now,
     },
@@ -363,7 +387,7 @@ async function pause(runtime, now, consumedResult, tx = null) {
 
 async function changeDuration(
   runtime,
-  { ticket, policy, rule, durationValueKey },
+  { ticket, policy, rule, durationValueKey, endReason = "SEVERITY_CHANGED" },
   now,
   currentSegmentConsumedSeconds,
   totalConsumedSeconds,
@@ -384,18 +408,28 @@ async function changeDuration(
     );
   }
 
+  const segmentSeconds = Math.max(0, Number(currentSegmentConsumedSeconds));
+
+  const totalSeconds = Math.max(0, Number(totalConsumedSeconds));
+
+  if (
+    !Number.isSafeInteger(segmentSeconds) ||
+    !Number.isSafeInteger(totalSeconds)
+  ) {
+    throw new TypeError("SLA duration values must be integer seconds.");
+  }
+
   const holidayRows = await repository.listHolidays(policy.calendar_id, {}, tx);
 
-  // Preserve the actual consumption of the segment being closed.
   await repository.closeSegment(
     runtime.id,
     runtime.run_number,
     now,
-    Math.floor(currentSegmentConsumedSeconds / 60),
+    Math.floor(segmentSeconds / 60),
     SLA_STATUS.STOPPED,
     tx,
-    "SEVERITY_CHANGED",
-    currentSegmentConsumedSeconds,
+    endReason,
+    segmentSeconds,
   );
 
   await repository.createSegment(
@@ -407,35 +441,29 @@ async function changeDuration(
       durationValueKey,
       targetMinutes: Number(rule.resolution_minutes),
       consumedMinutes: 0,
-      status: SLA_STATUS.RUNNING,
-      consumedMinutes: 0,
       consumedBusinessSeconds: 0,
+      status: SLA_STATUS.RUNNING,
     },
     tx,
   );
 
-  /*
-   * Use updateTicketSla, not upsertTicketSla.
-   * This preserves breached_at and other timestamp fields that
-   * must not be reset when severity changes.
-   */
+  const targetSeconds = Number(rule.resolution_minutes) * 60;
+
   return repository.updateTicketSla(
     runtime.id,
     {
       status: SLA_STATUS.RUNNING,
       pausedAt: null,
-      targetResolutionMinutes: Number(rule.resolution_minutes),
-      elapsedBusinessMinutes: totalConsumed,
-      elapsedBusinessSeconds: totalConsumedSeconds,
 
-      elapsedBusinessMinutes: Math.floor(totalConsumedSeconds / 60),
+      targetResolutionMinutes: Number(rule.resolution_minutes),
+
+      elapsedBusinessSeconds: totalSeconds,
+      elapsedBusinessMinutes: Math.floor(totalSeconds / 60),
 
       remainingBusinessMinutes: Math.floor(
-        Math.max(
-          Number(rule.resolution_minutes) * 60 - totalConsumedSeconds,
-          0,
-        ) / 60,
+        Math.max(targetSeconds - totalSeconds, 0) / 60,
       ),
+
       durationFieldValueKey: durationValueKey,
       lastCalculatedAt: now,
       policySnapshot: snapshot(policy, rule, holidayRows),
@@ -559,9 +587,6 @@ async function terminal(
     endReasonOverride ??
     (status === SLA_STATUS.COMPLETED ? "RESOLVED" : "TICKET_CLOSED");
 
-  const total = Math.max(0, Number(totalConsumed ?? 0));
-  const activeConsumed = Math.max(0, Number(segmentConsumed ?? 0));
-
   // Close the current run's active segment. The repository's database
   // constraint enforces no more than one open segment per run.
   const openSegment = await repository.oneOpenSegmentForRun(
@@ -601,9 +626,11 @@ async function terminal(
 
       elapsedBusinessSeconds: totalSeconds,
       elapsedBusinessMinutes: totalMinutes,
-      remainingBusinessMinutes: remaining(
-        runtime.target_resolution_minutes,
-        total,
+      remainingBusinessMinutes: Math.floor(
+        Math.max(
+          Number(runtime.target_resolution_minutes ?? 0) * 60 - totalSeconds,
+          0,
+        ) / 60,
       ),
       lastCalculatedAt: now,
     },
@@ -621,6 +648,7 @@ async function terminal(
     now,
     reason:
       endReasonOverride === "TICKET_CLOSED" ? "TICKET_CLOSED" : "SLA_COMPLETED",
+    elapsedBusinessSeconds: totalSeconds,
     tx,
   });
 
@@ -659,32 +687,43 @@ async function complete(
 }
 
 async function stop(runtime, now, consumedResult, tx = null) {
-  const totalConsumed = Number(
-    consumedResult?.totalConsumed ?? consumedResult ?? 0,
+  const totalSeconds = Math.max(
+    0,
+    Number(
+      consumedResult?.totalConsumedSeconds ??
+        Number(consumedResult?.totalConsumed ?? 0) * 60,
+    ),
   );
 
-  const segmentConsumed = Number(
-    consumedResult?.activeSegmentConsumed ?? totalConsumed,
+  const segmentSeconds = Math.max(
+    0,
+    Number(
+      consumedResult?.activeSegmentConsumedSeconds ??
+        Number(consumedResult?.activeSegmentConsumed ?? 0) * 60,
+    ),
   );
 
   return terminal(
     runtime,
     now,
-    totalConsumed,
-    segmentConsumed,
+    Math.floor(totalSeconds / 60),
+    Math.floor(segmentSeconds / 60),
     SLA_STATUS.STOPPED,
     tx,
     "TICKET_CLOSED",
+    totalSeconds,
+    segmentSeconds,
   );
 }
 
-async function breach(
+async function reconcileBreach(
   runtime,
   {
     now,
     targetMinutes,
     totalConsumedSeconds,
     breachAt = null,
+    elapsedBusinessSecondsAtBreach = null,
     segmentId = null,
   },
   tx = null,
@@ -695,6 +734,7 @@ async function breach(
     targetMinutes,
     elapsedBusinessSeconds: totalConsumedSeconds,
     breachAt,
+    elapsedBusinessSecondsAtBreach,
     segmentId,
     tx,
   });
@@ -710,5 +750,6 @@ export default Object.freeze({
   changeDuration,
   complete,
   stop,
-  breach,
+  reconcileBreach,
+  breach: reconcileBreach,
 });

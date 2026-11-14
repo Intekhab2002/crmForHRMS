@@ -823,6 +823,7 @@ async function listBreachEpisodes(ticketSlaId, runNumber = null, tx = null) {
   return result.rows;
 }
 
+
 async function createBreachEpisode(data, tx = null) {
   const result = await ex(tx).query(
     `
@@ -857,18 +858,21 @@ async function createBreachEpisode(data, tx = null) {
       data.segmentId ?? null,
       data.breachedAt,
       data.targetResolutionMinutes,
-      data.elapsedBusinessSeconds,
+      data.elapsedBusinessSecondsAtBreach,
     ],
   );
 
-  return result.rows[0];
+  return result.rows[0] ?? null;
 }
+
+
 
 async function clearActiveBreachEpisode(
   ticketSlaId,
   runNumber,
   clearedAt,
   clearReason,
+  elapsedBusinessSecondsAtClear,
   tx = null,
 ) {
   const result = await ex(tx).query(
@@ -876,17 +880,25 @@ async function clearActiveBreachEpisode(
       UPDATE ticket_sla_breach_episodes
       SET
         cleared_at = $3,
-        clear_reason = $4
+        clear_reason = $4,
+        elapsed_business_seconds_at_clear = $5
       WHERE ticket_sla_id = $1
         AND run_number = $2
         AND cleared_at IS NULL
       RETURNING *
     `,
-    [ticketSlaId, runNumber, clearedAt, clearReason],
+    [
+      ticketSlaId,
+      runNumber,
+      clearedAt,
+      clearReason,
+      elapsedBusinessSecondsAtClear,
+    ],
   );
 
   return result.rows[0] ?? null;
 }
+
 
 async function lockTicketForUpdate(ticketId, tx = null) {
   const result = await ex(tx).query(
