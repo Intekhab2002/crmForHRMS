@@ -155,7 +155,7 @@ async function calculateRuntimeConsumed(runtime, now, policy, tx) {
  * Returns null when the segment history cannot establish the crossing.
  */
 
-function calculateBreachTimestamp({
+export function calculateBreachTimestamp({
   segments,
   targetMinutes,
   now,

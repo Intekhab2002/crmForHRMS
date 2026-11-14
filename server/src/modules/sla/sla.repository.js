@@ -823,7 +823,6 @@ async function listBreachEpisodes(ticketSlaId, runNumber = null, tx = null) {
   return result.rows;
 }
 
-
 async function createBreachEpisode(data, tx = null) {
   const result = await ex(tx).query(
     `
@@ -865,16 +864,33 @@ async function createBreachEpisode(data, tx = null) {
   return result.rows[0] ?? null;
 }
 
-
-
 async function clearActiveBreachEpisode(
-  ticketSlaId,
-  runNumber,
-  clearedAt,
-  clearReason,
-  elapsedBusinessSecondsAtClear,
+  {
+    ticketSlaId,
+    runNumber,
+    clearedAt,
+    clearReason,
+    elapsedBusinessSecondsAtClear,
+  },
   tx = null,
 ) {
+  if (!ticketSlaId || !Number.isSafeInteger(runNumber) || runNumber < 1) {
+    throw new TypeError("A valid SLA runtime identity is required.");
+  }
+
+  if (!clearedAt || !clearReason) {
+    throw new TypeError("Clearance timestamp and reason are required.");
+  }
+
+  if (
+    !Number.isSafeInteger(elapsedBusinessSecondsAtClear) ||
+    elapsedBusinessSecondsAtClear < 0
+  ) {
+    throw new TypeError(
+      "Clearance elapsed business seconds must be a non-negative integer.",
+    );
+  }
+
   const result = await ex(tx).query(
     `
       UPDATE ticket_sla_breach_episodes
@@ -898,7 +914,6 @@ async function clearActiveBreachEpisode(
 
   return result.rows[0] ?? null;
 }
-
 
 async function lockTicketForUpdate(ticketId, tx = null) {
   const result = await ex(tx).query(

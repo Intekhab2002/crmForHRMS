@@ -1,4 +1,3 @@
-
 import repository from "./sla.repository.js";
 import { SLA_STATUS } from "./sla.constants.js";
 
@@ -6,7 +5,9 @@ function normalizeSeconds(value) {
   const seconds = Number(value ?? 0);
 
   if (!Number.isSafeInteger(seconds) || seconds < 0) {
-    throw new TypeError("Business seconds must be a non-negative safe integer.");
+    throw new TypeError(
+      "Business seconds must be a non-negative safe integer.",
+    );
   }
 
   return seconds;
@@ -44,9 +45,7 @@ async function reconcile({
   const elapsed = normalizeSeconds(elapsedBusinessSeconds);
   const targetSeconds = target * 60;
 
-  if (
-    [SLA_STATUS.COMPLETED, SLA_STATUS.STOPPED].includes(runtime.status)
-  ) {
+  if ([SLA_STATUS.COMPLETED, SLA_STATUS.STOPPED].includes(runtime.status)) {
     return runtime;
   }
 
@@ -63,11 +62,13 @@ async function reconcile({
   if (elapsed < targetSeconds) {
     if (activeEpisode) {
       await repository.clearActiveBreachEpisode(
-        runtime.id,
-        runtime.run_number,
-        now,
-        "TARGET_INCREASED",
-        elapsed,
+        {
+          ticketSlaId: runtime.id,
+          runNumber: runtime.run_number,
+          clearedAt: now,
+          clearReason: "TARGET_INCREASED",
+          elapsedBusinessSecondsAtClear: elapsed,
+        },
         tx,
       );
     }
@@ -131,9 +132,7 @@ async function reconcile({
     );
 
     if (!episode) {
-      throw new Error(
-        `Unable to create breach episode for SLA ${runtime.id}.`,
-      );
+      throw new Error(`Unable to create breach episode for SLA ${runtime.id}.`);
     }
   }
 
@@ -148,8 +147,7 @@ async function reconcile({
       breachedElapsedBusinessMinutes: toMinutes(
         episode.elapsed_business_seconds_at_breach,
       ),
-      breachedTargetResolutionMinutes:
-        episode.target_resolution_minutes,
+      breachedTargetResolutionMinutes: episode.target_resolution_minutes,
       elapsedBusinessSeconds: elapsed,
       elapsedBusinessMinutes: toMinutes(elapsed),
       remainingBusinessMinutes: 0,
@@ -187,11 +185,13 @@ async function clear({
   );
 
   return repository.clearActiveBreachEpisode(
-    runtime.id,
-    runtime.run_number,
-    now,
-    reason,
-    elapsed,
+    {
+      ticketSlaId: runtime.id,
+      runNumber: runtime.run_number,
+      clearedAt: now,
+      clearReason: reason,
+      elapsedBusinessSecondsAtClear: elapsed,
+    },
     tx,
   );
 }
