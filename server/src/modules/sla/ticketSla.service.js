@@ -47,6 +47,7 @@ async function get(id) {
   await requireTicket(id);
 
   const sla = await repository.oneTicketSla(id);
+
   const calculatedAt = new Date();
 
   if (!sla) {

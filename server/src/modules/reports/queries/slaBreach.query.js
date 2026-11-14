@@ -23,6 +23,14 @@ export function buildBreachAnalysis(runs) {
     medianBreachDuration: median(durations),
     maximumBreachDuration: durations.length ? Math.max(...durations) : null,
     rows: breaches,
+    totalBreachedRuns,
+    totalBreachEpisodes,
+    activeBreachEpisodes,
+    clearedBreachEpisodes,
+    averageElapsedAtBreach,
+    averageElapsedAtClearance,
+    episodes,
+    runs,
   };
 }
 

@@ -22,6 +22,7 @@ import { generateReportExcel } from "./generators/excel/reportExcel.generator.js
 import storage from "./storage/reportStorage.js";
 import { slaTicketDetailsDefinition } from "./definitions/slaTicketDetails.definition.js";
 import { fetchSlaTicketDetailsDataset } from "./queries/slaTicketDetails.query.js";
+import { fetchBreachEpisodes } from "./queries/slaBreachEpisode.query.js";
 import userRepository from "../users/user.repository.js";
 
 function parseReportDateTime(value) {
@@ -150,11 +151,12 @@ async function buildComplianceDataset(input) {
   }
 
   const segments = await fetchSegments(filteredRuns);
+  const breachEpisodes = await fetchBreachEpisodes(filteredRuns);
   const compliance = calculateCompliance(filteredRuns);
   const metrics = calculateMetrics(filteredRuns);
   const policyPerformance = buildPolicyPerformance(filteredRuns);
   const severityPerformance = await fetchSeverityPerformance(filteredRuns);
-  const breachAnalysis = buildBreachAnalysis(filteredRuns);
+  const breachAnalysis = buildBreachAnalysis(filteredRuns, breachEpisodes);
   const exceptions = buildExceptions(filteredRuns, segments);
   const trend = buildMonthlyTrend(filteredRuns, input.timezone);
   const reconciliation = reconcile({
@@ -167,6 +169,7 @@ async function buildComplianceDataset(input) {
   return {
     runs: filteredRuns,
     segments,
+    breachEpisodes,
     compliance,
     metrics,
     policyPerformance,
