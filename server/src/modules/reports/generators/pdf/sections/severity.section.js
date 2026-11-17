@@ -2,6 +2,7 @@ import { heading, table } from "../reportPdf.styles.js";
 
 export function renderSeverity(doc, data) {
   heading(doc, "6. Severity Performance");
+
   table(
     doc,
     [
@@ -12,26 +13,21 @@ export function renderSeverity(doc, data) {
       "Compliance",
       "Avg Target",
       "Avg Consumed",
-      "Severity",
-      "Runs",
-      "Met",
-      "Breached",
       "Episodes",
       "Active",
       "Cleared",
-      "Compliance",
     ],
     data.severityPerformance.map((row) => [
       row.severity,
       row.runs,
       row.met,
       row.breached,
+      row.compliance == null ? "—" : `${Number(row.compliance).toFixed(2)}%`,
+      format(row.averageTarget),
+      format(row.averageConsumed),
       row.breachEpisodes,
       row.activeBreachEpisodes,
       row.clearedBreachEpisodes,
-      row.compliance == null ? "—" : `${row.compliance.toFixed(2)}%`,
-      format(row.averageTarget),
-      format(row.averageConsumed),
     ]),
   );
 }

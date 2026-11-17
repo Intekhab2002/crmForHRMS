@@ -1,6 +1,11 @@
 import { EXCEPTION_CODE } from "../reports.constants.js";
 
-export function buildExceptions(runs, segments = [], breachEpisodes = []) {
+export function buildExceptions(
+  runs,
+  segments = [],
+  breachEpisodes = [],
+  dataCutoff = new Date().toISOString(),
+) {
   const rows = [];
 
   for (const run of runs) {
@@ -118,26 +123,37 @@ export function buildExceptions(runs, segments = [], breachEpisodes = []) {
     }
   }
 
+  const cutoffTime = new Date(dataCutoff).getTime();
+
+  if (!Number.isFinite(cutoffTime)) {
+    throw new TypeError("Invalid report dataCutoff.");
+  }
+
   const segmentById = new Map(
-    segments.map((segment) => [segment.segment_id, segment]),
+    segments.map((segment) => [String(segment.segment_id), segment]),
+  );
+
+  const runByKey = new Map(
+    runs.map((run) => [`${run.ticket_id}:${Number(run.run_number)}`, run]),
   );
 
   const activeEpisodesByRun = new Map();
 
   for (const episode of breachEpisodes) {
-    const runKey = `${episode.ticket_id}:${episode.run_number}`;
+    const runKey = `${episode.ticket_id}:${Number(episode.run_number)}`;
+    const run = runByKey.get(runKey);
 
     const segment = episode.segment_id
-      ? segmentById.get(episode.segment_id)
+      ? segmentById.get(String(episode.segment_id))
       : null;
 
     const breachTime = new Date(episode.breached_at).getTime();
 
+    const breachSeconds = Number(episode.elapsed_business_seconds_at_breach);
+
     const clearTime = episode.cleared_at
       ? new Date(episode.cleared_at).getTime()
       : null;
-
-    const breachSeconds = Number(episode.elapsed_business_seconds_at_breach);
 
     const clearSeconds =
       episode.elapsed_business_seconds_at_clear == null
@@ -146,7 +162,7 @@ export function buildExceptions(runs, segments = [], breachEpisodes = []) {
 
     const addEpisodeException = (message) => {
       rows.push({
-        code: EXCEPTION_CODE.INVALID_RUNTIME,
+        code: EXCEPTION_CODE.INVALID_BREACH_EPISODE,
         message,
         ticketId: episode.ticket_id,
         runNumber: Number(episode.run_number),
@@ -155,8 +171,17 @@ export function buildExceptions(runs, segments = [], breachEpisodes = []) {
       });
     };
 
-    if (!Number.isFinite(breachTime)) {
-      addEpisodeException("Breach episode has an invalid breach timestamp.");
+    if (!run) {
+      addEpisodeException(
+        "Breach episode does not belong to a report-scoped SLA run.",
+      );
+      continue;
+    }
+
+    if (!Number.isFinite(breachTime) || breachTime > cutoffTime) {
+      addEpisodeException(
+        "Breach episode has an invalid or out-of-scope breach timestamp.",
+      );
     }
 
     if (!Number.isFinite(breachSeconds) || breachSeconds < 0) {
@@ -166,28 +191,35 @@ export function buildExceptions(runs, segments = [], breachEpisodes = []) {
     }
 
     if (
-      episode.segment_id &&
-      (!segment ||
-        segment.ticket_id !== episode.ticket_id ||
-        Number(segment.run_number) !== Number(episode.run_number) ||
-        segment.ticket_sla_id !== episode.ticket_sla_id)
+      !segment ||
+      segment.ticket_id !== episode.ticket_id ||
+      Number(segment.run_number) !== Number(episode.run_number) ||
+      segment.ticket_sla_id !== episode.ticket_sla_id
     ) {
       addEpisodeException(
         "Breach episode references a segment outside its SLA run.",
       );
     }
 
-    if (episode.cleared_at) {
-      if (!Number.isFinite(clearTime) || clearTime < breachTime) {
+    const clearedAtCutoff =
+      clearTime != null &&
+      Number.isFinite(clearTime) &&
+      clearTime <= cutoffTime;
+
+    if (episode.cleared_at && !Number.isFinite(clearTime)) {
+      addEpisodeException("Breach episode has an invalid clearance timestamp.");
+    }
+
+    if (clearedAtCutoff) {
+      if (clearTime < breachTime) {
         addEpisodeException(
-          "Breach episode clearance timestamp precedes its breach timestamp.",
+          "Breach episode clearance precedes its breach timestamp.",
         );
       }
 
       if (
         clearSeconds == null ||
         !Number.isFinite(clearSeconds) ||
-        clearSeconds < 0 ||
         clearSeconds < breachSeconds
       ) {
         addEpisodeException(
@@ -206,7 +238,7 @@ export function buildExceptions(runs, segments = [], breachEpisodes = []) {
       const [ticketId, runNumber] = runKey.split(":");
 
       rows.push({
-        code: EXCEPTION_CODE.INVALID_RUNTIME,
+        code: EXCEPTION_CODE.INVALID_BREACH_EPISODE,
         message: "Multiple active breach episodes exist for the same SLA run.",
         ticketId,
         runNumber: Number(runNumber),

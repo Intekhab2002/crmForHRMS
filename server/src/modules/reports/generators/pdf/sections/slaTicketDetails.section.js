@@ -47,6 +47,9 @@ export function renderSlaTicketDetails(doc, data) {
     timestamp(row.dueAt, timezone),
     timestamp(row.ticketLastUpdatedAt, timezone),
     row.status,
+    row.breachCount ?? 0,
+    row.activeBreachCount ?? 0,
+    row.clearedBreachCount ?? 0,
   ]);
 
   table(
@@ -64,8 +67,11 @@ export function renderSlaTicketDetails(doc, data) {
       "Due Time",
       "Ticket Last Updated",
       "Status",
+      "Breaches",
+      "Active",
+      "Cleared",
     ],
     rows,
-    [15, 17, 16, 17, 9, 9, 10, 10, 17, 17, 18, 12],
+    [15, 17, 16, 17, 9, 9, 10, 10, 17, 17, 18, 12, 9, 9, 9],
   );
 }

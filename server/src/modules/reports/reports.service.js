@@ -137,13 +137,41 @@ async function buildComplianceDataset(input) {
 
   if (input.severityKeys?.length) {
     const segments = await fetchSegments(runs);
-    const allowed = new Set(
-      segments
-        .filter((segment) =>
-          input.severityKeys.includes(segment.duration_value_key),
-        )
-        .map((segment) => `${segment.ticket_id}:${segment.run_number}`),
-    );
+    const segmentsByRun = new Map();
+
+    for (const segment of segments) {
+      const key = `${segment.ticket_id}:${segment.run_number}`;
+      const list = segmentsByRun.get(key) || [];
+
+      list.push(segment);
+      segmentsByRun.set(key, list);
+    }
+
+    const allowed = new Set();
+
+    for (const run of runs) {
+      const key = `${run.ticket_id}:${run.run_number}`;
+      const applicableSegments = (segmentsByRun.get(key) || [])
+        .filter((segment) => {
+          const startedAt = new Date(segment.started_at).getTime();
+          const cutoff = new Date(input.dataCutoff).getTime();
+
+          return Number.isFinite(startedAt) && startedAt <= cutoff;
+        })
+        .sort(
+          (a, b) =>
+            new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
+        );
+
+      const effectiveSegment = applicableSegments.at(-1);
+
+      if (
+        effectiveSegment &&
+        input.severityKeys.includes(effectiveSegment.duration_value_key)
+      ) {
+        allowed.add(key);
+      }
+    }
 
     filteredRuns = runs.filter((run) =>
       allowed.has(`${run.ticket_id}:${run.run_number}`),
@@ -151,7 +179,10 @@ async function buildComplianceDataset(input) {
   }
 
   const segments = await fetchSegments(filteredRuns);
-  const breachEpisodes = await fetchBreachEpisodes(filteredRuns, input.dataCutoff,);
+  const breachEpisodes = await fetchBreachEpisodes(
+    filteredRuns,
+    input.dataCutoff,
+  );
   const compliance = calculateCompliance(filteredRuns);
   const metrics = calculateMetrics(filteredRuns);
   const policyPerformance = buildPolicyPerformance(filteredRuns);
@@ -165,14 +196,19 @@ async function buildComplianceDataset(input) {
     breachEpisodes,
     input.dataCutoff,
   );
-  const exceptions = buildExceptions(filteredRuns, segments,  breachEpisodes,);
+  const exceptions = buildExceptions(
+    filteredRuns,
+    segments,
+    breachEpisodes,
+    input.dataCutoff,
+  );
   const trend = buildMonthlyTrend(filteredRuns, input.timezone);
   const reconciliation = reconcile({
     runs: filteredRuns,
     compliance,
     exceptions,
     segments,
-     breachEpisodes,
+    breachEpisodes,
   });
 
   return {

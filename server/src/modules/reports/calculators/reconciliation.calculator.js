@@ -24,6 +24,9 @@ export function reconcile({
 
     return !Number.isFinite(seconds) || seconds < 0;
   });
+  const invalidBreachEpisodeExceptions = exceptions.filter(
+    (row) => row.code === "INVALID_BREACH_EPISODE",
+  );
 
   const invalidTargets = runs.filter((row) => {
     const target = Number(row.target_resolution_minutes);
@@ -75,8 +78,8 @@ export function reconcile({
     {
       code: "BREACH_EPISODE_INTEGRITY",
       expected: 0,
-      actual: invalidRuntimeExceptions.length,
-      pass: invalidRuntimeExceptions.length === 0,
+      actual: invalidBreachEpisodeExceptions.length,
+      pass: invalidBreachEpisodeExceptions.length === 0,
     },
     {
       code: "BREACH_EPISODE_SCOPE",

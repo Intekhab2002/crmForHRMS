@@ -5,8 +5,8 @@ import definition from "../../src/modules/reports/definitions/slaCompliance.defi
 
 test("SLA compliance definition is versioned and historical", () => {
   assert.equal(definition.code, "SLA_COMPLIANCE");
-  assert.equal(definition.version, "1.0");
-  assert.equal(definition.calculationVersion, "SLA-CALC-1.0");
+  assert.equal(definition.version, "1.1");
+  assert.equal(definition.calculationVersion, "SLA-CALC-2.0");
   assert.equal(definition.methodology.historicalSource, "ticket_sla_run_history");
   assert.equal(definition.methodology.executionEvidence, "ticket_sla_segments");
 });
