@@ -3,7 +3,11 @@ import { calculateBusinessSeconds } from "../../sla/businessTime.service.js";
 
 const ex = (tx) => getQueryExecutor(tx);
 
-const buildRunScope = (input = {}, alias = "r") => {
+const buildRunScope = (
+  input = {},
+  alias = "r",
+  { includeStatuses = true } = {},
+) => {
   const params = [input.periodStart, input.periodEnd, input.dataCutoff];
 
   const where = [
@@ -21,7 +25,7 @@ const buildRunScope = (input = {}, alias = "r") => {
     i += 1;
   }
 
-  if (input.statuses?.length) {
+  if (includeStatuses && input.statuses?.length) {
     where.push(`${alias}.status = ANY($${i}::text[])`);
 
     params.push(input.statuses);
@@ -34,7 +38,6 @@ const buildRunScope = (input = {}, alias = "r") => {
     next: i,
   };
 };
-
 function resolveRunCalendar(policySnapshot) {
   const policy = policySnapshot?.policy;
 
@@ -187,158 +190,176 @@ r.breached_target_resolution_minutes,
  */
 
 export async function listCurrentUnarchivedRuns(input, tx = null) {
-  const { where, params } = buildRunScope(input, "ts");
+  const { where, params } = buildRunScope(input, "ts", {
+    includeStatuses: false,
+  });
+
+  // Status filtering must happen after the cutoff-based status
+  // has been calculated in the CTE.
+  const statusFilter = input.statuses?.length
+    ? `WHERE status = ANY($${params.length + 1}::text[])`
+    : "";
+
+  if (input.statuses?.length) {
+    params.push(input.statuses);
+  }
 
   const query = `
-    SELECT
-      ts.id,
-      ts.ticket_id,
-      t.ticket_number,
-      ts.run_number,
-      ts.sla_policy_id,
-
-      COALESCE(
-        ts.policy_snapshot->'policy'->>'code',
-        p.code
-      ) AS policy_code,
-
-      COALESCE(
-        ts.policy_snapshot->'policy'->>'name',
-        p.name
-      ) AS policy_name,
-
-CASE
-  WHEN ts.completed_at IS NOT NULL
-    AND ts.completed_at <= $3::timestamptz
-    THEN 'COMPLETED'
-
-  WHEN ts.breached_at IS NOT NULL
-    AND ts.breached_at <= $3::timestamptz
-    THEN 'BREACHED'
-
-  WHEN ts.stopped_at IS NOT NULL
-    AND ts.stopped_at <= $3::timestamptz
-    THEN 'STOPPED'
-
-  WHEN COALESCE(cutoff_segment.open_segment_count, 0) > 0
-    THEN 'RUNNING'
-
-  WHEN COALESCE(cutoff_segment.has_paused_segment, FALSE)
-    THEN 'PAUSED'
-
-  ELSE ts.status
-END AS status
-
-      ts.activated_at,
-      ts.paused_at,
-      ts.stopped_at,
-      ts.completed_at,
-      ts.breached_at,
-      ts.breached_elapsed_business_minutes,
-      ts.breached_target_resolution_minutes,
-      ts.target_resolution_minutes,
-      ts.remaining_business_minutes,
-      ts.activation_field_key,
-      ts.activation_field_value_key,
-      ts.duration_field_key,
-      ts.duration_field_value_key,
-      ts.policy_snapshot,
-
-      COALESCE(
-        cutoff_segment.closed_consumed_seconds,
-        0
-      ) AS closed_consumed_seconds,
-
-      COALESCE(
-        cutoff_segment.open_segment_count,
-        0
-      ) AS open_segment_count,
-
-      cutoff_segment.active_segment_started_at,
-
-      COALESCE(
-        cutoff_segment.has_paused_segment,
-        FALSE
-      ) AS has_paused_segment,
-
-      t.assigned_user_id,
-      t.department_id,
-      t.organization_id,
-      u.username AS assigned_username,
-      d.name AS department_name,
-      o.name AS organization_name,
-
-      'RUNTIME' AS source
-
-    FROM ticket_sla ts
-
-    JOIN tickets t
-      ON t.id = ts.ticket_id
-
-    LEFT JOIN sla_policies p
-      ON p.id = ts.sla_policy_id
-
-    LEFT JOIN users u
-      ON u.id = t.assigned_user_id
-
-    LEFT JOIN departments d
-      ON d.id = t.department_id
-
-    LEFT JOIN organizations o
-      ON o.id = t.organization_id
-
-    LEFT JOIN LATERAL (
+    WITH runtime_runs AS (
       SELECT
-        COUNT(*) FILTER (
-          WHERE (
-            seg.ended_at IS NULL
-            OR seg.ended_at > $3::timestamptz
-          )
-          AND seg.started_at <= $3::timestamptz
+        ts.id,
+        ts.ticket_id,
+        t.ticket_number,
+        ts.run_number,
+        ts.sla_policy_id,
+
+        COALESCE(
+          ts.policy_snapshot->'policy'->>'code',
+          p.code
+        ) AS policy_code,
+
+        COALESCE(
+          ts.policy_snapshot->'policy'->>'name',
+          p.name
+        ) AS policy_name,
+
+        CASE
+          WHEN ts.completed_at IS NOT NULL
+            AND ts.completed_at <= $3::timestamptz
+            THEN 'COMPLETED'
+
+          WHEN ts.breached_at IS NOT NULL
+            AND ts.breached_at <= $3::timestamptz
+            THEN 'BREACHED'
+
+          WHEN ts.stopped_at IS NOT NULL
+            AND ts.stopped_at <= $3::timestamptz
+            THEN 'STOPPED'
+
+          WHEN COALESCE(cutoff_segment.open_segment_count, 0) > 0
+            THEN 'RUNNING'
+
+          WHEN COALESCE(cutoff_segment.has_paused_segment, FALSE)
+            THEN 'PAUSED'
+
+          ELSE ts.status
+        END AS status,
+
+        ts.activated_at,
+        ts.paused_at,
+        ts.stopped_at,
+        ts.completed_at,
+        ts.breached_at,
+        ts.breached_elapsed_business_minutes,
+        ts.breached_target_resolution_minutes,
+        ts.target_resolution_minutes,
+        ts.remaining_business_minutes,
+        ts.activation_field_key,
+        ts.activation_field_value_key,
+        ts.duration_field_key,
+        ts.duration_field_value_key,
+        ts.policy_snapshot,
+
+        COALESCE(
+          cutoff_segment.closed_consumed_seconds,
+          0
+        ) AS closed_consumed_seconds,
+
+        COALESCE(
+          cutoff_segment.open_segment_count,
+          0
         ) AS open_segment_count,
 
-        BOOL_OR(
-          seg.status = 'PAUSED'
-          AND seg.ended_at IS NOT NULL
-          AND seg.ended_at <= $3::timestamptz
+        cutoff_segment.active_segment_started_at,
+
+        COALESCE(
+          cutoff_segment.has_paused_segment,
+          FALSE
         ) AS has_paused_segment,
 
-        MAX(seg.started_at) FILTER (
-          WHERE (
-            seg.ended_at IS NULL
-            OR seg.ended_at > $3::timestamptz
-          )
-          AND seg.started_at <= $3::timestamptz
-        ) AS active_segment_started_at,
+        t.assigned_user_id,
+        t.department_id,
+        t.organization_id,
+        u.username AS assigned_username,
+        d.name AS department_name,
+        o.name AS organization_name,
 
-        SUM(
-          CASE
-            WHEN seg.ended_at IS NOT NULL
-              AND seg.ended_at <= $3::timestamptz
-            THEN COALESCE(
-              seg.consumed_business_seconds,
-              seg.consumed_minutes * 60,
-              0
+        'RUNTIME' AS source
+
+      FROM ticket_sla ts
+
+      JOIN tickets t
+        ON t.id = ts.ticket_id
+
+      LEFT JOIN sla_policies p
+        ON p.id = ts.sla_policy_id
+
+      LEFT JOIN users u
+        ON u.id = t.assigned_user_id
+
+      LEFT JOIN departments d
+        ON d.id = t.department_id
+
+      LEFT JOIN organizations o
+        ON o.id = t.organization_id
+
+      LEFT JOIN LATERAL (
+        SELECT
+          COUNT(*) FILTER (
+            WHERE (
+              seg.ended_at IS NULL
+              OR seg.ended_at > $3::timestamptz
             )
-            ELSE 0
-          END
-        ) AS closed_consumed_seconds
+            AND seg.started_at <= $3::timestamptz
+          ) AS open_segment_count,
 
-      FROM ticket_sla_segments seg
+          BOOL_OR(
+            seg.status = 'PAUSED'
+            AND seg.ended_at IS NOT NULL
+            AND seg.ended_at <= $3::timestamptz
+          ) AS has_paused_segment,
 
-      WHERE seg.ticket_sla_id = ts.id
-        AND seg.run_number = ts.run_number
-        AND seg.started_at <= $3::timestamptz
-    ) cutoff_segment ON TRUE
+          MAX(seg.started_at) FILTER (
+            WHERE (
+              seg.ended_at IS NULL
+              OR seg.ended_at > $3::timestamptz
+            )
+            AND seg.started_at <= $3::timestamptz
+          ) AS active_segment_started_at,
 
-    WHERE ${where}
+          SUM(
+            CASE
+              WHEN seg.ended_at IS NOT NULL
+                AND seg.ended_at <= $3::timestamptz
+              THEN COALESCE(
+                seg.consumed_business_seconds,
+                seg.consumed_minutes * 60,
+                0
+              )
+              ELSE 0
+            END
+          ) AS closed_consumed_seconds
 
-      AND NOT EXISTS (
-        SELECT 1
-        FROM ticket_sla_run_history h
-        WHERE h.ticket_id = ts.ticket_id
-          AND h.run_number = ts.run_number
-      )
+        FROM ticket_sla_segments seg
+
+        WHERE seg.ticket_sla_id = ts.id
+          AND seg.run_number = ts.run_number
+          AND seg.started_at <= $3::timestamptz
+      ) cutoff_segment ON TRUE
+
+      WHERE ${where}
+
+        AND NOT EXISTS (
+          SELECT 1
+          FROM ticket_sla_run_history h
+          WHERE h.ticket_id = ts.ticket_id
+            AND h.run_number = ts.run_number
+        )
+    )
+
+    SELECT *
+    FROM runtime_runs
+    ${statusFilter}
   `;
 
   const result = await ex(tx).query(query, params);
